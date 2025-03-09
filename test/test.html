@@ -1,0 +1,18 @@
+<h1 id="test-ooo">Test-ooo</h1>
+<ul>
+<li>potat-ooo</li>
+<li>coooolaaaa</li>
+</ul>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode julia"><code class="sourceCode julia"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">using</span> <span class="bu">WGLMakie</span>, <span class="bu">Bonito</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>m <span class="op">=</span> Bonito.<span class="fu">Slider</span>(<span class="fl">1</span><span class="op">:</span><span class="fl">100</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode julia"><code class="sourceCode julia"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">scatter</span>(<span class="fl">1</span><span class="op">:</span><span class="fl">5</span>, markersize<span class="op">=</span>m)</span></code></pre></div>
+<h2 id="plot-the-cat">PLOT THE CAT</h2>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode julia"><code class="sourceCode julia"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">using</span> <span class="bu">WGLMakie</span>, <span class="bu">FileIO</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>catmesh <span class="op">=</span> <span class="fu">load</span>(<span class="fu">assetpath</span>(<span class="st">&quot;cat.obj&quot;</span>))</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="fu">mesh</span>(catmesh, color<span class="op">=</span><span class="fu">load</span>(<span class="fu">assetpath</span>(<span class="st">&quot;diffusemap.png&quot;</span>)))</span></code></pre></div>
+<h2 id="plot-something-else">Plot something else</h2>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode julia"><code class="sourceCode julia"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">scatter</span>(<span class="fl">1</span><span class="op">:</span><span class="fl">4</span>)</span></code></pre></div>
