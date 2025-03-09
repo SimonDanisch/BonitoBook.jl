@@ -1,4 +1,4 @@
-module Kiri
+module BonitoBook
 
 using Bonito
 using Markdown

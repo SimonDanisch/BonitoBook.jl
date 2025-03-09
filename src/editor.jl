@@ -248,12 +248,12 @@ function markdown_setup(editor, container)
 end
 
 struct MLRunner
-    editor::Kiri.EvalEditor
+    editor::BonitoBook.EvalEditor
 end
 
 const SYSTEM_PROMPT = read(joinpath(@__DIR__, "templates", "system-prompt.md"), String)
 
-function Kiri.set_result!(chat_editor, result::Observable, runner::MLRunner, source)
+function BonitoBook.set_result!(chat_editor, result::Observable, runner::MLRunner, source)
     str = Observable{String}("")
     chat_editor.loading[] = true
     chat_editor.show_output[] = true
@@ -461,7 +461,7 @@ function Bonito.jsrender(session::Session, editor::CellEditor)
     hover_buttons = DOM.div(ai, show_editor, show_logging, out; class="hover-buttons")
 
     card_content = DOM.div(
-        Kiri.CodeIcon, chat, jleditor;
+        BonitoBook.CodeIcon, chat, jleditor;
         class="editor-content",
     )
 

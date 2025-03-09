@@ -1,7 +1,7 @@
 using WGLMakie
-using Kiri, Bonito
+using BonitoBook, Bonito
 begin
     app = App(title="MakieBook") do s
-        return Kiri.book(s, joinpath(@__DIR__, "test.md"))
+        return BonitoBook.book(s, joinpath(@__DIR__, "test.md"))
     end
 end
