@@ -9,10 +9,12 @@ struct MonacoEditor
     options::Dict{Symbol,Any}
     js_init_func::Base.RefValue{Bonito.JSCode}
     editor_classes::Vector{String}
+    show_editor::Observable{Bool}
+    hiding_direction::String
 end
 
-function MonacoEditor(source; js_init_func=js"", editor_classes=String[], language="julia", options...)
-    defaults = Dict(
+function MonacoEditor(source; js_init_func=nothing, show_editor=true, editor_classes=String[], language="julia", hiding_direction="vertical", options...)
+    defaults = Dict{Symbol, Any}(
         :value => source,
         :language => language,
         :minimap => Dict(:enabled => false),
@@ -23,23 +25,28 @@ function MonacoEditor(source; js_init_func=js"", editor_classes=String[], langua
         :renderLineHighlight => "none",
         :lineDecorationsWidth => 0,
     )
-    opts = merge!(Dict{Symbol,Any}(options), defaults)
+    if js_init_func === nothing
+        js_init_func = js"() => {}"
+    end
+    opts = merge!(defaults, Dict{Symbol,Any}(options))
     return MonacoEditor(
-        Observable(language), opts, Base.RefValue(js_init_func), editor_classes
+        Observable(language), opts, Base.RefValue(js_init_func), editor_classes, Observable(show_editor), hiding_direction
     )
 end
 
 function Bonito.jsrender(session::Session, editor::MonacoEditor)
     eclasses = join(editor.editor_classes, " ")
     editor_div = DOM.div(class="monaco-editor-div $(eclasses)")
+    # We somehow have to hide the container, since hiding the editor div destroys the editor
+    container = DOM.div(editor_div, class="monaco-editor-container $(eclasses)")
     # needs a return statement to actually return a function
     return Bonito.jsrender(session, DOM.div(
         CodeIcon,
-        editor_div,
+        container,
         js"""
         $(Monaco).then(mod => {
             const init_func = $(editor.js_init_func[]);
-            mod.setup_editor($(editor_div), $(editor.options),  $(editor.language), init_func);
+            mod.setup_editor($(editor_div), $(container), $(editor.options),  $(editor.language), init_func, $(editor.show_editor), $(editor.hiding_direction));
         })
         """
     ))
@@ -47,6 +54,7 @@ end
 
 struct EvalEditor
     editor::MonacoEditor
+    js_init_func::Bonito.JSCode
     container_classes::Vector{String}
     runner::Any
 
@@ -67,17 +75,18 @@ end
 
 function EvalEditor(source, runner=nothing;
         language="julia",
+        js_init_func=nothing,
         show_output=true,
         show_editor=true,
         editor_classes=String[],
         container_classes=String[],
         options...
     )
-
-    editor = MonacoEditor(source; language=language, editor_classes=editor_classes, options...)
+    js_init_func = isnothing(js_init_func) ? js"() => {}" : js_init_func
+    editor = MonacoEditor(source; language=language, show_editor=show_editor, editor_classes = editor_classes, options...)
     loading = Observable(false)
     show_output = Observable(show_output)
-    show_editor = Observable(show_editor)
+    show_editor = editor.show_editor
     result = Observable{Any}(nothing)
     src = Observable(source)
     set_src = Observable{String}("")
@@ -92,6 +101,7 @@ function EvalEditor(source, runner=nothing;
     end
     editor = EvalEditor(
         editor,
+        js_init_func,
         container_classes,
         runner,
 
@@ -115,8 +125,8 @@ function EvalEditor(source, runner=nothing;
     return editor
 end
 
-function Bonito.jsrender(session::Session, editor::EvalEditor)
-    editor_container = DOM.div(editor.editor; class="monaco-container")
+
+function render_editor(editor::EvalEditor)
     output_div = DOM.div(editor.output, class="cell-output")
     logging_html = Observable(HTML(""))
     on(editor.logging_html) do str
@@ -126,23 +136,24 @@ function Bonito.jsrender(session::Session, editor::EvalEditor)
     # Set the init func, which we can only do here where we have all divs
     editor.editor.js_init_func[] = js"""((editor, monaco, editor_div) => {
         const output_div = $(output_div);
-        const editor_container = $(editor_container)
         const logging_div = $(logging_div);
         $(Monaco).then(mod => {
             mod.setup_cell_editor(
-                editor, monaco, editor_div, output_div, editor_container, logging_div,
+                editor, monaco, editor_div, output_div, logging_div,
                 $(editor.source), $(editor.get_source), $(editor.set_source),
-                $(editor.show_output), $(editor.show_editor), $(editor.show_logging)
+                $(editor.show_output), $(editor.show_logging)
             );
+            const callback = ($(editor.js_init_func));
+            callback(editor, monaco, editor_div);
         })
     })
     """
-    return Bonito.jsrender(session, DOM.div(
-        ANSI_CSS,
-        editor_container,
-        logging_div,
-        output_div,
-    ))
+    return (ANSI_CSS, editor.editor, logging_div, output_div)
+end
+
+function Bonito.jsrender(session::Session, editor::EvalEditor)
+    elems = render_editor(editor)
+    return Bonito.jsrender(session, DOM.div(elems...;))
 end
 
 struct MarkdownRunner
@@ -296,112 +307,26 @@ function BonitoBook.set_result!(chat_editor, result::Observable, runner::MLRunne
     end)
 end
 
-const JL_ICON = Asset(joinpath(@__DIR__, "assets", "julia-dots.svg"))
 
-const JL_ICON_STYLE = Styles(
-    "background-image" => JL_ICON,
-    "background-size" => "60% auto",
-    "background-repeat" => "no-repeat",
-    "background-position" => "center",
-    "padding-top" => "0.1rem",
-    "padding-bottom" => "0.1rem",
-    "width" => "1.2rem",
-    "height" => "1.2rem",
-)
-
-const LOADING_STYLE = Styles(
-    CSS(
-        ".loading-cell",
-        "background" => "rgba(255, 255, 255, 1)",
-        "box-shadow" => "0 0 5px rgba(0, 0, 0, 0.1)",
-        "animation" => "background-fade 1.5s ease-in-out infinite, shadow-pulse 1.5s ease-in-out infinite",
-    ),
-    CSS(
-        "@keyframes background-fade",
-        CSS("0%", "background" => "rgba(255, 255, 255, 1)"),
-        CSS("100%", "background" => "rgba(250, 250, 250, 1)"),
-    ),
-    CSS(
-        "@keyframes shadow-pulse",
-        CSS("0%", "box-shadow" => "0 0 5px rgba(0, 0, 0, 0.1)"),
-        CSS("50%", "box-shadow" => "0 0 15px rgba(0, 0, 0, 0.3)"),
-        CSS("100%", "box-shadow" => "0 0 5px rgba(0, 0, 0, 0.1)"),
-    )
-)
-
-function SmallButton(;  style=Styles(), kw...)
-    stylo = Styles(
-        CSS(
-            "font-weight" => 600,
-            "background-color" => "transparent",
-            "font-size" => "1rem",
-            "min-width" => "1.5rem",
-            "padding-left" => "0.3rem",
-            "padding-right" => "0.3rem",
-            "padding-top" => "0.1rem",
-            "padding-bottom" => "0.1rem",
-            "border" => "none",
-            "border-radius" => "100px",
-            "color" => "#777",
-            "cursor" => "pointer",
-            "margin" => "0.25rem",
-            "box-shadow" => "0 2px 4px rgba(0, 0, 0, 0.2)",
-            "transition" => "background-color 0.2s",
-        ),
-        CSS(
-            ":hover",
-            "background-color" => "#ddd",
-        ),
-    )
+function SmallButton(; class="", kw...)
     value = Observable(false)
     button_dom = DOM.button(
         "";
         onclick=js"event=> $(value).notify(true);",
-        style=Styles(style, stylo),
+        class="small-button $(class)",
         kw...,
     )
     return button_dom, value
 end
 
-function SmallToggle(active, args...; class="", style=Styles(), kw...)
+function SmallToggle(active, args...; class="", kw...)
     class = active[] ? class : "toggled $class"
-    toggle_style = Styles(CSS(".toggled",
-        "color" => "#000",
-        "border" => "none",
-        "filter" => "grayscale(100%)",
-        "opacity" => "0.5",
-        "box-shadow" => "inset 2px 2px 5px rgba(0, 0, 0, 0.5)",
-    ))
-    stylo = Styles(
-        CSS(
-            "font-weight" => 600,
-            "background-color" => "transparent",
-            "font-size" => "1rem",
-            "min-width" => "1.5rem",
-            "padding-left" => "0.3rem",
-            "padding-right" => "0.3rem",
-            "padding-top" => "0.1rem",
-            "padding-bottom" => "0.1rem",
-            "border" => "none",
-            "border-radius" => "100px",
-            "color" => "#777",
-            "cursor" => "pointer",
-            "margin" => "0.25rem",
-            "box-shadow" => "0 2px 4px rgba(0, 0, 0, 0.2)",
-            "transition" => "background-color 0.2s",
-        ),
-        CSS(
-            ":hover",
-            "background-color" => "#ddd",
-        ),
-    )
     value = Observable(false)
-    button_dom = DOM.button(args...; style=Styles(style, stylo), class=class)
+    button_dom = DOM.button(args...; class="small-button $(class)", kw...)
 
     toggle_script = js"""
         const elem = $(button_dom);
         $(active).on((x) => {
-            console.log("woah there its togglin'", x)
             if (!x) {
                 elem.classList.add("toggled");
             } else {
@@ -415,7 +340,7 @@ function SmallToggle(active, args...; class="", style=Styles(), kw...)
     on(value) do click
         active[] = !active[]
     end
-    return DOM.span(toggle_style, button_dom, toggle_script)
+    return DOM.span(button_dom, toggle_script)
 end
 
 
@@ -425,7 +350,7 @@ function CellEditor(content, language, runner)
     runner = language == "markdown" ? MarkdownRunner() : runner
     jleditor = EvalEditor(
         content, runner;
-        show_editor=show_editor, language="julia", lineNumbers="off"
+        show_editor=show_editor, language=language
     )
     if language == "markdown"
         notify(jleditor.source)
@@ -453,15 +378,15 @@ function Bonito.jsrender(session::Session, editor::CellEditor)
         chat.show_editor[] = show
         chat.show_output[] = show
     end
+
     ai = SmallToggle(show_chat; class="codicon codicon-sparkle-filled")
     out = SmallToggle(jleditor.show_output; class="codicon codicon-graph")
     show_editor = SmallToggle(jleditor.show_editor; class="codicon codicon-code")
     show_logging = SmallToggle(jleditor.show_logging; class="codicon codicon-terminal")
-
     hover_buttons = DOM.div(ai, show_editor, show_logging, out; class="hover-buttons")
 
     card_content = DOM.div(
-        BonitoBook.CodeIcon, chat, jleditor;
+        chat, jleditor;
         class="editor-content",
     )
 
@@ -483,60 +408,82 @@ function Bonito.jsrender(session::Session, editor::CellEditor)
         });
     })()
     """
+    markdown_js = editor.language == "markdown" ? markdown_setup(jleditor, hover_container) : nothing
 
+    body = DOM.div(
+        BonitoBook.CodeIcon,
+        hover_container,  # Wrap everything in one container
+        hover_js,
+        markdown_js,
+        tabindex=0,
+        class="editor-container"
+    )
     onjs(
         session,
         map(|, chat.loading, jleditor.loading),
         js"""
             (x) => {
                 if (x) {
-                    $(card_content).classList.add("loading-cell");
+                    $(body).classList.add("loading-cell");
                 } else {
-                    $(card_content).classList.remove("loading-cell");
+                    $(body).classList.remove("loading-cell");
                 }
             }
         """
     )
-    js = editor.language == "markdown" ? markdown_setup(jleditor, hover_container) : nothing
 
-    return Bonito.jsrender(session, DOM.div(
-        LOADING_STYLE,
-        hover_container,  # Wrap everything in one container
-        hover_js,
-        js,
-        tabindex=0,
-        class="editor-container"
-    ))
+    return Bonito.jsrender(session, body)
 end
 
 struct FileEditor
     filename::String
-    editor::MonacoEditor
-    runner
+    editor::EvalEditor
+    function FileEditor(filepath, runner=nothing; language="julia", options...)
+        source = read(filepath, String)
+        opts = (
+            minimap=Dict(:enabled => true, :autohide => true),
+            scrollbar=Dict(),
+            overviewRulerBorder=true,
+            overviewRulerLanes=2,
+            lineDecorationsWidth=10
+        )
+        js_init_func = js"""(editor, monaco, editor_div) => {
+            $(Monaco).then(Monaco => {
+                Monaco.resize_to_lines(editor, monaco, editor_div)
+            })
+        }"""
+        editor = EvalEditor(source, runner; js_init_func=js_init_func, editor_classes=["file-editor"], hiding_direction="horizontal", language=language, opts..., options...)
+        return new(filepath, editor)
+    end
 end
 
-function FileEditor(filepath, runner=nothing; language="julia", options...)
-    source = read(filepath, String)
-    opts = (
-        minimap = Dict(:enabled => true),
-        scrollbar = Dict(),
-        overviewRulerBorder = true,
-        overviewRulerLanes = 2,
-        lineDecorationsWidth = 10
-    )
-    editor = MonacoEditor(source; editor_classes=["file-editor"], language=language, opts..., options...)
-    return FileEditor(filepath, editor, runner)
-end
+
 
 function Bonito.jsrender(session::Session, editor::FileEditor)
-    filename = Bonito.to_unix_path(editor.filename)
-    editor.editor.js_init_func[] = js"""((editor, monaco, editor_div)=> {
-        console.log("heloo")
-    })
+    relative = relpath(editor.filename, pwd())
+    filename = Bonito.to_unix_path(relative)
+    name = DOM.div(filename; class="file-editor-path")
+    toggle_js = js"""
+        const toggle_div = (show)=> {
+            const elem = $(name);
+              if (show) {
+                elem.classList.remove(`hide-horizontal`);
+                elem.classList.add(`show-horizontal`);
+            } else {
+                elem.classList.add(`hide-horizontal`);
+                elem.classList.remove(`show-horizontal`);
+            }
+        }
+        toggle_div($(editor.editor.show_editor[]));
+        $(editor.editor.show_editor).on(toggle_div);
     """
-    editor_div = DOM.div(editor.editor, class="file-editor-container")
+    editor_div = DOM.div(editor.editor.editor, class="file-editor-container")
+    ansi_css, meditor, logging_div, output_div = render_editor(editor.editor)
     return Bonito.jsrender(session, DOM.div(
-        filename,
+        name,
+        ansi_css,
         editor_div,
+        logging_div,
+        toggle_js
     ))
 end
