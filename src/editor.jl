@@ -2,7 +2,25 @@ import BonitoMLTools as BMLT
 import PromptingTools as PT
 
 const Monaco = ES6Module(joinpath(@__DIR__, "javascript", "Monaco.js"))
-const CodeIcon = Asset("https://cdn.jsdelivr.net/npm/@vscode/codicons@0.0.36/dist/codicon.min.css")
+const CodeIcon = Asset("https://cdn.jsdelivr.net/npm/@vscode/codicons@latest/dist/codicon.min.css")
+
+# TODO, this better not be a global, but rather part of `Book`
+# Cant be `Observable("default")`, since for a global compiled into the
+# Pkg image, it will always end up with ID 1, like any global observable from another Package -.-
+const MONACO_THEME = Observable{String}[]
+
+function get_monaco_theme()
+    if isempty(MONACO_THEME)
+        push!(MONACO_THEME, Observable("default"))
+    end
+    return MONACO_THEME[1]
+end
+
+function monaco_theme!(name::String)
+    obs = get_monaco_theme()
+    obs[] = name
+end
+
 
 struct MonacoEditor
     language::Observable{String}
@@ -35,18 +53,23 @@ function MonacoEditor(source; js_init_func=nothing, show_editor=true, editor_cla
 end
 
 function Bonito.jsrender(session::Session, editor::MonacoEditor)
-    eclasses = join(editor.editor_classes, " ")
+    classes = copy(editor.editor_classes)
+    push!(classes, "language-$(editor.language[])")
+    if editor.show_editor[]
+        push!(classes, "show-$(editor.hiding_direction)")
+    else
+        push!(classes, "hide-$(editor.hiding_direction)")
+    end
+    eclasses = join(classes, " ")
     editor_div = DOM.div(class="monaco-editor-div $(eclasses)")
-    # We somehow have to hide the container, since hiding the editor div destroys the editor
-    container = DOM.div(editor_div, class="monaco-editor-container $(eclasses)")
     # needs a return statement to actually return a function
     return Bonito.jsrender(session, DOM.div(
         CodeIcon,
-        container,
+        editor_div,
         js"""
         $(Monaco).then(mod => {
             const init_func = $(editor.js_init_func[]);
-            mod.setup_editor($(editor_div), $(container), $(editor.options),  $(editor.language), init_func, $(editor.show_editor), $(editor.hiding_direction));
+            mod.setup_editor($(editor_div), $(editor.options),  $(editor.language), init_func, $(editor.show_editor), $(editor.hiding_direction), $(copy(get_monaco_theme())));
         })
         """
     ))
@@ -78,6 +101,7 @@ function EvalEditor(source, runner=nothing;
         js_init_func=nothing,
         show_output=true,
         show_editor=true,
+        show_logging=true,
         editor_classes=String[],
         container_classes=String[],
         options...
@@ -112,10 +136,10 @@ function EvalEditor(source, runner=nothing;
         result,
         logging,
         logging_html,
-        Observable(true),
+        Observable(show_logging),
         show_output,
         show_editor,
-        loading
+        loading,
     )
     on(src) do src
         if !isempty(src)
@@ -125,105 +149,40 @@ function EvalEditor(source, runner=nothing;
     return editor
 end
 
-
 function render_editor(editor::EvalEditor)
-    output_div = DOM.div(editor.output, class="cell-output")
+    direction = editor.editor.hiding_direction
+    hiding = "hide-$direction"
+    showing = "show-$direction"
+    output_class = editor.show_output[] ? showing : hiding
+    logging_class = editor.show_logging[] ? showing : hiding
+    output_div = DOM.div(ANSI_CSS, editor.output, class="cell-output $(output_class)")
     logging_html = Observable(HTML(""))
     on(editor.logging_html) do str
         logging_html[] = HTML("<pre>" * str * "</pre>")
     end
-    logging_div = DOM.div(logging_html, class="logging-pre")
+    logging_div = DOM.div(logging_html, class="logging-pre $(logging_class)")
     # Set the init func, which we can only do here where we have all divs
     editor.editor.js_init_func[] = js"""((editor, monaco, editor_div) => {
         const output_div = $(output_div);
         const logging_div = $(logging_div);
-        $(Monaco).then(mod => {
+        return $(Monaco).then(mod => {
             mod.setup_cell_editor(
                 editor, monaco, editor_div, output_div, logging_div,
                 $(editor.source), $(editor.get_source), $(editor.set_source),
-                $(editor.show_output), $(editor.show_logging)
+                $(editor.show_output), $(editor.show_logging), $(direction),
             );
             const callback = ($(editor.js_init_func));
-            callback(editor, monaco, editor_div);
+            return callback(editor, monaco, editor_div);
         })
     })
     """
-    return (ANSI_CSS, editor.editor, logging_div, output_div)
+    return ( editor.editor, logging_div, output_div)
 end
 
 function Bonito.jsrender(session::Session, editor::EvalEditor)
     elems = render_editor(editor)
-    return Bonito.jsrender(session, DOM.div(elems...;))
+    return Bonito.jsrender(session, DOM.div(elems...))
 end
-
-struct MarkdownRunner
-end
-
-function parse_source(runner::Bonito.ModuleRunner, source)
-    try
-        expr = Bonito.parseall(source)
-        return Base.eval(runner, expr)
-    catch e
-        return Bonito.HTTPServer.err_to_html(e, Base.catch_backtrace())
-    end
-end
-
-
-function parse_source(::MarkdownRunner, source)
-    return try
-        return Markdown.parse(source)
-    catch e
-        return sprint(io -> Base.showerror(io, e))
-    end
-end
-
-function set_result!(editor, result::Observable, runner, source)
-    result[] = parse_source(runner, source)
-end
-
-using IOCapture, ANSIColoredPrinters
-
-const ANSI_CSS = Asset(joinpath(dirname(pathof(ANSIColoredPrinters)), "..", "docs", "src", "assets", "default.css"))
-
-function capture_all_as_html(f::Function, logging_obs::Observable{String})
-    callback_io = IOBuffer()
-    @async while isopen(callback_io)
-        buff = copy(take!(callback_io))
-        if !isempty(buff)
-            printer = HTMLPrinter(IOBuffer(buff); root_tag="span")
-            str = sprint(io -> show(io, MIME"text/html"(), printer))
-            logging_obs[] = str
-        end
-        yield()
-    end
-    IOCapture.capture(color=true, capture_buffer=callback_io) do
-        f()
-    end
-    close(callback_io)
-end
-
-
-function set_result!(editor, result::Observable, runner::Bonito.ModuleRunner, source)
-    editor.loading[] = true
-    editor.show_logging[] = true
-    result[] = nothing
-    editor.logging_html[] = ""
-    @async capture_all_as_html(editor.logging) do
-        try
-            expr = Bonito.parseall(source)
-            result[] = Base.eval(runner, expr)
-        catch e
-            result[] = Bonito.HTTPServer.err_to_html(e, Base.catch_backtrace())
-        finally
-            editor.loading[] = false
-            @async begin
-                sleep(2.5)
-                editor.show_logging[] = false
-            end
-        end
-    end
-end
-
 
 struct CellEditor
     language::String
@@ -232,214 +191,94 @@ struct CellEditor
     show_output::Observable{Bool}
     show_editor::Observable{Bool}
     show_ai::Observable{Bool}
-    show_controls::Observable{Bool}
-end
-
-function markdown_setup(editor, container)
-    js"""
-        const show_editor = $(editor.show_editor)
-        const show_output = $(editor.show_output)
-        const container = $(container)
-        container.addEventListener('focus', (e) => {
-            show_editor.notify(true);
-            show_output.notify(false);
-        });
-        // Blur event listener (focus lost)
-        function hasFocusWithin(element) {
-            return element === document.activeElement || element.contains(document.activeElement);
-        }
-        container.addEventListener('focusout', (e) => {
-            if (!container.contains(e.relatedTarget)) {
-                show_editor.notify(false);
-                show_output.notify(true);
-                $(editor.get_source).notify(true);
-            }
-        });
-    """
-end
-
-struct MLRunner
-    editor::BonitoBook.EvalEditor
-end
-
-const SYSTEM_PROMPT = read(joinpath(@__DIR__, "templates", "system-prompt.md"), String)
-
-function BonitoBook.set_result!(chat_editor, result::Observable, runner::MLRunner, source)
-    str = Observable{String}("")
-    chat_editor.loading[] = true
-    chat_editor.show_output[] = true
-    result[] = nothing
-    on(str) do s
-        try
-            result[] = Markdown.parse(s)
-        catch e
-            result[] = s
-        end
-    end
-    callback = Channel(1024) do c
-        for msg in c
-            yield() # Somehow needed?
-            str[] = str[] * msg
-        end
-    end
-    Base.errormonitor(Threads.@spawn begin
-        conversation = [
-            PT.SystemMessage(SYSTEM_PROMPT),
-            PT.UserMessage("""
-            Cell I currently work on:
-            $(runner.editor.source[])
-            Question being asked:
-            $(source)
-            """)
-        ]
-        msg = PT.aigenerate(conversation; streamcallback=callback)
-        jleditor = runner.editor
-        if isempty(strip(jleditor.source[])) && startswith(msg.content, "```julia") && endswith(msg.content, "```")
-            jleditor.show_editor[] = true
-            jleditor.show_output[] = true
-            jleditor.set_source[] = strip(msg.content[9:end-3])
-            result[] = nothing
-            chat_editor.show_output[] = false
-        else
-            chat_editor.show_output[] = true
-        end
-        chat_editor.loading[] = false
-    end)
+    uuid::String
+    delete_self::Observable{Bool}
 end
 
 
-function SmallButton(; class="", kw...)
-    value = Observable(false)
-    button_dom = DOM.button(
-        "";
-        onclick=js"event=> $(value).notify(true);",
-        class="small-button $(class)",
-        kw...,
-    )
-    return button_dom, value
-end
-
-function SmallToggle(active, args...; class="", kw...)
-    class = active[] ? class : "toggled $class"
-    value = Observable(false)
-    button_dom = DOM.button(args...; class="small-button $(class)", kw...)
-
-    toggle_script = js"""
-        const elem = $(button_dom);
-        $(active).on((x) => {
-            if (!x) {
-                elem.classList.add("toggled");
-            } else {
-                elem.classList.remove("toggled");
-            }
-        })
-        elem.addEventListener("click", event=> {
-            $(value).notify(true);
-        })
-    """
-    on(value) do click
-        active[] = !active[]
-    end
-    return DOM.span(button_dom, toggle_script)
-end
-
-
-function CellEditor(content, language, runner)
-    show_editor = language != "markdown"
-    show_controls = Observable(true)
+function CellEditor(content, language, runner; show_editor=true, show_logging=true, show_output=true, show_ai=false)
     runner = language == "markdown" ? MarkdownRunner() : runner
+    uuid = string(UUIDs.uuid4())
+    js_init_func = js"""
+        (editor, monaco, editor_div) => {
+            return $(Monaco).then(Monaco => {
+                Monaco.register_editor(editor, monaco, $(uuid))
+            })
+        }
+    """
     jleditor = EvalEditor(
-        content, runner;
-        show_editor=show_editor, language=language
+        content, runner; js_init_func=js_init_func,
+        show_editor=show_editor, show_logging=show_logging, language=language,
+        show_output=show_output,
+        tabCompletion = "on"
     )
+
     if language == "markdown"
         notify(jleditor.source)
     end
-    runner = MLRunner(jleditor)
-
-    show_chat = Observable(false)
+    airunner = MLRunner(jleditor)
+    show_chat = Observable(show_ai)
     chat = EvalEditor(
-        "", runner;
-        show_editor=false, show_output=false, language="markdown",
+        "", airunner;
+        show_editor=show_ai, show_output=show_ai, show_logging=show_ai, language="markdown",
         lineNumbers="off", editor_classes=["chat"]
     )
     on(show_chat) do show
         chat.show_editor[] = show
         chat.show_output[] = show
+        chat.show_logging[] = show
     end
-    return CellEditor(language, chat, jleditor, jleditor.show_output, jleditor.show_editor, show_chat, show_controls)
+    return CellEditor(
+        language, chat, jleditor, jleditor.show_output,
+        jleditor.show_editor, show_chat,
+        uuid, Observable(false)
+    )
 end
 
 function Bonito.jsrender(session::Session, editor::CellEditor)
     jleditor = editor.editor
     chat = editor.chat
-    show_chat = Observable(false)
-    on(show_chat) do show
-        chat.show_editor[] = show
-        chat.show_output[] = show
-    end
 
-    ai = SmallToggle(show_chat; class="codicon codicon-sparkle-filled")
+    ai = SmallToggle(editor.show_ai; class="codicon codicon-sparkle-filled")
     out = SmallToggle(jleditor.show_output; class="codicon codicon-graph")
     show_editor = SmallToggle(jleditor.show_editor; class="codicon codicon-code")
     show_logging = SmallToggle(jleditor.show_logging; class="codicon codicon-terminal")
-    hover_buttons = DOM.div(ai, show_editor, show_logging, out; class="hover-buttons")
-
+    delete_editor, click = SmallButton(class="codicon codicon-close", style="color: red;")
+    on(session, click) do x
+        editor.delete_self[] = true
+    end
+    hover_buttons = DOM.div(ai, show_editor, show_logging, out, delete_editor; class="hover-buttons")
+    any_visible = map(|, editor.show_ai, jleditor.show_editor, jleditor.show_logging)
+    jleditor_div, logging_div, output_div = render_editor(jleditor)
+    class = any_visible[] ? "show-vertical" : "hide-vertical"
     card_content = DOM.div(
-        chat, jleditor;
-        class="editor-content",
+        chat, jleditor_div, logging_div;
+        class="editor-content cell-editor $class",
     )
-
-    hover_container = DOM.div(
-        hover_buttons, card_content; class="hover-container", tabindex=0,
-    )
-    hover_js = js"""
-    (() => {
-        const container = $(hover_container);
-        const buttons = $(hover_buttons);
-        container.addEventListener("mouseover", () => {
-            buttons.style.opacity = 1.0;
-            buttons.style.pointerEvents = "auto";  // Allow interactions
-        });
-
-        container.addEventListener("mouseleave", () => {
-            buttons.style.opacity = 0.0;
-            buttons.style.pointerEvents = "none";  // Prevent flickering
-        });
-    })()
+    cell = DOM.div(hover_buttons, card_content, DOM.div(output_div, tabindex=0), style=Styles("position" => "relative"))
+    # Create a separate proximity area
+    proximity_area = DOM.div(class="cell-menu-proximit-area")
+    container = DOM.div(cell, proximity_area, style=Styles("position" => "relative"))
+    any_loading = map(|, chat.loading, jleditor.loading)
+    hide_on_focus_obs = Observable(editor.language == "markdown")
+    setup_cell_interactions = js"""
+    $(Monaco).then(mod => {
+        mod.setup_cell_interactions(
+            $hover_buttons, $container, $card_content, $any_loading, $any_visible,
+            $(hide_on_focus_obs), $(jleditor.show_editor),
+            $(jleditor.show_output), $(jleditor.get_source),
+        );
+    })
     """
-    markdown_js = editor.language == "markdown" ? markdown_setup(jleditor, hover_container) : nothing
-
-    body = DOM.div(
-        BonitoBook.CodeIcon,
-        hover_container,  # Wrap everything in one container
-        hover_js,
-        markdown_js,
-        tabindex=0,
-        class="editor-container"
-    )
-    onjs(
-        session,
-        map(|, chat.loading, jleditor.loading),
-        js"""
-            (x) => {
-                if (x) {
-                    $(body).classList.add("loading-cell");
-                } else {
-                    $(body).classList.remove("loading-cell");
-                }
-            }
-        """
-    )
-
-    return Bonito.jsrender(session, body)
+    cell_div = DOM.div(CodeIcon, container, setup_cell_interactions, class="cell-editor-container", id=editor.uuid)
+    return Bonito.jsrender(session, cell_div)
 end
 
 struct FileEditor
-    filename::String
+    files::Vector{String}
     editor::EvalEditor
-    function FileEditor(filepath, runner=nothing; language="julia", options...)
-        source = read(filepath, String)
+    function FileEditor(filepath::Vector{String}, runner=nothing; language="julia", options...)
+        source = read(filepath[1], String)
         opts = (
             minimap=Dict(:enabled => true, :autohide => true),
             scrollbar=Dict(),
@@ -448,7 +287,7 @@ struct FileEditor
             lineDecorationsWidth=10
         )
         js_init_func = js"""(editor, monaco, editor_div) => {
-            $(Monaco).then(Monaco => {
+            return $(Monaco).then(Monaco => {
                 Monaco.resize_to_lines(editor, monaco, editor_div)
             })
         }"""
@@ -457,12 +296,15 @@ struct FileEditor
     end
 end
 
-
-
 function Bonito.jsrender(session::Session, editor::FileEditor)
-    relative = relpath(editor.filename, pwd())
-    filename = Bonito.to_unix_path(relative)
-    name = DOM.div(filename; class="file-editor-path")
+    buttons = map(editor.files) do file
+        button = Button(basename(file))
+        on(session, button.value) do x
+            editor.editor.set_source[] = read(file, String)
+        end
+        return button
+    end
+    name = DOM.div(buttons...; class="hide-horizontal file-editor-path")
     toggle_js = js"""
         const toggle_div = (show)=> {
             const elem = $(name);
@@ -477,11 +319,10 @@ function Bonito.jsrender(session::Session, editor::FileEditor)
         toggle_div($(editor.editor.show_editor[]));
         $(editor.editor.show_editor).on(toggle_div);
     """
-    editor_div = DOM.div(editor.editor.editor, class="file-editor-container")
-    ansi_css, meditor, logging_div, output_div = render_editor(editor.editor)
+    editor_div = DOM.div(editor.editor.editor, class="file-cell-editor")
+    meditor, logging_div, output_div = render_editor(editor.editor)
     return Bonito.jsrender(session, DOM.div(
         name,
-        ansi_css,
         editor_div,
         logging_div,
         toggle_js

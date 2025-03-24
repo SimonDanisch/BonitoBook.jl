@@ -1,12 +1,8 @@
-Makie.set_theme!(size=(650, 450))
-BonitoBook.monaco_theme!("default")
-editor_width = "90ch"
+Makie.set_theme!(Makie.theme_dark())
+BonitoBook.monaco_theme!("vs-dark")
 Styles(
-    # Fix for Markdown list
     CSS("li p", "display" => "inline"),
-    CSS("mjx-container[jax='CHTML'][display='true']",
-        "display" => "inline"
-    ),
+    CSS("body", "background-color" => "black"),
     CSS(
         "@media print",
         CSS(
@@ -17,7 +13,6 @@ Styles(
             "filter" => "none !important"
         )
     ),
-    # Monaco Widgets (find/command palette)
     CSS(
         ".quick-input-widget",
         "position" => "fixed !important",
@@ -30,34 +25,20 @@ Styles(
     ),
     CSS(
         ".monaco-list",
-        # Prevents list from being cut off
         "max-height" => "60vh !important",
-        # Enables scrolling for long lists
         "overflow-y" => "auto !important"
-    ),
-    # The editor div
-    CSS(".cell-editor-container",
-        "width" => editor_width,
-        "position" => "relative"
-    ),
-    CSS(".cell-menu-proximit-area",
-        "position" => "absolute",
-        "top" => "-20px", # span an area of 20px above the cell
-        "left" => "0px",
-        "height" => "20px",
-        "width" => "100%",
-        "background-color" => "transparent",  # Invisible
-        "pointer-events" => "auto",  # Ensure it can detect mouse events
-        "z-index" => "-1" # don't cover e.g. editor
     ),
     CSS(
         ".cell-editor",
-        "width" => editor_width,
+        "width" => "80ch",
         "position" => "relative",
         "display" => "inline-block",
-        "padding" => "5px 5px 10px 10px",
+        "padding" => "10px",
+        "margin" => "10px",
         "border-radius" => "10px",
-        "box-shadow" => "0 4px 8px rgba(0.0, 0.0, 51.0, 0.2)",
+        "box-shadow" => "0 4px 8px rgba(0.0, 0.0, 0.0, 0.2)",
+        "background-color" => "#1e1e1e",
+        "color" => "#d4d4d4"
     ),
     CSS(
         ".monaco-editor-div",
@@ -65,140 +46,147 @@ Styles(
         "padding" => "0px",
         "margin" => "0px",
     ),
-    # AI
     CSS(".chat.monaco-editor-div",
-        "border-radius" => "3px",
-        "border" => "1px solid #ccc",
-        "padding" => "5px",
-        "margin" => "5px",
-        "overflow" => "hidden",
+        "border-radius" => "1px",
+        "border" => "1px solid #444",
+        "padding" => "2px",
     ),
-    # The logging output (io/stdout/etc)
     CSS(
         ".logging-pre",
-        "max-height" => "500px",
-        "max-width" => editor_width,
-        "overflow-y" => "auto",
+        "opacity" => "0",
+        "max-height" => "0",
+        "overflow" => "hidden",
         "margin" => "0",
         "padding" => "0",
+        "line-height" => "0",
+        "transition" => "opacity 2s ease, max-height 2s ease",
+        "display" => "none"
     ),
-
+    CSS(
+        ".logging-pre.show",
+        "opacity" => "1",
+        "max-height" => "500px",
+        "line-height" => "inherit",
+        "display" => "block"
+    ),
     CSS(".hover-buttons",
         "position" => "absolute",
-        "right" => "-10px",
-        "top" => "-23px",
+        "right" => "10px",
+        "top" => "0px",
         "z-index" => 1000,
         "opacity" => 0.0,
-        # Prevent flickering when hovering over buttons
-        "pointer-events" => "auto",
+        "pointer-events" => "none",
     ),
-
+    CSS(".cell-output",
+        "padding" => "10px 0px 0px 10px",
+    ),
     CSS(".cell-output",
         "width" => "100%",
-        "margin" => "5px",
-        "max-height" => "700px",
-        "overflow-y" => "auto"
     ),
-
+    CSS(".small-menu-bar",
+        "border" => "1px solid rgba(255, 255, 255, 0.1)",
+        "border-radius" => "8px",
+        "box-shadow" => "0px 4px 10px rgba(255, 255, 255, 0.15)",
+        "padding" => "5px",
+        "background" => "#333"
+    ),
     CSS(".hide-vertical",
-        "display" => "none",
+        "opacity" => "0",
+        "padding" => "0px",
+        "margin" => "0px",
+        "height" => "0px",
+        "max-height" => "0",
+        "overflow" => "hidden",
+        "transition" => "max-height 0.1s ease-out"
     ),
     CSS(".show-vertical",
-        "display" => "block",
+        "max-height" => "1000px",
+        "transition" => "max-height 0.1s ease-in"
     ),
     CSS(".hide-horizontal",
         "opacity" => "0",
-        "padding" => "0px !important",
-        "margin" => "0px !important",
-        "width" => "0px !important",  # Start collapsed horizontally
-        "max-width" => "0px",  # Start collapsed horizontally
-        "overflow" => "hidden",  # Hide overflow content
-        "transition" => "max-width 0.1s ease-out",  # Transition for max-width
+        "padding" => "0px",
+        "margin" => "0px",
+        "width" => "0px",
+        "max-width" => "0px",
+        "overflow" => "hidden",
+        "transition" => "max-width 0.1s ease-out",
         "border-radius" => "0px",
     ),
     CSS(".show-horizontal",
-        "max-width" => "1000px",  # Or any large value larger than the element's width
-        "transition" => "max-width 0.1s ease-in"  # Transition for max-width
+        "max-width" => "1000px",
+        "transition" => "max-width 0.1s ease-in"
     ),
     CSS(
         ".loading-cell",
-        "background" => "rgba(255, 255, 255, 1)",
-        "box-shadow" => "0 0 5px rgba(0, 0, 0, 0.1)",
+        "background" => "rgba(30, 30, 30, 1)",
+        "box-shadow" => "0 0 5px rgba(255, 255, 255, 0.1)",
         "animation" => "background-fade 1.5s ease-in-out infinite, shadow-pulse 1.5s ease-in-out infinite",
     ),
     CSS(
         "@keyframes background-fade",
-        CSS("0%", "background" => "rgba(255, 255, 255, 1)"),
-        CSS("100%", "background" => "rgba(250, 250, 250, 1)"),
+        CSS("0%", "background" => "rgba(30, 30, 30, 1)"),
+        CSS("100%", "background" => "rgba(25, 25, 25, 1)"),
     ),
     CSS(
         "@keyframes shadow-pulse",
-        CSS("0%", "box-shadow" => "0 0 5px rgba(0, 0, 0, 0.1)"),
-        CSS("50%", "box-shadow" => "0 0 15px rgba(0, 0, 0, 0.3)"),
-        CSS("100%", "box-shadow" => "0 0 5px rgba(0, 0, 0, 0.1)"),
+        CSS("0%", "box-shadow" => "0 0 5px rgba(255, 255, 255, 0.1)"),
+        CSS("50%", "box-shadow" => "0 0 15px rgba(255, 255, 255, 0.3)"),
+        CSS("100%", "box-shadow" => "0 0 5px rgba(255, 255, 255, 0.1)"),
     ),
     CSS(".julia-dots",
         "background-image" => BonitoBook.assets("julia-dots.svg"),
         "background-size" => "60% auto",
         "background-repeat" => "no-repeat",
         "background-position" => "center",
+        "padding-top" => "0.1rem",
+        "padding-bottom" => "0.1rem",
         "width" => "1.2rem",
         "height" => "1.2rem",
-    ),
-    CSS(".python-logo",
-        "background-image" => BonitoBook.assets("python.svg"),
-        "background-size" => "60% auto",
-        "background-repeat" => "no-repeat",
-        "background-position" => "center",
-        "width" => "1.2rem",
-        "height" => "1.2rem",
-    ),
-    # Menu and Buttons
-
-    CSS(".small-menu-bar",
-        "z-index" => "1001",
-        "background-color" => "white",
-        "border" => "1px solid rgba(0, 0, 0, 0.1)",  # Soft outline
-        "border-radius" => "8px",  # Rounded corners for a smoother look
-        "box-shadow" => "0px 4px 10px rgba(0, 0, 0, 0.15)",  # Soft shadow
-        "padding" => "4px",  # Adds spacing inside
-    ),
-    CSS(".small-button.toggled",
-        "color" => "#000",
-        "border" => "none",
-        "filter" => "grayscale(100%)",
-        "opacity" => "0.5",
-        "box-shadow" => "inset 2px 2px 5px rgba(0, 0, 0, 0.5)",
     ),
     CSS(".small-button",
+        "font-weight" => 600,
         "background-color" => "transparent",
+        "font-size" => "1rem",
+        "min-width" => "1.5rem",
+        "padding-left" => "0.3rem",
+        "padding-right" => "0.3rem",
+        "padding-top" => "0.1rem",
+        "padding-bottom" => "0.1rem",
         "border" => "none",
         "border-radius" => "100px",
-        "color" => "#555",
+        "color" => "#bbb",
         "cursor" => "pointer",
-        "box-shadow" => "0 2px 4px rgba(0, 0, 0, 0.2)",
+        "margin" => "0.25rem",
+        "box-shadow" => "0 2px 4px rgba(255, 255, 255, 0.2)",
         "transition" => "background-color 0.2s",
     ),
     CSS(
         ".small-button:hover",
-        "background-color" => "#ddd",
+        "background-color" => "#555",
     ),
-
+    CSS(".toggled",
+        "color" => "#fff",
+        "border" => "none",
+        "filter" => "grayscale(100%)",
+        "opacity" => "0.5",
+        "box-shadow" => "inset 2px 2px 5px rgba(255, 255, 255, 0.5)",
+    ),
     CSS(".file-editor-path",
-        "font-family" => "'Inter', 'Roboto', 'Arial', sans-serif",  # Clean, modern font
-        "font-size" => "14px",  # Slightly smaller for paths
-        "font-weight" => "500",  # Medium weight
-        "color" => "#555",  # Softer than blackmonaco-editor-div
-        "letter-spacing" => "0.3px",  # Subtle spacing
-        "padding" => "5px 10px",  # Adds space around text
+        "font-family" => "'Inter', 'Roboto', 'Arial', sans-serif",
+        "font-size" => "14px",
+        "font-weight" => "500",
+        "color" => "#aaa",
+        "letter-spacing" => "0.3px",
+        "padding" => "5px 10px",
         "margin" => "1px",
         "width" => "fit-content",
-        "border-radius" => "6px",  # Soft rounded corners
-        "border" => "1px solid rgba(0, 0, 0, 0.1)",  # Light border
-        "box-shadow" => "0px 2px 5px rgba(0, 0, 0, 0.1)",  # Soft shadow
-        "white-space" => "nowrap",  # Prevents wrapping
-        "overflow" => "hidden",  # Hides overflow
-        "text-overflow" => "ellipsis",  # Adds "..." if the path is too long
+        "border-radius" => "6px",
+        "border" => "1px solid rgba(255, 255, 255, 0.1)",
+        "box-shadow" => "0px 2px 5px rgba(255, 255, 255, 0.1)",
+        "white-space" => "nowrap",
+        "overflow" => "hidden",
+        "text-overflow" => "ellipsis",
     ),
     CSS(".file-editor",
         "padding" => "0px",
@@ -206,7 +194,6 @@ Styles(
         "width" => "90ch",
         "max-height" => "80vh",
     ),
-    # Utility
     CSS(".flex-row",
         "display" => "flex",
         "flex-direction" => "row"
@@ -234,11 +221,10 @@ Styles(
     CSS(".full-width",
         "width" => "100%"
     ),
-    # Markdown
-     CSS(".markdown-body",
+    CSS(".markdown-body",
         "-ms-text-size-adjust" => "100%",
         "-webkit-text-size-adjust" => "100%",
-        "color" => "#24292e",
+        "color" => "#d4d4d4",
         "line-height" => "1.5",
         "font-family" => "-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif,Apple Color Emoji,Segoe UI Emoji,Segoe UI Symbol",
         "font-size" => "16px",
@@ -264,13 +250,13 @@ Styles(
     CSS(".markdown-body h4", "font-size" => "16px", "font-weight" => "600"),
     CSS(".markdown-body h5", "font-size" => "14px", "font-weight" => "600"),
     CSS(".markdown-body h6", "font-size" => "12px", "font-weight" => "600"),
-    CSS(".markdown-body a", "color" => "#0366d6", "text-decoration" => "none"),
+    CSS(".markdown-body a", "color" => "#4f8cd1", "text-decoration" => "none"),
     CSS(".markdown-body a:hover", "text-decoration" => "underline"),
     CSS(".markdown-body strong", "font-weight" => "600"),
     CSS(".markdown-body hr",
         "background" => "transparent",
         "border" => "0",
-        "border-bottom" => "1px solid #dfe2e5",
+        "border-bottom" => "1px solid #444",
         "height" => "0",
         "margin" => "15px 0",
         "overflow" => "hidden"
@@ -281,8 +267,8 @@ Styles(
     ),
     CSS(".markdown-body td, .markdown-body th", "padding" => "0"),
     CSS(".markdown-body blockquote",
-        "border-left" => ".25em solid #dfe2e5",
-        "color" => "#6a737d",
+        "border-left" => ".25em solid #444",
+        "color" => "#9a9a9a",
         "padding" => "0 1em"
     ),
     CSS(".markdown-body code, .markdown-body pre",
@@ -292,26 +278,5 @@ Styles(
     CSS(".markdown-body pre", "margin-bottom" => "0", "margin-top" => "0"),
     CSS(".markdown-body img", "border-style" => "none"),
     CSS(".markdown-body input", "font" => "inherit", "overflow" => "visible"),
-    CSS(".markdown-body *", "box-sizing" => "border-box"),
-    # New Cell Menu
-    CSS(".new-cell-menu",
-        "width" => "100%",
-        "overflow" => "hidden",
-        "height" => "1.3rem",
-        "background-color" => "transparent",  # Initial background color
-        "transition" => "height 0.2s",
-    ),
-    CSS(".new-cell-menu:hover",
-        "height" => "2.5rem",  # Expand to fit buttons
-        "transition-delay" => "0.5s",
-        "background-color" => "#f0f0f0",  # Or any color you want
-    ),
-    CSS(".new-cell-menu > *",  # Target direct children
-        "opacity" => "0",
-        "transition" => "opacity 0.2s",
-    ),
-    CSS(".new-cell-menu:hover > *",  # Target direct children on hover
-        "opacity" => "1",
-        "transition-delay" => "0.5s",
-    )
+    CSS(".markdown-body *", "box-sizing" => "border-box")
 )

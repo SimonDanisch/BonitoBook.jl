@@ -17,7 +17,38 @@ function export_svg(element)
     """
 end
 
-
 function export_html(filename, book)
     Bonito.export_static(filename, App(book))
+end
+
+function export_jl(file, book, current_style)
+    app = App() do s
+        body = Centered(DOM.div(book...))
+        document = DOM.div(DOM.div(body; style=Styles("width" => "100%")))
+        return DOM.div(current_style, document)
+    end
+    Bonito.export_static(file, app)
+    return file
+end
+
+function export_md(file, book)
+    open(file, "w") do io
+        for cell_editor in book
+            language = cell_editor.language
+            editor = cell_editor.editor
+            content = editor.source[]
+            show_editor = editor.show_editor[]
+            show_logging = editor.show_logging[]
+            show_output = editor.show_output[]
+            show_chat = cell_editor.show_ai[]
+            if language == "markdown"
+                println(io, content)
+            else
+                println(io, "```$language $(show_editor) $(show_logging) $(show_output) $(show_chat)")
+                println(io, content)
+                println(io, "```")
+            end
+        end
+    end
+    return file
 end

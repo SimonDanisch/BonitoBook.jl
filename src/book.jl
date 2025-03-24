@@ -1,159 +1,232 @@
-struct Cell
-    language::Symbol
-    source::Observable{String}
-    parsed::Any
-    output::Any
+struct BookState
+    folder::String
+    cells::Vector{CellEditor}
+    commands::Observable{Dict{String,String}}
+    runners::Dict{String,Any}
 end
 
-Cell(language, source, parsed) = Cell(Symbol(language), source, parsed, nothing)
+struct Cell
+    language::String
+    source::String
+    output::Any
+
+    show_editor::Bool
+    show_logging::Bool
+    show_output::Bool
+    show_chat::Bool
+end
+
+Cell(language, source) = Cell(language, source, nothing, false, false, true, false)
 
 struct Book
     cells::Vector{Cell}
 end
 
-function markdown2book(md)
-    cells = Cell[]
-    last_md = nothing
-    for content in md.content
-        if content isa Markdown.Code
-            if !isnothing(last_md)
-                parsed = Markdown.MD(last_md, md.meta)
-                push!(cells, Cell("markdown", string(parsed), parsed))
-                last_md = nothing
-            end
-            push!(cells, Cell(content.language, content.code, nothing))
-        else
-            isnothing(last_md) && (last_md = [])
-            push!(last_md, content)
-        end
-    end
-    return cells
+function trigger_js_download(session, file)
+    evaljs(session, js"""
+        const a = document.createElement('a');
+        a.href = $(Bonito.url(session, Asset(file)));
+        a.download = $(basename(file));
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    """)
 end
 
-function export_jl(file, cells)
-    app = App() do s
-        body = Centered(DOM.div(cells))
-        document = DOM.div(DOM.div(body; style=Styles("width" => "210mm")))
-        return DOM.div(Bonito.MarkdownCSS, BOOK_STYLE, document)
-    end
-    Bonito.export_static(file, app)
-    return file
-end
-
-struct BookState
-    folder::String
-    history::Vector{Vector{Cell}}
-    cells::Vector{Cell}
-    commands::Observable{Dict{String, String}}
-    runners::Dict{String, Any}
-end
-
-include("templates/style.jl")
-
-
-function small_menu(elems...)
-
-
-end
-
-function saving_menu(session, cell_obs)
+function saving_menu(session, all_cells, current_style)
     save_jl, click_jl = SmallButton(; class="julia-dots")
     on(click_jl) do click
         Base.errormonitor(Threads.@async begin
-            file = export_jl("book.html", cell_obs)
-            evaljs(
-                session,
-                js"""
-                    const a = document.createElement('a');
-                    a.href = $(Bonito.url(session, Asset("book.html")));
-                    a.download = 'book.html';
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                """
-            )
+            file = export_jl("book.html", all_cells, current_style)
+            trigger_js_download(session, file)
         end)
     end
     save_md, click_md = SmallButton(; class="codicon codicon-markdown")
+    on(click_md) do click
+        Base.errormonitor(Threads.@async begin
+            file = export_md("book.md", all_cells)
+            trigger_js_download(session, file)
+        end)
+    end
     save_pdf, click_pdf = SmallButton(; class="codicon codicon-file-pdf")
-    return DOM.div(DOM.div(class="codicon codicon-save", save_jl, save_md, save_pdf);
+    return DOM.div(DOM.div(class="button-pad codicon codicon-save", save_jl, save_md, save_pdf);
         class="saving small-menu-bar"
     )
 end
 
+function play_menu(cells, runner)
+    run_all_div, run_all_click = SmallButton(; class="codicon codicon-play")
+    stop_all_div, stop_all_click = SmallButton(; class="codicon codicon-debug-stop")
+    on(stop_all_click) do click
+        println("Stopping all cells")
+        # Base.errormonitor(interrupt!(runner))
+    end
+    on(run_all_click) do click
+        for cell in cells
+            notify(cell.editor.get_source)
+        end
+    end
+    return DOM.div(DOM.div(run_all_div, stop_all_div);
+        class="saving small-menu-bar"
+    )
+end
+
+function new_cell_menu(session, book, editor_above_uuid, runner)
+    new_jl, click_jl = SmallButton(; class="julia-dots")
+    new_md, click_md = SmallButton(; class="codicon codicon-markdown")
+    new_py, click_py = SmallButton(; class="python-logo")
+    new_ai, click_ai = SmallButton(; class="codicon codicon-sparkle-filled")
+
+    function insert_editor(editor)
+        idx = findfirst(x-> x.uuid == editor_above_uuid, book)
+        insert!(book, idx + 1, editor)
+        add_cell_div = new_cell_menu(session, book, editor.uuid, runner)
+        elem = DOM.div(editor, add_cell_div)
+        Bonito.dom_in_js(session, elem, js"""(elem) => {
+            $(Monaco).then(Monaco => {
+                Monaco.add_editor_below($editor_above_uuid, elem, $(editor.uuid));
+            })
+        }""")
+    end
+
+    on(click_jl) do click
+        new_cell = CellEditor("", "julia", runner)
+        insert_editor(new_cell)
+    end
+    on(click_md) do click
+        new_cell = CellEditor("", "markdown", runner)
+        new_cell.show_editor[] = true
+        new_cell.show_output[] = false
+        insert_editor(new_cell)
+    end
+    on(click_ai) do click
+        new_cell = CellEditor("", "chatgpt", runner)
+        new_cell.show_ai[] = true
+        new_cell.show_editor[] = false
+        new_cell.show_output[] = false
+        insert_editor(new_cell)
+    end
+    plus = DOM.div(class="codicon codicon-plus")
+    menu_div = DOM.div(
+        plus, new_jl, new_md, new_py, new_ai;
+        class="saving small-menu-bar",
+    )
+    return DOM.div(Centered(menu_div); class="new-cell-menu")
+end
 
 function setup_menu(runner)
+    buttons_enabled = Observable(true)
+    keep = Button("keep"; enabled=buttons_enabled)
+    reset = Button("reset"; enabled=buttons_enabled)
+    styling_popup_text = Observable(DOM.h3("Do you want to keep the styling changes?"))
+    popup_content = DOM.div(
+        styling_popup_text,
+        DOM.div(keep, reset; class="flex-row gap-10"),
+    )
+    popup = PopUp(popup_content; show=false)
+
     style_path = joinpath(@__DIR__, "templates/style.jl")
-    style_fe = FileEditor(style_path, runner; editor_classes=["styling file-editor"], show_editor=false)
+    style_dark_path = joinpath(@__DIR__, "templates/style-dark.jl")
+    style_fe = FileEditor([style_path, style_dark_path], runner; editor_classes=["styling file-editor"], show_editor=false)
     notify(style_fe.editor.source)
     Bonito.wait_for(()-> !isnothing(style_fe.editor.output[]))
     style_fe_toggle = SmallToggle(style_fe.editor.show_editor; class="codicon codicon-paintcan")
     menu = DOM.div(DOM.div(class="codicon codicon-settings", style_fe_toggle);
         class="settings small-menu-bar"
     )
-    return menu, style_fe
+    last_style = Ref{Styles}(style_fe.editor.output[])
+    last_source = Ref{String}(style_fe.editor.source[])
+    output = Observable{Any}(last_style[])
+    should_popup = Ref(false)
+    on(style_fe.editor.output; update=true) do out
+        if should_popup[]
+            popup.show[] = true
+        end
+        if (out isa Styles)
+            if should_popup[]
+                buttons_enabled[] = true
+                styling_popup_text[] = DOM.div(
+                    DOM.h3("Want to keep changes?"),
+                )
+            end
+            output[] = out
+        else
+            buttons_enabled[] = false
+            styling_popup_text[] = DOM.div(
+                DOM.h3("Error in styling document!"),
+                out
+            )
+        end
+        if !should_popup[]
+            should_popup[] = true
+        end
+        return
+    end
+    on(keep.value) do click
+        popup.show[] = false
+        if buttons_enabled[]
+            last_style[] = output[]
+            last_source[] = style_fe.editor.source[]
+        end
+    end
+    on(reset.value) do click
+        popup.show[] = false
+        should_popup[] = false
+        style_fe.editor.set_source[] = last_source[]
+    end
+    return menu, style_fe, DOM.span(popup, output)
+end
+
+function setup_completions(session, cell_module)
+    inbox = Observable{Any}(Dict{String,Any}())
+    outbox = Observable{Any}(Dict{String,Any}())
+    on(session, outbox) do (id, data)
+        completions = get_completions(data["text"], Int(data["column"]) - 1, cell_module)
+        inbox[] = [id, completions]
+        return
+    end
+    return js"""
+        $(Monaco).then(Monaco => {
+            Monaco.register_completions($inbox, $outbox);
+        })
+    """
 end
 
 function book(session::Session, file)
-    md = Markdown.parse_file(file)
-    cells = markdown2book(md)
-    runner = Bonito.ModuleRunner(Module())
+    cells = load_book(file)
+    cell_module = Module()
+    runner = ThreadRunner(cell_module)
     runner.mod.eval(runner.mod, :(using Bonito, Markdown, BonitoBook, WGLMakie))
-    editors = map(cells) do cell
-        editor = CellEditor(cell.source[], string(cell.language), runner)
-        return editor
+    book = cells2editors(cells, runner)
+    editors = map(book) do editor
+        add_cell_div = new_cell_menu(session, book, editor.uuid, runner)
+        return DOM.div(editor, add_cell_div)
     end
-
-    cell_obs = DOM.div(editors...; style=Styles("width" => "fit-content"))
-    button_jl, add_jl = SmallButton(; class="julia-dots")
-    button_md, add_md = SmallButton(; class="codicon codicon-markdown")
-    button_chat, add_chat = SmallButton(; class="codicon codicon-sparkle-filled")
-
-    on(add_jl) do click
-        new_cell = CellEditor("", "julia", runner)
-        Bonito.append_child(session, cell_obs, new_cell)
+    register_book = js"""
+        $(Monaco).then(Monaco => {
+            Monaco.BOOK.update_order($(map(c-> c.uuid, book)));
+        })
+    """
+    for editor in book
+        on(session, editor.delete_self) do delete
+            if delete
+                filter!(x-> x.uuid != editor.uuid, book)
+                evaljs(session, js"""
+                    $(Monaco).then(Monaco => {
+                        Monaco.BOOK.remove_editor($(editor.uuid));
+                    })
+                """)
+            end
+        end
     end
-    on(add_md) do click
-        new_cell = CellEditor("", "markdown", runner)
-        Bonito.append_child(session, cell_obs, new_cell)
-    end
-    on(add_chat) do click
-        new_cell = CellEditor("", "chatgpt", runner)
-        new_cell.show_ai[] = true
-        new_cell.show_editor[] = false
-        new_cell.show_output[] = false
-        Bonito.append_child(session, cell_obs, new_cell)
-    end
-    add_div = DOM.div(DOM.div(class="codicon codicon-add"), button_jl, button_md, button_chat)
-
-    save = saving_menu(session, cell_obs)
-    _setup_menu, style_editor = setup_menu(runner)
-
-    cell_obs = DOM.div(editors...; style=Styles("width" => "fit-content", "display" => "inline-block", "max-width" => "90ch"))
-    content = DOM.div(cell_obs, style_editor;
-        style=Styles(
-            "display" => "flex",
-            "width" => "fit-content",
-            "flex-direction" => "row",  # Ensures elements are placed in a row
-            "gap" => "10px"  # Adjust spacing between elements
-        )
-    )
-    menu = DOM.div(save, _setup_menu; style=Styles(
-        "display" => "flex",
-        "width" => "fit-content",
-        "flex-direction" => "row",  # Ensures elements are placed in a row
-        "gap" => "10px"  # Adjust spacing between elements
-    ))
-    document = DOM.div(menu, content, add_div;
-        style=Styles(
-            "width" => "100%",
-            "display" => "flex",
-            "flex-direction" => "column",
-            "justify-content" => "center",
-            "align-items" => "center",  # If you also want vertical centering
-            "gap" => "10px"  # Optional: spacing between elements
-        )
-    )
-
-    return DOM.div(style_editor.editor.output, Bonito.MarkdownCSS, document)
+    cell_obs = DOM.div(editors...)
+    _setup_menu, style_editor, style_output = setup_menu(runner)
+    save = saving_menu(session, book, style_output)
+    player = play_menu(book, runner)
+    cell_obs = DOM.div(editors...; class="inline-block fit-content")
+    content = DOM.div(cell_obs, style_editor; class="flex-row gap-10 fit-content")
+    menu = DOM.div(save, player, _setup_menu; class="flex-row gap-10 fit-content")
+    document = DOM.div(menu, content; class="flex-column center-content gap-10 full-width")
+    completions = setup_completions(session, cell_module)
+    return DOM.div(style_output, completions, register_book, document)
 end
