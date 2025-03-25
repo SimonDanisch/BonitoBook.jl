@@ -3,21 +3,21 @@ using BonitoBook, Bonito
 
 
 app = App(title="BonitoBook") do s
-    return BonitoBook.book(s, joinpath(@__DIR__, "Sunny/01_LSWT_CoRh2O4.ipynb"))
+    return Book(joinpath(@__DIR__, "Sunny/01_LSWT_CoRh2O4.ipynb"));
 end
 
 app = App(title="BonitoBook") do s
-    return BonitoBook.book(s, joinpath(pwd(), "book.md"))
+    return Book(joinpath(@__DIR__, "test.md"))
 end
 # TODO
 #=
 - [x] cleanup hover menu + delete
-* global IO redirect
-* AoG demo
 * saving + versioning
-* folder
-* export
+* global IO redirect
 * display + plugins
+* export
+* AoG demo
+* folder
 =#
 
 

@@ -1,8 +1,31 @@
-Makie.set_theme!(Makie.theme_dark())
+# Define reusable variables
+editor_width = "90ch"
+max_height_large = "80vh"
+max_height_medium = "60vh"
+border_radius_small = "3px"
+border_radius_large = "10px"
+box_shadow_light = "0 4px 8px rgba(255, 255, 255, 0.2)"  # Light shadow for dark theme
+transition_fast = "0.1s ease-out"
+transition_slow = "0.2s ease-in"
+font_family_clean = "'Inter', 'Roboto', 'Arial', sans-serif"
+background_color_dark = "#1e1e1e"  # Dark background for the whole document
+text_color_light = "rgb(212, 212, 212)"  # Light text color
+border_color_dark = "rgba(255, 255, 255, 0.1)"  # Subtle border for dark theme
+
+Makie.set_theme!(size=(650, 450))
 BonitoBook.monaco_theme!("vs-dark")
+editor_width = "90ch"
 Styles(
+    # Set the background color for the whole document
+    CSS("body",
+        "background-color" => background_color_dark,
+        "color" => text_color_light
+    ),
+    # Fix for Markdown list
     CSS("li p", "display" => "inline"),
-    CSS("body", "background-color" => "black"),
+    CSS("mjx-container[jax='CHTML'][display='true']",
+        "display" => "inline"
+    ),
     CSS(
         "@media print",
         CSS(
@@ -13,187 +36,215 @@ Styles(
             "filter" => "none !important"
         )
     ),
+    # Monaco Widgets (find/command palette)
     CSS(
         ".quick-input-widget",
         "position" => "fixed !important",
         "top" => "10px !important",
+        "background-color" => background_color_dark,
+        "color" => text_color_light
     ),
     CSS(
         ".find-widget",
         "position" => "fixed !important",
         "top" => "10px !important",
+        "background-color" => background_color_dark,
+        "color" => text_color_light
     ),
     CSS(
         ".monaco-list",
-        "max-height" => "60vh !important",
-        "overflow-y" => "auto !important"
+        # Prevents list from being cut off
+        "max-height" => max_height_medium,
+        # Enables scrolling for long lists
+        "overflow-y" => "auto !important",
+        "background-color" => background_color_dark,
+        "color" => text_color_light
+    ),
+    # The editor div
+    CSS(".cell-editor-container",
+        "width" => editor_width,
+        "position" => "relative",
+        "background-color" => background_color_dark,
+        "color" => text_color_light
+    ),
+    CSS(".cell-menu-proximity-area",
+        "position" => "absolute",
+        "top" => "-20px", # span an area of 20px above the cell
+        "left" => "0px",
+        "height" => "20px",
+        "width" => "100%",
+        "background-color" => "transparent",  # Invisible
+        "pointer-events" => "auto",  # Ensure it can detect mouse events
+        "z-index" => "-1" # don't cover e.g. editor
     ),
     CSS(
         ".cell-editor",
-        "width" => "80ch",
+        "width" => editor_width,
         "position" => "relative",
         "display" => "inline-block",
-        "padding" => "10px",
-        "margin" => "10px",
-        "border-radius" => "10px",
-        "box-shadow" => "0 4px 8px rgba(0.0, 0.0, 0.0, 0.2)",
-        "background-color" => "#1e1e1e",
-        "color" => "#d4d4d4"
+        "padding" => "5px 5px 10px 10px",
+        "border-radius" => border_radius_large,
+        "box-shadow" => box_shadow_light,
+        "background-color" => background_color_dark,
+        "color" => text_color_light
     ),
     CSS(
         ".monaco-editor-div",
-        "background-color" => "transparent",
+        "background-color" => background_color_dark,
         "padding" => "0px",
         "margin" => "0px",
+        "color" => text_color_light
     ),
+    # AI
     CSS(".chat.monaco-editor-div",
-        "border-radius" => "1px",
-        "border" => "1px solid #444",
-        "padding" => "2px",
+        "border-radius" => border_radius_small,
+        "border" => "1px solid " * border_color_dark,
+        "padding" => "5px",
+        "margin" => "5px",
+        "overflow" => "hidden",
+        "background-color" => background_color_dark,
+        "color" => text_color_light
     ),
+    # The logging output (io/stdout/etc)
     CSS(
         ".logging-pre",
-        "opacity" => "0",
-        "max-height" => "0",
-        "overflow" => "hidden",
+        "max-height" => "500px",
+        "max-width" => editor_width,
+        "overflow-y" => "auto",
         "margin" => "0",
         "padding" => "0",
-        "line-height" => "0",
-        "transition" => "opacity 2s ease, max-height 2s ease",
-        "display" => "none"
+        "background-color" => background_color_dark,
+        "color" => text_color_light
     ),
-    CSS(
-        ".logging-pre.show",
-        "opacity" => "1",
-        "max-height" => "500px",
-        "line-height" => "inherit",
-        "display" => "block"
-    ),
+
     CSS(".hover-buttons",
         "position" => "absolute",
-        "right" => "10px",
-        "top" => "0px",
+        "right" => "-10px",
+        "top" => "-23px",
         "z-index" => 1000,
         "opacity" => 0.0,
-        "pointer-events" => "none",
+        # Prevent flickering when hovering over buttons
+        "pointer-events" => "auto",
     ),
-    CSS(".cell-output",
-        "padding" => "10px 0px 0px 10px",
-    ),
+
     CSS(".cell-output",
         "width" => "100%",
+        "margin" => "5px",
+        "max-height" => "700px",
+        "overflow-y" => "auto",
+        "background-color" => background_color_dark,
+        "color" => text_color_light
     ),
-    CSS(".small-menu-bar",
-        "border" => "1px solid rgba(255, 255, 255, 0.1)",
-        "border-radius" => "8px",
-        "box-shadow" => "0px 4px 10px rgba(255, 255, 255, 0.15)",
-        "padding" => "5px",
-        "background" => "#333"
-    ),
+
     CSS(".hide-vertical",
-        "opacity" => "0",
-        "padding" => "0px",
-        "margin" => "0px",
-        "height" => "0px",
-        "max-height" => "0",
-        "overflow" => "hidden",
-        "transition" => "max-height 0.1s ease-out"
+        "display" => "none",
     ),
     CSS(".show-vertical",
-        "max-height" => "1000px",
-        "transition" => "max-height 0.1s ease-in"
+        "display" => "block",
     ),
     CSS(".hide-horizontal",
         "opacity" => "0",
-        "padding" => "0px",
-        "margin" => "0px",
-        "width" => "0px",
-        "max-width" => "0px",
-        "overflow" => "hidden",
-        "transition" => "max-width 0.1s ease-out",
+        "padding" => "0px !important",
+        "margin" => "0px !important",
+        "width" => "0px !important",  # Start collapsed horizontally
+        "max-width" => "0px",  # Start collapsed horizontally
+        "overflow" => "hidden",  # Hide overflow content
+        "transition" => transition_fast,  # Transition for max-width
         "border-radius" => "0px",
     ),
     CSS(".show-horizontal",
-        "max-width" => "1000px",
-        "transition" => "max-width 0.1s ease-in"
+        "max-width" => "1000px",  # Or any large value larger than the element's width
+        "transition" => transition_fast  # Transition for max-width
     ),
     CSS(
         ".loading-cell",
-        "background" => "rgba(30, 30, 30, 1)",
-        "box-shadow" => "0 0 5px rgba(255, 255, 255, 0.1)",
+        "background" => "rgba(30, 30, 30, 1)",  # Darker background
+        "box-shadow" => box_shadow_light,  # Light shadow for contrast
         "animation" => "background-fade 1.5s ease-in-out infinite, shadow-pulse 1.5s ease-in-out infinite",
     ),
     CSS(
         "@keyframes background-fade",
-        CSS("0%", "background" => "rgba(30, 30, 30, 1)"),
-        CSS("100%", "background" => "rgba(25, 25, 25, 1)"),
+        CSS("0%", "background" => "rgba(255, 255, 255, 1)"),
+        CSS("100%", "background" => "rgba(250, 250, 250, 1)"),
     ),
     CSS(
         "@keyframes shadow-pulse",
-        CSS("0%", "box-shadow" => "0 0 5px rgba(255, 255, 255, 0.1)"),
-        CSS("50%", "box-shadow" => "0 0 15px rgba(255, 255, 255, 0.3)"),
-        CSS("100%", "box-shadow" => "0 0 5px rgba(255, 255, 255, 0.1)"),
+        CSS("0%", "box-shadow" => "0 0 5px rgba(0, 0, 0, 0.1)"),
+        CSS("50%", "box-shadow" => "0 0 15px rgba(0, 0, 0, 0.3)"),
+        CSS("100%", "box-shadow" => "0 0 5px rgba(0, 0, 0, 0.1)"),
     ),
     CSS(".julia-dots",
         "background-image" => BonitoBook.assets("julia-dots.svg"),
         "background-size" => "60% auto",
         "background-repeat" => "no-repeat",
         "background-position" => "center",
-        "padding-top" => "0.1rem",
-        "padding-bottom" => "0.1rem",
         "width" => "1.2rem",
         "height" => "1.2rem",
     ),
+    CSS(".python-logo",
+        "background-image" => BonitoBook.assets("python.svg"),
+        "background-size" => "60% auto",
+        "background-repeat" => "no-repeat",
+        "background-position" => "center",
+        "width" => "1.2rem",
+        "height" => "1.2rem",
+    ),
+    # Menu and Buttons
+
+    CSS(".small-menu-bar",
+        "z-index" => "1001",
+        "background-color" => background_color_dark,
+        "border" => "1px solid rgba(255, 255, 255, 0.1)",  # Soft outline
+        "border-radius" => "8px",  # Rounded corners for a smoother look
+        "box-shadow" => "0px 4px 10px rgba(255, 255, 255, 0.15)",  # Soft shadow
+        "padding" => "4px",  # Adds spacing inside
+    ),
+    CSS(".small-button.toggled",
+        "color" => text_color_light,
+        "border" => "none",
+        "filter" => "grayscale(100%)",
+        "opacity" => "0.5",
+        "box-shadow" => "inset 2px 2px 5px rgba(255, 255, 255, 0.2)",  # Light inset shadow
+    ),
     CSS(".small-button",
-        "font-weight" => 600,
         "background-color" => "transparent",
-        "font-size" => "1rem",
-        "min-width" => "1.5rem",
-        "padding-left" => "0.3rem",
-        "padding-right" => "0.3rem",
-        "padding-top" => "0.1rem",
-        "padding-bottom" => "0.1rem",
         "border" => "none",
         "border-radius" => "100px",
-        "color" => "#bbb",
+        "color" => text_color_light,  # Light text color for dark theme
         "cursor" => "pointer",
-        "margin" => "0.25rem",
-        "box-shadow" => "0 2px 4px rgba(255, 255, 255, 0.2)",
+        "box-shadow" => "0 2px 4px rgba(255, 255, 255, 0.2)",  # Light shadow for contrast
         "transition" => "background-color 0.2s",
     ),
     CSS(
         ".small-button:hover",
-        "background-color" => "#555",
+        "background-color" => "rgba(255, 255, 255, 0.1)",  # Subtle hover effect
     ),
-    CSS(".toggled",
-        "color" => "#fff",
-        "border" => "none",
-        "filter" => "grayscale(100%)",
-        "opacity" => "0.5",
-        "box-shadow" => "inset 2px 2px 5px rgba(255, 255, 255, 0.5)",
-    ),
+
     CSS(".file-editor-path",
-        "font-family" => "'Inter', 'Roboto', 'Arial', sans-serif",
-        "font-size" => "14px",
-        "font-weight" => "500",
-        "color" => "#aaa",
-        "letter-spacing" => "0.3px",
-        "padding" => "5px 10px",
+        "font-family" => font_family_clean,  # Clean, modern font
+        "font-size" => "14px",  # Slightly smaller for paths
+        "font-weight" => "500",  # Medium weight
+        "color" => text_color_light,  # Softer than blackmonaco-editor-div
+        "letter-spacing" => "0.3px",  # Subtle spacing
+        "padding" => "5px 10px",  # Adds space around text
         "margin" => "1px",
         "width" => "fit-content",
-        "border-radius" => "6px",
-        "border" => "1px solid rgba(255, 255, 255, 0.1)",
-        "box-shadow" => "0px 2px 5px rgba(255, 255, 255, 0.1)",
-        "white-space" => "nowrap",
-        "overflow" => "hidden",
-        "text-overflow" => "ellipsis",
+        "border-radius" => "6px",  # Soft rounded corners
+        "border" => "1px solid " * border_color_dark,  # Light border
+        "box-shadow" => box_shadow_light,  # Light shadow for contrast
+        "white-space" => "nowrap",  # Prevents wrapping
+        "overflow" => "hidden",  # Hides overflow
+        "text-overflow" => "ellipsis",  # Adds "..." if the path is too long
     ),
     CSS(".file-editor",
         "padding" => "0px",
         "margin" => "0px",
-        "width" => "90ch",
-        "max-height" => "80vh",
+        "width" => editor_width,
+        "max-height" => max_height_large,
+        "background-color" => background_color_dark,
+        "color" => text_color_light
     ),
+    # Utility
     CSS(".flex-row",
         "display" => "flex",
         "flex-direction" => "row"
@@ -221,10 +272,11 @@ Styles(
     CSS(".full-width",
         "width" => "100%"
     ),
-    CSS(".markdown-body",
+    # Markdown
+     CSS(".markdown-body",
         "-ms-text-size-adjust" => "100%",
         "-webkit-text-size-adjust" => "100%",
-        "color" => "#d4d4d4",
+        "color" => text_color_light,
         "line-height" => "1.5",
         "font-family" => "-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif,Apple Color Emoji,Segoe UI Emoji,Segoe UI Symbol",
         "font-size" => "16px",
@@ -250,13 +302,13 @@ Styles(
     CSS(".markdown-body h4", "font-size" => "16px", "font-weight" => "600"),
     CSS(".markdown-body h5", "font-size" => "14px", "font-weight" => "600"),
     CSS(".markdown-body h6", "font-size" => "12px", "font-weight" => "600"),
-    CSS(".markdown-body a", "color" => "#4f8cd1", "text-decoration" => "none"),
+    CSS(".markdown-body a", "color" => "#0366d6", "text-decoration" => "none"),
     CSS(".markdown-body a:hover", "text-decoration" => "underline"),
     CSS(".markdown-body strong", "font-weight" => "600"),
     CSS(".markdown-body hr",
         "background" => "transparent",
         "border" => "0",
-        "border-bottom" => "1px solid #444",
+        "border-bottom" => "1px solid #dfe2e5",
         "height" => "0",
         "margin" => "15px 0",
         "overflow" => "hidden"
@@ -267,8 +319,8 @@ Styles(
     ),
     CSS(".markdown-body td, .markdown-body th", "padding" => "0"),
     CSS(".markdown-body blockquote",
-        "border-left" => ".25em solid #444",
-        "color" => "#9a9a9a",
+        "border-left" => ".25em solid #dfe2e5",
+        "color" => "#6a737d",
         "padding" => "0 1em"
     ),
     CSS(".markdown-body code, .markdown-body pre",
@@ -278,5 +330,26 @@ Styles(
     CSS(".markdown-body pre", "margin-bottom" => "0", "margin-top" => "0"),
     CSS(".markdown-body img", "border-style" => "none"),
     CSS(".markdown-body input", "font" => "inherit", "overflow" => "visible"),
-    CSS(".markdown-body *", "box-sizing" => "border-box")
+    CSS(".markdown-body *", "box-sizing" => "border-box"),
+    # New Cell Menu
+    CSS(".new-cell-menu",
+        "width" => "100%",
+        "overflow" => "hidden",
+        "height" => "1.3rem",
+        "background-color" => "transparent",  # Initial background color
+        "transition" => "height 0.2s",
+    ),
+    CSS(".new-cell-menu:hover",
+        "height" => "2.5rem",  # Expand to fit buttons
+        "transition-delay" => "0.5s",
+        "background-color" => "#333",  # Or any color you want
+    ),
+    CSS(".new-cell-menu > *",  # Target direct children
+        "opacity" => "0",
+        "transition" => "opacity 0.2s",
+    ),
+    CSS(".new-cell-menu:hover > *",  # Target direct children on hover
+        "opacity" => "1",
+        "transition-delay" => "0.5s",
+    )
 )

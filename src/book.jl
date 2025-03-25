@@ -1,8 +1,35 @@
-struct BookState
+struct Book
+    file::String
     folder::String
     cells::Vector{CellEditor}
-    commands::Observable{Dict{String,String}}
-    runners::Dict{String,Any}
+    style_editor::FileEditor
+    runner::Any
+end
+
+function Book(file; folder=mktempdir(), runner=AsyncRunner())
+    cells = load_book(file)
+    runner.mod.eval(runner.mod, :(using Bonito, Markdown, BonitoBook, WGLMakie))
+
+    style_path_template = joinpath(@__DIR__, "templates/style.jl")
+    style_dark_path_template = joinpath(@__DIR__, "templates/style-dark.jl")
+    mkpath(joinpath(folder, "styles"))
+    style_path = joinpath(folder, "styles", "style.jl")
+    style_dark_path = joinpath(folder, "styles", "style-dark.jl")
+
+    cp(style_path_template, style_path)
+    cp(style_dark_path_template, style_dark_path)
+    editors = cells2editors(cells, runner)
+    style_editor = FileEditor([style_path, style_dark_path], runner; editor_classes=["styling file-editor"], show_editor=false)
+    notify(style_editor.editor.source)
+    Bonito.wait_for(() -> !isnothing(style_editor.editor.output[]))
+    book = Book(file, folder, editors, style_editor, runner)
+    export_md(joinpath(folder, "book.md"), book)
+    runner.callback[] = (cell, source, result) -> begin
+        if cell.editor.source[] != source
+            export_md(joinpath(folder, "book.md"), book)
+        end
+    end
+    return book
 end
 
 struct Cell
@@ -18,10 +45,6 @@ end
 
 Cell(language, source) = Cell(language, source, nothing, false, false, true, false)
 
-struct Book
-    cells::Vector{Cell}
-end
-
 function trigger_js_download(session, file)
     evaljs(session, js"""
         const a = document.createElement('a');
@@ -33,18 +56,18 @@ function trigger_js_download(session, file)
     """)
 end
 
-function saving_menu(session, all_cells, current_style)
+function saving_menu(session, book)
     save_jl, click_jl = SmallButton(; class="julia-dots")
     on(click_jl) do click
         Base.errormonitor(Threads.@async begin
-            file = export_jl("book.html", all_cells, current_style)
+            file = export_jl(joinpath(book.folder, "book.html"), book)
             trigger_js_download(session, file)
         end)
     end
     save_md, click_md = SmallButton(; class="codicon codicon-markdown")
     on(click_md) do click
         Base.errormonitor(Threads.@async begin
-            file = export_md("book.md", all_cells)
+            file = export_md(joinpath(book.folder, "book.md"), book)
             trigger_js_download(session, file)
         end)
     end
@@ -78,8 +101,8 @@ function new_cell_menu(session, book, editor_above_uuid, runner)
     new_ai, click_ai = SmallButton(; class="codicon codicon-sparkle-filled")
 
     function insert_editor(editor)
-        idx = findfirst(x-> x.uuid == editor_above_uuid, book)
-        insert!(book, idx + 1, editor)
+        idx = findfirst(x-> x.uuid == editor_above_uuid, book.cells)
+        insert!(book.cells, idx + 1, editor)
         add_cell_div = new_cell_menu(session, book, editor.uuid, runner)
         elem = DOM.div(editor, add_cell_div)
         Bonito.dom_in_js(session, elem, js"""(elem) => {
@@ -192,25 +215,21 @@ function setup_completions(session, cell_module)
     """
 end
 
-function book(session::Session, file)
-    cells = load_book(file)
-    cell_module = Module()
-    runner = ThreadRunner(cell_module)
-    runner.mod.eval(runner.mod, :(using Bonito, Markdown, BonitoBook, WGLMakie))
-    book = cells2editors(cells, runner)
-    editors = map(book) do editor
+function Bonito.jsrender(session::Session, book::Book)
+    runner = book.runner
+    cells = map(book.cells) do editor
         add_cell_div = new_cell_menu(session, book, editor.uuid, runner)
         return DOM.div(editor, add_cell_div)
     end
     register_book = js"""
         $(Monaco).then(Monaco => {
-            Monaco.BOOK.update_order($(map(c-> c.uuid, book)));
+            Monaco.BOOK.update_order($(map(c-> c.uuid, book.cells)));
         })
     """
-    for editor in book
+    for editor in book.cells
         on(session, editor.delete_self) do delete
             if delete
-                filter!(x-> x.uuid != editor.uuid, book)
+                filter!(x -> x.uuid != editor.uuid, book.cells)
                 evaljs(session, js"""
                     $(Monaco).then(Monaco => {
                         Monaco.BOOK.remove_editor($(editor.uuid));
@@ -219,14 +238,17 @@ function book(session::Session, file)
             end
         end
     end
-    cell_obs = DOM.div(editors...)
+    cell_obs = DOM.div(cells...)
     _setup_menu, style_editor, style_output = setup_menu(runner)
-    save = saving_menu(session, book, style_output)
+    save = saving_menu(session, book)
     player = play_menu(book, runner)
-    cell_obs = DOM.div(editors...; class="inline-block fit-content")
+    cell_obs = DOM.div(cells...; class="inline-block fit-content")
     content = DOM.div(cell_obs, style_editor; class="flex-row gap-10 fit-content")
     menu = DOM.div(save, player, _setup_menu; class="flex-row gap-10 fit-content")
     document = DOM.div(menu, content; class="flex-column center-content gap-10 full-width")
-    completions = setup_completions(session, cell_module)
-    return DOM.div(style_output, completions, register_book, document)
+    completions = setup_completions(session, runner.mod)
+    on(session.on_close) do close
+        runner.open[] = false
+    end
+    return Bonito.jsrender(session, DOM.div(style_output, completions, register_book, document))
 end

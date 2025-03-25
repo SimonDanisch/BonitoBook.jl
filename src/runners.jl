@@ -44,8 +44,6 @@ function set_result!(editor, result::Observable, runner, source)
     result[] = parse_source(runner, source)
 end
 
-using IOCapture, ANSIColoredPrinters
-
 const ANSI_CSS = Asset(joinpath(dirname(pathof(ANSIColoredPrinters)), "..", "docs", "src", "assets", "default.css"))
 
 function capture_all_as_html(f::Function, logging_obs::Observable{String})
@@ -64,7 +62,7 @@ function capture_all_as_html(f::Function, logging_obs::Observable{String})
             put!(chan, str)
         end
     end
-    IOCapture.capture(color=true, capture_buffer=callback_io) do
+    IOCapture.capture(color=true, capture_buffer=callback_io, passthrough=true) do
         f()
     end
     close(callback_io)
@@ -76,23 +74,52 @@ struct RunnerTask
     editor::EvalEditor
 end
 
-struct ThreadRunner
+struct AsyncRunner
     mod::Module
     task_queue::Channel{RunnerTask}
     thread::Task
+    callback::Base.RefValue{Function}
+    iochannel::Channel{Vector{UInt8}}
+    redirect_target::Base.RefValue{Observable{String}}
+    open::Threads.Atomic{Bool}
 end
 
-function ThreadRunner(mod::Module)
+
+const TASKS = []
+
+function AsyncRunner(mod::Module=Module(); callback=identity, spawn=false)
     taskref = Ref{Task}()
-    task_queue = Channel{RunnerTask}(Inf; spawn=true, taskref=taskref) do chan
+    redirect_target = Base.RefValue{Observable{String}}()
+    loki = ReentrantLock()
+    empty!(TASKS)
+    task_queue = Channel{RunnerTask}(Inf; spawn=spawn, taskref=taskref) do chan
         for task in chan
-            run!(mod, task)
+            lock(loki) do
+                push!(TASKS, task)
+                redirect_target[] = task.editor.logging
+                run!(mod, task)
+            end
         end
     end
-    return ThreadRunner(mod, task_queue, taskref[])
+    io_chan = redirect_all_to_channel()
+    open = Threads.Atomic{Bool}(true)
+    task = Threads.@spawn begin
+        while open[] && isopen(io_chan)
+            bytes = take!(io_chan)
+            lock(loki) do
+                if !isempty(bytes) && isassigned(redirect_target)
+                    printer = HTMLPrinter(IOBuffer(copy(bytes)); root_tag="span")
+                    str = sprint(io -> show(io, MIME"text/html"(), printer))
+                    redirect_target[][] = str
+                end
+            end
+        end
+    end
+    Base.errormonitor(task)
+    return AsyncRunner(mod, task_queue, taskref[], Base.RefValue{Function}(callback), io_chan, redirect_target, open)
 end
 
-function interrupt!(runner::ThreadRunner)
+function interrupt!(runner::AsyncRunner)
     Threads.@spawn Base.throwto(runner.thread, InterruptException())
 end
 
@@ -100,7 +127,6 @@ function book_display(value)
     return value
 end
 
-using Pkg
 
 function run!(mod::Module, task::RunnerTask)
     editor = task.editor
@@ -109,37 +135,31 @@ function run!(mod::Module, task::RunnerTask)
     editor.loading[] = true
     editor.show_logging[] = true
     editor.logging_html[] = ""
-    capture_all_as_html(editor.logging) do
-        try
-            if startswith(source, "]")
-                Pkg.REPLMode.pkgstr(source[2:end])
-            elseif startswith(source, "?")
-                sym = Base.eval(mod, Meta.parse(source[2:end]))
-                result[] = Base.Docs.doc(sym)
-            elseif startswith(source, ";")
-                println("Running in REPL mode")
-                cmd = `$(split(source[2:end]))`
-                run(cmd)
-            else
-                expr = Bonito.parseall(source)
-                result[] = book_display(Base.eval(mod, expr))
-            end
-        catch e
-            result[] = Bonito.HTTPServer.err_to_html(e, Base.catch_backtrace())
-        finally
-            editor.loading[] = false
-            @async begin
-                # Hide logging after some time
-                sleep(2.5)
-                editor.show_logging[] = false
-            end
+
+    try
+        if startswith(source, "]")
+            Pkg.REPLMode.pkgstr(source[2:end])
+        elseif startswith(source, "?")
+            sym = Base.eval(mod, Meta.parse(source[2:end]))
+            result[] = Base.Docs.doc(sym)
+        elseif startswith(source, ";")
+            cmd = `$(split(source[2:end]))`
+            run(cmd)
+        else
+            expr = Bonito.parseall(source)
+            result[] = book_display(Base.eval(mod, expr))
+        end
+    catch e
+        result[] = Bonito.HTTPServer.err_to_html(e, Base.catch_backtrace())
+    finally
+        editor.loading[] = false
+        Timer(2.5) do t
+            editor.show_logging[] = false
         end
     end
 end
 
-
-
-function set_result!(editor, result::Observable, runner::ThreadRunner, source::String)
+function set_result!(editor, result::Observable, runner::AsyncRunner, source::String)
     put!(runner.task_queue, RunnerTask(source, result, editor))
 end
 

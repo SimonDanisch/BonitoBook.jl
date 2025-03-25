@@ -21,19 +21,19 @@ function export_html(filename, book)
     Bonito.export_static(filename, App(book))
 end
 
-function export_jl(file, book, current_style)
+function export_jl(file::AbstractString, book::Book)
     app = App() do s
-        body = Centered(DOM.div(book...))
+        body = Centered(DOM.div(book.cells...))
         document = DOM.div(DOM.div(body; style=Styles("width" => "100%")))
-        return DOM.div(current_style, document)
+        return DOM.div(book.style_editor.editor.output, document)
     end
     Bonito.export_static(file, app)
     return file
 end
 
-function export_md(file, book)
+function export_md(file::AbstractString, book::Book)
     open(file, "w") do io
-        for cell_editor in book
+        for cell_editor in book.cells
             language = cell_editor.language
             editor = cell_editor.editor
             content = editor.source[]

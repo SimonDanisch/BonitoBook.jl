@@ -17,7 +17,7 @@
 
 Makie support and Bonito dashboards are first class citizens:
 
-```julia cell true true false
+```julia true true true false
 using WGLMakie, Bonito
 colormaps = Dropdown(["viridis", "heat", "blues"])
 funcs = Dropdown([sqrt, x->x^2, sin, cos])
@@ -37,7 +37,7 @@ DOM.div(funcs, colormaps, f)
 
 ## Support for any Bonito App from other Packages
 
-```julia
+```julia true true true false
 using NDViewer
 layers = [
     Dict(
@@ -70,19 +70,6 @@ f = NDViewer.wgl_create_plot(data, layers)
 ```
 
 
-```julia
+```julia true true true false
 scatter(1:4)
-```
-
-
-```julia
-1 + 1
-```
-
-```julia
-println("hey")
-```
-
-```julia
-println("whyyy")
 ```

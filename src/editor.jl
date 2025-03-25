@@ -1,4 +1,3 @@
-import BonitoMLTools as BMLT
 import PromptingTools as PT
 
 const Monaco = ES6Module(joinpath(@__DIR__, "javascript", "Monaco.js"))
@@ -257,7 +256,7 @@ function Bonito.jsrender(session::Session, editor::CellEditor)
     )
     cell = DOM.div(hover_buttons, card_content, DOM.div(output_div, tabindex=0), style=Styles("position" => "relative"))
     # Create a separate proximity area
-    proximity_area = DOM.div(class="cell-menu-proximit-area")
+    proximity_area = DOM.div(class="cell-menu-proximity-area")
     container = DOM.div(cell, proximity_area, style=Styles("position" => "relative"))
     any_loading = map(|, chat.loading, jleditor.loading)
     hide_on_focus_obs = Observable(editor.language == "markdown")

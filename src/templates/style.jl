@@ -1,3 +1,14 @@
+# Define reusable variables
+editor_width = "90ch"
+max_height_large = "80vh"
+max_height_medium = "60vh"
+border_radius_small = "3px"
+border_radius_large = "10px"
+box_shadow_soft = "0 4px 8px rgba(0.0, 0.0, 51.0, 0.2)"
+transition_fast = "0.1s ease-out"
+transition_slow = "0.2s ease-in"
+font_family_clean = "'Inter', 'Roboto', 'Arial', sans-serif"
+
 Makie.set_theme!(size=(650, 450))
 BonitoBook.monaco_theme!("default")
 editor_width = "90ch"
@@ -31,7 +42,7 @@ Styles(
     CSS(
         ".monaco-list",
         # Prevents list from being cut off
-        "max-height" => "60vh !important",
+        "max-height" => max_height_medium,
         # Enables scrolling for long lists
         "overflow-y" => "auto !important"
     ),
@@ -40,7 +51,7 @@ Styles(
         "width" => editor_width,
         "position" => "relative"
     ),
-    CSS(".cell-menu-proximit-area",
+    CSS(".cell-menu-proximity-area",
         "position" => "absolute",
         "top" => "-20px", # span an area of 20px above the cell
         "left" => "0px",
@@ -56,8 +67,8 @@ Styles(
         "position" => "relative",
         "display" => "inline-block",
         "padding" => "5px 5px 10px 10px",
-        "border-radius" => "10px",
-        "box-shadow" => "0 4px 8px rgba(0.0, 0.0, 51.0, 0.2)",
+        "border-radius" => border_radius_large,
+        "box-shadow" => box_shadow_soft,
     ),
     CSS(
         ".monaco-editor-div",
@@ -67,7 +78,7 @@ Styles(
     ),
     # AI
     CSS(".chat.monaco-editor-div",
-        "border-radius" => "3px",
+        "border-radius" => border_radius_small,
         "border" => "1px solid #ccc",
         "padding" => "5px",
         "margin" => "5px",
@@ -113,12 +124,12 @@ Styles(
         "width" => "0px !important",  # Start collapsed horizontally
         "max-width" => "0px",  # Start collapsed horizontally
         "overflow" => "hidden",  # Hide overflow content
-        "transition" => "max-width 0.1s ease-out",  # Transition for max-width
+        "transition" => transition_fast,  # Transition for max-width
         "border-radius" => "0px",
     ),
     CSS(".show-horizontal",
         "max-width" => "1000px",  # Or any large value larger than the element's width
-        "transition" => "max-width 0.1s ease-in"  # Transition for max-width
+        "transition" => transition_fast  # Transition for max-width
     ),
     CSS(
         ".loading-cell",
@@ -185,7 +196,7 @@ Styles(
     ),
 
     CSS(".file-editor-path",
-        "font-family" => "'Inter', 'Roboto', 'Arial', sans-serif",  # Clean, modern font
+        "font-family" => font_family_clean,  # Clean, modern font
         "font-size" => "14px",  # Slightly smaller for paths
         "font-weight" => "500",  # Medium weight
         "color" => "#555",  # Softer than blackmonaco-editor-div
@@ -203,8 +214,8 @@ Styles(
     CSS(".file-editor",
         "padding" => "0px",
         "margin" => "0px",
-        "width" => "90ch",
-        "max-height" => "80vh",
+        "width" => editor_width,
+        "max-height" => max_height_large,
     ),
     # Utility
     CSS(".flex-row",
