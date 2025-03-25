@@ -12,7 +12,7 @@ background_color_dark = "#1e1e1e"  # Dark background for the whole document
 text_color_light = "rgb(212, 212, 212)"  # Light text color
 border_color_dark = "rgba(255, 255, 255, 0.1)"  # Subtle border for dark theme
 
-Makie.set_theme!(size=(650, 450))
+Makie.set_theme!(; size=(650, 450), Makie.theme_dark()...)
 BonitoBook.monaco_theme!("vs-dark")
 editor_width = "90ch"
 Styles(
@@ -132,6 +132,7 @@ Styles(
         "margin" => "5px",
         "max-height" => "700px",
         "overflow-y" => "auto",
+        "overflow-x" => "visible", # dont clip
         "background-color" => background_color_dark,
         "color" => text_color_light
     ),

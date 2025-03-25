@@ -6,18 +6,20 @@ struct Book
     runner::Any
 end
 
-function Book(file; folder=mktempdir(), runner=AsyncRunner())
-    cells = load_book(file)
-    runner.mod.eval(runner.mod, :(using Bonito, Markdown, BonitoBook, WGLMakie))
-
-    style_path_template = joinpath(@__DIR__, "templates/style.jl")
-    style_dark_path_template = joinpath(@__DIR__, "templates/style-dark.jl")
-    mkpath(joinpath(folder, "styles"))
+function from_folder(folder, runner)
+    project = joinpath(folder, "Project.toml")
+    manifest = joinpath(folder, "Manifest.toml")
+    book = joinpath(folder, "book.md")
     style_path = joinpath(folder, "styles", "style.jl")
     style_dark_path = joinpath(folder, "styles", "style-dark.jl")
-
-    cp(style_path_template, style_path)
-    cp(style_dark_path_template, style_dark_path)
+    files = [book, project, manifest, style_path, style_dark_path]
+    for file in files
+        if !isfile(file)
+            error("File $file not found, not a BonitoBook?")
+        end
+    end
+    Pkg.activate(folder; io=IOBuffer())
+    cells = load_book(book)
     editors = cells2editors(cells, runner)
     style_editor = FileEditor([style_path, style_dark_path], runner; editor_classes=["styling file-editor"], show_editor=false)
     notify(style_editor.editor.source)
@@ -30,6 +32,49 @@ function Book(file; folder=mktempdir(), runner=AsyncRunner())
         end
     end
     return book
+end
+
+function from_file(file, folder, runner)
+    cells = load_book(file)
+    runner.mod.eval(runner.mod, :(using Bonito, Markdown, BonitoBook, WGLMakie))
+
+    style_path_template = joinpath(@__DIR__, "templates/style.jl")
+    style_dark_path_template = joinpath(@__DIR__, "templates/style-dark.jl")
+    mkpath(joinpath(folder, "styles"))
+    style_path = joinpath(folder, "styles", "style.jl")
+    style_dark_path = joinpath(folder, "styles", "style-dark.jl")
+
+    cp(style_path_template, style_path)
+    cp(style_dark_path_template, style_dark_path)
+    # Copy over project so mutations stay in the book
+    project = Pkg.project().path
+    cp(project, joinpath(folder, "Project.toml"))
+    cp(joinpath(dirname(project), "Manifest.toml"), joinpath(folder, "Manifest.toml"))
+    Pkg.activate(folder; io=IOBuffer())
+
+    editors = cells2editors(cells, runner)
+    style_editor = FileEditor([style_path, style_dark_path], runner; editor_classes=["styling file-editor"], show_editor=false)
+    notify(style_editor.editor.source)
+    Bonito.wait_for(() -> !isnothing(style_editor.editor.output[]))
+    book = Book(file, folder, editors, style_editor, runner)
+    export_md(joinpath(folder, "book.md"), book)
+    runner.callback[] = (cell, source, result) -> begin
+        if cell.editor.source[] != source
+            export_md(joinpath(folder, "book.md"), book)
+        end
+    end
+    return book
+end
+
+function Book(file; folder=mktempdir(), runner=AsyncRunner())
+    runner.mod.eval(runner.mod, :(using Bonito, Markdown, BonitoBook, WGLMakie))
+    if isfile(file)
+        return from_file(file, folder, runner)
+    elseif isdir(file)
+        return from_folder(file, runner)
+    else
+        error("File $file isnt a file or folder")
+    end
 end
 
 struct Cell

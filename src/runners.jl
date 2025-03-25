@@ -46,28 +46,6 @@ end
 
 const ANSI_CSS = Asset(joinpath(dirname(pathof(ANSIColoredPrinters)), "..", "docs", "src", "assets", "default.css"))
 
-function capture_all_as_html(f::Function, logging_obs::Observable{String})
-    callback_io = IOBuffer()
-    chan = Channel(Inf) do chan
-        for msg in chan
-            logging_obs[] = msg
-        end
-    end
-    Threads.@spawn while isopen(callback_io)
-        yield()
-        buff = copy(take!(callback_io))
-        if !isempty(buff)
-            printer = HTMLPrinter(IOBuffer(buff); root_tag="span")
-            str = sprint(io -> show(io, MIME"text/html"(), printer))
-            put!(chan, str)
-        end
-    end
-    IOCapture.capture(color=true, capture_buffer=callback_io, passthrough=true) do
-        f()
-    end
-    close(callback_io)
-end
-
 struct RunnerTask
     source::String
     result::Observable
@@ -147,7 +125,11 @@ function run!(mod::Module, task::RunnerTask)
             run(cmd)
         else
             expr = Bonito.parseall(source)
-            result[] = book_display(Base.eval(mod, expr))
+            if endswith(source, ";")
+                result[] = nothing
+            else
+                result[] = book_display(Base.eval(mod, expr))
+            end
         end
     catch e
         result[] = Bonito.HTTPServer.err_to_html(e, Base.catch_backtrace())

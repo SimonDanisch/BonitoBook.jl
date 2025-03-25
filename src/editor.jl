@@ -290,7 +290,13 @@ struct FileEditor
                 Monaco.resize_to_lines(editor, monaco, editor_div)
             })
         }"""
-        editor = EvalEditor(source, runner; js_init_func=js_init_func, editor_classes=["file-editor"], hiding_direction="horizontal", language=language, opts..., options...)
+        editor = EvalEditor(source, runner;
+            js_init_func=js_init_func,
+            editor_classes=["file-editor"],
+            hiding_direction="horizontal",
+            language=language, show_logging=false,
+            opts..., options...
+        )
         return new(filepath, editor)
     end
 end

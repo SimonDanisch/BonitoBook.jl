@@ -1,7 +1,7 @@
 
-# Taken from IOCapture.jl, adpated to our needs!
 const REDIRECT_CHANNEL = Base.RefValue{Channel{Vector{UInt8}}}()
 
+# Taken from IOCapture.jl, adpated to our needs!
 function redirect_all_to_channel()
     # Needs to be singleton, since we can only redirect one time
     if isassigned(REDIRECT_CHANNEL) && isopen(REDIRECT_CHANNEL[])

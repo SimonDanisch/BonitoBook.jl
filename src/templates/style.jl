@@ -108,7 +108,8 @@ Styles(
         "width" => "100%",
         "margin" => "5px",
         "max-height" => "700px",
-        "overflow-y" => "auto"
+        "overflow-y" => "auto",
+        "overflow-x" => "visible",
     ),
 
     CSS(".hide-vertical",
