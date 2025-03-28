@@ -40,7 +40,10 @@ end
 
 parse_source(runner::Nothing, source) = nothing
 
-function set_result!(editor, result::Observable, runner, source)
+function run!(runner::MarkdownRunner, editor::EvalEditor)
+    eval_source!(editor, editor.output, runner, editor.source[])
+end
+function eval_source!(editor, result::Observable, runner, source)
     result[] = parse_source(runner, source)
 end
 
@@ -62,18 +65,13 @@ struct AsyncRunner
     open::Threads.Atomic{Bool}
 end
 
-
-const TASKS = []
-
 function AsyncRunner(mod::Module=Module(); callback=identity, spawn=false)
     taskref = Ref{Task}()
     redirect_target = Base.RefValue{Observable{String}}()
     loki = ReentrantLock()
-    empty!(TASKS)
     task_queue = Channel{RunnerTask}(Inf; spawn=spawn, taskref=taskref) do chan
         for task in chan
             lock(loki) do
-                push!(TASKS, task)
                 redirect_target[] = task.editor.logging
                 run!(mod, task)
             end
@@ -105,6 +103,12 @@ function book_display(value)
     return value
 end
 
+function run!(editor::EvalEditor)
+    run!(editor.runner, editor)
+end
+
+
+run!(runner::AsyncRunner, editor::EvalEditor) = run!(runner.mod, RunnerTask(editor.source[], editor.output, editor))
 
 function run!(mod::Module, task::RunnerTask)
     editor = task.editor
@@ -141,10 +145,9 @@ function run!(mod::Module, task::RunnerTask)
     end
 end
 
-function set_result!(editor, result::Observable, runner::AsyncRunner, source::String)
-    put!(runner.task_queue, RunnerTask(source, result, editor))
+function eval_source!(editor, source::String)
+    put!(editor.runner.task_queue, RunnerTask(source, editor.output, editor))
 end
-
 
 struct MLRunner
     editor::BonitoBook.EvalEditor
@@ -152,9 +155,7 @@ end
 
 const SYSTEM_PROMPT = read(joinpath(@__DIR__, "templates", "system-prompt.md"), String)
 
-global ALL_MSGS = []
-
-function BonitoBook.set_result!(chat_editor, result::Observable, runner::MLRunner, source)
+function BonitoBook.eval_source!(chat_editor, result::Observable, runner::MLRunner, source)
     str = Observable{String}("")
     chat_editor.loading[] = true
     chat_editor.show_output[] = true
@@ -185,14 +186,9 @@ function BonitoBook.set_result!(chat_editor, result::Observable, runner::MLRunne
         ]
         msg = PT.aigenerate(conversation; streamcallback=callback)
         jleditor = runner.editor
-        empty!(ALL_MSGS)
-        on(jleditor.source) do src
-            push!(ALL_MSGS, src)
-        end
         if isempty(strip(jleditor.source[])) && startswith(msg.content, "```julia") && endswith(msg.content, "```")
             result[] = nothing
-            jleditor.show_editor[] = true
-            jleditor.show_output[] = true
+            toggle!(jleditor, editor=true, output=true)
             jleditor.set_source[] = strip(msg.content[9:end-3])
             chat_editor.show_output[] = false
         else

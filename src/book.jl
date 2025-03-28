@@ -22,9 +22,9 @@ function from_folder(folder, runner)
     cells = load_book(book)
     editors = cells2editors(cells, runner)
     style_editor = FileEditor([style_path, style_dark_path], runner; editor_classes=["styling file-editor"], show_editor=false)
-    notify(style_editor.editor.source)
-    Bonito.wait_for(() -> !isnothing(style_editor.editor.output[]))
-    book = Book(file, folder, editors, style_editor, runner)
+    run!(style_editor.editor) # run the style editor to get the output Styles
+    @assert style_editor.editor.output[] isa Styles
+    book = Book(book, folder, editors, style_editor, runner)
     export_md(joinpath(folder, "book.md"), book)
     runner.callback[] = (cell, source, result) -> begin
         if cell.editor.source[] != source
@@ -34,8 +34,8 @@ function from_folder(folder, runner)
     return book
 end
 
-function from_file(file, folder, runner)
-    cells = load_book(file)
+function from_file(book, folder, runner)
+    cells = load_book(book)
     runner.mod.eval(runner.mod, :(using Bonito, Markdown, BonitoBook, WGLMakie))
 
     style_path_template = joinpath(@__DIR__, "templates/style.jl")
@@ -54,9 +54,9 @@ function from_file(file, folder, runner)
 
     editors = cells2editors(cells, runner)
     style_editor = FileEditor([style_path, style_dark_path], runner; editor_classes=["styling file-editor"], show_editor=false)
-    notify(style_editor.editor.source)
-    Bonito.wait_for(() -> !isnothing(style_editor.editor.output[]))
-    book = Book(file, folder, editors, style_editor, runner)
+    run!(style_editor.editor) # run the style editor to get the output Styles
+    @assert style_editor.editor.output[] isa Styles
+    book = Book(book, folder, editors, style_editor, runner)
     export_md(joinpath(folder, "book.md"), book)
     runner.callback[] = (cell, source, result) -> begin
         if cell.editor.source[] != source
@@ -122,7 +122,7 @@ function saving_menu(session, book)
     )
 end
 
-function play_menu(cells, runner)
+function play_menu(book)
     run_all_div, run_all_click = SmallButton(; class="codicon codicon-play")
     stop_all_div, stop_all_click = SmallButton(; class="codicon codicon-debug-stop")
     on(stop_all_click) do click
@@ -130,9 +130,13 @@ function play_menu(cells, runner)
         # Base.errormonitor(interrupt!(runner))
     end
     on(run_all_click) do click
-        for cell in cells
-            notify(cell.editor.get_source)
+        task = @async for cell in book.cells
+            # fetches source only if unsaved source is there
+            # After that, runs cell
+            cell.editor.loading[] = true
+            run_from_newest!(cell.editor)
         end
+        Base.errormonitor(task)
     end
     return DOM.div(DOM.div(run_all_div, stop_all_div);
         class="saving small-menu-bar"
@@ -169,7 +173,7 @@ function new_cell_menu(session, book, editor_above_uuid, runner)
     end
     on(click_ai) do click
         new_cell = CellEditor("", "chatgpt", runner)
-        new_cell.show_ai[] = true
+        new_cell.show_chat[] = true
         new_cell.show_editor[] = false
         new_cell.show_output[] = false
         insert_editor(new_cell)
@@ -182,7 +186,7 @@ function new_cell_menu(session, book, editor_above_uuid, runner)
     return DOM.div(Centered(menu_div); class="new-cell-menu")
 end
 
-function setup_menu(runner)
+function setup_menu(book)
     buttons_enabled = Observable(true)
     keep = Button("keep"; enabled=buttons_enabled)
     reset = Button("reset"; enabled=buttons_enabled)
@@ -192,12 +196,7 @@ function setup_menu(runner)
         DOM.div(keep, reset; class="flex-row gap-10"),
     )
     popup = PopUp(popup_content; show=false)
-
-    style_path = joinpath(@__DIR__, "templates/style.jl")
-    style_dark_path = joinpath(@__DIR__, "templates/style-dark.jl")
-    style_fe = FileEditor([style_path, style_dark_path], runner; editor_classes=["styling file-editor"], show_editor=false)
-    notify(style_fe.editor.source)
-    Bonito.wait_for(()-> !isnothing(style_fe.editor.output[]))
+    style_fe = book.style_editor
     style_fe_toggle = SmallToggle(style_fe.editor.show_editor; class="codicon codicon-paintcan")
     menu = DOM.div(DOM.div(class="codicon codicon-settings", style_fe_toggle);
         class="settings small-menu-bar"
@@ -284,9 +283,9 @@ function Bonito.jsrender(session::Session, book::Book)
         end
     end
     cell_obs = DOM.div(cells...)
-    _setup_menu, style_editor, style_output = setup_menu(runner)
+    _setup_menu, style_editor, style_output = setup_menu(book)
     save = saving_menu(session, book)
-    player = play_menu(book, runner)
+    player = play_menu(book)
     cell_obs = DOM.div(cells...; class="inline-block fit-content")
     content = DOM.div(cell_obs, style_editor; class="flex-row gap-10 fit-content")
     menu = DOM.div(save, player, _setup_menu; class="flex-row gap-10 fit-content")

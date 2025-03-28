@@ -1,7 +1,6 @@
 using WGLMakie
 using BonitoBook, Bonito
 
-
 app = App(title="BonitoBook") do s
     return Book(joinpath(@__DIR__, "Sunny/01_LSWT_CoRh2O4.ipynb"));
 end

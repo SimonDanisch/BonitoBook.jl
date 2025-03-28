@@ -13,7 +13,7 @@ function assets(paths...)
 end
 
 # Write your package code here.
-function set_result! end
+function eval_source! end
 
 include("redirect_io.jl")
 include("editor.jl")

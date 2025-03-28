@@ -107,7 +107,7 @@ Styles(
     ),
     # The logging output (io/stdout/etc)
     CSS(
-        ".logging-pre",
+        ".cell-logging",
         "max-height" => "500px",
         "max-width" => editor_width,
         "overflow-y" => "auto",
@@ -159,20 +159,20 @@ Styles(
     ),
     CSS(
         ".loading-cell",
-        "background" => "rgba(30, 30, 30, 1)",  # Darker background
+        "background" => background_color_dark,  # Darker background
         "box-shadow" => box_shadow_light,  # Light shadow for contrast
         "animation" => "background-fade 1.5s ease-in-out infinite, shadow-pulse 1.5s ease-in-out infinite",
     ),
     CSS(
         "@keyframes background-fade",
-        CSS("0%", "background" => "rgba(255, 255, 255, 1)"),
-        CSS("100%", "background" => "rgba(250, 250, 250, 1)"),
+        CSS("0%", "background" => "rgba(1, 1, 1, 1)"),
+        CSS("100%", "background" => "rgba(1, 1, 1, 1)"),
     ),
     CSS(
         "@keyframes shadow-pulse",
-        CSS("0%", "box-shadow" => "0 0 5px rgba(0, 0, 0, 0.1)"),
-        CSS("50%", "box-shadow" => "0 0 15px rgba(0, 0, 0, 0.3)"),
-        CSS("100%", "box-shadow" => "0 0 5px rgba(0, 0, 0, 0.1)"),
+        CSS("0%", "box-shadow" => "0 0 5px rgba(255, 255, 255, 0.1)"),
+        CSS("50%", "box-shadow" => "0 0 15px rgba(255, 255, 255, 0.3)"),
+        CSS("100%", "box-shadow" => "0 0 5px rgba(255, 255, 255, 0.1)"),
     ),
     CSS(".julia-dots",
         "background-image" => BonitoBook.assets("julia-dots.svg"),

@@ -86,7 +86,7 @@ Styles(
     ),
     # The logging output (io/stdout/etc)
     CSS(
-        ".logging-pre",
+        ".cell-logging",
         "max-height" => "500px",
         "max-width" => editor_width,
         "overflow-y" => "auto",

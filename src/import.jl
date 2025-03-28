@@ -78,7 +78,7 @@ function cells2editors(cells, runner)
             show_editor=cell.show_editor,
             show_logging=cell.show_logging,
             show_output=cell.show_output,
-            show_ai=cell.show_chat
+            show_chat=cell.show_chat
         )
     end
 end
