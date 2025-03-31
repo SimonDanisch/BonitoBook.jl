@@ -5,9 +5,22 @@ app = App(title="BonitoBook") do s
     return Book(joinpath(@__DIR__, "Sunny/01_LSWT_CoRh2O4.ipynb"));
 end
 
+BonitoBook.from_file(joinpath(@__DIR__, "Sunny/01_LSWT_CoRh2O4.ipynb"), nothing)
+book = joinpath(@__DIR__, "Sunny/01_LSWT_CoRh2O4.ipynb")
+name, ext = splitext(book)
+if !(ext in (".md", ".ipynb"))
+    error("File $book is not a markdown or ipynb file: $(ext)")
+end
+folder = joinpath(dirname(book), name)
+if isdir(folder)
+    from_folder(folder)
+else
+    mkpath(folder)
+end
 app = App(title="BonitoBook") do s
     return Book(joinpath(@__DIR__, "test.md"))
 end
+
 # TODO
 #=
 - [x] cleanup hover menu + delete

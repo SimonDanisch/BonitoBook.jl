@@ -6,7 +6,7 @@ using UUIDs
 using Pkg
 using ANSIColoredPrinters
 using Logging
-
+using WGLMakie
 
 function assets(paths...)
     return Asset(joinpath(@__DIR__, "assets", paths...))

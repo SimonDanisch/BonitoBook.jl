@@ -19,13 +19,21 @@ function from_folder(folder)
             error("File $file not found, not a BonitoBook?")
         end
     end
-    Pkg.activate(folder; io = IOBuffer())
     return book, folder, [style_path, style_dark_path]
 end
 
 function from_file(book, folder)
-    if isdir(folder)
-        return from_folder(folder)
+    if isnothing(folder)
+        name, ext = splitext(book)
+        if !(ext in (".md", ".ipynb"))
+            error("File $book is not a markdown or ipynb file: $(ext)")
+        end
+        folder = joinpath(dirname(book), name)
+        if isdir(folder)
+            return from_folder(folder)
+        else
+            mkpath(folder)
+        end
     end
     style_path_template = joinpath(@__DIR__, "templates/style.jl")
     style_dark_path_template = joinpath(@__DIR__, "templates/style-dark.jl")
@@ -39,33 +47,33 @@ function from_file(book, folder)
     project = Pkg.project().path
     cp(project, joinpath(folder, "Project.toml"))
     cp(joinpath(dirname(project), "Manifest.toml"), joinpath(folder, "Manifest.toml"))
-    Pkg.activate(folder; io = IOBuffer())
-
     return book, folder, [style_path, style_dark_path]
 end
 
 function Book(file; folder = nothing, runner = AsyncRunner())
-    runner.mod.eval(runner.mod, :(using Bonito, Markdown, BonitoBook, WGLMakie))
+    runner.mod.eval(runner.mod, :(using BonitoBook, BonitoBook.Bonito, BonitoBook.Markdown, BonitoBook.WGLMakie))
     if isfile(file)
-        bookfile, folder, style_paths = from_file(file, folder, runner)
+        bookfile, folder, style_paths = from_file(file, folder)
     elseif isdir(file)
-        bookfile, folder, style_paths = from_folder(file, runner)
+        bookfile, folder, style_paths = from_folder(file)
     else
         error("File $file isnt a file or folder")
     end
     cells = load_book(bookfile)
     editors = cells2editors(cells, runner)
-    style_editor = FileEditor(style_paths..., runner; editor_classes = ["styling file-editor"], show_editor = false)
+
+    style_editor = FileEditor(style_paths, runner; editor_classes = ["styling file-editor"], show_editor = false)
     run!(style_editor.editor) # run the style editor to get the output Styles
     @assert style_editor.editor.output[] isa Styles
     progress = Observable((false, 0.0))
     book = Book(bookfile, folder, editors, style_editor, runner, progress)
     export_md(joinpath(folder, "book.md"), book)
-    return runner.callback[] = (cell, source, result) -> begin
-        if cell.editor.source[] != source
-            export_md(joinpath(folder, "book.md"), book)
+    for editor in editors
+        on(editor.editor.source) do new_source
+            save(book)
         end
     end
+    return book
 end
 
 struct Cell
@@ -142,42 +150,52 @@ function play_menu(book)
     )
 end
 
+using Dates
+
+function WGLMakie.save(book::Book)
+    if !isdir(joinpath(book.folder, ".versions"))
+        mkpath(joinpath(book.folder, ".versions"))
+    end
+    version = Dates.format(Dates.now(), "yyyy-mm-dd_HHMMSS")
+    cp(book.file, joinpath(book.folder, ".versions", "book-$version.md"))
+    export_md(joinpath(book.folder, "book.md"), book)
+end
+
+function insert_editor_below!(book, session, editor, editor_above_uuid)
+    idx = findfirst(x -> x.uuid == editor_above_uuid, book.cells)
+    insert!(book.cells, idx + 1, editor)
+    add_cell_div = new_cell_menu(session, book, editor.uuid, book.runner)
+    on(session, editor.editor.source) do new_source
+        save(book)
+    end
+    elem = DOM.div(editor, add_cell_div)
+    return Bonito.dom_in_js(
+        session, elem, js"""(elem) => {
+            $(Monaco).then(Monaco => {
+                Monaco.add_editor_below($editor_above_uuid, elem, $(editor.uuid));
+            })
+        }"""
+    )
+end
+
 function new_cell_menu(session, book, editor_above_uuid, runner)
+
     new_jl, click_jl = SmallButton(; class = "julia-dots")
     new_md, click_md = SmallButton(; class = "codicon codicon-markdown")
     new_py, click_py = SmallButton(; class = "python-logo")
     new_ai, click_ai = SmallButton(; class = "codicon codicon-sparkle-filled")
 
-    function insert_editor(editor)
-        idx = findfirst(x -> x.uuid == editor_above_uuid, book.cells)
-        insert!(book.cells, idx + 1, editor)
-        add_cell_div = new_cell_menu(session, book, editor.uuid, runner)
-        elem = DOM.div(editor, add_cell_div)
-        return Bonito.dom_in_js(
-            session, elem, js"""(elem) => {
-                $(Monaco).then(Monaco => {
-                    Monaco.add_editor_below($editor_above_uuid, elem, $(editor.uuid));
-                })
-            }"""
-        )
-    end
-
     on(click_jl) do click
         new_cell = CellEditor("", "julia", runner)
-        insert_editor(new_cell)
+        insert_editor_below!(book, session, editor_above_uuid, new_cell)
     end
     on(click_md) do click
-        new_cell = CellEditor("", "markdown", runner)
-        new_cell.show_editor[] = true
-        new_cell.show_output[] = false
-        insert_editor(new_cell)
+        new_cell = CellEditor("", "markdown", runner; show_editor=true, show_output=false)
+        insert_editor_below!(book, session, editor_above_uuid, new_cell)
     end
     on(click_ai) do click
-        new_cell = CellEditor("", "chatgpt", runner)
-        new_cell.show_chat[] = true
-        new_cell.show_editor[] = false
-        new_cell.show_output[] = false
-        insert_editor(new_cell)
+        new_cell = CellEditor("", "chatgpt", runner; show_chat=true, show_editor=false, show_output=false)
+        insert_editor_below!(book, session, editor_above_uuid, new_cell)
     end
     plus = DOM.div(class = "codicon codicon-plus")
     menu_div = DOM.div(

@@ -70,7 +70,6 @@ class EvalEditor {
             this.process_message(message);
         });
         monaco.then((monaco)=>{
-            console.log(monaco_editor);
             monaco_editor.editor.then((editor)=>{
                 resize_to_lines(editor, monaco, this.editor.editor_div);
                 editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyP, ()=>{
@@ -79,14 +78,14 @@ class EvalEditor {
                 add_command(editor, "Eval cell", [
                     monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter
                 ], ()=>{
-                    this.set_source();
+                    this.set_source(editor);
                     this.run();
                     this.send();
                 });
                 add_command(editor, "Eval cell + add new cell", [
                     monaco.KeyMod.Shift | monaco.KeyCode.Enter
                 ], ()=>{
-                    this.set_source();
+                    this.set_source(editor);
                     this.run();
                     this.send();
                     move_down(editor);
@@ -94,7 +93,7 @@ class EvalEditor {
                 add_command(editor, "Save", [
                     monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS
                 ], ()=>{
-                    this.set_source();
+                    this.set_source(editor);
                     this.send();
                 });
             });
@@ -105,12 +104,10 @@ class EvalEditor {
             type: "run"
         });
     }
-    set_source() {
-        this.editor.editor.then((editor)=>{
-            this.message_queue.push({
-                type: "new-source",
-                data: editor.getValue()
-            });
+    set_source(editor) {
+        this.message_queue.push({
+            type: "new-source",
+            data: editor.getValue()
         });
     }
     send() {

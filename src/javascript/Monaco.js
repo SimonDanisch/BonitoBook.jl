@@ -108,7 +108,7 @@ export class EvalEditor {
                     "Eval cell",
                     [monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter],
                     () => {
-                        this.set_source();
+                        this.set_source(editor);
                         this.run();
                         this.send();
                     }
@@ -118,7 +118,7 @@ export class EvalEditor {
                     "Eval cell + add new cell",
                     [monaco.KeyMod.Shift | monaco.KeyCode.Enter],
                     () => {
-                        this.set_source();
+                        this.set_source(editor);
                         this.run();
                         this.send();
                         move_down(editor);
@@ -129,7 +129,7 @@ export class EvalEditor {
                     "Save",
                     [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS],
                     () => {
-                        this.set_source();
+                        this.set_source(editor);
                         this.send();
                     }
                 );
@@ -139,12 +139,10 @@ export class EvalEditor {
     run() {
         this.message_queue.push({ type: "run" });
     }
-    set_source() {
-        this.editor.editor.then((editor) => {
-            this.message_queue.push({
-                type: "new-source",
-                data: editor.getValue(),
-            });
+    set_source(editor) {
+        this.message_queue.push({
+            type: "new-source",
+            data: editor.getValue(),
         });
     }
     send() {

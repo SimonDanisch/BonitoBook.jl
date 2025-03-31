@@ -4,15 +4,24 @@ max_height_large = "80vh"
 max_height_medium = "60vh"
 border_radius_small = "3px"
 border_radius_large = "10px"
-box_shadow_soft = "0 4px 8px rgba(0.0, 0.0, 51.0, 0.2)"
+box_shadow_light = "0 4px 8px rgba(255, 255, 255, 0.2)"  # Light shadow for dark theme
 transition_fast = "0.1s ease-out"
 transition_slow = "0.2s ease-in"
 font_family_clean = "'Inter', 'Roboto', 'Arial', sans-serif"
+background_color_dark = "#1e1e1e"  # Dark background for the whole document
+text_color_light = "rgb(212, 212, 212)"  # Light text color
+border_color_dark = "rgba(255, 255, 255, 0.1)"  # Subtle border for dark theme
 
-Makie.set_theme!(size = (650, 450))
-BonitoBook.monaco_theme!("default")
+Makie.set_theme!(; size = (650, 450), Makie.theme_dark()...)
+BonitoBook.monaco_theme!("vs-dark")
 editor_width = "90ch"
 Styles(
+    # Set the background color for the whole document
+    CSS(
+        "body",
+        "background-color" => background_color_dark,
+        "color" => text_color_light
+    ),
     # Fix for Markdown list
     CSS("li p", "display" => "inline"),
     CSS(
@@ -34,24 +43,32 @@ Styles(
         ".quick-input-widget",
         "position" => "fixed !important",
         "top" => "10px !important",
+        "background-color" => background_color_dark,
+        "color" => text_color_light
     ),
     CSS(
         ".find-widget",
         "position" => "fixed !important",
         "top" => "10px !important",
+        "background-color" => background_color_dark,
+        "color" => text_color_light
     ),
     CSS(
         ".monaco-list",
         # Prevents list from being cut off
         "max-height" => max_height_medium,
         # Enables scrolling for long lists
-        "overflow-y" => "auto !important"
+        "overflow-y" => "auto !important",
+        "background-color" => background_color_dark,
+        "color" => text_color_light
     ),
     # The editor div
     CSS(
         ".cell-editor-container",
         "width" => editor_width,
-        "position" => "relative"
+        "position" => "relative",
+        "background-color" => background_color_dark,
+        "color" => text_color_light
     ),
     CSS(
         ".cell-menu-proximity-area",
@@ -71,22 +88,27 @@ Styles(
         "display" => "inline-block",
         "padding" => "5px 5px 10px 10px",
         "border-radius" => border_radius_large,
-        "box-shadow" => box_shadow_soft,
+        "box-shadow" => box_shadow_light,
+        "background-color" => background_color_dark,
+        "color" => text_color_light
     ),
     CSS(
         ".monaco-editor-div",
-        "background-color" => "transparent",
+        "background-color" => background_color_dark,
         "padding" => "0px",
         "margin" => "0px",
+        "color" => text_color_light
     ),
     # AI
     CSS(
         ".chat.monaco-editor-div",
         "border-radius" => border_radius_small,
-        "border" => "1px solid #ccc",
+        "border" => "1px solid " * border_color_dark,
         "padding" => "5px",
         "margin" => "5px",
         "overflow" => "hidden",
+        "background-color" => background_color_dark,
+        "color" => text_color_light
     ),
     # The logging output (io/stdout/etc)
     CSS(
@@ -96,6 +118,8 @@ Styles(
         "overflow-y" => "auto",
         "margin" => "0",
         "padding" => "0",
+        "background-color" => background_color_dark,
+        "color" => text_color_light
     ),
 
     CSS(
@@ -115,7 +139,9 @@ Styles(
         "margin" => "5px",
         "max-height" => "700px",
         "overflow-y" => "auto",
-        "overflow-x" => "visible",
+        "overflow-x" => "visible", # dont clip
+        "background-color" => background_color_dark,
+        "color" => text_color_light
     ),
 
     CSS(
@@ -128,22 +154,36 @@ Styles(
     ),
     CSS(
         ".hide-horizontal",
-        "display" => "none"
+        "opacity" => "0",
+        "padding" => "0px !important",
+        "margin" => "0px !important",
+        "width" => "0px !important",  # Start collapsed horizontally
+        "max-width" => "0px",  # Start collapsed horizontally
+        "overflow" => "hidden",  # Hide overflow content
+        "transition" => transition_fast,  # Transition for max-width
+        "border-radius" => "0px",
     ),
     CSS(
         ".show-horizontal",
-        "display" => "block",
+        "max-width" => "1000px",  # Or any large value larger than the element's width
+        "transition" => transition_fast  # Transition for max-width
     ),
     CSS(
         ".loading-cell",
-        "box-shadow" => box_shadow_soft,
-        "animation" => "shadow-pulse 1.5s ease-in-out infinite",
+        "background" => background_color_dark,  # Darker background
+        "box-shadow" => box_shadow_light,  # Light shadow for contrast
+        "animation" => "background-fade 1.5s ease-in-out infinite, shadow-pulse 1.5s ease-in-out infinite",
+    ),
+    CSS(
+        "@keyframes background-fade",
+        CSS("0%", "background" => "rgba(1, 1, 1, 1)"),
+        CSS("100%", "background" => "rgba(1, 1, 1, 1)"),
     ),
     CSS(
         "@keyframes shadow-pulse",
-        CSS("0%", "box-shadow" => box_shadow_soft,
-        CSS("50%", "box-shadow" => "0 0 20px rgba(0.0, 150.0, 51.0, 0.8)"),
-        CSS("100%", "box-shadow" => box_shadow_soft),
+        CSS("0%", "box-shadow" => "0 0 5px rgba(255, 255, 255, 0.1)"),
+        CSS("50%", "box-shadow" => "0 0 15px rgba(255, 255, 255, 0.3)"),
+        CSS("100%", "box-shadow" => "0 0 5px rgba(255, 255, 255, 0.1)"),
     ),
     CSS(
         ".julia-dots",
@@ -168,33 +208,33 @@ Styles(
     CSS(
         ".small-menu-bar",
         "z-index" => "1001",
-        "background-color" => "white",
-        "border" => "1px solid rgba(0, 0, 0, 0.1)",  # Soft outline
+        "background-color" => background_color_dark,
+        "border" => "1px solid rgba(255, 255, 255, 0.1)",  # Soft outline
         "border-radius" => "8px",  # Rounded corners for a smoother look
-        "box-shadow" => "0px 4px 10px rgba(0, 0, 0, 0.15)",  # Soft shadow
+        "box-shadow" => "0px 4px 10px rgba(255, 255, 255, 0.15)",  # Soft shadow
         "padding" => "4px",  # Adds spacing inside
     ),
     CSS(
         ".small-button.toggled",
-        "color" => "#000",
+        "color" => text_color_light,
         "border" => "none",
         "filter" => "grayscale(100%)",
         "opacity" => "0.5",
-        "box-shadow" => "inset 2px 2px 5px rgba(0, 0, 0, 0.5)",
+        "box-shadow" => "inset 2px 2px 5px rgba(255, 255, 255, 0.2)",  # Light inset shadow
     ),
     CSS(
         ".small-button",
         "background-color" => "transparent",
         "border" => "none",
         "border-radius" => "100px",
-        "color" => "#555",
+        "color" => text_color_light,  # Light text color for dark theme
         "cursor" => "pointer",
-        "box-shadow" => "0 2px 4px rgba(0, 0, 0, 0.2)",
+        "box-shadow" => "0 2px 4px rgba(255, 255, 255, 0.2)",  # Light shadow for contrast
         "transition" => "background-color 0.2s",
     ),
     CSS(
         ".small-button:hover",
-        "background-color" => "#ddd",
+        "background-color" => "rgba(255, 255, 255, 0.1)",  # Subtle hover effect
     ),
 
     CSS(
@@ -202,14 +242,14 @@ Styles(
         "font-family" => font_family_clean,  # Clean, modern font
         "font-size" => "14px",  # Slightly smaller for paths
         "font-weight" => "500",  # Medium weight
-        "color" => "#555",  # Softer than blackmonaco-editor-div
+        "color" => text_color_light,  # Softer than blackmonaco-editor-div
         "letter-spacing" => "0.3px",  # Subtle spacing
         "padding" => "5px 10px",  # Adds space around text
         "margin" => "1px",
         "width" => "fit-content",
         "border-radius" => "6px",  # Soft rounded corners
-        "border" => "1px solid rgba(0, 0, 0, 0.1)",  # Light border
-        "box-shadow" => "0px 2px 5px rgba(0, 0, 0, 0.1)",  # Soft shadow
+        "border" => "1px solid " * border_color_dark,  # Light border
+        "box-shadow" => box_shadow_light,  # Light shadow for contrast
         "white-space" => "nowrap",  # Prevents wrapping
         "overflow" => "hidden",  # Hides overflow
         "text-overflow" => "ellipsis",  # Adds "..." if the path is too long
@@ -220,6 +260,8 @@ Styles(
         "margin" => "0px",
         "width" => editor_width,
         "max-height" => max_height_large,
+        "background-color" => background_color_dark,
+        "color" => text_color_light
     ),
     # Utility
     CSS(
@@ -262,7 +304,7 @@ Styles(
         ".markdown-body",
         "-ms-text-size-adjust" => "100%",
         "-webkit-text-size-adjust" => "100%",
-        "color" => "#24292e",
+        "color" => text_color_light,
         "line-height" => "1.5",
         "font-family" => "-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif,Apple Color Emoji,Segoe UI Emoji,Segoe UI Symbol",
         "font-size" => "16px",
@@ -338,7 +380,7 @@ Styles(
         ".new-cell-menu:hover",
         "height" => "2.5rem",  # Expand to fit buttons
         "transition-delay" => "0.5s",
-        "background-color" => "#f0f0f0",  # Or any color you want
+        "background-color" => "#333",  # Or any color you want
     ),
     CSS(
         ".new-cell-menu > *",  # Target direct children

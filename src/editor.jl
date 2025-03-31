@@ -109,8 +109,12 @@ struct EvalEditor
 end
 
 function process_message(editor::EvalEditor, message::Dict)
-    return if message["type"] == "new-source"
-        editor.source[] = message["data"]
+    @show message
+    if message["type"] == "new-source"
+        if editor.source[] != message["data"]
+            @show message["data"]
+            editor.source[] = message["data"]
+        end
     elseif message["type"] == "run"
         eval_source!(editor, editor.source[])
     elseif message["type"] == "toggle-editor"
@@ -124,14 +128,17 @@ function process_message(editor::EvalEditor, message::Dict)
     else
         error("Unknown message type: $(message["type"])")
     end
+    return
 end
 
 function send(editor::EvalEditor; msg...)
-    return editor.julia_to_js[] = Dict{String, Any}((string(k) => v for (k, v) in pairs(msg)))
+    editor.julia_to_js[] = Dict{String, Any}((string(k) => v for (k, v) in pairs(msg)))
+    return
 end
 
 function run_from_newest!(editor::EvalEditor)
-    return send(editor; type = "run-from-newest")
+    send(editor; type = "run-from-newest")
+    return
 end
 
 function toggle!(ee::EvalEditor; editor = nothing, output = nothing, logging = nothing)
@@ -147,7 +154,8 @@ function toggle!(ee::EvalEditor; editor = nothing, output = nothing, logging = n
             end
         end
     end
-    return send(ee; type = "multi", data = messages)
+    send(ee; type = "multi", data = messages)
+    return
 end
 
 function EvalEditor(

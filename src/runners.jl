@@ -116,9 +116,7 @@ function run!(mod::Module, task::RunnerTask)
     editor.loading[] = true
     editor.show_logging[] = true
     editor.logging_html[] = ""
-
-    return try
-        @show source
+    try
         if startswith(source, "]")
             Pkg.REPLMode.pkgstr(source[2:end])
         elseif startswith(source, "?")
@@ -143,6 +141,7 @@ function run!(mod::Module, task::RunnerTask)
             editor.show_logging[] = false
         end
     end
+    return
 end
 
 function eval_source!(editor, source::String)

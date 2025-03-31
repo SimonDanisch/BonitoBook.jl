@@ -141,8 +141,8 @@ Styles(
     ),
     CSS(
         "@keyframes shadow-pulse",
-        CSS("0%", "box-shadow" => box_shadow_soft,
-        CSS("50%", "box-shadow" => "0 0 20px rgba(0.0, 150.0, 51.0, 0.8)"),
+        CSS("0%", "box-shadow" => box_shadow_soft),
+        CSS("50%", "box-shadow" => "0 0px 15px rgba(0.0, 150.0, 51.0, 0.8)"),
         CSS("100%", "box-shadow" => box_shadow_soft),
     ),
     CSS(
