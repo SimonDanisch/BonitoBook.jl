@@ -119,6 +119,7 @@ function run!(mod::Module, task::RunnerTask)
     editor.logging_html[] = ""
 
     try
+        @show source
         if startswith(source, "]")
             Pkg.REPLMode.pkgstr(source[2:end])
         elseif startswith(source, "?")

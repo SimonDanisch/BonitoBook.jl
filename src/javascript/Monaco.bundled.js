@@ -4,58 +4,56 @@
 
 const MONACO = "https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/+esm";
 const monaco = import(MONACO);
-class Book {
-    constructor(){
-        this.cells = [];
-        this.editors = {};
-    }
-    update_order(uuids) {
-        this.cells = uuids;
-    }
-    add_editor(editor, uuid) {
-        this.editors[uuid] = editor;
-    }
-    add_below(uuid_above, uuid) {
-        const index = this.cells.indexOf(uuid_above);
-        if (index === -1) {
-            throw new Error("Cell not found in the book.");
+class MonacoEditor {
+    constructor(editor_div, options, init_callback, hiding_direction, visible, theme){
+        this.editor_div = editor_div;
+        this.options = options;
+        this.initialized = false;
+        this.hiding_direction = hiding_direction;
+        this.theme = theme;
+        this.editor = new Promise((resolve)=>{
+            this.resolve_setup = resolve;
+        });
+        if (visible) {
+            this.initialize();
         }
-        this.cells.splice(index + 1, 0, uuid);
+        init_callback(this);
     }
-    get_up(editor) {
-        const uuid = editor.cell_uuid;
-        const index = this.cells.indexOf(uuid);
-        if (index <= 0) return null;
-        for(let i = index - 1; i >= 0; i--){
-            const up_uuid = this.cells[i];
-            if (this.editors[up_uuid]) {
-                return this.editors[up_uuid];
+    set_theme(theme) {
+        monaco.then((m)=>m.editor.setTheme(theme));
+    }
+    update_options(options) {
+        this.editor.then((x)=>x.updateOptions(options));
+    }
+    initialize() {
+        monaco.then((monaco)=>{
+            const div = this.editor_div;
+            const editor = monaco.editor.create(div, this.options);
+            div._editor_instance = this.editor;
+            monaco.editor.setTheme(this.theme);
+            this.initialized = true;
+            this.resolve_setup(editor);
+        });
+    }
+    toggle_editor(show) {
+        const div = this.editor_div;
+        toggle_elem(show, div, this.hiding_direction);
+        if (show && !this.initialized) {
+            const callback = ()=>{
+                this.initialize();
+                div.removeEventListener("transitionend", callback);
+            };
+            const transition_str = getComputedStyle(div).transitionDuration;
+            const transition = parseFloat(transition_str) * 1000;
+            if (transition === 0) {
+                callback();
+            } else {
+                div.addEventListener("transitionend", callback);
+                setTimeout(callback, transition);
             }
         }
-        return null;
-    }
-    get_down(editor) {
-        const uuid = editor.cell_uuid;
-        const index = this.cells.indexOf(uuid);
-        if (index === -1 || index >= this.cells.length - 1) return null;
-        for(let i = index + 1; i < this.cells.length; i++){
-            const down_uuid = this.cells[i];
-            if (this.editors[down_uuid]) {
-                return this.editors[down_uuid];
-            }
-        }
-        return null;
-    }
-    remove_editor(uuid) {
-        delete this.editors[uuid];
-        const index = this.cells.indexOf(uuid);
-        if (index !== -1) {
-            this.cells.splice(index, 1);
-        }
-        document.getElementById(uuid).parentElement.remove();
     }
 }
-const BOOK = new Book();
 class EvalEditor {
     constructor(monaco_editor, output_div, logging_div, direction, js_to_julia, julia_to_js, source_obs, show_output, show_logging){
         this.message_queue = [];
@@ -165,7 +163,82 @@ class EvalEditor {
             console.warn("Unknown message type:", message.type);
         }
     }
+    toggle_editor(show) {
+        this.editor.toggle_editor(show);
+        this.js_to_julia.notify({
+            type: "toggle-editor",
+            data: show
+        });
+    }
+    toggle_output(show) {
+        this.show_output = show;
+        this.js_to_julia.notify({
+            type: "toggle-output",
+            data: show
+        });
+        toggle_elem(show, this.output_div, this.direction);
+    }
+    toggle_logging(show) {
+        this.show_logging = show;
+        this.js_to_julia.notify({
+            type: "toggle-logging",
+            data: show
+        });
+        toggle_elem(show, this.logging_div, this.direction);
+    }
 }
+class Book {
+    constructor(){
+        this.cells = [];
+        this.editors = {};
+    }
+    update_order(uuids) {
+        this.cells = uuids;
+    }
+    add_editor(editor, uuid) {
+        this.editors[uuid] = editor;
+    }
+    add_below(uuid_above, uuid) {
+        const index = this.cells.indexOf(uuid_above);
+        if (index === -1) {
+            throw new Error("Cell not found in the book.");
+        }
+        this.cells.splice(index + 1, 0, uuid);
+    }
+    get_up(editor) {
+        const uuid = editor.cell_uuid;
+        const index = this.cells.indexOf(uuid);
+        if (index <= 0) return null;
+        for(let i = index - 1; i >= 0; i--){
+            const up_uuid = this.cells[i];
+            if (this.editors[up_uuid]) {
+                return this.editors[up_uuid];
+            }
+        }
+        return null;
+    }
+    get_down(editor) {
+        const uuid = editor.cell_uuid;
+        const index = this.cells.indexOf(uuid);
+        if (index === -1 || index >= this.cells.length - 1) return null;
+        for(let i = index + 1; i < this.cells.length; i++){
+            const down_uuid = this.cells[i];
+            if (this.editors[down_uuid]) {
+                return this.editors[down_uuid];
+            }
+        }
+        return null;
+    }
+    remove_editor(uuid) {
+        delete this.editors[uuid];
+        const index = this.cells.indexOf(uuid);
+        if (index !== -1) {
+            this.cells.splice(index, 1);
+        }
+        document.getElementById(uuid).parentElement.remove();
+    }
+}
+const BOOK = new Book();
 function add_editor_below(above_editor_uuid, elem, uuid) {
     const editor_div = document.getElementById(above_editor_uuid);
     const parent1 = editor_div.parentElement;
@@ -194,7 +267,6 @@ function resize_to_lines(editor, monaco, editor_div) {
     updateEditorHeight();
 }
 function toggle_elem(show, elem, direction) {
-    console.log("Toggling element", elem, "to", show);
     const hide_class = `hide-${direction}`;
     const show_class = `show-${direction}`;
     if (!elem) {
@@ -209,7 +281,8 @@ function toggle_elem(show, elem, direction) {
         elem.classList.remove(show_class);
     }
 }
-function setup_cell_interactions(buttons, container, card_content, loading_obs, all_visible_obs, hide_on_focus_obs, show_editor_obs, show_output_obs, get_source_obs) {
+function setup_cell_editor(uuid, buttons, container, card_content, loading_obs, all_visible_obs, hide_on_focus_obs) {
+    const eval_editor = BOOK.editors[uuid];
     const make_visible = ()=>{
         buttons.style.opacity = 1.0;
     };
@@ -230,69 +303,19 @@ function setup_cell_interactions(buttons, container, card_content, loading_obs, 
     });
     container.addEventListener("focus", (e)=>{
         if (hide_on_focus_obs.value) {
-            show_editor_obs.notify(true);
-            show_output_obs.notify(false);
+            eval_editor.toggle_editor(true);
+            eval_editor.toggle_output(false);
         }
     });
     container.addEventListener("focusout", (e)=>{
         if (hide_on_focus_obs.value) {
             if (!container.contains(e.relatedTarget)) {
-                show_editor_obs.notify(false);
-                show_output_obs.notify(true);
-                get_source_obs.notify(true);
+                eval_editor.toggle_editor(false);
+                eval_editor.toggle_output(true);
+                eval_editor.set_source();
             }
         }
     });
-}
-class MonacoEditor {
-    constructor(editor_div, options, init_callback, hiding_direction, visible, theme){
-        this.editor_div = editor_div;
-        this.options = options;
-        this.initialized = false;
-        this.hiding_direction = hiding_direction;
-        this.theme = theme;
-        this.editor = new Promise((resolve)=>{
-            this.resolve_setup = resolve;
-        });
-        if (visible) {
-            this.initialize();
-        }
-        init_callback(this);
-    }
-    set_theme(theme) {
-        monaco.then((m)=>m.editor.setTheme(theme));
-    }
-    update_options(options) {
-        this.editor.then((x)=>x.updateOptions(options));
-    }
-    initialize() {
-        monaco.then((monaco)=>{
-            const div = this.editor_div;
-            const editor = monaco.editor.create(div, this.options);
-            div._editor_instance = this.editor;
-            monaco.editor.setTheme(this.theme);
-            this.initialized = true;
-            this.resolve_setup(editor);
-        });
-    }
-    toggle_editor(show) {
-        const div = this.editor_div;
-        toggle_elem(show, div, this.hiding_direction);
-        if (show && !this.initialized) {
-            const callback = ()=>{
-                this.initialize();
-                div.removeEventListener("transitionend", callback);
-            };
-            const transition_str = getComputedStyle(div).transitionDuration;
-            const transition = parseFloat(transition_str) * 1000;
-            if (transition === 0) {
-                callback();
-            } else {
-                div.addEventListener("transitionend", callback);
-                setTimeout(callback, transition);
-            }
-        }
-    }
 }
 class Connection {
     constructor(inbox, outbox){
@@ -443,14 +466,14 @@ function register_cell_editor(eval_editor, uuid) {
         });
     });
 }
-export { BOOK as BOOK };
+export { MonacoEditor as MonacoEditor };
 export { EvalEditor as EvalEditor };
+export { BOOK as BOOK };
 export { add_editor_below as add_editor_below };
 export { add_command as add_command };
 export { resize_to_lines as resize_to_lines };
 export { toggle_elem as toggle_elem };
-export { setup_cell_interactions as setup_cell_interactions };
-export { MonacoEditor as MonacoEditor };
+export { setup_cell_editor as setup_cell_editor };
 export { register_completions as register_completions };
 export { register_cell_editor as register_cell_editor };
 

@@ -106,11 +106,17 @@ struct EvalEditor
     loading::Observable{Bool}
 end
 
-function process_message(editor, message::Dict)
+function process_message(editor::EvalEditor, message::Dict)
     if message["type"] == "new-source"
         editor.source[] = message["data"]
     elseif message["type"] == "run"
         eval_source!(editor, editor.source[])
+    elseif message["type"] == "toggle-editor"
+        editor.show_editor[] = message["data"]
+    elseif message["type"] == "toggle-logging"
+        editor.show_logging[] = message["data"]
+    elseif message["type"] == "toggle-output"
+        editor.show_output[] = message["data"]
     elseif message["type"] === "multi"
         foreach(msg-> process_message(editor, msg), message["data"])
     else
@@ -272,7 +278,6 @@ function CellEditor(content, language, runner; show_editor=true, show_logging=tr
         end
     end
     on(show_chat_obs) do show
-        @show chat.show_editor[] chat.show_logging[] chat.show_output[]
         toggle!(chat; editor = show, output = show, logging = show)
     end
     return CellEditor(
@@ -315,7 +320,8 @@ function Bonito.jsrender(session::Session, editor::CellEditor)
     hide_on_focus_obs = Observable(editor.language == "markdown")
     setup_cell_interactions = js"""
     $(Monaco).then(mod => {
-        mod.setup_cell_interactions(
+        mod.setup_cell_editor(
+            $(editor.uuid),
             $hover_buttons, $container, $card_content,
             $any_loading, $any_visible,
             $(hide_on_focus_obs),

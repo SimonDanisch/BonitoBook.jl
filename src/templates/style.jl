@@ -119,18 +119,10 @@ Styles(
         "display" => "block",
     ),
     CSS(".hide-horizontal",
-        "opacity" => "0",
-        "padding" => "0px !important",
-        "margin" => "0px !important",
-        "width" => "0px !important",  # Start collapsed horizontally
-        "max-width" => "0px",  # Start collapsed horizontally
-        "overflow" => "hidden",  # Hide overflow content
-        "transition" => transition_fast,  # Transition for max-width
-        "border-radius" => "0px",
+        "display" => "none"
     ),
     CSS(".show-horizontal",
-        "max-width" => "1000px",  # Or any large value larger than the element's width
-        "transition" => transition_fast  # Transition for max-width
+        "display" => "block",
     ),
     CSS(
         ".loading-cell",

@@ -4,9 +4,10 @@ struct Book
     cells::Vector{CellEditor}
     style_editor::FileEditor
     runner::Any
+    progress::Observable{Tuple{Bool, Float64}}
 end
 
-function from_folder(folder, runner)
+function from_folder(folder)
     project = joinpath(folder, "Project.toml")
     manifest = joinpath(folder, "Manifest.toml")
     book = joinpath(folder, "book.md")
@@ -19,25 +20,13 @@ function from_folder(folder, runner)
         end
     end
     Pkg.activate(folder; io=IOBuffer())
-    cells = load_book(book)
-    editors = cells2editors(cells, runner)
-    style_editor = FileEditor([style_path, style_dark_path], runner; editor_classes=["styling file-editor"], show_editor=false)
-    run!(style_editor.editor) # run the style editor to get the output Styles
-    @assert style_editor.editor.output[] isa Styles
-    book = Book(book, folder, editors, style_editor, runner)
-    export_md(joinpath(folder, "book.md"), book)
-    runner.callback[] = (cell, source, result) -> begin
-        if cell.editor.source[] != source
-            export_md(joinpath(folder, "book.md"), book)
-        end
-    end
-    return book
+    return book, folder, [style_path, style_dark_path]
 end
 
-function from_file(book, folder, runner)
-    cells = load_book(book)
-    runner.mod.eval(runner.mod, :(using Bonito, Markdown, BonitoBook, WGLMakie))
-
+function from_file(book, folder)
+    if isdir(folder)
+        return from_folder(folder)
+    end
     style_path_template = joinpath(@__DIR__, "templates/style.jl")
     style_dark_path_template = joinpath(@__DIR__, "templates/style-dark.jl")
     mkpath(joinpath(folder, "styles"))
@@ -52,28 +41,30 @@ function from_file(book, folder, runner)
     cp(joinpath(dirname(project), "Manifest.toml"), joinpath(folder, "Manifest.toml"))
     Pkg.activate(folder; io=IOBuffer())
 
+    return book, folder, [style_path, style_dark_path]
+end
+
+function Book(file; folder=nothing, runner=AsyncRunner())
+    runner.mod.eval(runner.mod, :(using Bonito, Markdown, BonitoBook, WGLMakie))
+    if isfile(file)
+        bookfile, folder, style_paths = from_file(file, folder, runner)
+    elseif isdir(file)
+        bookfile, folder, style_paths = from_folder(file, runner)
+    else
+        error("File $file isnt a file or folder")
+    end
+    cells = load_book(bookfile)
     editors = cells2editors(cells, runner)
-    style_editor = FileEditor([style_path, style_dark_path], runner; editor_classes=["styling file-editor"], show_editor=false)
+    style_editor = FileEditor(style_paths..., runner; editor_classes=["styling file-editor"], show_editor=false)
     run!(style_editor.editor) # run the style editor to get the output Styles
     @assert style_editor.editor.output[] isa Styles
-    book = Book(book, folder, editors, style_editor, runner)
+    progress = Observable((false, 0.0))
+    book = Book(bookfile, folder, editors, style_editor, runner, progress)
     export_md(joinpath(folder, "book.md"), book)
     runner.callback[] = (cell, source, result) -> begin
         if cell.editor.source[] != source
             export_md(joinpath(folder, "book.md"), book)
         end
-    end
-    return book
-end
-
-function Book(file; folder=mktempdir(), runner=AsyncRunner())
-    runner.mod.eval(runner.mod, :(using Bonito, Markdown, BonitoBook, WGLMakie))
-    if isfile(file)
-        return from_file(file, folder, runner)
-    elseif isdir(file)
-        return from_folder(file, runner)
-    else
-        error("File $file isnt a file or folder")
     end
 end
 
@@ -197,7 +188,11 @@ function setup_menu(book)
     )
     popup = PopUp(popup_content; show=false)
     style_fe = book.style_editor
-    style_fe_toggle = SmallToggle(style_fe.editor.show_editor; class="codicon codicon-paintcan")
+    show_editor = Observable(false)
+    on(show_editor) do show
+        toggle!(style_fe.editor, editor=show)
+    end
+    style_fe_toggle = SmallToggle(show_editor; class="codicon codicon-paintcan")
     menu = DOM.div(DOM.div(class="codicon codicon-settings", style_fe_toggle);
         class="settings small-menu-bar"
     )

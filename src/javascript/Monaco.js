@@ -1,6 +1,227 @@
 const MONACO = "https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/+esm";
 const monaco = import(MONACO);
 
+export class MonacoEditor {
+    constructor(
+        editor_div,
+        options,
+        init_callback,
+        hiding_direction,
+        visible,
+        theme
+    ) {
+        this.editor_div = editor_div;
+        this.options = options;
+        this.initialized = false;
+        this.hiding_direction = hiding_direction;
+        this.theme = theme;
+        this.editor = new Promise((resolve) => {
+            this.resolve_setup = resolve;
+        });
+        if (visible) {
+            this.initialize();
+        }
+        init_callback(this);
+    }
+    set_theme(theme) {
+        monaco.then((m) => m.editor.setTheme(theme));
+    }
+    update_options(options) {
+        this.editor.then((x) => x.updateOptions(options));
+    }
+    initialize() {
+        monaco.then((monaco) => {
+            const div = this.editor_div;
+            const editor = monaco.editor.create(div, this.options);
+            div._editor_instance = this.editor;
+            monaco.editor.setTheme(this.theme);
+            this.initialized = true;
+            this.resolve_setup(editor);
+        });
+    }
+    toggle_editor(show) {
+        const div = this.editor_div;
+        toggle_elem(show, div, this.hiding_direction);
+        if (show && !this.initialized) {
+            // if just toggled visibility, we need to wait for the transition to end
+            // to have the width/height on the final value
+            const callback = () => {
+                this.initialize();
+                // Remove listener to prevent multiple calls
+                div.removeEventListener("transitionend", callback);
+            };
+            const transition_str = getComputedStyle(div).transitionDuration;
+            const transition = parseFloat(transition_str) * 1000;
+            if (transition === 0) {
+                callback();
+            } else {
+                div.addEventListener("transitionend", callback);
+                setTimeout(callback, transition);
+            }
+        }
+    }
+}
+
+export class EvalEditor {
+    constructor(
+        monaco_editor,
+        output_div,
+        logging_div,
+        direction,
+        js_to_julia,
+        julia_to_js,
+        source_obs,
+        show_output,
+        show_logging
+    ) {
+        this.message_queue = [];
+        this.editor = monaco_editor;
+        this.output_div = output_div;
+        this.logging_div = logging_div;
+        this.direction = direction;
+        this.source_obs = source_obs;
+
+        this.show_output = show_output;
+        this.show_logging = show_logging;
+
+        this.js_to_julia = js_to_julia;
+        julia_to_js.on((message) => {
+            console.log(message);
+            this.process_message(message);
+        });
+        monaco.then((monaco) => {
+            monaco_editor.editor.then((editor) => {
+                resize_to_lines(editor, monaco, this.editor.editor_div);
+                editor.addCommand(
+                    monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyP, // Ctrl+P or Cmd+P
+                    () => {
+                        // Trigger the built-in command palette command
+                        editor.trigger(
+                            "keyboard",
+                            "editor.action.quickCommand",
+                            null
+                        );
+                    }
+                );
+                add_command(
+                    editor,
+                    "Eval cell",
+                    [monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter],
+                    () => {
+                        this.set_source();
+                        this.run();
+                        this.send();
+                    }
+                );
+                add_command(
+                    editor,
+                    "Eval cell + add new cell",
+                    [monaco.KeyMod.Shift | monaco.KeyCode.Enter],
+                    () => {
+                        this.set_source();
+                        this.run();
+                        this.send();
+                        move_down(editor);
+                    }
+                );
+                add_command(
+                    editor,
+                    "Save",
+                    [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS],
+                    () => {
+                        this.set_source();
+                        this.send();
+                    }
+                );
+            });
+        });
+    }
+    run() {
+        this.message_queue.push({ type: "run" });
+    }
+    set_source() {
+        this.editor.editor.then((editor) => {
+            this.message_queue.push({
+                type: "new-source",
+                data: editor.getValue(),
+            });
+        });
+    }
+    send() {
+        if (this.message_queue.length === 0) return;
+        if (this.message_queue.length === 1) {
+            this.js_to_julia.notify(this.message_queue[0]);
+        } else {
+            this.js_to_julia.notify({
+                type: "multi",
+                data: this.message_queue,
+            });
+        }
+        this.message_queue = [];
+    }
+    process_message(message) {
+        if (message.type === "get-source") {
+            this.editor.editor.then((editor) => {
+                this.js_to_julia.notify({
+                    type: "new-source",
+                    data: editor.getValue(),
+                });
+            });
+        } else if (message.type === "set-source") {
+            this.editor.editor.then((editor) => {
+                editor.setValue(message.data);
+            });
+        } else if (message.type === "run-from-newest") {
+            this.editor.editor.then((editor) => {
+                const newest_source = editor.getValue();
+                if (this.source_obs.value != newest_source) {
+                    this.message_queue.push({
+                        type: "new-source",
+                        data: newest_source,
+                    });
+                }
+                this.run();
+                this.send();
+            });
+        } else if (message.type === "toggle-editor") {
+            this.editor.toggle_editor(message.data);
+        } else if (message.type === "toggle-output") {
+            this.show_output = message.data;
+            toggle_elem(message.data, this.output_div, this.direction);
+        } else if (message.type === "toggle-logging") {
+            this.show_logging = message.data;
+            toggle_elem(message.data, this.logging_div, this.direction);
+        } else if (message.type === "multi") {
+            message.data.forEach(this.process_message.bind(this));
+        } else {
+            console.warn("Unknown message type:", message.type);
+        }
+    }
+    toggle_editor(show) {
+        this.editor.toggle_editor(show);
+        this.js_to_julia.notify({
+            type: "toggle-editor",
+            data: show,
+        });
+    }
+    toggle_output(show) {
+        this.show_output = show;
+        this.js_to_julia.notify({
+            type: "toggle-output",
+            data: show,
+        });
+        toggle_elem(show, this.output_div, this.direction);
+    }
+    toggle_logging(show) {
+        this.show_logging = show;
+        this.js_to_julia.notify({
+            type: "toggle-logging",
+            data: show,
+        });
+        toggle_elem(show, this.logging_div, this.direction);
+    }
+}
+
 class Book {
     constructor() {
         this.cells = []; // Ordered list of cell uuids
@@ -64,144 +285,6 @@ class Book {
 
 export const BOOK = new Book();
 
-export class EvalEditor {
-    constructor(
-        monaco_editor,
-        output_div,
-        logging_div,
-        direction,
-        js_to_julia,
-        julia_to_js,
-        source_obs,
-        show_output,
-        show_logging
-    ) {
-        this.message_queue = [];
-        this.editor = monaco_editor;
-        this.output_div = output_div;
-        this.logging_div = logging_div;
-        this.direction = direction;
-        this.source_obs = source_obs;
-
-        this.show_output = show_output;
-        this.show_logging = show_logging;
-
-        this.js_to_julia = js_to_julia;
-        julia_to_js.on((message) => {
-            console.log(message)
-            this.process_message(message);
-        });
-        monaco.then((monaco) => {
-            console.log(monaco_editor)
-            monaco_editor.editor.then((editor) => {
-                resize_to_lines(editor, monaco, this.editor.editor_div);
-                editor.addCommand(
-                    monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyP, // Ctrl+P or Cmd+P
-                    () => {
-                        // Trigger the built-in command palette command
-                        editor.trigger(
-                            "keyboard",
-                            "editor.action.quickCommand",
-                            null
-                        );
-                    }
-                );
-                add_command(
-                    editor,
-                    "Eval cell",
-                    [monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter],
-                    () => {
-                        this.set_source();
-                        this.run();
-                        this.send();
-                    }
-                );
-                add_command(
-                    editor,
-                    "Eval cell + add new cell",
-                    [monaco.KeyMod.Shift | monaco.KeyCode.Enter],
-                    () => {
-                        this.set_source();
-                        this.run();
-                        this.send();
-                        move_down(editor);
-                    }
-                );
-                add_command(
-                    editor,
-                    "Save",
-                    [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS],
-                    () => {
-                        this.set_source();
-                        this.send();
-                    }
-                );
-            });
-        });
-    }
-    run() {
-        this.message_queue.push({ type: "run" });
-    }
-    set_source() {
-        this.editor.editor.then((editor => {
-            this.message_queue.push({
-                type: "new-source",
-                data: editor.getValue(),
-            });
-        }));
-    }
-    send() {
-        if (this.message_queue.length === 0) return;
-        if (this.message_queue.length === 1) {
-            this.js_to_julia.notify(this.message_queue[0]);
-        } else {
-            this.js_to_julia.notify({
-                type: "multi",
-                data: this.message_queue,
-            });
-        }
-        this.message_queue = [];
-    }
-    process_message(message) {
-        if (message.type === "get-source") {
-            this.editor.editor.then((editor) => {
-                this.js_to_julia.notify({
-                    type: "new-source",
-                    data: editor.getValue(),
-                });
-            });
-        } else if (message.type === "set-source") {
-            this.editor.editor.then((editor) => {
-                editor.setValue(message.data);
-            });
-        } else if (message.type === "run-from-newest") {
-            this.editor.editor.then((editor) => {
-                const newest_source = editor.getValue();
-                if (this.source_obs.value != newest_source) {
-                    this.message_queue.push({
-                        type: "new-source",
-                        data: newest_source,
-                    });
-                }
-                this.run();
-                this.send();
-            });
-        } else if (message.type === "toggle-editor") {
-            this.editor.toggle_editor(message.data);
-        } else if (message.type === "toggle-output") {
-            this.show_output = message.data;
-            toggle_elem(message.data, this.output_div, this.direction);
-        } else if (message.type === "toggle-logging") {
-            this.show_logging = message.data;
-            toggle_elem(message.data, this.logging_div, this.direction);
-        } else if (message.type === "multi") {
-            message.data.forEach(this.process_message.bind(this));
-        } else {
-            console.warn("Unknown message type:", message.type);
-        }
-    }
-}
-
 export function add_editor_below(above_editor_uuid, elem, uuid) {
     const editor_div = document.getElementById(above_editor_uuid); // Correct function
     const parent1 = editor_div.parentElement; // Parent of editor_div
@@ -245,7 +328,6 @@ export function resize_to_lines(editor, monaco, editor_div) {
 }
 
 export function toggle_elem(show, elem, direction) {
-    console.log("Toggling element", elem, "to", show);
     const hide_class = `hide-${direction}`;
     const show_class = `show-${direction}`;
     if (!elem) {
@@ -261,19 +343,17 @@ export function toggle_elem(show, elem, direction) {
     }
 }
 
-export function setup_cell_interactions(
-    buttons,
-    container,
-    card_content,
-    loading_obs,
-    all_visible_obs,
-
-    // Markdown unhiding behavior
-    hide_on_focus_obs,
-    show_editor_obs,
-    show_output_obs,
-    get_source_obs
-) {
+export function setup_cell_editor(
+        uuid,
+        buttons,
+        container,
+        card_content,
+        loading_obs,
+        all_visible_obs,
+        // Markdown unhiding behavior
+        hide_on_focus_obs
+    ) {
+    const eval_editor = BOOK.editors[uuid];
     const make_visible = () => {
         buttons.style.opacity = 1.0;
     };
@@ -295,81 +375,21 @@ export function setup_cell_interactions(
     });
     container.addEventListener("focus", (e) => {
         if (hide_on_focus_obs.value) {
-            show_editor_obs.notify(true);
-            show_output_obs.notify(false);
+            eval_editor.toggle_editor(true);
+            eval_editor.toggle_output(false);
         }
     });
     container.addEventListener("focusout", (e) => {
         if (hide_on_focus_obs.value) {
             if (!container.contains(e.relatedTarget)) {
-                show_editor_obs.notify(false);
-                show_output_obs.notify(true);
-                get_source_obs.notify(true);
+                eval_editor.toggle_editor(false);
+                eval_editor.toggle_output(true);
+                eval_editor.set_source();
             }
         }
     });
 }
 
-export class MonacoEditor {
-    constructor(
-        editor_div,
-        options,
-        init_callback,
-        hiding_direction,
-        visible,
-        theme
-    ) {
-        this.editor_div = editor_div;
-        this.options = options;
-        this.initialized = false;
-        this.hiding_direction = hiding_direction;
-        this.theme = theme;
-        this.editor = new Promise((resolve) => {
-            this.resolve_setup = resolve;
-        })
-        if (visible) {
-            this.initialize();
-        }
-        init_callback(this);
-    }
-    set_theme(theme) {
-        monaco.then((m) => m.editor.setTheme(theme));
-    }
-    update_options(options) {
-        this.editor.then(x=> x.updateOptions(options));
-    }
-    initialize() {
-        monaco.then((monaco) => {
-            const div = this.editor_div;
-            const editor = monaco.editor.create(div, this.options);
-            div._editor_instance = this.editor;
-            monaco.editor.setTheme(this.theme);
-            this.initialized = true;
-            this.resolve_setup(editor);
-        });
-    }
-    toggle_editor(show) {
-        const div = this.editor_div;
-        toggle_elem(show, div, this.hiding_direction);
-        if (show && !this.initialized) {
-            // if just toggled visibility, we need to wait for the transition to end
-            // to have the width/height on the final value
-            const callback = () => {
-                this.initialize();
-                // Remove listener to prevent multiple calls
-                div.removeEventListener("transitionend", callback);
-            };
-            const transition_str = getComputedStyle(div).transitionDuration;
-            const transition = parseFloat(transition_str) * 1000;
-            if (transition === 0) {
-                callback();
-            } else {
-                div.addEventListener("transitionend", callback);
-                setTimeout(callback, transition);
-            }
-        }
-    };
-}
 
 class Connection {
     constructor(inbox, outbox) {
