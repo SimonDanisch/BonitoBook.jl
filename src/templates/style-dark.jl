@@ -12,18 +12,20 @@ background_color_dark = "#1e1e1e"  # Dark background for the whole document
 text_color_light = "rgb(212, 212, 212)"  # Light text color
 border_color_dark = "rgba(255, 255, 255, 0.1)"  # Subtle border for dark theme
 
-Makie.set_theme!(; size=(650, 450), Makie.theme_dark()...)
+Makie.set_theme!(; size = (650, 450), Makie.theme_dark()...)
 BonitoBook.monaco_theme!("vs-dark")
 editor_width = "90ch"
 Styles(
     # Set the background color for the whole document
-    CSS("body",
+    CSS(
+        "body",
         "background-color" => background_color_dark,
         "color" => text_color_light
     ),
     # Fix for Markdown list
     CSS("li p", "display" => "inline"),
-    CSS("mjx-container[jax='CHTML'][display='true']",
+    CSS(
+        "mjx-container[jax='CHTML'][display='true']",
         "display" => "inline"
     ),
     CSS(
@@ -61,13 +63,15 @@ Styles(
         "color" => text_color_light
     ),
     # The editor div
-    CSS(".cell-editor-container",
+    CSS(
+        ".cell-editor-container",
         "width" => editor_width,
         "position" => "relative",
         "background-color" => background_color_dark,
         "color" => text_color_light
     ),
-    CSS(".cell-menu-proximity-area",
+    CSS(
+        ".cell-menu-proximity-area",
         "position" => "absolute",
         "top" => "-20px", # span an area of 20px above the cell
         "left" => "0px",
@@ -96,7 +100,8 @@ Styles(
         "color" => text_color_light
     ),
     # AI
-    CSS(".chat.monaco-editor-div",
+    CSS(
+        ".chat.monaco-editor-div",
         "border-radius" => border_radius_small,
         "border" => "1px solid " * border_color_dark,
         "padding" => "5px",
@@ -117,7 +122,8 @@ Styles(
         "color" => text_color_light
     ),
 
-    CSS(".hover-buttons",
+    CSS(
+        ".hover-buttons",
         "position" => "absolute",
         "right" => "-10px",
         "top" => "-23px",
@@ -127,7 +133,8 @@ Styles(
         "pointer-events" => "auto",
     ),
 
-    CSS(".cell-output",
+    CSS(
+        ".cell-output",
         "width" => "100%",
         "margin" => "5px",
         "max-height" => "700px",
@@ -137,13 +144,16 @@ Styles(
         "color" => text_color_light
     ),
 
-    CSS(".hide-vertical",
+    CSS(
+        ".hide-vertical",
         "display" => "none",
     ),
-    CSS(".show-vertical",
+    CSS(
+        ".show-vertical",
         "display" => "block",
     ),
-    CSS(".hide-horizontal",
+    CSS(
+        ".hide-horizontal",
         "opacity" => "0",
         "padding" => "0px !important",
         "margin" => "0px !important",
@@ -153,7 +163,8 @@ Styles(
         "transition" => transition_fast,  # Transition for max-width
         "border-radius" => "0px",
     ),
-    CSS(".show-horizontal",
+    CSS(
+        ".show-horizontal",
         "max-width" => "1000px",  # Or any large value larger than the element's width
         "transition" => transition_fast  # Transition for max-width
     ),
@@ -174,7 +185,8 @@ Styles(
         CSS("50%", "box-shadow" => "0 0 15px rgba(255, 255, 255, 0.3)"),
         CSS("100%", "box-shadow" => "0 0 5px rgba(255, 255, 255, 0.1)"),
     ),
-    CSS(".julia-dots",
+    CSS(
+        ".julia-dots",
         "background-image" => BonitoBook.assets("julia-dots.svg"),
         "background-size" => "60% auto",
         "background-repeat" => "no-repeat",
@@ -182,7 +194,8 @@ Styles(
         "width" => "1.2rem",
         "height" => "1.2rem",
     ),
-    CSS(".python-logo",
+    CSS(
+        ".python-logo",
         "background-image" => BonitoBook.assets("python.svg"),
         "background-size" => "60% auto",
         "background-repeat" => "no-repeat",
@@ -192,7 +205,8 @@ Styles(
     ),
     # Menu and Buttons
 
-    CSS(".small-menu-bar",
+    CSS(
+        ".small-menu-bar",
         "z-index" => "1001",
         "background-color" => background_color_dark,
         "border" => "1px solid rgba(255, 255, 255, 0.1)",  # Soft outline
@@ -200,14 +214,16 @@ Styles(
         "box-shadow" => "0px 4px 10px rgba(255, 255, 255, 0.15)",  # Soft shadow
         "padding" => "4px",  # Adds spacing inside
     ),
-    CSS(".small-button.toggled",
+    CSS(
+        ".small-button.toggled",
         "color" => text_color_light,
         "border" => "none",
         "filter" => "grayscale(100%)",
         "opacity" => "0.5",
         "box-shadow" => "inset 2px 2px 5px rgba(255, 255, 255, 0.2)",  # Light inset shadow
     ),
-    CSS(".small-button",
+    CSS(
+        ".small-button",
         "background-color" => "transparent",
         "border" => "none",
         "border-radius" => "100px",
@@ -221,7 +237,8 @@ Styles(
         "background-color" => "rgba(255, 255, 255, 0.1)",  # Subtle hover effect
     ),
 
-    CSS(".file-editor-path",
+    CSS(
+        ".file-editor-path",
         "font-family" => font_family_clean,  # Clean, modern font
         "font-size" => "14px",  # Slightly smaller for paths
         "font-weight" => "500",  # Medium weight
@@ -237,7 +254,8 @@ Styles(
         "overflow" => "hidden",  # Hides overflow
         "text-overflow" => "ellipsis",  # Adds "..." if the path is too long
     ),
-    CSS(".file-editor",
+    CSS(
+        ".file-editor",
         "padding" => "0px",
         "margin" => "0px",
         "width" => editor_width,
@@ -246,35 +264,44 @@ Styles(
         "color" => text_color_light
     ),
     # Utility
-    CSS(".flex-row",
+    CSS(
+        ".flex-row",
         "display" => "flex",
         "flex-direction" => "row"
     ),
-    CSS(".flex-column",
+    CSS(
+        ".flex-column",
         "display" => "flex",
         "flex-direction" => "column"
     ),
-    CSS(".center-content",
+    CSS(
+        ".center-content",
         "justify-content" => "center",
         "align-items" => "center"
     ),
-    CSS(".inline-block",
+    CSS(
+        ".inline-block",
         "display" => "inline-block"
     ),
-    CSS(".fit-content",
+    CSS(
+        ".fit-content",
         "width" => "fit-content"
     ),
-    CSS(".max-width-90ch",
+    CSS(
+        ".max-width-90ch",
         "max-width" => "90ch"
     ),
-    CSS(".gap-10",
+    CSS(
+        ".gap-10",
         "gap" => "10px"
     ),
-    CSS(".full-width",
+    CSS(
+        ".full-width",
         "width" => "100%"
     ),
     # Markdown
-     CSS(".markdown-body",
+    CSS(
+        ".markdown-body",
         "-ms-text-size-adjust" => "100%",
         "-webkit-text-size-adjust" => "100%",
         "color" => text_color_light,
@@ -283,20 +310,24 @@ Styles(
         "font-size" => "16px",
         "word-wrap" => "break-word"
     ),
-    CSS(".markdown-body .octicon",
+    CSS(
+        ".markdown-body .octicon",
         "display" => "inline-block",
         "fill" => "currentColor",
         "vertical-align" => "text-bottom"
     ),
-    CSS(".markdown-body .anchor",
+    CSS(
+        ".markdown-body .anchor",
         "float" => "left",
         "line-height" => "1",
         "margin-left" => "-20px",
         "padding-right" => "4px"
     ),
     CSS(".markdown-body .anchor:focus", "outline" => "none"),
-    CSS(".markdown-body h1, .markdown-body h2, .markdown-body h3, .markdown-body h4, .markdown-body h5, .markdown-body h6",
-        "margin-bottom" => "0", "margin-top" => "0"),
+    CSS(
+        ".markdown-body h1, .markdown-body h2, .markdown-body h3, .markdown-body h4, .markdown-body h5, .markdown-body h6",
+        "margin-bottom" => "0", "margin-top" => "0"
+    ),
     CSS(".markdown-body h1", "font-size" => "32px", "font-weight" => "600"),
     CSS(".markdown-body h2", "font-size" => "24px", "font-weight" => "600"),
     CSS(".markdown-body h3", "font-size" => "20px", "font-weight" => "600"),
@@ -306,7 +337,8 @@ Styles(
     CSS(".markdown-body a", "color" => "#0366d6", "text-decoration" => "none"),
     CSS(".markdown-body a:hover", "text-decoration" => "underline"),
     CSS(".markdown-body strong", "font-weight" => "600"),
-    CSS(".markdown-body hr",
+    CSS(
+        ".markdown-body hr",
         "background" => "transparent",
         "border" => "0",
         "border-bottom" => "1px solid #dfe2e5",
@@ -314,17 +346,20 @@ Styles(
         "margin" => "15px 0",
         "overflow" => "hidden"
     ),
-    CSS(".markdown-body table",
+    CSS(
+        ".markdown-body table",
         "border-collapse" => "collapse",
         "border-spacing" => "0"
     ),
     CSS(".markdown-body td, .markdown-body th", "padding" => "0"),
-    CSS(".markdown-body blockquote",
+    CSS(
+        ".markdown-body blockquote",
         "border-left" => ".25em solid #dfe2e5",
         "color" => "#6a737d",
         "padding" => "0 1em"
     ),
-    CSS(".markdown-body code, .markdown-body pre",
+    CSS(
+        ".markdown-body code, .markdown-body pre",
         "font-family" => "SFMono-Regular,Consolas,Liberation Mono,Menlo,Courier,monospace",
         "font-size" => "12px"
     ),
@@ -333,23 +368,27 @@ Styles(
     CSS(".markdown-body input", "font" => "inherit", "overflow" => "visible"),
     CSS(".markdown-body *", "box-sizing" => "border-box"),
     # New Cell Menu
-    CSS(".new-cell-menu",
+    CSS(
+        ".new-cell-menu",
         "width" => "100%",
         "overflow" => "hidden",
         "height" => "1.3rem",
         "background-color" => "transparent",  # Initial background color
         "transition" => "height 0.2s",
     ),
-    CSS(".new-cell-menu:hover",
+    CSS(
+        ".new-cell-menu:hover",
         "height" => "2.5rem",  # Expand to fit buttons
         "transition-delay" => "0.5s",
         "background-color" => "#333",  # Or any color you want
     ),
-    CSS(".new-cell-menu > *",  # Target direct children
+    CSS(
+        ".new-cell-menu > *",  # Target direct children
         "opacity" => "0",
         "transition" => "opacity 0.2s",
     ),
-    CSS(".new-cell-menu:hover > *",  # Target direct children on hover
+    CSS(
+        ".new-cell-menu:hover > *",  # Target direct children on hover
         "opacity" => "1",
         "transition-delay" => "0.5s",
     )

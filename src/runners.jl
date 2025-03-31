@@ -1,4 +1,3 @@
-
 struct MarkdownRunner
 end
 
@@ -19,7 +18,7 @@ function parse_source(::MarkdownRunner, source)
                 elseif node.language == ""
                     return node
                 else
-                    editor = MonacoEditor(node.code; language=node.language, readOnly=true, lineNumbers="off", editor_classes=["markdown-inline-code"])
+                    editor = MonacoEditor(node.code; language = node.language, readOnly = true, lineNumbers = "off", editor_classes = ["markdown-inline-code"])
                     editor.js_init_func[] = js"""
                     (editor, monaco, editor_div) => {
                         $(Monaco).then(mod => {
@@ -41,10 +40,10 @@ end
 parse_source(runner::Nothing, source) = nothing
 
 function run!(runner::MarkdownRunner, editor::EvalEditor)
-    eval_source!(editor, editor.output, runner, editor.source[])
+    return eval_source!(editor, editor.output, runner, editor.source[])
 end
 function eval_source!(editor, result::Observable, runner, source)
-    result[] = parse_source(runner, source)
+    return result[] = parse_source(runner, source)
 end
 
 const ANSI_CSS = Asset(joinpath(dirname(pathof(ANSIColoredPrinters)), "..", "docs", "src", "assets", "default.css"))
@@ -65,11 +64,11 @@ struct AsyncRunner
     open::Threads.Atomic{Bool}
 end
 
-function AsyncRunner(mod::Module=Module(); callback=identity, spawn=false)
+function AsyncRunner(mod::Module = Module(); callback = identity, spawn = false)
     taskref = Ref{Task}()
     redirect_target = Base.RefValue{Observable{String}}()
     loki = ReentrantLock()
-    task_queue = Channel{RunnerTask}(Inf; spawn=spawn, taskref=taskref) do chan
+    task_queue = Channel{RunnerTask}(Inf; spawn = spawn, taskref = taskref) do chan
         for task in chan
             lock(loki) do
                 redirect_target[] = task.editor.logging
@@ -84,7 +83,7 @@ function AsyncRunner(mod::Module=Module(); callback=identity, spawn=false)
             bytes = take!(io_chan)
             lock(loki) do
                 if !isempty(bytes) && isassigned(redirect_target)
-                    printer = HTMLPrinter(IOBuffer(copy(bytes)); root_tag="span")
+                    printer = HTMLPrinter(IOBuffer(copy(bytes)); root_tag = "span")
                     str = sprint(io -> show(io, MIME"text/html"(), printer))
                     redirect_target[][] = str
                 end
@@ -96,7 +95,7 @@ function AsyncRunner(mod::Module=Module(); callback=identity, spawn=false)
 end
 
 function interrupt!(runner::AsyncRunner)
-    Threads.@spawn Base.throwto(runner.thread, InterruptException())
+    return Threads.@spawn Base.throwto(runner.thread, InterruptException())
 end
 
 function book_display(value)
@@ -104,7 +103,7 @@ function book_display(value)
 end
 
 function run!(editor::EvalEditor)
-    run!(editor.runner, editor)
+    return run!(editor.runner, editor)
 end
 
 
@@ -118,7 +117,7 @@ function run!(mod::Module, task::RunnerTask)
     editor.show_logging[] = true
     editor.logging_html[] = ""
 
-    try
+    return try
         @show source
         if startswith(source, "]")
             Pkg.REPLMode.pkgstr(source[2:end])
@@ -147,7 +146,7 @@ function run!(mod::Module, task::RunnerTask)
 end
 
 function eval_source!(editor, source::String)
-    put!(editor.runner.task_queue, RunnerTask(source, editor.output, editor))
+    return put!(editor.runner.task_queue, RunnerTask(source, editor.output, editor))
 end
 
 struct MLRunner
@@ -175,26 +174,30 @@ function BonitoBook.eval_source!(chat_editor, result::Observable, runner::MLRunn
         end
     end
 
-    Base.errormonitor(Threads.@async begin
-        conversation = [
-            PT.SystemMessage(SYSTEM_PROMPT),
-            PT.UserMessage("""
-            Cell I currently work on:
-            $(runner.editor.source[])
-            Question being asked:
-            $(source)
-            """)
-        ]
-        msg = PT.aigenerate(conversation; streamcallback=callback)
-        jleditor = runner.editor
-        if isempty(strip(jleditor.source[])) && startswith(msg.content, "```julia") && endswith(msg.content, "```")
-            result[] = nothing
-            toggle!(jleditor, editor=true, output=true)
-            jleditor.set_source[] = strip(msg.content[9:end-3])
-            chat_editor.show_output[] = false
-        else
-            chat_editor.show_output[] = true
+    Base.errormonitor(
+        Threads.@async begin
+            conversation = [
+                PT.SystemMessage(SYSTEM_PROMPT),
+                PT.UserMessage(
+                    """
+                    Cell I currently work on:
+                    $(runner.editor.source[])
+                    Question being asked:
+                    $(source)
+                    """
+                ),
+            ]
+            msg = PT.aigenerate(conversation; streamcallback = callback)
+            jleditor = runner.editor
+            if isempty(strip(jleditor.source[])) && startswith(msg.content, "```julia") && endswith(msg.content, "```")
+                result[] = nothing
+                toggle!(jleditor, editor = true, output = true)
+                jleditor.set_source[] = strip(msg.content[9:(end - 3)])
+                chat_editor.show_output[] = false
+            else
+                chat_editor.show_output[] = true
+            end
+            chat_editor.loading[] = false
         end
-        chat_editor.loading[] = false
-    end)
+    )
 end

@@ -18,13 +18,13 @@ function export_svg(element)
 end
 
 function export_html(filename, book)
-    Bonito.export_static(filename, App(book))
+    return Bonito.export_static(filename, App(book))
 end
 
 function export_jl(file::AbstractString, book::Book)
     app = App() do s
         body = Centered(DOM.div(book.cells...))
-        document = DOM.div(DOM.div(body; style=Styles("width" => "100%")))
+        document = DOM.div(DOM.div(body; style = Styles("width" => "100%")))
         return DOM.div(book.style_editor.editor.output, document)
     end
     Bonito.export_static(file, app)

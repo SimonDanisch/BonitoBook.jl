@@ -1,10 +1,10 @@
 using JSON, Markdown
 
-function markdown2book(md; all_blocks_as_cell=false)
+function markdown2book(md; all_blocks_as_cell = false)
     cells = Cell[]
     last_md = nothing
     function append_last_md()
-        if !isnothing(last_md) && !isempty(last_md)
+        return if !isnothing(last_md) && !isempty(last_md)
             parsed = Markdown.MD(last_md, md.meta)
             push!(cells, Cell("markdown", string(parsed)))
             last_md = nothing
@@ -75,10 +75,10 @@ function cells2editors(cells, runner)
     return map(cells) do cell
         return CellEditor(
             cell.source, string(cell.language), runner;
-            show_editor=cell.show_editor,
-            show_logging=cell.show_logging,
-            show_output=cell.show_output,
-            show_chat=cell.show_chat
+            show_editor = cell.show_editor,
+            show_logging = cell.show_logging,
+            show_output = cell.show_output,
+            show_chat = cell.show_chat
         )
     end
 end

@@ -1,18 +1,18 @@
-function SmallButton(; class="", kw...)
+function SmallButton(; class = "", kw...)
     value = Observable(false)
     button_dom = DOM.button(
         "";
-        onclick=js"event=> $(value).notify(true);",
-        class="small-button $(class)",
+        onclick = js"event=> $(value).notify(true);",
+        class = "small-button $(class)",
         kw...,
     )
     return button_dom, value
 end
 
-function SmallToggle(active, args...; class="", kw...)
+function SmallToggle(active, args...; class = "", kw...)
     class = active[] ? class : "toggled $class"
     value = Observable(false)
-    button_dom = DOM.button(args...; class="small-button $(class)", kw...)
+    button_dom = DOM.button(args...; class = "small-button $(class)", kw...)
 
     toggle_script = js"""
         const elem = $(button_dom);
@@ -39,13 +39,13 @@ struct PopUp
     show::Observable{Bool}
 end
 
-function PopUp(content; show=true)
+function PopUp(content; show = true)
     return PopUp(Observable(content), Observable(show))
 end
 
 function Bonito.jsrender(session::Session, popup::PopUp)
     button_style = Styles("position" => "absolute", "top" => "1px", "right" => "1px", "background-color" => "red")
-    button, click = SmallButton(class="codicon codicon-close", style=button_style)
+    button, click = SmallButton(class = "codicon codicon-close", style = button_style)
     on(click) do click
         popup.show[] = !popup.show[]
     end
@@ -58,7 +58,7 @@ function Bonito.jsrender(session::Session, popup::PopUp)
     )
     card = Card(
         Col(popup.content, button),
-        style=popup_style
+        style = popup_style
     )
     close_js = js"""
         const show = $(popup.show);

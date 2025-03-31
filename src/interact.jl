@@ -33,7 +33,7 @@ end
 
 function create_widget(sym, data::NamedTuple)
     lookup = Dict(Pair.(values(data), keys(data)))
-    s = Bonito.Dropdown(collect(values(data)); option_to_string=x -> lookup[x])
+    s = Bonito.Dropdown(collect(values(data)); option_to_string = x -> lookup[x])
     return LabeledWidget(sym, s)
 end
 
@@ -47,13 +47,15 @@ function make_widget(binding)
 end
 
 function symbols(bindings)
-    map(x -> x.args[1], bindings)
+    return map(x -> x.args[1], bindings)
 end
 
 macro manipulate(for_expr)
     if for_expr.head != :for
-        error("@manipulate syntax is @manipulate for ",
-            " [<variable>=<domain>,]... <expression> end")
+        error(
+            "@manipulate syntax is @manipulate for ",
+            " [<variable>=<domain>,]... <expression> end"
+        )
     end
     block = for_expr.args[2]
     # remove trailing LineNumberNodes from loop body as to not just return `nothing`

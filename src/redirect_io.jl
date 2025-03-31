@@ -1,4 +1,3 @@
-
 const REDIRECT_CHANNEL = Base.RefValue{Channel{Vector{UInt8}}}()
 
 # Taken from IOCapture.jl, adpated to our needs!
@@ -13,7 +12,7 @@ function redirect_all_to_channel()
     default_stderr = stderr
     # Redirect both the `stdout` and `stderr` streams to a single `Pipe` object.
     pipe = Pipe()
-    Base.link_pipe!(pipe; reader_supports_async=true, writer_supports_async=true)
+    Base.link_pipe!(pipe; reader_supports_async = true, writer_supports_async = true)
     pe_stdout = IOContext(pipe.in, :color => true)
     pe_stderr = IOContext(pipe.in, :color => true)
     redirect_stdout(pe_stdout)
@@ -25,7 +24,7 @@ function redirect_all_to_channel()
     # `String`. We need to use an asynchronous task to continously tranfer bytes from the
     # pipe to `output` in order to avoid the buffer filling up and stalling write() calls in
     # user code.
-    capture_channel = Channel{Vector{UInt8}}(Inf; spawn=true) do chan
+    capture_channel = Channel{Vector{UInt8}}(Inf; spawn = true) do chan
         while !eof(pipe) && isopen(chan)
             data = readavailable(pipe)
             put!(chan, copy(data))
