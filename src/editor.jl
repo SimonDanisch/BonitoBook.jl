@@ -88,7 +88,7 @@ end
 
 struct EvalEditor
     editor::MonacoEditor
-    js_init_func::Bonito.JSCode
+    js_init_func::Base.RefValue{Bonito.JSCode}
     container_classes::Vector{String}
     runner::Any
 
@@ -186,7 +186,7 @@ function EvalEditor(
     end
     editor = EvalEditor(
         editor,
-        js_init_func,
+        Base.RefValue(js_init_func),
         container_classes,
         runner,
         js_to_julia,
@@ -232,8 +232,8 @@ function render_editor(editor::EvalEditor)
                 $(editor.js_to_julia), $(editor.julia_to_js), $(editor.source),
                 $(editor.show_output), $(editor.show_logging),
             );
-            const callback = ($(editor.js_init_func));
-            return callback(editor);
+            const callback = ($(editor.js_init_func[]));
+            return callback(ee);
         })
     })
     """
@@ -258,15 +258,9 @@ end
 function CellEditor(content, language, runner; show_editor = true, show_logging = true, show_output = true, show_chat = false)
     runner = language == "markdown" ? MarkdownRunner() : runner
     uuid = string(UUIDs.uuid4())
-    js_init_func = js"""
-        (editor) => {
-            return $(Monaco).then(Monaco => {
-                Monaco.register_cell_editor(editor, $(uuid))
-            })
-        }
-    """
+
     jleditor = EvalEditor(
-        content, runner; js_init_func = js_init_func,
+        content, runner;
         show_editor = show_editor, show_logging = show_logging, language = language,
         show_output = show_output,
         tabCompletion = "on"
@@ -315,31 +309,41 @@ function Bonito.jsrender(session::Session, editor::CellEditor)
     on(session, click) do x
         editor.delete_self[] = true
     end
-    hover_buttons = DOM.div(ai, show_editor, show_logging, out, delete_editor; class = "hover-buttons")
+    hover_id = "$(editor.uuid)-hover"
+    container_id = "$(editor.uuid)-container"
+    card_content_id = "$(editor.uuid)-card-content"
+    any_loading = map(|, chat.loading, jleditor.loading)
+    hide_on_focus_obs = Observable(editor.language == "markdown")
     any_visible = map(|, editor.chat.show_editor, jleditor.show_editor, jleditor.show_logging)
+
+    editor.editor.js_init_func[] = js"""
+        (editor) => {
+            return $(Monaco).then(Monaco => {
+                console.log("Registering cell editor");
+                Monaco.register_cell_editor(editor, $(editor.uuid))
+                mod.setup_cell_editor(
+                    editor,
+                    $hover_id, $container_id, $card_content_id,
+                    $any_loading, $any_visible,
+                    $(hide_on_focus_obs),
+                );
+            })
+        }
+    """
+    hover_buttons = DOM.div(ai, show_editor, show_logging, out, delete_editor; class = "hover-buttons", id=hover_id)
+
     jleditor_div, logging_div, output_div = render_editor(jleditor)
     class = any_visible[] ? "show-vertical" : "hide-vertical"
     card_content = DOM.div(
         chat, jleditor_div, logging_div;
-        class = "cell-editor $class",
+        class = "cell-editor $class", id=card_content_id,
     )
     cell = DOM.div(hover_buttons, card_content, DOM.div(output_div, tabindex = 0), style = Styles("position" => "relative"))
     # Create a separate proximity area
     proximity_area = DOM.div(class = "cell-menu-proximity-area")
-    container = DOM.div(cell, proximity_area, style = Styles("position" => "relative"))
-    any_loading = map(|, chat.loading, jleditor.loading)
-    hide_on_focus_obs = Observable(editor.language == "markdown")
-    setup_cell_interactions = js"""
-    $(Monaco).then(mod => {
-        mod.setup_cell_editor(
-            $(editor.uuid),
-            $hover_buttons, $container, $card_content,
-            $any_loading, $any_visible,
-            $(hide_on_focus_obs),
-        );
-    })
-    """
-    cell_div = DOM.div(CodeIcon, container, setup_cell_interactions, class = "cell-editor-container", id = editor.uuid)
+    container = DOM.div(cell, proximity_area, style = Styles("position" => "relative"), id=container_id, tabindex = 0)
+
+    cell_div = DOM.div(CodeIcon, container, class = "cell-editor-container", id = editor.uuid)
     return Bonito.jsrender(session, cell_div)
 end
 

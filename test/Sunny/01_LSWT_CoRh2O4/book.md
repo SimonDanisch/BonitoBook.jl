@@ -9,8 +9,10 @@ Sunny is implemented in Julia, which allows for interactive development (like Py
 From the Julia prompt, load Sunny and also [GLMakie](https://docs.makie.org/) for graphics.
 
 ```julia true false true false
+sleep(2)
+```
+```julia true false true false
 using Sunny, WGLMakie
-
 ```
 If these packages are not yet installed, Julia will offer to install them. If executing this tutorial gives an error, you may need to update Sunny and GLMakie from the [built-in package manager](https://github.com/SunnySuite/Sunny.jl/wiki/Getting-started-with-Julia#the-built-in-julia-package-manager).
 
@@ -130,7 +132,7 @@ This result can be compared to experimental neutron scattering data from Fig. 5 
 
 ### What's next?
 
-* For more spin wave calculations of this type, browse the SpinW tutorials ported to Sunny.
-* Spin wave theory neglects thermal fluctuations of the magnetic order. The next CoRh₂O₄ tutorial demonstrates how to sample spins in thermal equilibrium, and measure dynamical correlations from the classical spin dynamics.
-* Sunny also offers features that go beyond the dipole approximation of a quantum spin via the theory of SU(*N*) coherent states. This can be especially useful for systems with strong single-ion anisotropy, as demonstrated in the FeI₂ tutorial.
+  * For more spin wave calculations of this type, browse the SpinW tutorials ported to Sunny.
+  * Spin wave theory neglects thermal fluctuations of the magnetic order. The next CoRh₂O₄ tutorial demonstrates how to sample spins in thermal equilibrium, and measure dynamical correlations from the classical spin dynamics.
+  * Sunny also offers features that go beyond the dipole approximation of a quantum spin via the theory of SU(*N*) coherent states. This can be especially useful for systems with strong single-ion anisotropy, as demonstrated in the FeI₂ tutorial.
 

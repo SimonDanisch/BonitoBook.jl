@@ -192,19 +192,19 @@ class Book {
     update_order(uuids) {
         this.cells = uuids;
     }
-    add_editor(editor, uuid) {
-        this.editors[uuid] = editor;
+    add_editor(editor, uuid1) {
+        this.editors[uuid1] = editor;
     }
-    add_below(uuid_above, uuid) {
+    add_below(uuid_above, uuid1) {
         const index = this.cells.indexOf(uuid_above);
         if (index === -1) {
             throw new Error("Cell not found in the book.");
         }
-        this.cells.splice(index + 1, 0, uuid);
+        this.cells.splice(index + 1, 0, uuid1);
     }
     get_up(editor) {
-        const uuid = editor.cell_uuid;
-        const index = this.cells.indexOf(uuid);
+        const uuid1 = editor.cell_uuid;
+        const index = this.cells.indexOf(uuid1);
         if (index <= 0) return null;
         for(let i = index - 1; i >= 0; i--){
             const up_uuid = this.cells[i];
@@ -215,8 +215,8 @@ class Book {
         return null;
     }
     get_down(editor) {
-        const uuid = editor.cell_uuid;
-        const index = this.cells.indexOf(uuid);
+        const uuid1 = editor.cell_uuid;
+        const index = this.cells.indexOf(uuid1);
         if (index === -1 || index >= this.cells.length - 1) return null;
         for(let i = index + 1; i < this.cells.length; i++){
             const down_uuid = this.cells[i];
@@ -226,21 +226,21 @@ class Book {
         }
         return null;
     }
-    remove_editor(uuid) {
-        delete this.editors[uuid];
-        const index = this.cells.indexOf(uuid);
+    remove_editor(uuid1) {
+        delete this.editors[uuid1];
+        const index = this.cells.indexOf(uuid1);
         if (index !== -1) {
             this.cells.splice(index, 1);
         }
-        document.getElementById(uuid).parentElement.remove();
+        document.getElementById(uuid1).parentElement.remove();
     }
 }
 const BOOK = new Book();
-function add_editor_below(above_editor_uuid, elem, uuid) {
+function add_editor_below(above_editor_uuid, elem, uuid1) {
     const editor_div = document.getElementById(above_editor_uuid);
     const parent1 = editor_div.parentElement;
     parent1.insertAdjacentElement("afterend", elem);
-    BOOK.add_below(above_editor_uuid, uuid);
+    BOOK.add_below(above_editor_uuid, uuid1);
 }
 function add_command(editor, label, keybinding, callback) {
     editor.addAction({
@@ -278,8 +278,15 @@ function toggle_elem(show, elem, direction) {
         elem.classList.remove(show_class);
     }
 }
-function setup_cell_editor(uuid, buttons, container, card_content, loading_obs, all_visible_obs, hide_on_focus_obs) {
-    const eval_editor = BOOK.editors[uuid];
+function setup_cell_editor(eval_editor, buttons_id, container_id, card_content_id, loading_obs, all_visible_obs, hide_on_focus_obs) {
+    const buttons = document.getElementById(buttons_id);
+    const container = document.getElementById(container_id);
+    const card_content = document.getElementById(card_content_id);
+    console.log(container);
+    if (!eval_editor) {
+        console.warn("No editor found for uuid:", uuid);
+        console.log(BOOK.editors);
+    }
     const make_visible = ()=>{
         buttons.style.opacity = 1.0;
     };
@@ -299,17 +306,22 @@ function setup_cell_editor(uuid, buttons, container, card_content, loading_obs, 
         toggle_elem(x, card_content, "vertical");
     });
     container.addEventListener("focus", (e)=>{
+        console.log("$$$$$focus$$$$$$$");
         if (hide_on_focus_obs.value) {
             eval_editor.toggle_editor(true);
             eval_editor.toggle_output(false);
         }
     });
     container.addEventListener("focusout", (e)=>{
+        console.log("Focus out!");
         if (hide_on_focus_obs.value) {
+            console.log(`will toggle: ${!container.contains(e.relatedTarget)}`);
             if (!container.contains(e.relatedTarget)) {
-                eval_editor.toggle_editor(false);
-                eval_editor.toggle_output(true);
-                eval_editor.set_source();
+                eval_editor.editor.editor.then((editor)=>{
+                    eval_editor.toggle_editor(false);
+                    eval_editor.toggle_output(true);
+                    eval_editor.set_source(editor);
+                });
             }
         }
     });
@@ -399,7 +411,7 @@ function move_to_editor(editor) {
     }
 }
 function move_up(editor) {
-    const upper = BOOK.get_up(editor).editor;
+    const upper = BOOK.get_up(editor).monaco_editor.editor;
     if (upper) {
         upper.then((upper)=>{
             const lastLine = upper.getModel().getLineCount();
@@ -413,7 +425,7 @@ function move_up(editor) {
     }
 }
 function move_down(editor) {
-    const lower = BOOK.get_down(editor).editor;
+    const lower = BOOK.get_down(editor).monaco_editor.editor;
     if (lower) {
         lower.then((lower)=>{
             lower.focus();
@@ -425,11 +437,11 @@ function move_down(editor) {
         });
     }
 }
-function register_cell_editor(eval_editor, uuid) {
+function register_cell_editor(eval_editor, uuid1) {
     monaco.then((monaco)=>{
-        eval_editor.editor.then((editor)=>{
-            BOOK.add_editor(eval_editor, uuid);
-            editor.cell_uuid = uuid;
+        eval_editor.editor.editor.then((editor)=>{
+            BOOK.add_editor(eval_editor, uuid1);
+            editor.cell_uuid = uuid1;
             const cursorAtBottomKey = editor.createContextKey("editorCursorAtBottom", false);
             const cursorAtTopKey = editor.createContextKey("editorCursorAtTop", false);
             const update_corsor_context = ()=>{
@@ -441,7 +453,7 @@ function register_cell_editor(eval_editor, uuid) {
             editor.onDidChangeCursorPosition(update_corsor_context);
             update_corsor_context();
             editor.addAction({
-                id: `move-up-${uuid}`,
+                id: `move-up-${uuid1}`,
                 label: "Move up",
                 precondition: "editorTextFocus && !suggestWidgetVisible && editorCursorAtTop",
                 keybindings: [
@@ -451,7 +463,7 @@ function register_cell_editor(eval_editor, uuid) {
                 contextMenuGroupId: "navigation"
             });
             editor.addAction({
-                id: `move-down-${uuid}`,
+                id: `move-down-${uuid1}`,
                 label: "Move down",
                 keybindings: [
                     monaco.KeyCode.DownArrow

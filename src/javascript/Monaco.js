@@ -342,16 +342,24 @@ export function toggle_elem(show, elem, direction) {
 }
 
 export function setup_cell_editor(
-        uuid,
-        buttons,
-        container,
-        card_content,
-        loading_obs,
-        all_visible_obs,
-        // Markdown unhiding behavior
-        hide_on_focus_obs
-    ) {
-    const eval_editor = BOOK.editors[uuid];
+    eval_editor,
+    buttons_id,
+    container_id,
+    card_content_id,
+    loading_obs,
+    all_visible_obs,
+    // Markdown unhiding behavior
+    hide_on_focus_obs
+) {
+    const buttons = document.getElementById(buttons_id);
+    const container = document.getElementById(container_id);
+    const card_content = document.getElementById(card_content_id);
+    console.log(container)
+
+    if (!eval_editor) {
+        console.warn("No editor found for uuid:", uuid);
+        console.log(BOOK.editors);
+    }
     const make_visible = () => {
         buttons.style.opacity = 1.0;
     };
@@ -372,17 +380,22 @@ export function setup_cell_editor(
         toggle_elem(x, card_content, "vertical");
     });
     container.addEventListener("focus", (e) => {
+        console.log("$$$$$focus$$$$$$$");
         if (hide_on_focus_obs.value) {
             eval_editor.toggle_editor(true);
             eval_editor.toggle_output(false);
         }
     });
     container.addEventListener("focusout", (e) => {
+        console.log("Focus out!")
         if (hide_on_focus_obs.value) {
+            console.log(`will toggle: ${!container.contains(e.relatedTarget)}`);
             if (!container.contains(e.relatedTarget)) {
-                eval_editor.toggle_editor(false);
-                eval_editor.toggle_output(true);
-                eval_editor.set_source();
+                eval_editor.editor.editor.then((editor) => {
+                    eval_editor.toggle_editor(false);
+                    eval_editor.toggle_output(true);
+                    eval_editor.set_source(editor);
+                })
             }
         }
     });
@@ -470,7 +483,7 @@ function move_to_editor(editor) {
 }
 
 function move_up(editor) {
-    const upper = BOOK.get_up(editor).editor;
+    const upper = BOOK.get_up(editor).monaco_editor.editor;
     if (upper) {
         upper.then((upper) => {
             const lastLine = upper.getModel().getLineCount();
@@ -485,7 +498,7 @@ function move_up(editor) {
 }
 
 function move_down(editor) {
-    const lower = BOOK.get_down(editor).editor;
+    const lower = BOOK.get_down(editor).monaco_editor.editor;
     if (lower) {
         lower.then(lower => {
             lower.focus();
@@ -500,7 +513,7 @@ function move_down(editor) {
 
 export function register_cell_editor(eval_editor, uuid) {
     monaco.then((monaco) => {
-        eval_editor.editor.then(editor => {
+        eval_editor.editor.editor.then((editor) => {
             BOOK.add_editor(eval_editor, uuid);
             editor.cell_uuid = uuid;
             const cursorAtBottomKey = editor.createContextKey(

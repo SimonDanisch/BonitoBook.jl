@@ -187,15 +187,15 @@ function new_cell_menu(session, book, editor_above_uuid, runner)
 
     on(click_jl) do click
         new_cell = CellEditor("", "julia", runner)
-        insert_editor_below!(book, session, editor_above_uuid, new_cell)
+        insert_editor_below!(book, session, new_cell, editor_above_uuid)
     end
     on(click_md) do click
         new_cell = CellEditor("", "markdown", runner; show_editor=true, show_output=false)
-        insert_editor_below!(book, session, editor_above_uuid, new_cell)
+        insert_editor_below!(book, session, new_cell, editor_above_uuid)
     end
     on(click_ai) do click
         new_cell = CellEditor("", "chatgpt", runner; show_chat=true, show_editor=false, show_output=false)
-        insert_editor_below!(book, session, editor_above_uuid, new_cell)
+        insert_editor_below!(book, session, new_cell, editor_above_uuid)
     end
     plus = DOM.div(class = "codicon codicon-plus")
     menu_div = DOM.div(
