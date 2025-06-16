@@ -44,8 +44,8 @@ function parse_source(::MarkdownRunner, source)
                         });
                     }
                     """
+                    return editor
                 end
-                return editor
             end
         )
         return Bonito.string_to_markdown(source, replacements)

@@ -29,18 +29,27 @@ function markdown2book(md; all_blocks_as_cell = false)
         if content isa Markdown.Code
             languages = split(content.language, " ")
             language = languages[1]
-            if language in ("markdown", "julia", "python")
+            if !isempty(language) && language in ("markdown", "julia", "python")
                 # We only treat ```language bool bool bool bool as a code block (our format)
                 # Option to force all blocks as code blocks, for markdown not written by us
                 if all_blocks_as_cell || length(languages) == 5
                     append_last_md()
-                    show_fields = parse.(Bool, languages[2:end])
+                    if length(languages) == 5
+                        show_fields = parse.(Bool, languages[2:end])
+                    else
+                        # Default show fields for all_blocks_as_cell mode
+                        show_fields = (false, false, true, false)
+                    end
                     push!(cells, Cell(language, content.code, nothing, show_fields...))
                 else
                     # Otherwise we treat it as inline markdown code block
                     isnothing(last_md) && (last_md = [])
                     push!(last_md, content)
                 end
+            else
+                # Handle unknown languages by treating as markdown
+                isnothing(last_md) && (last_md = [])
+                push!(last_md, content)
             end
         else
             isnothing(last_md) && (last_md = [])
@@ -70,7 +79,13 @@ function ipynb2book(json_path::String)
         cell_type = cell["cell_type"]
         if cell_type == "code"
             source = join(cell["source"], "")
-            language = json_content["metadata"]["kernelspec"]["language"]
+            # Safe access to kernelspec language
+            language = "julia"  # default
+            if haskey(json_content, "metadata") && 
+               haskey(json_content["metadata"], "kernelspec") &&
+               haskey(json_content["metadata"]["kernelspec"], "language")
+                language = json_content["metadata"]["kernelspec"]["language"]
+            end
             if language == "markdown"
                 fields = (false, false, true, false)
             else

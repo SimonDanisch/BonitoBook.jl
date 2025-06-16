@@ -143,10 +143,8 @@ struct EvalEditor
 end
 
 function process_message(editor::EvalEditor, message::Dict)
-    @show message
     if message["type"] == "new-source"
         if editor.source[] != message["data"]
-            @show message["data"]
             editor.source[] = message["data"]
         end
     elseif message["type"] == "run"
@@ -209,7 +207,7 @@ function EvalEditor(
     js_to_julia = Observable(Dict{String, Any}())
     julia_to_js = Observable(Dict{String, Any}())
     show_output = Observable(show_output)
-    show_editor = editor.init_visible
+    show_editor_obs = Observable(show_editor)
 
     result = Observable{Any}(nothing)
     src = Observable(source)
@@ -233,7 +231,7 @@ function EvalEditor(
 
         Observable(show_logging),
         show_output,
-        Observable(show_editor),
+        show_editor_obs,
         loading,
     )
 
@@ -363,12 +361,12 @@ function Bonito.jsrender(session::Session, editor::CellEditor)
     show_output = Observable(jleditor.show_output[])
     on(x -> toggle!(jleditor; output = !jleditor.show_output[]), show_output)
     out = SmallToggle(show_output; class = "codicon codicon-graph")
-    show_editor = Observable(jleditor.show_editor[])
-    on(x -> toggle!(jleditor; editor = !jleditor.show_editor[]), show_editor)
-    show_editor = SmallToggle(show_editor; class = "codicon codicon-code")
-    show_logging = Observable(jleditor.show_logging[])
-    on(x -> toggle!(jleditor; logging = !jleditor.show_logging[]), show_logging)
-    show_logging = SmallToggle(show_logging; class = "codicon codicon-terminal")
+    show_editor_obs = Observable(jleditor.show_editor[])
+    on(x -> toggle!(jleditor; editor = !jleditor.show_editor[]), show_editor_obs)
+    show_editor = SmallToggle(show_editor_obs; class = "codicon codicon-code")
+    show_logging_obs = Observable(jleditor.show_logging[])
+    on(x -> toggle!(jleditor; logging = !jleditor.show_logging[]), show_logging_obs)
+    show_logging = SmallToggle(show_logging_obs; class = "codicon codicon-terminal")
     delete_editor, click = SmallButton(class = "codicon codicon-close", style = "color: red;")
     on(session, click) do x
         editor.delete_self[] = true
@@ -385,7 +383,7 @@ function Bonito.jsrender(session::Session, editor::CellEditor)
             return $(Monaco).then(Monaco => {
                 console.log("Registering cell editor");
                 Monaco.register_cell_editor(editor, $(editor.uuid))
-                mod.setup_cell_editor(
+                Monaco.setup_cell_editor(
                     editor,
                     $hover_id, $container_id, $card_content_id,
                     $any_loading, $any_visible,
@@ -444,7 +442,7 @@ function Bonito.jsrender(session::Session, editor::FileEditor)
     buttons = map(editor.files) do file
         button = Button(basename(file))
         on(session, button.value) do x
-            editor.editor.set_source[] = read(file, String)
+            editor.editor.source[] = read(file, String)
         end
         return button
     end

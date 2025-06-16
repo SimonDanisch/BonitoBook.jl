@@ -86,7 +86,9 @@ book = Book("/path/to/book/folder")
 ```
 """
 function Book(file; folder = nothing, runner = AsyncRunner())
-    runner.mod.eval(runner.mod, :(using BonitoBook, BonitoBook.Bonito, BonitoBook.Markdown, BonitoBook.WGLMakie))
+    if !isa(runner, MarkdownRunner)
+        runner.mod.eval(runner.mod, :(using BonitoBook, BonitoBook.Bonito, BonitoBook.Markdown, BonitoBook.WGLMakie))
+    end
     if isfile(file)
         bookfile, folder, style_paths = from_file(file, folder)
     elseif isdir(file)
@@ -103,11 +105,6 @@ function Book(file; folder = nothing, runner = AsyncRunner())
     progress = Observable((false, 0.0))
     book = Book(bookfile, folder, editors, style_editor, runner, progress)
     export_md(joinpath(folder, "book.md"), book)
-    for editor in editors
-        on(editor.editor.source) do new_source
-            save(book)
-        end
-    end
     return book
 end
 
@@ -171,6 +168,13 @@ function saving_menu(session, book)
         )
     end
     save_pdf, click_pdf = SmallButton(; class = "codicon codicon-file-pdf")
+    on(click_pdf) do click
+        Base.errormonitor(
+            Threads.@async begin
+                println("PDF export not yet implemented")
+            end
+        )
+    end
     return DOM.div(
         DOM.div(class = "button-pad codicon codicon-save", save_jl, save_md, save_pdf);
         class = "saving small-menu-bar"
@@ -182,7 +186,9 @@ function play_menu(book)
     stop_all_div, stop_all_click = SmallButton(; class = "codicon codicon-debug-stop")
     on(stop_all_click) do click
         println("Stopping all cells")
-        # Base.errormonitor(interrupt!(runner))
+        if isa(book.runner, AsyncRunner)
+            Base.errormonitor(interrupt!(book.runner))
+        end
     end
     on(run_all_click) do click
         task = @async for cell in book.cells
@@ -200,6 +206,24 @@ function play_menu(book)
 end
 
 using Dates
+
+function setup_editor_callbacks!(session, book, editor)
+    on(session, editor.editor.source) do new_source
+        save(book)
+    end
+    on(session, editor.delete_self) do delete
+        if delete
+            filter!(x -> x.uuid != editor.uuid, book.cells)
+            evaljs(
+                session, js"""
+                    $(Monaco).then(Monaco => {
+                        Monaco.BOOK.remove_editor($(editor.uuid));
+                    })
+                """
+            )
+        end
+    end
+end
 
 """
     save(book::Book)
@@ -219,11 +243,13 @@ end
 
 function insert_editor_below!(book, session, editor, editor_above_uuid)
     idx = findfirst(x -> x.uuid == editor_above_uuid, book.cells)
-    insert!(book.cells, idx + 1, editor)
-    add_cell_div = new_cell_menu(session, book, editor.uuid, book.runner)
-    on(session, editor.editor.source) do new_source
-        save(book)
+    if isnothing(idx)
+        push!(book.cells, editor)
+    else
+        insert!(book.cells, idx + 1, editor)
     end
+    add_cell_div = new_cell_menu(session, book, editor.uuid, book.runner)
+    setup_editor_callbacks!(session, book, editor)
     elem = DOM.div(editor, add_cell_div)
     return Bonito.dom_in_js(
         session, elem, js"""(elem) => {
@@ -239,6 +265,10 @@ function new_cell_menu(session, book, editor_above_uuid, runner)
     new_jl, click_jl = SmallButton(; class = "julia-dots")
     new_md, click_md = SmallButton(; class = "codicon codicon-markdown")
     new_py, click_py = SmallButton(; class = "python-logo")
+    on(click_py) do click
+        new_cell = CellEditor("", "python", runner)
+        insert_editor_below!(book, session, new_cell, editor_above_uuid)
+    end
     new_ai, click_ai = SmallButton(; class = "codicon codicon-sparkle-filled")
 
     on(click_jl) do click
@@ -325,8 +355,8 @@ function setup_menu(book)
 end
 
 function setup_completions(session, cell_module)
-    inbox = Observable{Any}(Dict{String, Any}())
-    outbox = Observable{Any}(Dict{String, Any}())
+    inbox = Observable{Any}([])
+    outbox = Observable{Any}([])
     on(session, outbox) do (id, data)
         completions = get_completions(data["text"], Int(data["column"]) - 1, cell_module)
         inbox[] = [id, completions]
@@ -351,18 +381,7 @@ function Bonito.jsrender(session::Session, book::Book)
         })
     """
     for editor in book.cells
-        on(session, editor.delete_self) do delete
-            if delete
-                filter!(x -> x.uuid != editor.uuid, book.cells)
-                evaljs(
-                    session, js"""
-                        $(Monaco).then(Monaco => {
-                            Monaco.BOOK.remove_editor($(editor.uuid));
-                        })
-                    """
-                )
-            end
-        end
+        setup_editor_callbacks!(session, book, editor)
     end
     cell_obs = DOM.div(cells...)
     _setup_menu, style_editor, style_output = setup_menu(book)
