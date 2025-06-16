@@ -1,3 +1,15 @@
+"""
+    SmallButton(; class="", kw...)
+
+Create a small interactive button component.
+
+# Arguments
+- `class`: CSS class string to apply to the button
+- `kw...`: Additional keyword arguments passed to the DOM button
+
+# Returns
+Tuple of (button_dom, click_observable) where click_observable fires when clicked.
+"""
 function SmallButton(; class = "", kw...)
     value = Observable(false)
     button_dom = DOM.button(
@@ -9,6 +21,20 @@ function SmallButton(; class = "", kw...)
     return button_dom, value
 end
 
+"""
+    SmallToggle(active, args...; class="", kw...)
+
+Create a small toggle button that reflects and controls a boolean observable.
+
+# Arguments
+- `active`: Observable{Bool} that controls the toggle state
+- `args...`: Additional arguments passed to the button
+- `class`: CSS class string
+- `kw...`: Additional keyword arguments
+
+# Returns
+DOM element with toggle functionality.
+"""
 function SmallToggle(active, args...; class = "", kw...)
     class = active[] ? class : "toggled $class"
     value = Observable(false)
@@ -34,11 +60,32 @@ function SmallToggle(active, args...; class = "", kw...)
 end
 
 
+"""
+    PopUp
+
+Modal popup component with show/hide functionality.
+
+# Fields
+- `content::Observable{Any}`: Content to display in the popup
+- `show::Observable{Bool}`: Whether the popup is visible
+"""
 struct PopUp
     content::Observable{Any}
     show::Observable{Bool}
 end
 
+"""
+    PopUp(content; show=true)
+
+Create a popup with the given content.
+
+# Arguments
+- `content`: Content to display (can be any renderable object)
+- `show`: Whether the popup starts visible (default: true)
+
+# Returns
+`PopUp` instance.
+"""
 function PopUp(content; show = true)
     return PopUp(Observable(content), Observable(show))
 end
@@ -69,7 +116,7 @@ function Bonito.jsrender(session::Session, popup::PopUp)
             }
         });
         show.on((show) => {
-            console.log("POOOPPIEEE")
+            console.log("Popup visibility changed")
             console.log(show);
             card.style.display = show ? "block" : "none";
         })

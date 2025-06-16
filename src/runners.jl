@@ -1,6 +1,24 @@
+"""
+    MarkdownRunner
+
+Runner for processing markdown content with LaTeX math and code highlighting.
+
+Handles markdown parsing, MathJax integration, and syntax highlighting for embedded code blocks.
+"""
 struct MarkdownRunner
 end
 
+"""
+    parse_source(::MarkdownRunner, source)
+
+Parse markdown source into rendered HTML with syntax highlighting and math support.
+
+# Arguments
+- `source`: Markdown source string
+
+# Returns
+Rendered markdown with embedded Monaco editors for code blocks and MathJax for LaTeX.
+"""
 function parse_source(::MarkdownRunner, source)
     return try
         replacements = Dict(
@@ -54,6 +72,20 @@ struct RunnerTask
     editor::EvalEditor
 end
 
+"""
+    AsyncRunner
+
+Asynchronous code execution runner that handles Julia code evaluation in a separate thread.
+
+# Fields
+- `mod::Module`: Module for code execution
+- `task_queue::Channel{RunnerTask}`: Queue of tasks to execute
+- `thread::Task`: Background execution thread
+- `callback::Base.RefValue{Function}`: Result processing callback
+- `iochannel::Channel{Vector{UInt8}}`: IO redirection channel
+- `redirect_target::Base.RefValue{Observable{String}}`: Target for redirected output
+- `open::Threads.Atomic{Bool}`: Whether the runner is active
+"""
 struct AsyncRunner
     mod::Module
     task_queue::Channel{RunnerTask}
@@ -64,6 +96,19 @@ struct AsyncRunner
     open::Threads.Atomic{Bool}
 end
 
+"""
+    AsyncRunner(mod=Module(); callback=identity, spawn=false)
+
+Create a new asynchronous code runner.
+
+# Arguments
+- `mod`: Module for code execution (defaults to new module)
+- `callback`: Function to process results (defaults to identity)
+- `spawn`: Whether to spawn the task (defaults to false)
+
+# Returns
+Configured `AsyncRunner` instance ready for code execution.
+"""
 function AsyncRunner(mod::Module = Module(); callback = identity, spawn = false)
     taskref = Ref{Task}()
     redirect_target = Base.RefValue{Observable{String}}()

@@ -8,6 +8,26 @@ using ANSIColoredPrinters
 using Logging
 using WGLMakie
 
+"""
+    assets(paths...)
+
+Get an asset file from the package assets directory.
+
+# Arguments
+- `paths...`: Path components relative to the assets directory
+
+# Returns
+`Asset` object for the specified file.
+
+# Examples
+```julia
+# Get the Julia logo
+logo = assets("julia-dots.svg")
+
+# Get a font file
+font = assets("codicon.ttf")
+```
+"""
 function assets(paths...)
     return Asset(joinpath(@__DIR__, "assets", paths...))
 end

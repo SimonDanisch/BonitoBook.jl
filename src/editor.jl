@@ -21,6 +21,19 @@ function monaco_theme!(name::String)
 end
 
 
+"""
+    MonacoEditor
+
+Wrapper for the Monaco Code Editor with customizable options and themes.
+
+# Fields
+- `options::Dict{Symbol, Any}`: Monaco editor configuration options
+- `js_init_func::Base.RefValue{Bonito.JSCode}`: JavaScript initialization function
+- `editor_classes::Vector{String}`: CSS classes to apply
+- `theme::String`: Editor theme name
+- `hiding_direction::String`: Direction for show/hide animations
+- `init_visible::Bool`: Whether editor is initially visible
+"""
 struct MonacoEditor
     options::Dict{Symbol, Any}
     js_init_func::Base.RefValue{Bonito.JSCode}
@@ -86,6 +99,27 @@ function Bonito.jsrender(session::Session, editor::MonacoEditor)
     )
 end
 
+"""
+    EvalEditor
+
+Interactive code editor with execution capabilities and bidirectional JavaScript communication.
+
+# Fields
+- `editor::MonacoEditor`: Monaco code editor instance
+- `js_init_func::Base.RefValue{Bonito.JSCode}`: JavaScript initialization function
+- `container_classes::Vector{String}`: CSS classes for the container
+- `runner::Any`: Code execution runner
+- `js_to_julia::Observable{Dict{String, Any}}`: Messages from JavaScript to Julia
+- `julia_to_js::Observable{Dict{String, Any}}`: Messages from Julia to JavaScript
+- `source::Observable{String}`: Current source code
+- `output::Observable{Any}`: Execution output
+- `logging::Observable{String}`: Execution logs
+- `logging_html::Observable{String}`: HTML-formatted logs
+- `show_logging::Observable{Bool}`: Whether to show logs
+- `show_output::Observable{Bool}`: Whether to show output
+- `show_editor::Observable{Bool}`: Whether to show editor
+- `loading::Observable{Bool}`: Whether execution is in progress
+"""
 struct EvalEditor
     editor::MonacoEditor
     js_init_func::Base.RefValue{Bonito.JSCode}
@@ -245,6 +279,19 @@ function Bonito.jsrender(session::Session, editor::EvalEditor)
     return Bonito.jsrender(session, DOM.div(elems...))
 end
 
+"""
+    CellEditor
+
+Interactive cell combining code editor and AI chat capabilities.
+
+# Fields
+- `language::String`: Programming language ("julia", "markdown", "python", etc.)
+- `chat::EvalEditor`: AI chat interface editor
+- `editor::EvalEditor`: Main code editor
+- `uuid::String`: Unique identifier for the cell
+- `show_chat::Observable{Bool}`: Whether to show chat interface
+- `delete_self::Observable{Bool}`: Signal for cell deletion
+"""
 struct CellEditor
     language::String
     chat::EvalEditor
@@ -255,6 +302,23 @@ struct CellEditor
 end
 
 
+"""
+    CellEditor(content, language, runner; show_editor=true, show_logging=true, show_output=true, show_chat=false)
+
+Create an interactive cell editor with code execution and AI chat capabilities.
+
+# Arguments
+- `content`: Initial source code or content
+- `language`: Programming language ("julia", "markdown", "python", etc.)
+- `runner`: Code execution runner
+- `show_editor`: Whether to show the code editor initially
+- `show_logging`: Whether to show execution logs initially
+- `show_output`: Whether to show execution output initially
+- `show_chat`: Whether to show AI chat interface initially
+
+# Returns
+Configured `CellEditor` instance ready for interactive use.
+"""
 function CellEditor(content, language, runner; show_editor = true, show_logging = true, show_output = true, show_chat = false)
     runner = language == "markdown" ? MarkdownRunner() : runner
     uuid = string(UUIDs.uuid4())

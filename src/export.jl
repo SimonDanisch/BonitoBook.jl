@@ -17,10 +17,34 @@ function export_svg(element)
     """
 end
 
+"""
+    export_html(filename, book)
+
+Export a book to a static HTML file.
+
+# Arguments
+- `filename`: Output HTML file path
+- `book::Book`: Book to export
+
+# Returns
+Path to the exported HTML file.
+"""
 function export_html(filename, book)
     return Bonito.export_static(filename, App(book))
 end
 
+"""
+    export_jl(file, book)
+
+Export a book to a Julia-specific HTML format with styling.
+
+# Arguments
+- `file`: Output file path
+- `book::Book`: Book to export
+
+# Returns
+Path to the exported file.
+"""
 function export_jl(file::AbstractString, book::Book)
     app = App() do s
         body = Centered(DOM.div(book.cells...))
@@ -31,6 +55,20 @@ function export_jl(file::AbstractString, book::Book)
     return file
 end
 
+"""
+    export_md(file, book)
+
+Export a book to markdown format, preserving cell metadata.
+
+# Arguments
+- `file`: Output markdown file path
+- `book::Book`: Book to export
+
+# Returns
+Path to the exported markdown file.
+
+The exported markdown includes cell visibility flags in code block headers.
+"""
 function export_md(file::AbstractString, book::Book)
     open(file, "w") do io
         for cell_editor in book.cells

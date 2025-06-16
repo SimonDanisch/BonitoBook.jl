@@ -1,3 +1,16 @@
+"""
+    Book
+
+Represents an interactive book with code cells, style editor, and execution runner.
+
+# Fields
+- `file::String`: Path to the main book file
+- `folder::String`: Directory containing the book files
+- `cells::Vector{CellEditor}`: Collection of editable code/markdown cells
+- `style_editor::FileEditor`: Editor for styling the book
+- `runner::Any`: Code execution runner (typically AsyncRunner)
+- `progress::Observable{Tuple{Bool, Float64}}`: Progress tracking for operations
+"""
 struct Book
     file::String
     folder::String
@@ -50,6 +63,28 @@ function from_file(book, folder)
     return book, folder, [style_path, style_dark_path]
 end
 
+"""
+    Book(file; folder=nothing, runner=AsyncRunner())
+
+Create a new Book from a file or folder.
+
+# Arguments
+- `file`: Path to a markdown file (.md), Jupyter notebook (.ipynb), or folder containing book files
+- `folder`: Optional target folder for book files (if not provided, auto-generated)
+- `runner`: Code execution runner (defaults to AsyncRunner())
+
+# Returns
+A `Book` instance ready for interactive editing and execution.
+
+# Examples
+```julia
+# Create from markdown file
+book = Book("mybook.md")
+
+# Create from existing book folder
+book = Book("/path/to/book/folder")
+```
+"""
 function Book(file; folder = nothing, runner = AsyncRunner())
     runner.mod.eval(runner.mod, :(using BonitoBook, BonitoBook.Bonito, BonitoBook.Markdown, BonitoBook.WGLMakie))
     if isfile(file)
@@ -76,6 +111,20 @@ function Book(file; folder = nothing, runner = AsyncRunner())
     return book
 end
 
+"""
+    Cell
+
+Represents a single cell in a book with source code and display options.
+
+# Fields
+- `language::String`: Programming language ("julia", "markdown", "python", etc.)
+- `source::String`: Source code or markdown content
+- `output::Any`: Computed output from executing the cell
+- `show_editor::Bool`: Whether to show the code editor
+- `show_logging::Bool`: Whether to show execution logs
+- `show_output::Bool`: Whether to show execution output
+- `show_chat::Bool`: Whether to show AI chat interface
+"""
 struct Cell
     language::String
     source::String
@@ -152,6 +201,13 @@ end
 
 using Dates
 
+"""
+    save(book::Book)
+
+Save the book to disk, creating a versioned backup and exporting to markdown.
+
+Creates a timestamped backup in the `.versions` folder and updates the main `book.md` file.
+"""
 function WGLMakie.save(book::Book)
     if !isdir(joinpath(book.folder, ".versions"))
         mkpath(joinpath(book.folder, ".versions"))

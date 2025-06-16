@@ -1,5 +1,20 @@
 using JSON, Markdown
 
+"""
+    markdown2book(md; all_blocks_as_cell=false)
+
+Parse a markdown document into book cells.
+
+# Arguments
+- `md`: Parsed markdown document
+- `all_blocks_as_cell`: If true, treat all code blocks as cells (default: false)
+
+# Returns
+Vector of `Cell` objects.
+
+Code blocks with format ```language bool bool bool bool are treated as interactive cells.
+Other content becomes markdown cells.
+"""
 function markdown2book(md; all_blocks_as_cell = false)
     cells = Cell[]
     last_md = nothing
@@ -36,6 +51,17 @@ function markdown2book(md; all_blocks_as_cell = false)
     return cells
 end
 
+"""
+    ipynb2book(json_path)
+
+Convert a Jupyter notebook file to book cells.
+
+# Arguments
+- `json_path`: Path to the .ipynb file
+
+# Returns
+Vector of `Cell` objects representing the notebook content.
+"""
 function ipynb2book(json_path::String)
     # Read the JSON file
     json_content = JSON.parsefile(json_path)
@@ -60,6 +86,21 @@ function ipynb2book(json_path::String)
     return cells
 end
 
+"""
+    load_book(path)
+
+Load a book from a file path, supporting both markdown (.md) and Jupyter notebook (.ipynb) formats.
+
+# Arguments
+- `path`: Path to the book file
+
+# Returns
+Vector of `Cell` objects representing the book content.
+
+# Supported formats
+- `.md`: Markdown files with embedded code blocks
+- `.ipynb`: Jupyter notebook files
+"""
 function load_book(path)
     if endswith(path, ".ipynb")
         return ipynb2book(path)
@@ -71,6 +112,18 @@ function load_book(path)
     end
 end
 
+"""
+    cells2editors(cells, runner)
+
+Convert a vector of cells to interactive cell editors.
+
+# Arguments
+- `cells`: Vector of `Cell` objects
+- `runner`: Code execution runner
+
+# Returns
+Vector of `CellEditor` objects ready for interactive use.
+"""
 function cells2editors(cells, runner)
     return map(cells) do cell
         return CellEditor(
