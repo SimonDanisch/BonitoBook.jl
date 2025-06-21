@@ -252,16 +252,32 @@ function add_command(editor, label, keybinding, callback) {
         run: callback
     });
 }
-function resize_to_lines(editor, monaco, editor_div) {
-    function updateEditorHeight() {
-        const lineHeight = editor.getOption(monaco.editor.EditorOption.lineHeight);
-        const lineCount = editor.getModel().getLineCount();
-        const height = lineHeight * lineCount;
-        editor_div.style.height = height + "px";
-        editor.layout();
+function resize_to_lines(editor, monaco, editor_div, retryCount = 0) {
+    if (!editor || typeof editor.onDidChangeModelContent !== 'function') {
+        return;
     }
-    editor.onDidChangeModelContent(updateEditorHeight);
-    updateEditorHeight();
+    function updateEditorHeight() {
+        try {
+            const model = editor.getModel();
+            if (!model) {
+                console.warn('Editor model not available yet');
+                return;
+            }
+            const lineHeight = editor.getOption(monaco.editor.EditorOption.lineHeight);
+            const lineCount = model.getLineCount();
+            const height = lineHeight * lineCount;
+            editor_div.style.height = height + "px";
+            editor.layout();
+        } catch (error) {
+            console.error('Error updating editor height:', error);
+        }
+    }
+    try {
+        editor.onDidChangeModelContent(updateEditorHeight);
+        updateEditorHeight();
+    } catch (error) {
+        console.error('Error setting up resize_to_lines:', error);
+    }
 }
 function toggle_elem(show, elem, direction) {
     const hide_class = `hide-${direction}`;
@@ -282,7 +298,6 @@ function setup_cell_editor(eval_editor, buttons_id, container_id, card_content_i
     const buttons = document.getElementById(buttons_id);
     const container = document.getElementById(container_id);
     const card_content = document.getElementById(card_content_id);
-    console.log(container);
     if (!eval_editor) {
         console.warn("No editor found for uuid:", uuid);
         console.log(BOOK.editors);

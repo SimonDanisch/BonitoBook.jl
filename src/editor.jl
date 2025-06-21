@@ -381,7 +381,6 @@ function Bonito.jsrender(session::Session, editor::CellEditor)
     editor.editor.js_init_func[] = js"""
         (editor) => {
             return $(Monaco).then(Monaco => {
-                console.log("Registering cell editor");
                 Monaco.register_cell_editor(editor, $(editor.uuid))
                 Monaco.setup_cell_editor(
                     editor,
@@ -436,12 +435,12 @@ struct FileEditor
             opts..., options...
         )
         current_file = Observable(filepath[1])
-        
+
         # Set up auto-save when source changes
         on(editor.source) do new_source
             write(current_file[], new_source)
         end
-        
+
         return new(filepath, editor, current_file)
     end
 end

@@ -286,7 +286,7 @@ function new_cell_menu(session, book, editor_above_uuid, runner)
         new_cell = CellEditor("", "chatgpt", runner; show_chat=true, show_editor=false, show_output=false)
         insert_editor_below!(book, session, new_cell, editor_above_uuid)
     end
-    plus = DOM.div(class = "codicon codicon-plus")
+    plus, click_plus = SmallButton(; class = "codicon codicon-plus")
     menu_div = DOM.div(
         plus, new_jl, new_md, new_py, new_ai;
         class = "saving small-menu-bar",

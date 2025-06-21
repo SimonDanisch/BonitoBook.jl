@@ -66,6 +66,7 @@ Styles(
     CSS(
         ".cell-editor-container",
         "width" => editor_width,
+        "max-width" => "95vw",
         "position" => "relative",
         "background-color" => background_color_dark,
         "color" => text_color_light
@@ -84,6 +85,7 @@ Styles(
     CSS(
         ".cell-editor",
         "width" => editor_width,
+        "max-width" => "95vw",
         "position" => "relative",
         "display" => "inline-block",
         "padding" => "5px 5px 10px 10px",
@@ -188,20 +190,46 @@ Styles(
     CSS(
         ".julia-dots",
         "background-image" => BonitoBook.assets("julia-dots.svg"),
-        "background-size" => "60% auto",
+        "background-size" => "1.2em 1.2em",
         "background-repeat" => "no-repeat",
         "background-position" => "center",
-        "width" => "1.2rem",
-        "height" => "1.2rem",
+        "vertical-align" => "middle"
+    ),
+    CSS(
+        ".julia-dots::before",
+        "content" => "''",
+        "display" => "inline-block",
+        "width" => "1.2em",
+        "height" => "1.2em"
+    ),
+    CSS(
+        ".small-button.julia-dots",
+        "display" => "inline-flex",
+        "align-items" => "center",
+        "justify-content" => "center",
+        "vertical-align" => "middle"
     ),
     CSS(
         ".python-logo",
         "background-image" => BonitoBook.assets("python.svg"),
-        "background-size" => "60% auto",
+        "background-size" => "1.2em 1.2em",
         "background-repeat" => "no-repeat",
         "background-position" => "center",
-        "width" => "1.2rem",
-        "height" => "1.2rem",
+        "vertical-align" => "middle"
+    ),
+    CSS(
+        ".python-logo::before",
+        "content" => "''",
+        "display" => "inline-block",
+        "width" => "1.2em",
+        "height" => "1.2em"
+    ),
+    CSS(
+        ".small-button.python-logo",
+        "display" => "inline-flex",
+        "align-items" => "center",
+        "justify-content" => "center",
+        "vertical-align" => "middle"
     ),
     # Menu and Buttons
 
@@ -212,7 +240,10 @@ Styles(
         "border" => "1px solid rgba(255, 255, 255, 0.1)",  # Soft outline
         "border-radius" => "8px",  # Rounded corners for a smoother look
         "box-shadow" => "0px 4px 10px rgba(255, 255, 255, 0.15)",  # Soft shadow
-        "padding" => "4px",  # Adds spacing inside
+        "padding" => "6px",  # Better spacing inside
+        "display" => "flex",
+        "gap" => "4px",  # Consistent gap between buttons
+        "align-items" => "center"
     ),
     CSS(
         ".small-button.toggled",
@@ -226,11 +257,15 @@ Styles(
         ".small-button",
         "background-color" => "transparent",
         "border" => "none",
-        "border-radius" => "100px",
+        "border-radius" => "8px",
         "color" => text_color_light,  # Light text color for dark theme
         "cursor" => "pointer",
         "box-shadow" => "0 2px 4px rgba(255, 255, 255, 0.2)",  # Light shadow for contrast
         "transition" => "background-color 0.2s",
+        "padding" => "8px",
+        "display" => "inline-flex",
+        "align-items" => "center",
+        "justify-content" => "center"
     ),
     CSS(
         ".small-button:hover",
@@ -379,17 +414,18 @@ Styles(
     CSS(
         ".new-cell-menu:hover",
         "height" => "2.5rem",  # Expand to fit buttons
-        "transition-delay" => "0.5s",
-        "background-color" => "#333",  # Or any color you want
+        "transition-delay" => "0.1s",
+        "background-color" => "rgba(255, 255, 255, 0.05)",
     ),
     CSS(
         ".new-cell-menu > *",  # Target direct children
         "opacity" => "0",
-        "transition" => "opacity 0.2s",
+        "transition" => "opacity 0.15s",
     ),
     CSS(
         ".new-cell-menu:hover > *",  # Target direct children on hover
         "opacity" => "1",
-        "transition-delay" => "0.5s",
-    )
+        "transition-delay" => "0.1s",
+    ),
+
 )
