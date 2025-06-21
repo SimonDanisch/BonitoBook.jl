@@ -501,31 +501,37 @@ function move_to_editor(editor) {
 }
 
 function move_up(editor) {
-    const upper = BOOK.get_up(editor).monaco_editor.editor;
-    if (upper) {
-        upper.then((upper) => {
-            const lastLine = upper.getModel().getLineCount();
-            upper.focus();
-            upper.setPosition({
-                lineNumber: lastLine,
-                column: 1,
-            });
-            move_to_editor(upper);
-        })
+    const upper_editor = BOOK.get_up(editor);
+    if (upper_editor) {
+        const upper = upper_editor.editor.editor;
+        if (upper) {
+            upper.then((upper) => {
+                const lastLine = upper.getModel().getLineCount();
+                upper.focus();
+                upper.setPosition({
+                    lineNumber: lastLine,
+                    column: 1,
+                });
+                move_to_editor(upper);
+            })
+        }
     }
 }
 
 function move_down(editor) {
-    const lower = BOOK.get_down(editor).monaco_editor.editor;
-    if (lower) {
-        lower.then(lower => {
-            lower.focus();
-            lower.setPosition({
-                lineNumber: 1,
-                column: 1,
+    const lower_editor = BOOK.get_down(editor);
+    if (lower_editor) {
+        const lower = lower_editor.editor.editor;
+        if (lower) {
+            lower.then(lower => {
+                lower.focus();
+                lower.setPosition({
+                    lineNumber: 1,
+                    column: 1,
+                });
+                move_to_editor(lower);
             });
-            move_to_editor(lower);
-        });
+        }
     }
 }
 

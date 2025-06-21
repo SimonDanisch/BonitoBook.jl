@@ -197,7 +197,6 @@ function play_menu(book)
         task = @async for cell in book.cells
             # fetches source only if unsaved source is there
             # After that, runs cell
-            cell.editor.loading[] = true
             run_from_newest!(cell.editor)
         end
         Base.errormonitor(task)

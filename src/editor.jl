@@ -169,6 +169,7 @@ function send(editor::EvalEditor; msg...)
 end
 
 function run_from_newest!(editor::EvalEditor)
+    cell.editor.loading[] = true
     send(editor; type = "run-from-newest")
     return
 end

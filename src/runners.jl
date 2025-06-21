@@ -189,6 +189,7 @@ function run!(mod::Module, task::RunnerTask)
 end
 
 function eval_source!(editor, source::String)
+    editor.loading[] = true  # Set loading immediately when queued
     return put!(editor.runner.task_queue, RunnerTask(source, editor.output, editor))
 end
 
