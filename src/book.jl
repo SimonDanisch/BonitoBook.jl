@@ -101,10 +101,13 @@ function Book(file; folder = nothing, runner = AsyncRunner())
 
     style_editor = FileEditor(style_paths, runner; editor_classes = ["styling file-editor"], show_editor = false)
     run!(style_editor.editor) # run the style editor to get the output Styles
-    @assert style_editor.editor.output[] isa Styles
+
     progress = Observable((false, 0.0))
     book = Book(bookfile, folder, editors, style_editor, runner, progress)
     export_md(joinpath(folder, "book.md"), book)
+    if !(style_editor.editor.output[] isa Styles)
+        return style_editor.editor.output[]
+    end
     return book
 end
 

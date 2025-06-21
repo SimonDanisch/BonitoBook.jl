@@ -109,7 +109,7 @@ Create a new asynchronous code runner.
 # Returns
 Configured `AsyncRunner` instance ready for code execution.
 """
-function AsyncRunner(mod::Module = Module(); callback = identity, spawn = false)
+function AsyncRunner(mod::Module = Module(gensym("BonitoBook")); callback = identity, spawn = false)
     taskref = Ref{Task}()
     redirect_target = Base.RefValue{Observable{String}}()
     loki = ReentrantLock()
@@ -171,11 +171,10 @@ function run!(mod::Module, task::RunnerTask)
             cmd = `$(split(source[2:end]))`
             run(cmd)
         else
-            expr = Bonito.parseall(source)
             if endswith(source, ";")
                 result[] = nothing
             else
-                result[] = book_display(Base.eval(mod, expr))
+                result[] = book_display(Base.include_string(mod, source))
             end
         end
     catch e
