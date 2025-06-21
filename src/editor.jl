@@ -412,6 +412,7 @@ end
 struct FileEditor
     files::Vector{String}
     editor::EvalEditor
+    current_file::Observable{String}
     function FileEditor(filepath::Vector{String}, runner = nothing; language = "julia", options...)
         source = read(filepath[1], String)
         opts = (
@@ -434,7 +435,14 @@ struct FileEditor
             language = language, show_logging = false,
             opts..., options...
         )
-        return new(filepath, editor)
+        current_file = Observable(filepath[1])
+        
+        # Set up auto-save when source changes
+        on(editor.source) do new_source
+            write(current_file[], new_source)
+        end
+        
+        return new(filepath, editor, current_file)
     end
 end
 
@@ -442,6 +450,10 @@ function Bonito.jsrender(session::Session, editor::FileEditor)
     buttons = map(editor.files) do file
         button = Button(basename(file))
         on(session, button.value) do x
+            # Save current file before switching
+            write(editor.current_file[], editor.editor.source[])
+            # Switch to new file
+            editor.current_file[] = file
             editor.editor.source[] = read(file, String)
         end
         return button
