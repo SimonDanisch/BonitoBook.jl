@@ -140,6 +140,7 @@ struct EvalEditor
     show_editor::Observable{Bool}
 
     loading::Observable{Bool}
+    language::String
 end
 
 function process_message(editor::EvalEditor, message::Dict)
@@ -148,7 +149,7 @@ function process_message(editor::EvalEditor, message::Dict)
             editor.source[] = message["data"]
         end
     elseif message["type"] == "run"
-        eval_source!(editor, editor.source[])
+        eval_source!(editor, editor.source[], editor.language)
     elseif message["type"] == "toggle-editor"
         editor.show_editor[] = message["data"]
     elseif message["type"] == "toggle-logging"
@@ -234,8 +235,8 @@ function EvalEditor(
         show_output,
         show_editor_obs,
         loading,
+        language
     )
-
     on(js_to_julia) do message
         process_message(editor, message)
     end
@@ -372,6 +373,16 @@ function Bonito.jsrender(session::Session, editor::CellEditor)
     on(session, click) do x
         editor.delete_self[] = true
     end
+    
+    # Add language indicator based on the editor language
+    language_indicator = if editor.language == "python"
+        SmallButton(class = "python-logo", title = "Python")[1]  # Get just the DOM element
+    elseif editor.language == "julia"
+        SmallButton(class = "julia-dots", title = "Julia")[1]  # Get just the DOM element
+    else
+        # For other languages, show a generic code icon
+        SmallButton(class = "codicon codicon-file-code", title = "Code")[1]
+    end
     hover_id = "$(editor.uuid)-hover"
     container_id = "$(editor.uuid)-container"
     card_content_id = "$(editor.uuid)-card-content"
@@ -392,7 +403,7 @@ function Bonito.jsrender(session::Session, editor::CellEditor)
             })
         }
     """
-    hover_buttons = DOM.div(ai, show_editor, show_logging, out, delete_editor; class = "hover-buttons", id=hover_id)
+    hover_buttons = DOM.div(language_indicator, ai, show_editor, show_logging, out, delete_editor; class = "hover-buttons", id=hover_id)
 
     jleditor_div, logging_div, output_div = render_editor(jleditor)
     class = any_visible[] ? "show-vertical" : "hide-vertical"

@@ -1,3 +1,77 @@
+using PythonCall
+
+mutable struct PythonRunner
+    globals::Py
+    locals::Py
+    function PythonRunner()
+        new(PythonCall.pydict(), PythonCall.pydict())
+    end
+end
+
+global eval_python_code = nothing
+
+function get_func()
+    if isnothing(eval_python_code)
+        pyexec("""
+        import ast
+        import textwrap
+
+        def eval_python_code(source, globals_dict, locals_dict):
+            tree = ast.parse(source, mode="exec")
+            body = tree.body
+            n = len(body)
+            if n == 0:
+                return None
+
+            exprs = body[:-1]
+            last_stmt = body[-1]
+
+            if exprs:
+                init_code = textwrap.dedent("\\n".join(ast.unparse(stmt) for stmt in exprs))
+                exec(init_code, globals_dict, locals_dict)
+
+            if isinstance(last_stmt, ast.Expr):
+                tail_expr = ast.unparse(last_stmt.value)
+                return eval(tail_expr, globals_dict, locals_dict)
+            else:
+                full_code = textwrap.dedent(source)
+                exec(full_code, globals_dict, locals_dict)
+                return None
+        """, Main)
+        global eval_python_code = pyeval("eval_python_code", Main)
+    end
+    return eval_python_code
+end
+
+
+function transfer_python_vars(python_dict::Py, julia_module, var_type::String)
+    jl_dict = pyconvert(Dict, python_dict)
+    for key in keys(jl_dict)
+        key_str = string(key)
+        if !startswith(key_str, "_")  # Skip private variables
+            julia_symbol = Symbol(key_str)
+            if !hasproperty(julia_module, julia_symbol)
+                try
+                    value = jl_dict[key]
+                    @eval julia_module $julia_symbol = $value
+                catch e
+                    @warn "Could not transfer Python $var_type variable $key_str to Julia: " e
+                end
+            end
+        end
+    end
+end
+
+function eval_python_code_jl(runner::PythonRunner, mod, filename, start_line, python_source)
+    eval_py = get_func()  # Ensure eval_python_code is defined
+    result = eval_py(python_source, runner.globals, runner.locals)
+    # PythonCall.pyexec(python_source, runner.globals, runner.locals)
+    transfer_python_vars(runner.globals, mod, "global")
+    transfer_python_vars(runner.locals, mod, "local")
+    return result
+end
+
+
 """
     MarkdownRunner
 
@@ -54,7 +128,6 @@ function parse_source(::MarkdownRunner, source)
     end
 end
 
-
 parse_source(runner::Nothing, source) = nothing
 
 function run!(runner::MarkdownRunner, editor::EvalEditor)
@@ -70,15 +143,17 @@ struct RunnerTask
     source::String
     result::Observable
     editor::EvalEditor
+    language::String
 end
 
 """
     AsyncRunner
 
-Asynchronous code execution runner that handles Julia code evaluation in a separate thread.
+Asynchronous code execution runner that handles Julia and Python code evaluation in a separate thread.
 
 # Fields
 - `mod::Module`: Module for code execution
+- `python_runner::PythonRunner`: Python execution context
 - `task_queue::Channel{RunnerTask}`: Queue of tasks to execute
 - `thread::Task`: Background execution thread
 - `callback::Base.RefValue{Function}`: Result processing callback
@@ -88,12 +163,24 @@ Asynchronous code execution runner that handles Julia code evaluation in a separ
 """
 struct AsyncRunner
     mod::Module
+    python_runner::PythonRunner
     task_queue::Channel{RunnerTask}
     thread::Task
     callback::Base.RefValue{Function}
     iochannel::Channel{Vector{UInt8}}
     redirect_target::Base.RefValue{Observable{String}}
     open::Threads.Atomic{Bool}
+end
+
+function set_task_tid!(task::Task, tid::Integer)
+    task.sticky = true
+    return ccall(:jl_set_task_tid, Cint, (Any, Cint), task, tid - 1)
+end
+function spawnat(f, tid)
+    task = Task(f)
+    set_task_tid!(task, tid)
+    schedule(task)
+    return task
 end
 
 """
@@ -110,33 +197,36 @@ Create a new asynchronous code runner.
 Configured `AsyncRunner` instance ready for code execution.
 """
 function AsyncRunner(mod::Module = Module(gensym("BonitoBook")); callback = identity, spawn = false)
-    taskref = Ref{Task}()
     redirect_target = Base.RefValue{Observable{String}}()
+    python_runner = fetch(spawnat(1) do
+        PythonRunner()
+    end)
     loki = ReentrantLock()
-    task_queue = Channel{RunnerTask}(Inf; spawn = spawn, taskref = taskref) do chan
-        for task in chan
+    task_queue = Channel{RunnerTask}(Inf)
+    taskref = spawnat(1) do
+        for task in task_queue
             lock(loki) do
                 redirect_target[] = task.editor.logging
-                run!(mod, task)
+                run!(mod, python_runner, task)
             end
         end
     end
-    io_chan = redirect_all_to_channel()
+    # io_chan = redirect_all_to_channel()
     open = Threads.Atomic{Bool}(true)
-    task = Threads.@spawn begin
-        while open[] && isopen(io_chan)
-            bytes = take!(io_chan)
-            lock(loki) do
-                if !isempty(bytes) && isassigned(redirect_target)
-                    printer = HTMLPrinter(IOBuffer(copy(bytes)); root_tag = "span")
-                    str = sprint(io -> show(io, MIME"text/html"(), printer))
-                    redirect_target[][] = str
-                end
-            end
-        end
-    end
-    Base.errormonitor(task)
-    return AsyncRunner(mod, task_queue, taskref[], Base.RefValue{Function}(callback), io_chan, redirect_target, open)
+    # task = Threads.@spawn begin
+    #     while open[] && isopen(io_chan)
+    #         bytes = take!(io_chan)
+    #         lock(loki) do
+    #             if !isempty(bytes) && isassigned(redirect_target)
+    #                 printer = HTMLPrinter(IOBuffer(copy(bytes)); root_tag = "span")
+    #                 str = sprint(io -> show(io, MIME"text/html"(), printer))
+    #                 redirect_target[][] = str
+    #             end
+    #         end
+    #     end
+    # end
+    # Base.errormonitor(task)
+    return AsyncRunner(mod, python_runner, task_queue, taskref, Base.RefValue{Function}(callback), Channel{Vector{UInt8}}(), redirect_target, open)
 end
 
 function interrupt!(runner::AsyncRunner)
@@ -151,30 +241,41 @@ function run!(editor::EvalEditor)
     return run!(editor.runner, editor)
 end
 
+function run!(runner::AsyncRunner, editor::EvalEditor)
+    run!(runner.mod, runner.python_runner, RunnerTask(editor.source[], editor.output, editor, editor.language))
+end
 
-run!(runner::AsyncRunner, editor::EvalEditor) = run!(runner.mod, RunnerTask(editor.source[], editor.output, editor))
-
-function run!(mod::Module, task::RunnerTask)
+function run!(mod::Module, python_runner::PythonRunner, task::RunnerTask)
     editor = task.editor
     result = task.result
     source = task.source
+    language = task.language
     editor.loading[] = true
     editor.show_logging[] = true
     editor.logging_html[] = ""
     try
-        if startswith(source, "]")
-            Pkg.REPLMode.pkgstr(source[2:end])
-        elseif startswith(source, "?")
-            sym = Base.eval(mod, Meta.parse(source[2:end]))
-            result[] = Base.Docs.doc(sym)
-        elseif startswith(source, ";")
-            cmd = `$(split(source[2:end]))`
-            run(cmd)
+        if language == "python"
+            # Execute Python code
+            PythonCall.GIL.lock() do
+                py_result = eval_python_code_jl(python_runner, mod, "", 1, source)
+                result[] = py_result
+            end
         else
-            if endswith(source, ";")
-                result[] = nothing
+            # Execute Julia code (default behavior)
+            if startswith(source, "]")
+                Pkg.REPLMode.pkgstr(source[2:end])
+            elseif startswith(source, "?")
+                sym = Base.eval(mod, Meta.parse(source[2:end]))
+                result[] = Base.Docs.doc(sym)
+            elseif startswith(source, ";")
+                cmd = `$(split(source[2:end]))`
+                run(cmd)
             else
-                result[] = book_display(Base.include_string(mod, source))
+                if endswith(source, ";")
+                    result[] = nothing
+                else
+                    result[] = book_display(Base.include_string(mod, source))
+                end
             end
         end
     catch e
@@ -188,9 +289,9 @@ function run!(mod::Module, task::RunnerTask)
     return
 end
 
-function eval_source!(editor, source::String)
+function eval_source!(editor, source::String, language::String = "julia")
     editor.loading[] = true  # Set loading immediately when queued
-    return put!(editor.runner.task_queue, RunnerTask(source, editor.output, editor))
+    return put!(editor.runner.task_queue, RunnerTask(source, editor.output, editor, language))
 end
 
 struct MLRunner
