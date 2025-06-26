@@ -373,16 +373,7 @@ function Bonito.jsrender(session::Session, editor::CellEditor)
     on(session, click) do x
         editor.delete_self[] = true
     end
-    
-    # Add language indicator based on the editor language
-    language_indicator = if editor.language == "python"
-        SmallButton(class = "python-logo", title = "Python")[1]  # Get just the DOM element
-    elseif editor.language == "julia"
-        SmallButton(class = "julia-dots", title = "Julia")[1]  # Get just the DOM element
-    else
-        # For other languages, show a generic code icon
-        SmallButton(class = "codicon codicon-file-code", title = "Code")[1]
-    end
+
     hover_id = "$(editor.uuid)-hover"
     container_id = "$(editor.uuid)-container"
     card_content_id = "$(editor.uuid)-card-content"
@@ -403,13 +394,22 @@ function Bonito.jsrender(session::Session, editor::CellEditor)
             })
         }
     """
-    hover_buttons = DOM.div(language_indicator, ai, show_editor, show_logging, out, delete_editor; class = "hover-buttons", id=hover_id)
+    hover_buttons = DOM.div(ai, show_editor, show_logging, out, delete_editor; class = "hover-buttons", id=hover_id)
+
+    # Create small always-visible language indicator positioned in bottom right
+    small_language_indicator = if editor.language == "python"
+        DOM.div(class = "python-logo small-language-icon", title = "Python", style = "position: absolute; bottom: 4px; right: 8px; font-size: 10px; opacity: 0.6; pointer-events: none;")
+    elseif editor.language == "julia"
+        DOM.div(class = "julia-dots small-language-icon", title = "Julia", style = "position: absolute; bottom: 4px; right: 8px; font-size: 10px; opacity: 0.6; pointer-events: none;")
+    else
+        DOM.div(class = "codicon codicon-file-code small-language-icon", title = "Code", style = "position: absolute; bottom: 4px; right: 8px; font-size: 10px; opacity: 0.6; pointer-events: none;")
+    end
 
     jleditor_div, logging_div, output_div = render_editor(jleditor)
     class = any_visible[] ? "show-vertical" : "hide-vertical"
     card_content = DOM.div(
-        chat, jleditor_div, logging_div;
-        class = "cell-editor $class", id=card_content_id,
+        chat, jleditor_div, logging_div, small_language_indicator;
+        class = "cell-editor $class", id=card_content_id, style = "position: relative;"
     )
     cell = DOM.div(hover_buttons, card_content, DOM.div(output_div, tabindex = 0), style = Styles("position" => "relative"))
     # Create a separate proximity area
