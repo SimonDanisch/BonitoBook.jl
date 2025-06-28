@@ -1,31 +1,23 @@
 using WGLMakie
 using BonitoBook, Bonito
+using PythonCall
+rm(BonitoBook.Monaco.bundle_file)
 
-# BonitoBook.Monaco.bundle_file |> rm
-# BonitoBook.Monaco.bundle_data |> empty!
-
-# rm(joinpath(@__DIR__, "Sunny/01_LSWT_CoRh2O4"), recursive=true, force=true)
+rm(joinpath("dev", "BonitoBook", "test", "Sunny/01_LSWT_CoRh2O4"), recursive=true, force=true)
+path = normpath(abspath(joinpath("dev", "BonitoBook", "test", "Sunny/01_LSWT_CoRh2O4.ipynb")))
 app = App(title="BonitoBook") do s
-    return Book(joinpath(@__DIR__, "Sunny/01_LSWT_CoRh2O4.ipynb"));
+    return Book(path);
 end
 
 file = joinpath(@__DIR__, "Sunny/01_LSWT_CoRh2O4/styles/style.jl")
 
-code = read(file, String)
-m = Module()
 
-m.eval(m, :(function include(x)
-    path = joinpath(@__DIR__, x)
-    @show path
-    Base._include(identity, $m, path)
-end))
 
 
 cd(dirname(file)) do
     Base.include_string(m, "println(@__source__)", file)
 end
 
-@edit Base._include(identity, m, "test")
 bookfile, folder, style_paths = BonitoBook.from_file(joinpath(@__DIR__, "Sunny/01_LSWT_CoRh2O4.ipynb"), "./Sunny/Test")
 runner = BonitoBook.AsyncRunner()
 style_editor = BonitoBook.FileEditor(style_paths, runner; editor_classes = ["styling file-editor"], show_editor = false)

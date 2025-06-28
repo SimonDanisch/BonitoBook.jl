@@ -130,9 +130,10 @@ end
 
 parse_source(runner::Nothing, source) = nothing
 
-function run!(runner::MarkdownRunner, editor::EvalEditor)
+function run!(runner::MarkdownRunner, editor::EvalEditor, language::String = "julia")
     return eval_source!(editor, editor.output, runner, editor.source[])
 end
+
 function eval_source!(editor, result::Observable, runner, source)
     return result[] = parse_source(runner, source)
 end
@@ -289,10 +290,16 @@ function run!(mod::Module, python_runner::PythonRunner, task::RunnerTask)
     return
 end
 
-function eval_source!(editor, source::String, language::String = "julia")
+function eval_source!(runner, editor, source::String, language::String = "julia")
     editor.loading[] = true  # Set loading immediately when queued
     return put!(editor.runner.task_queue, RunnerTask(source, editor.output, editor, language))
 end
+
+function eval_source!(editor, source::String, language::String = "julia")
+    editor.loading[] = true  # Set loading immediately when queued
+    return eval_source!(editor.runner, RunnerTask(source, editor.output, editor, language))
+end
+
 
 struct MLRunner
     editor::BonitoBook.EvalEditor

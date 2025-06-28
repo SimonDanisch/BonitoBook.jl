@@ -1,7 +1,6 @@
 import PromptingTools as PT
 
 const Monaco = ES6Module(joinpath(@__DIR__, "javascript", "Monaco.js"))
-const CodeIcon = Asset("https://cdn.jsdelivr.net/npm/@vscode/codicons@latest/dist/codicon.min.css")
 
 # TODO, this better not be a global, but rather part of `Book`
 # Cant be `Observable("default")`, since for a global compiled into the
@@ -82,7 +81,6 @@ function Bonito.jsrender(session::Session, editor::MonacoEditor)
     # needs a return statement to actually return a function
     return Bonito.jsrender(
         session, DOM.div(
-            CodeIcon,
             editor_div,
             js"""
             $(Monaco).then(mod => {
@@ -149,7 +147,10 @@ function process_message(editor::EvalEditor, message::Dict)
             editor.source[] = message["data"]
         end
     elseif message["type"] == "run"
-        eval_source!(editor, editor.source[], editor.language)
+        run!(editor)
+    elseif message["type"] == "get-source"
+        # Send current source to JavaScript editor
+        send(editor; type = "set-source", data = editor.source[])
     elseif message["type"] == "toggle-editor"
         editor.show_editor[] = message["data"]
     elseif message["type"] == "toggle-logging"
@@ -359,17 +360,23 @@ function Bonito.jsrender(session::Session, editor::CellEditor)
     jleditor = editor.editor
     chat = editor.chat
 
-    ai = SmallToggle(editor.show_chat; class = "codicon codicon-sparkle-filled")
+    ai_icon = icon("sparkle-filled")
+    ai = DOM.button(ai_icon; class="small-button", onclick=js"event=> $(editor.show_chat).notify(!$(editor.show_chat).value)")
     show_output = Observable(jleditor.show_output[])
     on(x -> toggle!(jleditor; output = !jleditor.show_output[]), show_output)
-    out = SmallToggle(show_output; class = "codicon codicon-graph")
+    out_icon = icon("graph")
+    out = DOM.button(out_icon; class="small-button", onclick=js"event=> $(show_output).notify(!$(show_output).value)")
     show_editor_obs = Observable(jleditor.show_editor[])
     on(x -> toggle!(jleditor; editor = !jleditor.show_editor[]), show_editor_obs)
-    show_editor = SmallToggle(show_editor_obs; class = "codicon codicon-code")
+    editor_icon = icon("code")
+    show_editor = DOM.button(editor_icon; class="small-button", onclick=js"event=> $(show_editor_obs).notify(!$(show_editor_obs).value)")
     show_logging_obs = Observable(jleditor.show_logging[])
     on(x -> toggle!(jleditor; logging = !jleditor.show_logging[]), show_logging_obs)
-    show_logging = SmallToggle(show_logging_obs; class = "codicon codicon-terminal")
-    delete_editor, click = SmallButton(class = "codicon codicon-close", style = "color: red;")
+    logging_icon = icon("terminal")
+    show_logging = DOM.button(logging_icon; class="small-button", onclick=js"event=> $(show_logging_obs).notify(!$(show_logging_obs).value)")
+    delete_icon = icon("close", style=Styles("color" => "red"))
+    click = Observable(false)
+    delete_editor = DOM.button(delete_icon; class="small-button", onclick=js"event=> $(click).notify(true)")
     on(session, click) do x
         editor.delete_self[] = true
     end
@@ -397,13 +404,13 @@ function Bonito.jsrender(session::Session, editor::CellEditor)
     hover_buttons = DOM.div(ai, show_editor, show_logging, out, delete_editor; class = "hover-buttons", id=hover_id)
 
     # Create small always-visible language indicator positioned in bottom right
-    small_language_indicator = if editor.language == "python"
-        DOM.div(class = "python-logo small-language-icon", title = "Python", style = "position: absolute; bottom: 4px; right: 8px; font-size: 10px; opacity: 0.6; pointer-events: none;")
-    elseif editor.language == "julia"
-        DOM.div(class = "julia-dots small-language-icon", title = "Julia", style = "position: absolute; bottom: 4px; right: 8px; font-size: 10px; opacity: 0.6; pointer-events: none;")
-    else
-        DOM.div(class = "codicon codicon-file-code small-language-icon", title = "Code", style = "position: absolute; bottom: 4px; right: 8px; font-size: 10px; opacity: 0.6; pointer-events: none;")
-    end
+    names = Dict(
+        "julia" => "julia-logo",
+        "markdown" => "markdown",
+        "python" => "python-logo",
+    )
+    name = get(names, editor.language, "file-code")
+    small_language_indicator = icon(name, size="10px", class="small-language-icon")
 
     jleditor_div, logging_div, output_div = render_editor(jleditor)
     class = any_visible[] ? "show-vertical" : "hide-vertical"
@@ -416,7 +423,7 @@ function Bonito.jsrender(session::Session, editor::CellEditor)
     proximity_area = DOM.div(class = "cell-menu-proximity-area")
     container = DOM.div(cell, proximity_area, style = Styles("position" => "relative"), id=container_id, tabindex = 0)
 
-    cell_div = DOM.div(CodeIcon, container, class = "cell-editor-container", id = editor.uuid)
+    cell_div = DOM.div(container, class = "cell-editor-container", id = editor.uuid)
     return Bonito.jsrender(session, cell_div)
 end
 

@@ -147,49 +147,34 @@ Styles(
         CSS("50%", "box-shadow" => "0 0 20px rgba(0.0, 150.0, 51.0, 0.8)"),
         CSS("100%", "box-shadow" => box_shadow_soft)
     ),
+
     CSS(
-        ".julia-dots",
-        "background-image" => BonitoBook.assets("julia-dots.svg"),
-        "background-size" => "1.2em 1.2em",
-        "background-repeat" => "no-repeat",
-        "background-position" => "center",
-        "vertical-align" => "middle"
+        ".small-language-icon",
+        "position" => "absolute",
+        "bottom" => "4px",
+        "right" => "8px",
+        "opacity"=> "0.6",
+        "pointer-events" => "none"
     ),
+
+    # Codicon system - now supporting both font and SVG icons
     CSS(
-        ".julia-dots::before",
-        "content" => "''",
+        ".codicon",
         "display" => "inline-block",
-        "width" => "1.2em",
-        "height" => "1.2em"
+        "text-decoration" => "none",
+        "text-rendering" => "auto",
+        "text-align" => "center",
+        "text-transform" => "none",
+        "-webkit-font-smoothing" => "antialiased",
+        "-moz-osx-font-smoothing" => "grayscale",
+        "user-select" => "none",
+        "-webkit-user-select" => "none",
+        "flex-shrink" => "0"
     ),
     CSS(
-        ".small-button.julia-dots",
-        "display" => "inline-flex",
-        "align-items" => "center",
-        "justify-content" => "center",
-        "vertical-align" => "middle"
-    ),
-    CSS(
-        ".python-logo",
-        "background-image" => BonitoBook.assets("python.svg"),
-        "background-size" => "1.2em 1.2em",
-        "background-repeat" => "no-repeat",
-        "background-position" => "center",
-        "vertical-align" => "middle"
-    ),
-    CSS(
-        ".python-logo::before",
-        "content" => "''",
-        "display" => "inline-block",
-        "width" => "1.2em",
-        "height" => "1.2em"
-    ),
-    CSS(
-        ".small-button.python-logo",
-        "display" => "inline-flex",
-        "align-items" => "center",
-        "justify-content" => "center",
-        "vertical-align" => "middle"
+        ".codicon svg",
+        "display" => "block",
+        "fill" => "currentColor"
     ),
     # Menu and Buttons
 

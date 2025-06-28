@@ -187,28 +187,7 @@ Styles(
         CSS("50%", "box-shadow" => "0 0 15px rgba(255, 255, 255, 0.3)"),
         CSS("100%", "box-shadow" => "0 0 5px rgba(255, 255, 255, 0.1)"),
     ),
-    CSS(
-        ".julia-dots",
-        "background-image" => BonitoBook.assets("julia-dots.svg"),
-        "background-size" => "1.2em 1.2em",
-        "background-repeat" => "no-repeat",
-        "background-position" => "center",
-        "vertical-align" => "middle"
-    ),
-    CSS(
-        ".julia-dots::before",
-        "content" => "''",
-        "display" => "inline-block",
-        "width" => "1.2em",
-        "height" => "1.2em"
-    ),
-    CSS(
-        ".small-button.julia-dots",
-        "display" => "inline-flex",
-        "align-items" => "center",
-        "justify-content" => "center",
-        "vertical-align" => "middle"
-    ),
+
     CSS(
         ".python-logo",
         "background-image" => BonitoBook.assets("python.svg"),

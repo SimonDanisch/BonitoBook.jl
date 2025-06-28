@@ -66,7 +66,6 @@ class EvalEditor {
         this.show_logging = show_logging;
         this.js_to_julia = js_to_julia;
         julia_to_js.on((message)=>{
-            console.log(message);
             this.process_message(message);
         });
         monaco.then((monaco)=>{
@@ -310,32 +309,64 @@ function setup_cell_editor(eval_editor, buttons_id, container_id, card_content_i
     };
     container.addEventListener("mouseover", make_visible);
     container.addEventListener("mouseout", hide);
+    let loadingTimeout = null;
+    let loadingStartTime = null;
     loading_obs.on((x)=>{
         if (x) {
             card_content.classList.add("loading-cell");
+            loadingStartTime = Date.now();
+            if (loadingTimeout) {
+                clearTimeout(loadingTimeout);
+                loadingTimeout = null;
+            }
         } else {
-            card_content.classList.remove("loading-cell");
+            const currentTime = Date.now();
+            const elapsedTime = currentTime - (loadingStartTime || currentTime);
+            const remainingTime = Math.max(0, 1000 - elapsedTime);
+            if (remainingTime > 0) {
+                loadingTimeout = setTimeout(()=>{
+                    card_content.classList.remove("loading-cell");
+                    loadingTimeout = null;
+                }, remainingTime);
+            } else {
+                card_content.classList.remove("loading-cell");
+            }
         }
     });
     all_visible_obs.on((x)=>{
         toggle_elem(x, card_content, "vertical");
     });
     container.addEventListener("focus", (e)=>{
-        console.log("$$$$$focus$$$$$$$");
         if (hide_on_focus_obs.value) {
             eval_editor.toggle_editor(true);
             eval_editor.toggle_output(false);
         }
     });
+    container.addEventListener("click", (e)=>{
+        if (hide_on_focus_obs.value) {
+            const monacoEditor = container.querySelector('.monaco-editor');
+            if (!monacoEditor || !monacoEditor.contains(e.target)) {
+                eval_editor.toggle_editor(true);
+                eval_editor.toggle_output(false);
+                eval_editor.js_to_julia.notify({
+                    type: "get-source"
+                });
+                eval_editor.editor.editor.then((editor)=>{
+                    editor.focus();
+                });
+            }
+        }
+    });
     container.addEventListener("focusout", (e)=>{
         console.log("Focus out!");
         if (hide_on_focus_obs.value) {
-            console.log(`will toggle: ${!container.contains(e.relatedTarget)}`);
             if (!container.contains(e.relatedTarget)) {
                 eval_editor.editor.editor.then((editor)=>{
                     eval_editor.toggle_editor(false);
                     eval_editor.toggle_output(true);
                     eval_editor.set_source(editor);
+                    eval_editor.run();
+                    eval_editor.send();
                 });
             }
         }

@@ -152,7 +152,7 @@ function trigger_js_download(session, file)
 end
 
 function saving_menu(session, book)
-    save_jl, click_jl = SmallButton(; class = "julia-dots")
+    save_jl, click_jl = icon_button("julia-logo")
     on(click_jl) do click
         Base.errormonitor(
             Threads.@async begin
@@ -161,7 +161,7 @@ function saving_menu(session, book)
             end
         )
     end
-    save_md, click_md = SmallButton(; class = "codicon codicon-markdown")
+    save_md, click_md = icon_button("markdown")
     on(click_md) do click
         Base.errormonitor(
             Threads.@async begin
@@ -170,7 +170,7 @@ function saving_menu(session, book)
             end
         )
     end
-    save_pdf, click_pdf = SmallButton(; class = "codicon codicon-file-pdf")
+    save_pdf, click_pdf = icon_button("file-pdf")
     on(click_pdf) do click
         Base.errormonitor(
             Threads.@async begin
@@ -179,14 +179,14 @@ function saving_menu(session, book)
         )
     end
     return DOM.div(
-        DOM.div(class = "button-pad codicon codicon-save", save_jl, save_md, save_pdf);
+        DOM.div(icon("save"), save_jl, save_md, save_pdf; class="button-pad");
         class = "saving small-menu-bar"
     )
 end
 
 function play_menu(book)
-    run_all_div, run_all_click = SmallButton(; class = "codicon codicon-play")
-    stop_all_div, stop_all_click = SmallButton(; class = "codicon codicon-debug-stop")
+    run_all_div, run_all_click = icon_button("play")
+    stop_all_div, stop_all_click = icon_button("debug-stop")
     on(stop_all_click) do click
         println("Stopping all cells")
         if isa(book.runner, AsyncRunner)
@@ -264,14 +264,14 @@ end
 
 function new_cell_menu(session, book, editor_above_uuid, runner)
 
-    new_jl, click_jl = SmallButton(; class = "julia-dots")
-    new_md, click_md = SmallButton(; class = "codicon codicon-markdown")
-    new_py, click_py = SmallButton(; class = "python-logo")
+    new_jl, click_jl = icon_button("julia-logo")
+    new_md, click_md = icon_button("markdown")
+    new_py, click_py = icon_button("python-logo")
     on(click_py) do click
         new_cell = CellEditor("", "python", runner)
         insert_editor_below!(book, session, new_cell, editor_above_uuid)
     end
-    new_ai, click_ai = SmallButton(; class = "codicon codicon-sparkle-filled")
+    new_ai, click_ai = icon_button("sparkle-filled")
 
     on(click_jl) do click
         new_cell = CellEditor("", "julia", runner)
@@ -285,7 +285,7 @@ function new_cell_menu(session, book, editor_above_uuid, runner)
         new_cell = CellEditor("", "chatgpt", runner; show_chat=true, show_editor=false, show_output=false)
         insert_editor_below!(book, session, new_cell, editor_above_uuid)
     end
-    plus, click_plus = SmallButton(; class = "codicon codicon-plus")
+    plus, click_plus = icon_button("add")
     menu_div = DOM.div(
         plus, new_jl, new_md, new_py, new_ai;
         class = "saving small-menu-bar",
@@ -308,9 +308,10 @@ function setup_menu(book)
     on(show_editor) do show
         toggle!(style_fe.editor, editor = show)
     end
-    style_fe_toggle = SmallToggle(show_editor; class = "codicon codicon-paintcan")
+    paintcan_icon = icon("paintcan")
+    style_fe_toggle = DOM.button(paintcan_icon; class="small-button", onclick=js"event=> $(show_editor).notify(!$(show_editor).value)")
     menu = DOM.div(
-        DOM.div(class = "codicon codicon-settings", style_fe_toggle);
+        DOM.div(icon("settings"), style_fe_toggle; class="settings-container");
         class = "settings small-menu-bar"
     )
     last_style = Ref{Styles}(style_fe.editor.output[])
