@@ -32,8 +32,8 @@ Styles(
             "--animation-glow" => "0 0 20px rgba(0, 150, 51, 0.8)",
             "--icon-color" => "#666666",
             "--icon-hover-color" => "#333333",
-            "--icon-filter" => "brightness(0.4) sepia(1) saturate(0) hue-rotate(0deg)",
-            "--icon-hover-filter" => "brightness(0.2) sepia(1) saturate(0) hue-rotate(0deg)",
+            "--icon-filter" => "none",
+            "--icon-hover-filter" => "brightness(0.7)",
         )
     ),
 
@@ -56,8 +56,8 @@ Styles(
             "--animation-glow" => "0 0 15px rgba(255, 255, 255, 0.3)",
             "--icon-color" => "#cccccc",
             "--icon-hover-color" => "#ffffff",
-            "--icon-filter" => "brightness(0) saturate(100%) invert(80%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(1.2) contrast(1)",
-            "--icon-hover-filter" => "brightness(0) saturate(100%) invert(100%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(1) contrast(1)",
+            "--icon-filter" => "invert(1)",
+            "--icon-hover-filter" => "invert(1) brightness(1.2)",
         )
     ),
     CSS(
@@ -266,18 +266,27 @@ Styles(
         "filter" => "var(--icon-hover-filter)"
     ),
 
-    # SVG and image icons
+    # SVG icons (excluding colored icons identified by filename)
     CSS(
-        "img[src\$='.svg'], svg",
+        "img:not([src*='python-logo']):not([src*='julia-logo']), svg",
         "filter" => "var(--icon-filter)"
     ),
     CSS(
-        ".small-button img[src\$='.svg'], .small-button svg",
+        ".small-button img:not([src*='python-logo']):not([src*='julia-logo']), .small-button svg",
         "filter" => "var(--icon-filter)"
     ),
     CSS(
-        ".small-button:hover img[src\$='.svg'], .small-button:hover svg",
+        ".small-button:hover img:not([src*='python-logo']):not([src*='julia-logo']), .small-button:hover svg",
         "filter" => "var(--icon-hover-filter)"
+    ),
+
+    # Colored icons - handle separately for dark theme
+    CSS(
+        "@media (prefers-color-scheme: dark)",
+        CSS(
+            "img[src*='python-logo'], img[src*='julia-logo']",
+            "filter" => "brightness(1.3) contrast(1.1)"
+        )
     ),
 
     # Menu and Buttons
