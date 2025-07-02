@@ -1,3 +1,6 @@
+# Theme control: true = light, false = dark, nothing = auto (browser preference)
+light_theme = nothing
+
 # Define reusable variables for dimensions and transitions
 editor_width = "90ch"
 max_height_large = "80vh"
@@ -10,12 +13,31 @@ font_family_clean = "'Inter', 'Roboto', 'Arial', sans-serif"
 
 # Set Makie theme and Monaco editor based on system preference
 Makie.set_theme!(size = (650, 450))
-BonitoBook.monaco_theme!("default")
+
+# Define theme media queries based on light_theme setting
+light_media_query = if light_theme === nothing
+    BonitoBook.monaco_theme!("default")  # Auto-detect in JS
+    "@media (prefers-color-scheme: light), (prefers-color-scheme: no-preference)"
+elseif light_theme === true
+    BonitoBook.monaco_theme!("vs")  # Force light Monaco theme
+    ""  # No media query = always apply
+else
+    BonitoBook.monaco_theme!("vs-dark")  # Force dark Monaco theme
+    "@media (max-width: 0px)"  # Never apply
+end
+
+dark_media_query = if light_theme === nothing
+    "@media (prefers-color-scheme: dark)"
+elseif light_theme === false
+    ""  # No media query = always apply
+else
+    "@media (max-width: 0px)"  # Never apply
+end
 
 Styles(
-    # Light theme colors (default - wrapped in media query for proper specificity)
+    # Light theme colors
     CSS(
-        "@media (prefers-color-scheme: light), (prefers-color-scheme: no-preference)",
+        light_media_query,
         CSS(
             ":root",
             "--bg-primary" => "#ffffff",
@@ -37,9 +59,9 @@ Styles(
         )
     ),
 
-    # Dark theme colors (activated by prefers-color-scheme: dark)
+    # Dark theme colors
     CSS(
-        "@media (prefers-color-scheme: dark)",
+        dark_media_query,
         CSS(
             ":root",
             "--bg-primary" => "#1e1e1e",
@@ -282,7 +304,7 @@ Styles(
 
     # Colored icons - handle separately for dark theme
     CSS(
-        "@media (prefers-color-scheme: dark)",
+        dark_media_query,
         CSS(
             "img[src*='python-logo'], img[src*='julia-logo']",
             "filter" => "brightness(1.3) contrast(1.1)"

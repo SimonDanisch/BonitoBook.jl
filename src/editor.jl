@@ -79,13 +79,14 @@ function Bonito.jsrender(session::Session, editor::MonacoEditor)
     eclasses = join(classes, " ")
     editor_div = DOM.div(class = "monaco-editor-div $(eclasses)")
     # needs a return statement to actually return a function
+    theme = get_monaco_theme()
     return Bonito.jsrender(
         session, DOM.div(
             editor_div,
             js"""
             $(Monaco).then(mod => {
                 const init_func = $(editor.js_init_func[]);
-                const editor = new mod.MonacoEditor($(editor_div), $(editor.options), init_func, $(direction), $(visible), $(editor.theme));
+                const editor = new mod.MonacoEditor($(editor_div), $(editor.options), init_func, $(direction), $(visible), $(theme));
                 if ($(visible)) {
                     // return promise tho wait for the editor to be ready
                     return editor.editor;

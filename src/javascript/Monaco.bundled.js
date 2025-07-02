@@ -10,7 +10,10 @@ class MonacoEditor {
         this.options = options;
         this.initialized = false;
         this.hiding_direction = hiding_direction;
-        this.theme = theme;
+        this.theme = theme.value;
+        theme.on((new_theme)=>{
+            this.set_theme(new_theme);
+        });
         this.editor = new Promise((resolve)=>{
             this.resolve_setup = resolve;
         });
@@ -37,16 +40,7 @@ class MonacoEditor {
             const div = this.editor_div;
             const editor = monaco.editor.create(div, this.options);
             div._editor_instance = this.editor;
-            let effectiveTheme = this.theme;
-            if (this.theme === "default") {
-                effectiveTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'vs-dark' : 'vs';
-                const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-                mediaQuery.addListener((e)=>{
-                    const newTheme = e.matches ? 'vs-dark' : 'vs';
-                    monaco.editor.setTheme(newTheme);
-                });
-            }
-            monaco.editor.setTheme(effectiveTheme);
+            this.set_theme(this.theme);
             this.initialized = true;
             this.resolve_setup(editor);
         });
