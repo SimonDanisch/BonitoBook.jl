@@ -36,8 +36,8 @@ end
 
 Styles(
     # Light theme colors
-    CSS(
-        light_media_query,
+    if light_media_query == ""
+        # Force light theme - apply directly
         CSS(
             ":root",
             "--bg-primary" => "#ffffff",
@@ -57,11 +57,35 @@ Styles(
             "--icon-filter" => "none",
             "--icon-hover-filter" => "brightness(0.7)",
         )
-    ),
+    else
+        # Auto or never apply - use media query
+        CSS(
+            light_media_query,
+            CSS(
+                ":root",
+                "--bg-primary" => "#ffffff",
+                "--text-primary" => "#24292e",
+                "--text-secondary" => "#555555",
+                "--border-primary" => "rgba(0, 0, 0, 0.1)",
+                "--border-secondary" => "#ccc",
+                "--shadow-soft" => "0 4px 8px rgba(0, 0, 51, 0.2)",
+                "--shadow-button" => "0 2px 4px rgba(0, 0, 0, 0.2)",
+                "--shadow-inset" => "inset 2px 2px 5px rgba(0, 0, 0, 0.5)",
+                "--hover-bg" => "#ddd",
+                "--menu-hover-bg" => "rgba(0, 0, 0, 0.05)",
+                "--accent-blue" => "#0366d6",
+                "--animation-glow" => "0 0 20px rgba(0, 150, 51, 0.8)",
+                "--icon-color" => "#666666",
+                "--icon-hover-color" => "#333333",
+                "--icon-filter" => "none",
+                "--icon-hover-filter" => "brightness(0.7)",
+            )
+        )
+    end,
 
     # Dark theme colors
-    CSS(
-        dark_media_query,
+    if dark_media_query == ""
+        # Force dark theme - apply directly
         CSS(
             ":root",
             "--bg-primary" => "#1e1e1e",
@@ -81,7 +105,31 @@ Styles(
             "--icon-filter" => "invert(1)",
             "--icon-hover-filter" => "invert(1) brightness(1.2)",
         )
-    ),
+    else
+        # Auto or never apply - use media query
+        CSS(
+            dark_media_query,
+            CSS(
+                ":root",
+                "--bg-primary" => "#1e1e1e",
+                "--text-primary" => "rgb(212, 212, 212)",
+                "--text-secondary" => "rgb(212, 212, 212)",
+                "--border-primary" => "rgba(255, 255, 255, 0.1)",
+                "--border-secondary" => "rgba(255, 255, 255, 0.1)",
+                "--shadow-soft" => "0 4px 8px rgba(255, 255, 255, 0.2)",
+                "--shadow-button" => "0 2px 4px rgba(255, 255, 255, 0.2)",
+                "--shadow-inset" => "inset 2px 2px 5px rgba(255, 255, 255, 0.2)",
+                "--hover-bg" => "rgba(255, 255, 255, 0.1)",
+                "--menu-hover-bg" => "rgba(255, 255, 255, 0.05)",
+                "--accent-blue" => "#0366d6",
+                "--animation-glow" => "0 0 15px rgba(255, 255, 255, 0.3)",
+                "--icon-color" => "#cccccc",
+                "--icon-hover-color" => "#ffffff",
+                "--icon-filter" => "invert(1)",
+                "--icon-hover-filter" => "invert(1) brightness(1.2)",
+            )
+        )
+    end,
     CSS(
         "@media print",
         CSS(
@@ -303,13 +351,22 @@ Styles(
     ),
 
     # Colored icons - handle separately for dark theme
-    CSS(
-        dark_media_query,
+    if dark_media_query == ""
+        # Force dark theme - apply directly
         CSS(
             "img[src*='python-logo'], img[src*='julia-logo']",
             "filter" => "brightness(1.3) contrast(1.1)"
         )
-    ),
+    else
+        # Auto or never apply - use media query
+        CSS(
+            dark_media_query,
+            CSS(
+                "img[src*='python-logo'], img[src*='julia-logo']",
+                "filter" => "brightness(1.3) contrast(1.1)"
+            )
+        )
+    end,
 
     # Menu and Buttons
     CSS(
