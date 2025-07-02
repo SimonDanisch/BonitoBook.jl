@@ -130,14 +130,6 @@ end
 
 parse_source(runner::Nothing, source) = nothing
 
-function run!(runner::MarkdownRunner, editor::EvalEditor, language::String = "julia")
-    return eval_source!(editor, editor.output, runner, editor.source[])
-end
-
-function eval_source!(editor, result::Observable, runner, source)
-    return result[] = parse_source(runner, source)
-end
-
 const ANSI_CSS = Asset(joinpath(dirname(pathof(ANSIColoredPrinters)), "..", "docs", "src", "assets", "default.css"))
 
 struct RunnerTask
@@ -184,6 +176,7 @@ function spawnat(f, tid)
     return task
 end
 
+
 """
     AsyncRunner(mod=Module(); callback=identity, spawn=false)
 
@@ -207,27 +200,31 @@ function AsyncRunner(mod::Module = Module(gensym("BonitoBook")); callback = iden
     taskref = spawnat(1) do
         for task in task_queue
             lock(loki) do
-                redirect_target[] = task.editor.logging
-                run!(mod, python_runner, task)
+                try
+                    redirect_target[] = task.editor.logging
+                    run!(mod, python_runner, task)
+                catch e
+                    @error "Error running code: $(task.source)" exception=(e, catch_backtrace())
+                end
             end
         end
     end
-    # io_chan = redirect_all_to_channel()
+    io_chan = redirect_all_to_channel()
     open = Threads.Atomic{Bool}(true)
-    # task = Threads.@spawn begin
-    #     while open[] && isopen(io_chan)
-    #         bytes = take!(io_chan)
-    #         lock(loki) do
-    #             if !isempty(bytes) && isassigned(redirect_target)
-    #                 printer = HTMLPrinter(IOBuffer(copy(bytes)); root_tag = "span")
-    #                 str = sprint(io -> show(io, MIME"text/html"(), printer))
-    #                 redirect_target[][] = str
-    #             end
-    #         end
-    #     end
-    # end
-    # Base.errormonitor(task)
-    return AsyncRunner(mod, python_runner, task_queue, taskref, Base.RefValue{Function}(callback), Channel{Vector{UInt8}}(), redirect_target, open)
+    task = Threads.@spawn begin
+        while open[] && isopen(io_chan)
+            bytes = take!(io_chan)
+            lock(loki) do
+                if !isempty(bytes) && isassigned(redirect_target)
+                    printer = HTMLPrinter(IOBuffer(copy(bytes)); root_tag = "span")
+                    str = sprint(io -> show(io, MIME"text/html"(), printer))
+                    redirect_target[][] = str
+                end
+            end
+        end
+    end
+    Base.errormonitor(task)
+    return AsyncRunner(mod, python_runner, task_queue, taskref, Base.RefValue{Function}(callback), io_chan, redirect_target, open)
 end
 
 function interrupt!(runner::AsyncRunner)
@@ -243,6 +240,7 @@ function run!(editor::EvalEditor)
 end
 
 function run!(runner::AsyncRunner, editor::EvalEditor)
+    # put!(runner.task_queue, RunnerTask(editor.source[], editor.output, editor, editor.language))
     run!(runner.mod, runner.python_runner, RunnerTask(editor.source[], editor.output, editor, editor.language))
 end
 
@@ -257,10 +255,8 @@ function run!(mod::Module, python_runner::PythonRunner, task::RunnerTask)
     try
         if language == "python"
             # Execute Python code
-            PythonCall.GIL.lock() do
-                py_result = eval_python_code_jl(python_runner, mod, "", 1, source)
-                result[] = py_result
-            end
+            py_result = eval_python_code_jl(python_runner, mod, "", 1, source)
+            result[] = py_result
         else
             # Execute Julia code (default behavior)
             if startswith(source, "]")
@@ -290,16 +286,6 @@ function run!(mod::Module, python_runner::PythonRunner, task::RunnerTask)
     return
 end
 
-function eval_source!(runner, editor, source::String, language::String = "julia")
-    editor.loading[] = true  # Set loading immediately when queued
-    return put!(editor.runner.task_queue, RunnerTask(source, editor.output, editor, language))
-end
-
-function eval_source!(editor, source::String, language::String = "julia")
-    editor.loading[] = true  # Set loading immediately when queued
-    return eval_source!(editor.runner, RunnerTask(source, editor.output, editor, language))
-end
-
 
 struct MLRunner
     editor::BonitoBook.EvalEditor
@@ -307,7 +293,7 @@ end
 
 const SYSTEM_PROMPT = read(joinpath(@__DIR__, "templates", "system-prompt.md"), String)
 
-function BonitoBook.eval_source!(chat_editor, result::Observable, runner::MLRunner, source)
+function eval_source!(chat_editor, result::Observable, runner::MLRunner, source)
     str = Observable{String}("")
     chat_editor.loading[] = true
     chat_editor.show_output[] = true

@@ -114,9 +114,6 @@ function icon_button(icon_name::String, args...; size="16px", icon_class="", kw.
     return button_dom, value
 end
 
-# Write your package code here.
-function eval_source! end
-
 include("redirect_io.jl")
 include("editor.jl")
 include("book.jl")
