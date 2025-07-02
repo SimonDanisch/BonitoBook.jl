@@ -12,16 +12,19 @@ transition_slow = "0.2s ease-in"
 font_family_clean = "'Inter', 'Roboto', 'Arial', sans-serif"
 
 # Set Makie theme and Monaco editor based on system preference
-Makie.set_theme!(size = (650, 450))
 
 # Define theme media queries based on light_theme setting
 light_media_query = if light_theme === nothing
     BonitoBook.monaco_theme!("default")  # Auto-detect in JS
+    Makie.set_theme!(size = (650, 450))
     "@media (prefers-color-scheme: light), (prefers-color-scheme: no-preference)"
 elseif light_theme === true
     BonitoBook.monaco_theme!("vs")  # Force light Monaco theme
+    Makie.set_theme!(size = (650, 450))
     ""  # No media query = always apply
 else
+
+    Makie.set_theme!(Makie.theme_dark(), size = (650, 450))
     BonitoBook.monaco_theme!("vs-dark")  # Force dark Monaco theme
     "@media (max-width: 0px)"  # Never apply
 end

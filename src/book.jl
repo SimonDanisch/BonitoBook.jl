@@ -176,7 +176,7 @@ function saving_menu(session, book)
         )
     end
     return DOM.div(
-        DOM.div(icon("save"), save_jl, save_md, save_pdf; class="button-pad");
+        icon("save"), save_jl, save_md, save_pdf;
         class = "saving small-menu-bar"
     )
 end
@@ -308,7 +308,7 @@ function setup_menu(book)
     paintcan_icon = icon("paintcan")
     style_fe_toggle = DOM.button(paintcan_icon; class="small-button", onclick=js"event=> $(show_editor).notify(!$(show_editor).value)")
     menu = DOM.div(
-        DOM.div(icon("settings"), style_fe_toggle; class="settings-container");
+        icon("settings"), style_fe_toggle;
         class = "settings small-menu-bar"
     )
     last_style = Ref{Styles}(style_fe.editor.output[])
