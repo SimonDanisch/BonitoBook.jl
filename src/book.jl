@@ -368,12 +368,11 @@ function setup_completions(session, cell_module)
         })
     """
 end
-
 function Bonito.jsrender(session::Session, book::Book)
     runner = book.runner
     cells = map(book.cells) do editor
         add_cell_div = new_cell_menu(session, book, editor.uuid, runner)
-        return DOM.div(editor, add_cell_div)
+        DOM.div(editor, add_cell_div)
     end
     register_book = js"""
         $(Monaco).then(Monaco => {
@@ -383,17 +382,24 @@ function Bonito.jsrender(session::Session, book::Book)
     for editor in book.cells
         setup_editor_callbacks!(session, book, editor)
     end
-    cell_obs = DOM.div(cells...)
     _setup_menu, style_editor, style_output = setup_menu(book)
     save = saving_menu(session, book)
     player = play_menu(book)
+
+    menu = DOM.div(save, player, _setup_menu; class = "book-main-menu")
+
     cell_obs = DOM.div(cells...; class = "inline-block fit-content")
-    content = DOM.div(cell_obs, style_editor; class = "flex-row gap-10 fit-content")
-    menu = DOM.div(save, player, _setup_menu; class = "flex-row gap-10 fit-content")
-    document = DOM.div(menu, content; class = "flex-column center-content gap-10 full-width")
+
+    content = DOM.div(cell_obs, style_editor; class = "book-content")
+
+    document = DOM.div(menu, content; class = "book-document")
+
     completions = setup_completions(session, runner.mod)
+
     on(session.on_close) do close
         runner.open[] = false
+        return
     end
-    return Bonito.jsrender(session, DOM.div(style_output, completions, register_book, document))
+
+    Bonito.jsrender(session, DOM.div(style_output, completions, register_book, document; class = "book-wrapper"))
 end

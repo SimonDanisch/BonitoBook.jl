@@ -3,15 +3,15 @@ using WGLMakie
 using BonitoBook, Bonito
 using PythonCall
 rm(BonitoBook.Monaco.bundle_file)
-
 rm(joinpath("dev", "BonitoBook", "test", "Sunny", "01_LSWT_CoRh2O4"), recursive=true, force=true)
 
 app = App(title="BonitoBook") do s
     return Book(joinpath("dev", "BonitoBook", "test", "Sunny/01_LSWT_CoRh2O4.ipynb"));
 end
 
+getfield(BonitoBook, Symbol("#502"))
 
-
+BonitoBook.var"#502#505" |> methods
 cd(dirname(file)) do
     Base.include_string(m, "println(@__source__)", file)
 end

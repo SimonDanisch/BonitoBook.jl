@@ -21,9 +21,8 @@ light_media_query = if light_theme === nothing
 elseif light_theme === true
     BonitoBook.monaco_theme!("vs")  # Force light Monaco theme
     Makie.set_theme!(size = (650, 450))
-    ""  # No media query = always apply
+    "@media screen"  # Apply directly to root
 else
-
     Makie.set_theme!(Makie.theme_dark(), size = (650, 450))
     BonitoBook.monaco_theme!("vs-dark")  # Force dark Monaco theme
     "@media (max-width: 0px)"  # Never apply
@@ -32,15 +31,18 @@ end
 dark_media_query = if light_theme === nothing
     "@media (prefers-color-scheme: dark)"
 elseif light_theme === false
-    ""  # No media query = always apply
+    "@media screen" # Apply directly to root
 else
     "@media (max-width: 0px)"  # Never apply
 end
 
 Styles(
+    CSS("body",
+        "margin" => "0px",
+    ),
     # Light theme colors
-    if light_media_query == ""
-        # Force light theme - apply directly
+    CSS(
+        light_media_query,
         CSS(
             ":root",
             "--bg-primary" => "#ffffff",
@@ -59,36 +61,15 @@ Styles(
             "--icon-hover-color" => "#333333",
             "--icon-filter" => "none",
             "--icon-hover-filter" => "brightness(0.7)",
+            "--scrollbar-track" => "#f1f1f1",
+            "--scrollbar-thumb" => "#c1c1c1",
+            "--scrollbar-thumb-hover" => "#a8a8a8",
         )
-    else
-        # Auto or never apply - use media query
-        CSS(
-            light_media_query,
-            CSS(
-                ":root",
-                "--bg-primary" => "#ffffff",
-                "--text-primary" => "#24292e",
-                "--text-secondary" => "#555555",
-                "--border-primary" => "rgba(0, 0, 0, 0.1)",
-                "--border-secondary" => "#ccc",
-                "--shadow-soft" => "0 4px 8px rgba(0, 0, 51, 0.2)",
-                "--shadow-button" => "0 2px 4px rgba(0, 0, 0, 0.2)",
-                "--shadow-inset" => "inset 2px 2px 5px rgba(0, 0, 0, 0.5)",
-                "--hover-bg" => "#ddd",
-                "--menu-hover-bg" => "rgba(0, 0, 0, 0.05)",
-                "--accent-blue" => "#0366d6",
-                "--animation-glow" => "0 0 20px rgba(0, 150, 51, 0.8)",
-                "--icon-color" => "#666666",
-                "--icon-hover-color" => "#333333",
-                "--icon-filter" => "none",
-                "--icon-hover-filter" => "brightness(0.7)",
-            )
-        )
-    end,
+    ),
 
     # Dark theme colors
-    if dark_media_query == ""
-        # Force dark theme - apply directly
+    CSS(
+        dark_media_query,
         CSS(
             ":root",
             "--bg-primary" => "#1e1e1e",
@@ -107,32 +88,11 @@ Styles(
             "--icon-hover-color" => "#ffffff",
             "--icon-filter" => "invert(1)",
             "--icon-hover-filter" => "invert(1) brightness(1.2)",
+            "--scrollbar-track" => "#2d2d2d",
+            "--scrollbar-thumb" => "#555555",
+            "--scrollbar-thumb-hover" => "#777777",
         )
-    else
-        # Auto or never apply - use media query
-        CSS(
-            dark_media_query,
-            CSS(
-                ":root",
-                "--bg-primary" => "#1e1e1e",
-                "--text-primary" => "rgb(212, 212, 212)",
-                "--text-secondary" => "rgb(212, 212, 212)",
-                "--border-primary" => "rgba(255, 255, 255, 0.1)",
-                "--border-secondary" => "rgba(255, 255, 255, 0.1)",
-                "--shadow-soft" => "0 4px 8px rgba(255, 255, 255, 0.2)",
-                "--shadow-button" => "0 2px 4px rgba(255, 255, 255, 0.2)",
-                "--shadow-inset" => "inset 2px 2px 5px rgba(255, 255, 255, 0.2)",
-                "--hover-bg" => "rgba(255, 255, 255, 0.1)",
-                "--menu-hover-bg" => "rgba(255, 255, 255, 0.05)",
-                "--accent-blue" => "#0366d6",
-                "--animation-glow" => "0 0 15px rgba(255, 255, 255, 0.3)",
-                "--icon-color" => "#cccccc",
-                "--icon-hover-color" => "#ffffff",
-                "--icon-filter" => "invert(1)",
-                "--icon-hover-filter" => "invert(1) brightness(1.2)",
-            )
-        )
-    end,
+    ),
     CSS(
         "@media print",
         CSS(
@@ -354,22 +314,39 @@ Styles(
     ),
 
     # Colored icons - handle separately for dark theme
-    if dark_media_query == ""
-        # Force dark theme - apply directly
+    CSS(
+        dark_media_query,
         CSS(
             "img[src*='python-logo'], img[src*='julia-logo']",
             "filter" => "brightness(1.3) contrast(1.1)"
         )
-    else
-        # Auto or never apply - use media query
-        CSS(
-            dark_media_query,
-            CSS(
-                "img[src*='python-logo'], img[src*='julia-logo']",
-                "filter" => "brightness(1.3) contrast(1.1)"
-            )
-        )
-    end,
+    ),
+
+    # Scrollbar styling
+    CSS(
+        "::-webkit-scrollbar",
+        "width" => "12px"
+    ),
+    CSS(
+        "::-webkit-scrollbar-track",
+        "background" => "var(--scrollbar-track)"
+    ),
+    CSS(
+        "::-webkit-scrollbar-thumb",
+        "background-color" => "var(--scrollbar-thumb)",
+        "border-radius" => "6px",
+        "border" => "2px solid var(--scrollbar-track)"
+    ),
+    CSS(
+        "::-webkit-scrollbar-thumb:hover",
+        "background-color" => "var(--scrollbar-thumb-hover)"
+    ),
+    # Firefox scrollbar
+    CSS(
+        "*",
+        "scrollbar-width" => "thin",
+        "scrollbar-color" => "var(--scrollbar-thumb) var(--scrollbar-track)"
+    ),
 
     # Menu and Buttons
     CSS(
@@ -542,5 +519,40 @@ Styles(
         ".new-cell-menu:hover > *",
         "opacity" => "1",
         "transition-delay" => "0.1s",
+    ),
+
+    # Book layout classes
+    CSS(
+        ".book-main-menu",
+        "position" => "relative",
+        "display" => "flex",
+        "flex-direction" => "row",
+        "width" => "100%",
+        "justify-content" => "center",
+        "background-color" => "var(--bg-primary)"
+    ),
+    CSS(
+        ".book-content",
+        "display" => "flex",
+        "flex-direction" => "row",
+        "justify-content" => "center",
+        "flex" => "1",
+        "padding-top" => "20px",
+        "overflow" => "auto",
+        "width" => "100%"
+    ),
+    CSS(
+        ".book-document",
+        "display" => "flex",
+        "flex-direction" => "column",
+        "align-items" => "center",
+        "width" => "100%",
+        "height" => "100%",
+        "overflow" => "hidden"
+    ),
+    CSS(
+        ".book-wrapper",
+        "overflow" => "hidden",
+        "height" => "100vh"
     ),
 )
