@@ -362,22 +362,22 @@ function Bonito.jsrender(session::Session, editor::CellEditor)
     chat = editor.chat
 
     ai_icon = icon("sparkle-filled")
-    ai = DOM.button(ai_icon; class="small-button", onclick=js"event=> $(editor.show_chat).notify(!$(editor.show_chat).value)")
+    ai = DOM.button(ai_icon; class = "small-button", onclick = js"event=> $(editor.show_chat).notify(!$(editor.show_chat).value)")
     show_output = Observable(jleditor.show_output[])
     on(x -> toggle!(jleditor; output = !jleditor.show_output[]), show_output)
     out_icon = icon("graph")
-    out = DOM.button(out_icon; class="small-button", onclick=js"event=> $(show_output).notify(!$(show_output).value)")
+    out = DOM.button(out_icon; class = "small-button", onclick = js"event=> $(show_output).notify(!$(show_output).value)")
     show_editor_obs = Observable(jleditor.show_editor[])
     on(x -> toggle!(jleditor; editor = !jleditor.show_editor[]), show_editor_obs)
     editor_icon = icon("code")
-    show_editor = DOM.button(editor_icon; class="small-button", onclick=js"event=> $(show_editor_obs).notify(!$(show_editor_obs).value)")
+    show_editor = DOM.button(editor_icon; class = "small-button", onclick = js"event=> $(show_editor_obs).notify(!$(show_editor_obs).value)")
     show_logging_obs = Observable(jleditor.show_logging[])
     on(x -> toggle!(jleditor; logging = !jleditor.show_logging[]), show_logging_obs)
     logging_icon = icon("terminal")
-    show_logging = DOM.button(logging_icon; class="small-button", onclick=js"event=> $(show_logging_obs).notify(!$(show_logging_obs).value)")
-    delete_icon = icon("close", style=Styles("color" => "red"))
+    show_logging = DOM.button(logging_icon; class = "small-button", onclick = js"event=> $(show_logging_obs).notify(!$(show_logging_obs).value)")
+    delete_icon = icon("close", style = Styles("color" => "red"))
     click = Observable(false)
-    delete_editor = DOM.button(delete_icon; class="small-button", onclick=js"event=> $(click).notify(true)")
+    delete_editor = DOM.button(delete_icon; class = "small-button", onclick = js"event=> $(click).notify(true)")
     on(session, click) do x
         editor.delete_self[] = true
     end
@@ -402,7 +402,7 @@ function Bonito.jsrender(session::Session, editor::CellEditor)
             })
         }
     """
-    hover_buttons = DOM.div(ai, show_editor, show_logging, out, delete_editor; class = "hover-buttons", id=hover_id)
+    hover_buttons = DOM.div(ai, show_editor, show_logging, out, delete_editor; class = "hover-buttons", id = hover_id)
 
     # Create small always-visible language indicator positioned in bottom right
     names = Dict(
@@ -411,18 +411,18 @@ function Bonito.jsrender(session::Session, editor::CellEditor)
         "python" => "python-logo",
     )
     name = get(names, editor.language, "file-code")
-    small_language_indicator = icon(name, size="10px", class="small-language-icon")
+    small_language_indicator = icon(name, size = "10px", class = "small-language-icon")
 
     jleditor_div, logging_div, output_div = render_editor(jleditor)
     class = any_visible[] ? "show-vertical" : "hide-vertical"
     card_content = DOM.div(
         chat, jleditor_div, logging_div, small_language_indicator;
-        class = "cell-editor $class", id=card_content_id, style = "position: relative;"
+        class = "cell-editor $class", id = card_content_id, style = "position: relative;"
     )
     cell = DOM.div(hover_buttons, card_content, DOM.div(output_div, tabindex = 0), style = Styles("position" => "relative"))
     # Create a separate proximity area
     proximity_area = DOM.div(class = "cell-menu-proximity-area")
-    container = DOM.div(cell, proximity_area, style = Styles("position" => "relative"), id=container_id, tabindex = 0)
+    container = DOM.div(cell, proximity_area, style = Styles("position" => "relative"), id = container_id, tabindex = 0)
 
     cell_div = DOM.div(container, class = "cell-editor-container", id = editor.uuid)
     return Bonito.jsrender(session, cell_div)

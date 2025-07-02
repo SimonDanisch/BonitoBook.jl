@@ -94,9 +94,10 @@ function Bonito.jsrender(session::Session, popup::PopUp)
     button_style = Styles("position" => "absolute", "top" => "1px", "right" => "1px", "background-color" => "red")
     close_icon = icon("close")
     click = Observable(false)
-    button = DOM.button(close_icon;
-        class="small-button",
-        style=button_style,
+    button = DOM.button(
+        close_icon;
+        class = "small-button",
+        style = button_style,
         onclick = js"event=> $(click).notify(true);"
     )
     on(click) do click

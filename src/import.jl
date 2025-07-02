@@ -81,9 +81,9 @@ function ipynb2book(json_path::String)
             source = join(cell["source"], "")
             # Safe access to kernelspec language
             language = "julia"  # default
-            if haskey(json_content, "metadata") && 
-               haskey(json_content["metadata"], "kernelspec") &&
-               haskey(json_content["metadata"]["kernelspec"], "language")
+            if haskey(json_content, "metadata") &&
+                    haskey(json_content["metadata"], "kernelspec") &&
+                    haskey(json_content["metadata"]["kernelspec"], "language")
                 language = json_content["metadata"]["kernelspec"]["language"]
             end
             if language == "markdown"

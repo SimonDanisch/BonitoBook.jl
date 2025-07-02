@@ -37,7 +37,8 @@ else
 end
 
 Styles(
-    CSS("body",
+    CSS(
+        "body",
         "margin" => "0px",
     ),
     # Light theme colors
@@ -266,7 +267,7 @@ Styles(
         "position" => "absolute",
         "bottom" => "4px",
         "right" => "8px",
-        "opacity"=> "0.8",
+        "opacity" => "0.8",
         "pointer-events" => "none",
         "color" => "var(--icon-color)",
         "filter" => "var(--icon-filter)"

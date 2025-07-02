@@ -59,13 +59,13 @@ save_icon = icon("save", size="20px", class="toolbar-icon")
 error_icon = icon("error", style="color: red;")
 ```
 """
-function icon(name::String; size="1.2em", class="", style=Styles(), kw...)
+function icon(name::String; size = "1.2em", class = "", style = Styles(), kw...)
     asset = assets("icons", "$(name).svg")
     # Just return the asset with minimal styling to match codicon behavior
     return DOM.img(
-        src=asset;
-        class="codicon $(class)",
-        style=Styles(style, "width" => size),
+        src = asset;
+        class = "codicon $(class)",
+        style = Styles(style, "width" => size),
         kw...
     )
 end
@@ -97,8 +97,8 @@ play_btn, play_clicks = icon_button("play", "Run Code")
 stop_btn, stop_clicks = icon_button("stop", size="20px", icon_class="danger")
 ```
 """
-function icon_button(icon_name::String, args...; size="16px", icon_class="", kw...)
-    icon_elem = icon(icon_name; class=icon_class)
+function icon_button(icon_name::String, args...; size = "16px", icon_class = "", kw...)
+    icon_elem = icon(icon_name; class = icon_class)
 
     # Create button content with icon and any additional args
     button_content = isempty(args) ? [icon_elem] : [icon_elem, " ", args...]

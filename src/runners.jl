@@ -4,7 +4,7 @@ mutable struct PythonRunner
     globals::Py
     locals::Py
     function PythonRunner()
-        new(PythonCall.pydict(), PythonCall.pydict())
+        return new(PythonCall.pydict(), PythonCall.pydict())
     end
 end
 
@@ -12,32 +12,34 @@ global eval_python_code = nothing
 
 function get_func()
     if isnothing(eval_python_code)
-        pyexec("""
-        import ast
-        import textwrap
+        pyexec(
+            """
+            import ast
+            import textwrap
 
-        def eval_python_code(source, globals_dict, locals_dict):
-            tree = ast.parse(source, mode="exec")
-            body = tree.body
-            n = len(body)
-            if n == 0:
-                return None
+            def eval_python_code(source, globals_dict, locals_dict):
+                tree = ast.parse(source, mode="exec")
+                body = tree.body
+                n = len(body)
+                if n == 0:
+                    return None
 
-            exprs = body[:-1]
-            last_stmt = body[-1]
+                exprs = body[:-1]
+                last_stmt = body[-1]
 
-            if exprs:
-                init_code = textwrap.dedent("\\n".join(ast.unparse(stmt) for stmt in exprs))
-                exec(init_code, globals_dict, locals_dict)
+                if exprs:
+                    init_code = textwrap.dedent("\\n".join(ast.unparse(stmt) for stmt in exprs))
+                    exec(init_code, globals_dict, locals_dict)
 
-            if isinstance(last_stmt, ast.Expr):
-                tail_expr = ast.unparse(last_stmt.value)
-                return eval(tail_expr, globals_dict, locals_dict)
-            else:
-                full_code = textwrap.dedent(source)
-                exec(full_code, globals_dict, locals_dict)
-                return None
-        """, Main)
+                if isinstance(last_stmt, ast.Expr):
+                    tail_expr = ast.unparse(last_stmt.value)
+                    return eval(tail_expr, globals_dict, locals_dict)
+                else:
+                    full_code = textwrap.dedent(source)
+                    exec(full_code, globals_dict, locals_dict)
+                    return None
+            """, Main
+        )
         global eval_python_code = pyeval("eval_python_code", Main)
     end
     return eval_python_code
@@ -60,6 +62,7 @@ function transfer_python_vars(python_dict::Py, julia_module, var_type::String)
             end
         end
     end
+    return
 end
 
 function eval_python_code_jl(runner::PythonRunner, mod, filename, start_line, python_source)
@@ -192,9 +195,11 @@ Configured `AsyncRunner` instance ready for code execution.
 """
 function AsyncRunner(mod::Module = Module(gensym("BonitoBook")); callback = identity, spawn = false)
     redirect_target = Base.RefValue{Observable{String}}()
-    python_runner = fetch(spawnat(1) do
-        PythonRunner()
-    end)
+    python_runner = fetch(
+        spawnat(1) do
+            PythonRunner()
+        end
+    )
     loki = ReentrantLock()
     task_queue = Channel{RunnerTask}(Inf)
     taskref = spawnat(1) do
@@ -204,7 +209,7 @@ function AsyncRunner(mod::Module = Module(gensym("BonitoBook")); callback = iden
                     redirect_target[] = task.editor.logging
                     run!(mod, python_runner, task)
                 catch e
-                    @error "Error running code: $(task.source)" exception=(e, catch_backtrace())
+                    @error "Error running code: $(task.source)" exception = (e, catch_backtrace())
                 end
             end
         end
@@ -240,10 +245,10 @@ function run!(editor::EvalEditor; async = true)
 end
 
 function run!(runner::MarkdownRunner, editor::EvalEditor; async = true)
-    editor.output[] = parse_source(runner, editor.source[])
+    return editor.output[] = parse_source(runner, editor.source[])
 end
 function run!(runner::AsyncRunner, editor::EvalEditor; async = true)
-    if async
+    return if async
         put!(runner.task_queue, RunnerTask(editor.source[], editor.output, editor, editor.language))
     else
         run!(runner.mod, runner.python_runner, RunnerTask(editor.source[], editor.output, editor, editor.language))
