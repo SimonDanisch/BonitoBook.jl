@@ -429,10 +429,18 @@ function Bonito.jsrender(session::Session, editor::CellEditor)
 end
 
 struct FileEditor
-    files::Vector{String}
+    files::Observable{Vector{String}}
     editor::EvalEditor
     current_file::Observable{String}
-    function FileEditor(filepath::Vector{String}, runner = nothing; language = "julia", options...)
+    current_file_index::Observable{Int}
+    # Observables for JavaScript communication
+    switch_file_obs::Observable{Int}
+    close_file_obs::Observable{Int}
+    open_file_obs::Observable{String}
+    # File dialog
+    file_dialog::OpenFileDialog
+
+    function FileEditor(filepath::Vector{String}, runner = nothing; language = "julia", show_editor = true, options...)
         source = read(filepath[1], String)
         opts = (
             minimap = Dict(:enabled => true, :autohide => true),
@@ -443,7 +451,9 @@ struct FileEditor
         )
         js_init_func = js"""(editor, monaco, editor_div) => {
             return $(Monaco).then(Monaco => {
-                Monaco.resize_to_lines(editor, monaco, editor_div)
+                // Don't auto-resize - let it fill the container
+                editor_div.style.height = "100%";
+                editor.layout();
             })
         }"""
         editor = EvalEditor(
@@ -451,40 +461,174 @@ struct FileEditor
             js_init_func = js_init_func,
             editor_classes = ["file-editor"],
             hiding_direction = "horizontal",
-            language = language, show_logging = false,
+            language = language,
+            show_editor = show_editor,
+            show_logging = false,
             opts..., options...
         )
+        files_obs = Observable(filepath)
         current_file = Observable(filepath[1])
+        current_file_index = Observable(1)
+
+        # Create observables for JavaScript communication
+        switch_file_obs = Observable{Int}(0)
+        close_file_obs = Observable{Int}(0)
+        open_file_obs = Observable{String}("")
+
+        # Create file dialog
+        base_folder = dirname(filepath[1])
+        file_dialog = OpenFileDialog(base_folder)
 
         # Set up auto-save when source changes
         on(editor.source) do new_source
             write(current_file[], new_source)
         end
 
-        return new(filepath, editor, current_file)
+        return new(files_obs, editor, current_file, current_file_index, switch_file_obs, close_file_obs, open_file_obs, file_dialog)
     end
 end
 
-function Bonito.jsrender(session::Session, editor::FileEditor)
-    buttons = map(editor.files) do file
-        button = Button(basename(file))
-        on(session, button.value) do x
-            # Save current file before switching
-            write(editor.current_file[], editor.editor.source[])
-            # Switch to new file
-            editor.current_file[] = file
-            editor.editor.source[] = read(file, String)
+function open_file!(editor::FileEditor, filepath::String)
+    if !isempty(filepath)
+        # Try different strategies to find the file
+        candidates = [
+            filepath,  # As-is (could be absolute or relative)
+            abspath(filepath),  # Make absolute from current directory
+            joinpath(dirname(editor.current_file[]), filepath),  # Relative to current file
+        ]
+        found_file = nothing
+        for candidate in candidates
+            try
+                if isfile(candidate) && !(candidate in editor.files[])
+                    found_file = abspath(candidate)  # Always store as absolute path
+                    break
+                end
+            catch
+                # Skip invalid paths
+                continue
+            end
         end
-        return button
+        if !isnothing(found_file)
+            editor.files[] = [editor.files[]; found_file]
+            editor.switch_file_obs[] = length(editor.files[])
+            @info "Opened file: $found_file"
+        else
+            @warn "Could not find file: $filepath. Tried: $candidates"
+        end
     end
-    name = DOM.div(buttons...; class = "hide-horizontal file-editor-path")
+end
 
-    editor_div = DOM.div(editor.editor.editor, class = "file-cell-editor")
-    meditor, logging_div, output_div = render_editor(editor.editor)
+function switch_file!(editor::FileEditor, file_index::Integer)
+    if file_index > 0 && file_index <= length(editor.files[]) && file_index != editor.current_file_index[]
+        # Save current file before switching
+        write(editor.current_file[], editor.editor.source[])
+        # Switch to new file
+        editor.current_file[] = editor.files[][file_index]
+        editor.current_file_index[] = file_index
+        editor.editor.source[] = read(editor.files[][file_index], String)
+    end
+end
+
+function close_file!(editor::FileEditor, file_index::Integer)
+    files = editor.files[]
+    if file_index > 0 && length(files) > 1 && file_index <= length(files)
+        # Remove file from list
+        new_files = [files[1:file_index-1]; files[file_index+1:end]]
+        editor.files[] = new_files
+
+        # Adjust current file index if necessary
+        current_idx = editor.current_file_index[]
+        if file_index == current_idx
+            # If closing current file, switch to previous or first file
+            new_idx = min(current_idx, length(new_files))
+            if new_idx > 0
+                switch_file!(editor, new_idx)
+            end
+        elseif file_index < current_idx
+            # If closing a file before current, adjust index
+            editor.current_file_index[] = current_idx - 1
+        end
+    end
+end
+
+# Forward toggle! calls to the underlying EvalEditor for compatibility
+function toggle!(editor::FileEditor; kwargs...)
+    toggle!(editor.editor; kwargs...)
+end
+
+
+function Bonito.jsrender(session::Session, editor::FileEditor)
+    # Handle file switching
+    on(session, editor.switch_file_obs) do file_index
+        switch_file!(editor, file_index)
+    end
+
+    # Handle file closing
+    on(session, editor.close_file_obs) do file_index
+        close_file!(editor, file_index)
+    end
+
+    # Handle opening new files
+    on(session, editor.open_file_obs) do filepath
+        open_file!(editor, filepath)
+    end
+
+    # Connect file dialog selection to file opening
+    on(session, editor.file_dialog.file_selected) do filepath
+        if !isempty(filepath)
+            open_file!(editor, filepath)
+        end
+    end
+
+    # Create reactive tabs
+    tabs_content = map(editor.files, editor.current_file_index) do files, current_idx
+        tab_elements = []
+
+        # Create tabs for each file
+        for (i, file) in enumerate(files)
+            is_active = i == current_idx
+            tab_class = is_active ? "file-tab active" : "file-tab"
+
+            # Tab content with file name and close button
+            tab_name = DOM.span(basename(file), class = "file-tab-name")
+
+            # Close button (only show if more than one file)
+            if length(files) > 1
+                close_btn = DOM.button("×",
+                    class = "file-tab-close",
+                    onclick = js"event => { event.stopPropagation(); $(editor.close_file_obs).notify($(i)); }")
+                tab_content = DOM.div(tab_name, close_btn, class = "file-tab-content")
+            else
+                tab_content = DOM.div(tab_name, class = "file-tab-content")
+            end
+
+            # Full tab element
+            tab = DOM.div(tab_content,
+                class = tab_class,
+                onclick = js"event => $(editor.switch_file_obs).notify($(i))")
+
+            push!(tab_elements, tab)
+        end
+
+        # Add "open file" button
+        open_btn = DOM.button("+",
+            class = "file-tab-add",
+            onclick = js"event => $(editor.file_dialog.show_dialog).notify(true)")
+        push!(tab_elements, open_btn)
+
+        return DOM.div(tab_elements..., class = "file-tabs-container")
+    end
+
+    # Editor container that fills remaining height
+    meditor, _, _ = render_editor(editor.editor)
+    editor_container = DOM.div(meditor, class = "file-editor-container")
+
+
     return Bonito.jsrender(
         session, DOM.div(
-            name,
-            editor_div,
+            tabs_content,
+            editor_container,
+            editor.file_dialog,
         )
     )
 end

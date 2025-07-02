@@ -118,9 +118,9 @@ end
 function eval_source! end
 
 include("redirect_io.jl")
+include("components.jl")
 include("editor.jl")
 include("book.jl")
-include("components.jl")
 include("runners.jl")
 include("export.jl")
 include("import.jl")

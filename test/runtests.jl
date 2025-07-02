@@ -9,12 +9,6 @@ app = App(title="BonitoBook") do s
     return Book(joinpath("dev", "BonitoBook", "test", "Sunny/01_LSWT_CoRh2O4.ipynb"));
 end
 
-getfield(BonitoBook, Symbol("#502"))
-
-BonitoBook.var"#502#505" |> methods
-cd(dirname(file)) do
-    Base.include_string(m, "println(@__source__)", file)
-end
 
 bookfile, folder, style_paths = BonitoBook.from_file(joinpath(@__DIR__, "Sunny/01_LSWT_CoRh2O4.ipynb"), "./Sunny/Test")
 runner = BonitoBook.AsyncRunner()
