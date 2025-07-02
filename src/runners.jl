@@ -235,13 +235,19 @@ function book_display(value)
     return value
 end
 
-function run!(editor::EvalEditor)
-    return run!(editor.runner, editor)
+function run!(editor::EvalEditor; async = true)
+    return run!(editor.runner, editor; async = async)
 end
 
-function run!(runner::AsyncRunner, editor::EvalEditor)
-    # put!(runner.task_queue, RunnerTask(editor.source[], editor.output, editor, editor.language))
-    run!(runner.mod, runner.python_runner, RunnerTask(editor.source[], editor.output, editor, editor.language))
+function run!(runner::MarkdownRunner, editor::EvalEditor; async = true)
+    editor.output[] = parse_source(runner, editor.source[])
+end
+function run!(runner::AsyncRunner, editor::EvalEditor; async = true)
+    if async
+        put!(runner.task_queue, RunnerTask(editor.source[], editor.output, editor, editor.language))
+    else
+        run!(runner.mod, runner.python_runner, RunnerTask(editor.source[], editor.output, editor, editor.language))
+    end
 end
 
 function run!(mod::Module, python_runner::PythonRunner, task::RunnerTask)

@@ -97,7 +97,7 @@ function Book(file; folder = nothing, runner = AsyncRunner())
     editors = cells2editors(cells, runner)
 
     style_editor = FileEditor(style_paths, runner; editor_classes = ["styling file-editor"], show_editor = false)
-    run!(style_editor.editor) # run the style editor to get the output Styles
+    run!(style_editor.editor; async=false) # run the style editor to get the output Styles
 
     progress = Observable((false, 0.0))
     book = Book(bookfile, folder, editors, style_editor, runner, progress)
