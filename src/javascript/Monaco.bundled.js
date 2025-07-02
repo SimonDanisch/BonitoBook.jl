@@ -20,7 +20,14 @@ class MonacoEditor {
         init_callback(this);
     }
     set_theme(theme) {
-        monaco.then((m)=>m.editor.setTheme(theme));
+        this.theme = theme;
+        monaco.then((m)=>{
+            let effectiveTheme = theme;
+            if (theme === "default") {
+                effectiveTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'vs-dark' : 'vs';
+            }
+            m.editor.setTheme(effectiveTheme);
+        });
     }
     update_options(options) {
         this.editor.then((x)=>x.updateOptions(options));
@@ -30,7 +37,16 @@ class MonacoEditor {
             const div = this.editor_div;
             const editor = monaco.editor.create(div, this.options);
             div._editor_instance = this.editor;
-            monaco.editor.setTheme(this.theme);
+            let effectiveTheme = this.theme;
+            if (this.theme === "default") {
+                effectiveTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'vs-dark' : 'vs';
+                const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+                mediaQuery.addListener((e)=>{
+                    const newTheme = e.matches ? 'vs-dark' : 'vs';
+                    monaco.editor.setTheme(newTheme);
+                });
+            }
+            monaco.editor.setTheme(effectiveTheme);
             this.initialized = true;
             this.resolve_setup(editor);
         });

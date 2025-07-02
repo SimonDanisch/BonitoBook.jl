@@ -1,12 +1,13 @@
+using Revise
 using WGLMakie
 using BonitoBook, Bonito
 using PythonCall
 rm(BonitoBook.Monaco.bundle_file)
 
 rm(joinpath("dev", "BonitoBook", "test", "Sunny/01_LSWT_CoRh2O4"), recursive=true, force=true)
-path = normpath(abspath(joinpath("dev", "BonitoBook", "test", "Sunny/01_LSWT_CoRh2O4.ipynb")))
+
 app = App(title="BonitoBook") do s
-    return Book(path);
+    return Book(joinpath("dev", "BonitoBook", "test", "Sunny/01_LSWT_CoRh2O4.ipynb"));
 end
 
 file = joinpath(@__DIR__, "Sunny/01_LSWT_CoRh2O4/styles/style.jl")

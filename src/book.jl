@@ -25,23 +25,23 @@ function from_folder(folder)
     manifest = joinpath(folder, "Manifest.toml")
     book = joinpath(folder, "book.md")
     style_path = joinpath(folder, "styles", "style.jl")
-    style_dark_path = joinpath(folder, "styles", "style-dark.jl")
-    files = [book, project, manifest, style_path, style_dark_path]
+    files = [book, project, manifest, style_path]
     for file in files
         if !isfile(file)
             error("File $file not found, not a BonitoBook?")
         end
     end
-    return book, folder, [style_path, style_dark_path]
+    return book, folder, [style_path]
 end
 
 function from_file(book, folder)
     if isnothing(folder)
+        book_file = normpath(abspath(book))
         name, ext = splitext(book)
         if !(ext in (".md", ".ipynb"))
             error("File $book is not a markdown or ipynb file: $(ext)")
         end
-        folder = joinpath(dirname(book), name)
+        folder = joinpath(dirname(book_file), basename(name))
         if isdir(folder)
             return from_folder(folder)
         else
@@ -49,18 +49,15 @@ function from_file(book, folder)
         end
     end
     style_path_template = joinpath(@__DIR__, "templates/style.jl")
-    style_dark_path_template = joinpath(@__DIR__, "templates/style-dark.jl")
     mkpath(joinpath(folder, "styles"))
     style_path = joinpath(folder, "styles", "style.jl")
-    style_dark_path = joinpath(folder, "styles", "style-dark.jl")
 
     cp(style_path_template, style_path)
-    cp(style_dark_path_template, style_dark_path)
     # Copy over project so mutations stay in the book
     project = Pkg.project().path
     cp(project, joinpath(folder, "Project.toml"))
     cp(joinpath(dirname(project), "Manifest.toml"), joinpath(folder, "Manifest.toml"))
-    return book, folder, [style_path, style_dark_path]
+    return book, folder, [style_path]
 end
 
 """
