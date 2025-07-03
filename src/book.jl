@@ -97,7 +97,7 @@ function Book(file; folder = nothing, runner = AsyncRunner())
     editors = cells2editors(cells, runner)
 
     style_editor = FileEditor(style_paths, runner; editor_classes = ["styling file-editor"], show_editor = false)
-    run!(style_editor.editor) # run the style editor to get the output Styles
+    run!(style_editor.editor; async = false) # run the style editor to get the output Styles
 
     progress = Observable((false, 0.0))
     book = Book(bookfile, folder, editors, style_editor, runner, progress)
@@ -210,7 +210,7 @@ function setup_editor_callbacks!(session, book, editor)
     on(session, editor.editor.source) do new_source
         save(book)
     end
-    on(session, editor.delete_self) do delete
+    return on(session, editor.delete_self) do delete
         if delete
             filter!(x -> x.uuid != editor.uuid, book.cells)
             evaljs(
@@ -237,7 +237,7 @@ function WGLMakie.save(book::Book)
     end
     version = Dates.format(Dates.now(), "yyyy-mm-dd_HHMMSS")
     cp(book.file, joinpath(book.folder, ".versions", "book-$version.md"))
-    export_md(joinpath(book.folder, "book.md"), book)
+    return export_md(joinpath(book.folder, "book.md"), book)
 end
 
 function insert_editor_below!(book, session, editor, editor_above_uuid)
@@ -275,11 +275,11 @@ function new_cell_menu(session, book, editor_above_uuid, runner)
         insert_editor_below!(book, session, new_cell, editor_above_uuid)
     end
     on(click_md) do click
-        new_cell = CellEditor("", "markdown", runner; show_editor=true, show_output=false)
+        new_cell = CellEditor("", "markdown", runner; show_editor = true, show_output = false)
         insert_editor_below!(book, session, new_cell, editor_above_uuid)
     end
     on(click_ai) do click
-        new_cell = CellEditor("", "chatgpt", runner; show_chat=true, show_editor=false, show_output=false)
+        new_cell = CellEditor("", "chatgpt", runner; show_chat = true, show_editor = false, show_output = false)
         insert_editor_below!(book, session, new_cell, editor_above_uuid)
     end
     plus, click_plus = icon_button("add")
@@ -306,7 +306,7 @@ function setup_menu(book)
         toggle!(style_fe.editor, editor = show)
     end
     paintcan_icon = icon("paintcan")
-    style_fe_toggle = DOM.button(paintcan_icon; class="small-button", onclick=js"event=> $(show_editor).notify(!$(show_editor).value)")
+    style_fe_toggle = DOM.button(paintcan_icon; class = "small-button", onclick = js"event=> $(show_editor).notify(!$(show_editor).value)")
     menu = DOM.div(
         icon("settings"), style_fe_toggle;
         class = "settings small-menu-bar"
@@ -401,5 +401,5 @@ function Bonito.jsrender(session::Session, book::Book)
         return
     end
 
-    Bonito.jsrender(session, DOM.div(style_output, completions, register_book, document; class = "book-wrapper"))
+    return Bonito.jsrender(session, DOM.div(style_output, completions, register_book, document; class = "book-wrapper"))
 end

@@ -1,0 +1,46 @@
+# BonitoBook
+
+Features of BonitBook
+
+```julia
+import Makie.SpecApi as S
+@manipulate for vis in (
+        contour = visual(Contour),
+        scatter = visual(Scatter),
+        violin = visual(Violin),
+    )
+    layer = AlgebraOfGraphics.density() * vis
+    penguin_bill * mapping(; color = :species)
+end
+```
+
+```julia true false true false
+using AlgebraOfGraphics, WGLMakie
+
+penguins = (AlgebraOfGraphics.penguins())
+
+data(penguins) * visual(BoxPlot) *
+    mapping(:species, :bill_depth_mm, color=:sex, dodge=:sex) 
+```
+```julia true false true false
+import Makie.SpecApi as S
+@manipulate for i in 100:500
+    x = data((;x=rand(i), y=rand(i), z=rand(i))) * 
+        mapping(:x, :y, :z) * 
+        visual(Scatter)
+    draw(x; axis=(;type=Axis3))
+end
+```
+```julia true false true false
+textlabel(
+    rand(10),
+    rand(10),
+    map(string, 1:10);
+    shape=Circle(Point2f(0), 1.0f0), space=:data, markerspace=:data,
+    shape_limits=Rect2f(-sqrt(0.5), -sqrt(0.5), sqrt(2), sqrt(2)),
+    keep_aspect=true,
+)
+```
+```julia true true true false
+
+```

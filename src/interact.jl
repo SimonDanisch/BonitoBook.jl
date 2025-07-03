@@ -79,9 +79,13 @@ macro manipulate(for_expr)
         init = map(to_value, observies)
         func = $(lambda)
         obs = Observable(func(init...))
+        l = Base.ReentrantLock()
         Bonito.onany(observies...) do args...
             @async begin
-                obs[] = func(args...)
+                lock(l) do
+                    # Prevent reentrant calls to func
+                    obs[] = func(args...)
+                end
             end
         end
         DOM.div(
@@ -95,13 +99,19 @@ export @manipulate
 
 using AlgebraOfGraphics
 
-function Bonito.jsrender(s::Session, value::AlgebraOfGraphics.Layer)
+function Bonito.jsrender(s::Session, value::AlgebraOfGraphics.Layers)
     spec = AlgebraOfGraphics.draw_to_spec(value)
     f, ax, pl = plot(spec)
     return Bonito.jsrender(s, f)
 end
 
-function Bonito.jsrender(s::Session, value::Observable{AlgebraOfGraphics.Layer})
+function Bonito.jsrender(s::Session, value::Observable{AlgebraOfGraphics.Layers})
     spec_obs = map(AlgebraOfGraphics.draw_to_spec, value)
     return Bonito.jsrender(s, spec_obs)
+end
+
+
+function Bonito.jsrender(s::Session, value::Observable{Makie.GridLayoutSpec})
+    f, ax, pl = plot(value)
+    return Bonito.jsrender(s, f)
 end

@@ -4,7 +4,7 @@ mutable struct PythonRunner
     globals::Py
     locals::Py
     function PythonRunner()
-        new(PythonCall.pydict(), PythonCall.pydict())
+        return new(PythonCall.pydict(), PythonCall.pydict())
     end
 end
 
@@ -12,32 +12,34 @@ global eval_python_code = nothing
 
 function get_func()
     if isnothing(eval_python_code)
-        pyexec("""
-        import ast
-        import textwrap
+        pyexec(
+            """
+            import ast
+            import textwrap
 
-        def eval_python_code(source, globals_dict, locals_dict):
-            tree = ast.parse(source, mode="exec")
-            body = tree.body
-            n = len(body)
-            if n == 0:
-                return None
+            def eval_python_code(source, globals_dict, locals_dict):
+                tree = ast.parse(source, mode="exec")
+                body = tree.body
+                n = len(body)
+                if n == 0:
+                    return None
 
-            exprs = body[:-1]
-            last_stmt = body[-1]
+                exprs = body[:-1]
+                last_stmt = body[-1]
 
-            if exprs:
-                init_code = textwrap.dedent("\\n".join(ast.unparse(stmt) for stmt in exprs))
-                exec(init_code, globals_dict, locals_dict)
+                if exprs:
+                    init_code = textwrap.dedent("\\n".join(ast.unparse(stmt) for stmt in exprs))
+                    exec(init_code, globals_dict, locals_dict)
 
-            if isinstance(last_stmt, ast.Expr):
-                tail_expr = ast.unparse(last_stmt.value)
-                return eval(tail_expr, globals_dict, locals_dict)
-            else:
-                full_code = textwrap.dedent(source)
-                exec(full_code, globals_dict, locals_dict)
-                return None
-        """, Main)
+                if isinstance(last_stmt, ast.Expr):
+                    tail_expr = ast.unparse(last_stmt.value)
+                    return eval(tail_expr, globals_dict, locals_dict)
+                else:
+                    full_code = textwrap.dedent(source)
+                    exec(full_code, globals_dict, locals_dict)
+                    return None
+            """, Main
+        )
         global eval_python_code = pyeval("eval_python_code", Main)
     end
     return eval_python_code
@@ -60,6 +62,7 @@ function transfer_python_vars(python_dict::Py, julia_module, var_type::String)
             end
         end
     end
+    return
 end
 
 function eval_python_code_jl(runner::PythonRunner, mod, filename, start_line, python_source)
@@ -130,14 +133,6 @@ end
 
 parse_source(runner::Nothing, source) = nothing
 
-function run!(runner::MarkdownRunner, editor::EvalEditor, language::String = "julia")
-    return eval_source!(editor, editor.output, runner, editor.source[])
-end
-
-function eval_source!(editor, result::Observable, runner, source)
-    return result[] = parse_source(runner, source)
-end
-
 const ANSI_CSS = Asset(joinpath(dirname(pathof(ANSIColoredPrinters)), "..", "docs", "src", "assets", "default.css"))
 
 struct RunnerTask
@@ -184,6 +179,7 @@ function spawnat(f, tid)
     return task
 end
 
+
 """
     AsyncRunner(mod=Module(); callback=identity, spawn=false)
 
@@ -199,35 +195,41 @@ Configured `AsyncRunner` instance ready for code execution.
 """
 function AsyncRunner(mod::Module = Module(gensym("BonitoBook")); callback = identity, spawn = false)
     redirect_target = Base.RefValue{Observable{String}}()
-    python_runner = fetch(spawnat(1) do
-        PythonRunner()
-    end)
+    python_runner = fetch(
+        spawnat(1) do
+            PythonRunner()
+        end
+    )
     loki = ReentrantLock()
     task_queue = Channel{RunnerTask}(Inf)
     taskref = spawnat(1) do
         for task in task_queue
             lock(loki) do
-                redirect_target[] = task.editor.logging
-                run!(mod, python_runner, task)
+                try
+                    redirect_target[] = task.editor.logging
+                    run!(mod, python_runner, task)
+                catch e
+                    @error "Error running code: $(task.source)" exception = (e, catch_backtrace())
+                end
             end
         end
     end
-    # io_chan = redirect_all_to_channel()
+    io_chan = redirect_all_to_channel()
     open = Threads.Atomic{Bool}(true)
-    # task = Threads.@spawn begin
-    #     while open[] && isopen(io_chan)
-    #         bytes = take!(io_chan)
-    #         lock(loki) do
-    #             if !isempty(bytes) && isassigned(redirect_target)
-    #                 printer = HTMLPrinter(IOBuffer(copy(bytes)); root_tag = "span")
-    #                 str = sprint(io -> show(io, MIME"text/html"(), printer))
-    #                 redirect_target[][] = str
-    #             end
-    #         end
-    #     end
-    # end
-    # Base.errormonitor(task)
-    return AsyncRunner(mod, python_runner, task_queue, taskref, Base.RefValue{Function}(callback), Channel{Vector{UInt8}}(), redirect_target, open)
+    task = Threads.@spawn begin
+        while open[] && isopen(io_chan)
+            bytes = take!(io_chan)
+            lock(loki) do
+                if !isempty(bytes) && isassigned(redirect_target)
+                    printer = HTMLPrinter(IOBuffer(copy(bytes)); root_tag = "span")
+                    str = sprint(io -> show(io, MIME"text/html"(), printer))
+                    redirect_target[][] = str
+                end
+            end
+        end
+    end
+    Base.errormonitor(task)
+    return AsyncRunner(mod, python_runner, task_queue, taskref, Base.RefValue{Function}(callback), io_chan, redirect_target, open)
 end
 
 function interrupt!(runner::AsyncRunner)
@@ -238,12 +240,19 @@ function book_display(value)
     return value
 end
 
-function run!(editor::EvalEditor)
-    return run!(editor.runner, editor)
+function run!(editor::EvalEditor; async = true)
+    return run!(editor.runner, editor; async = async)
 end
 
-function run!(runner::AsyncRunner, editor::EvalEditor)
-    run!(runner.mod, runner.python_runner, RunnerTask(editor.source[], editor.output, editor, editor.language))
+function run!(runner::MarkdownRunner, editor::EvalEditor; async = true)
+    return editor.output[] = parse_source(runner, editor.source[])
+end
+function run!(runner::AsyncRunner, editor::EvalEditor; async = true)
+    return if async
+        put!(runner.task_queue, RunnerTask(editor.source[], editor.output, editor, editor.language))
+    else
+        run!(runner.mod, runner.python_runner, RunnerTask(editor.source[], editor.output, editor, editor.language))
+    end
 end
 
 function run!(mod::Module, python_runner::PythonRunner, task::RunnerTask)
@@ -257,10 +266,8 @@ function run!(mod::Module, python_runner::PythonRunner, task::RunnerTask)
     try
         if language == "python"
             # Execute Python code
-            PythonCall.GIL.lock() do
-                py_result = eval_python_code_jl(python_runner, mod, "", 1, source)
-                result[] = py_result
-            end
+            py_result = eval_python_code_jl(python_runner, mod, "", 1, source)
+            result[] = py_result
         else
             # Execute Julia code (default behavior)
             if startswith(source, "]")
@@ -290,16 +297,6 @@ function run!(mod::Module, python_runner::PythonRunner, task::RunnerTask)
     return
 end
 
-function eval_source!(runner, editor, source::String, language::String = "julia")
-    editor.loading[] = true  # Set loading immediately when queued
-    return put!(editor.runner.task_queue, RunnerTask(source, editor.output, editor, language))
-end
-
-function eval_source!(editor, source::String, language::String = "julia")
-    editor.loading[] = true  # Set loading immediately when queued
-    return eval_source!(editor.runner, RunnerTask(source, editor.output, editor, language))
-end
-
 
 struct MLRunner
     editor::BonitoBook.EvalEditor
@@ -307,7 +304,7 @@ end
 
 const SYSTEM_PROMPT = read(joinpath(@__DIR__, "templates", "system-prompt.md"), String)
 
-function BonitoBook.eval_source!(chat_editor, result::Observable, runner::MLRunner, source)
+function eval_source!(chat_editor, result::Observable, runner::MLRunner, source)
     str = Observable{String}("")
     chat_editor.loading[] = true
     chat_editor.show_output[] = true
