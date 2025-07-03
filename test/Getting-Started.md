@@ -5,11 +5,10 @@ Features of BonitBook
 ```julia
 import Makie.SpecApi as S
 @manipulate for vis in (
-        contour = visual(Contour),
-        scatter = visual(Scatter),
+        scatter = visual(BoxPlot),
         violin = visual(Violin),
     )
-    layer = AlgebraOfGraphics.density() * vis
-    penguin_bill * mapping(; color = :species)
+    data(penguins) * visual(QQPlot) *
+    mapping(:species, :bill_depth_mm, color=:sex, dodge=:sex)
 end
 ```
