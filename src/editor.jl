@@ -79,7 +79,7 @@ function Bonito.jsrender(session::Session, editor::MonacoEditor)
     eclasses = join(classes, " ")
     editor_div = DOM.div(class = "monaco-editor-div $(eclasses)")
     # needs a return statement to actually return a function
-    theme = get_monaco_theme()
+    theme = copy(get_monaco_theme())
     return Bonito.jsrender(
         session, DOM.div(
             editor_div,
