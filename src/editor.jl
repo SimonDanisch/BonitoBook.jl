@@ -208,8 +208,13 @@ function send(editor::EvalEditor; msg...)
 end
 
 function run_from_newest!(editor::EvalEditor)
-    cell.editor.loading[] = true
+    editor.loading[] = true
     send(editor; type = "run-from-newest")
+    return
+end
+
+function set_source!(editor::EvalEditor, source::String)
+    send(editor; type = "set-source", data = source)
     return
 end
 
@@ -466,8 +471,8 @@ struct FileEditor
     editor::EvalEditor
     current_file::Observable{String}
 
-    function FileEditor(filepath::String, runner = nothing; language = "julia", show_editor = true, options...)
-        source = read(filepath, String)
+    function FileEditor(filepath::String="", runner = nothing; language = "julia", show_editor = true, options...)
+        source = isempty(filepath) ? "" : read(filepath, String)
         opts = (
             minimap = Dict(:enabled => true, :autohide => true),
             scrollbar = Dict(),
@@ -488,11 +493,6 @@ struct FileEditor
         )
         current_file = Observable(filepath)
 
-        # Set up auto-save when source changes
-        on(editor.source) do new_source
-            write(current_file[], new_source)
-        end
-
         return new(editor, current_file)
     end
 end
@@ -500,8 +500,10 @@ end
 function open_file!(editor::FileEditor, filepath::String)
     if isfile(filepath)
         # Switch to new file
+        @info "Opening file in editor: $filepath"
         editor.current_file[] = filepath
-        editor.editor.source[] = read(filepath, String)
+        set_source!(editor.editor, read(filepath, String))
+        toggle!(editor; editor = true)
     else
         @warn "Could not find file: $filepath"
     end
@@ -512,7 +514,6 @@ end
 function toggle!(editor::FileEditor; kwargs...)
     toggle!(editor.editor; kwargs...)
 end
-
 
 function Bonito.jsrender(session::Session, editor::FileEditor)
     # Editor container that fills remaining height

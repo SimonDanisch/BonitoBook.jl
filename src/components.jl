@@ -483,58 +483,31 @@ function FileTabs(files::Vector{String})
     tabs = FileTabs(files_obs, current_file, current_file_index, switch_file_obs, close_file_obs, open_file_obs, file_dialog)
 
     # Set up file management logic
-    setup_file_management!(tabs)
-
-    return tabs
-end
-
-function setup_file_management!(tabs::FileTabs)
-    # Keep current_file in sync with current_file_index
     on(tabs.current_file_index) do idx
         files = tabs.files[]
         if idx > 0 && idx <= length(files)
             tabs.current_file[] = files[idx]
         end
     end
+    return tabs
 end
 
 function open_file!(tabs::FileTabs, filepath::String)
-    if !isempty(filepath)
-        # Try different strategies to find the file
-        candidates = [
-            filepath,  # As-is (could be absolute or relative)
-            abspath(filepath),  # Make absolute from current directory
-            joinpath(dirname(tabs.current_file[]), filepath),  # Relative to current file
-        ]
-        found_file = nothing
-        for candidate in candidates
-            try
-                if isfile(candidate)
-                    found_file = abspath(candidate)  # Always store as absolute path
-                    break
-                end
-            catch
-                # Skip invalid paths
-                continue
-            end
-        end
-        if !isnothing(found_file)
-            files = tabs.files[]
-            # Check if file is already open
-            existing_index = findfirst(f -> f == found_file, files)
-            if existing_index !== nothing
-                # Switch to existing file
-                tabs.current_file_index[] = existing_index
-            else
-                # Add new file to list
-                new_files = [files; found_file]
-                tabs.files[] = new_files
-                tabs.current_file_index[] = length(new_files)
-            end
-            @info "Opened file: $found_file"
+    if isfile(filepath)
+        files = tabs.files[]
+        # Check if file is already open
+        existing_index = findfirst(f -> f == filepath, files)
+        if !isnothing(existing_index)
+            # Switch to existing file
+            tabs.current_file_index[] = existing_index
         else
-            @warn "Could not find file: $filepath. Tried: $candidates"
+            # Add new file to list
+            push!(tabs.files[], filepath)
+            tabs.current_file_index[] = length(files)
         end
+        @info "Opened file: $filepath"
+    else
+        @warn "Could not find file: $filepath"
     end
 end
 
@@ -553,16 +526,13 @@ function close_file!(tabs::FileTabs, file_index::Integer)
             @warn "Cannot close the last file"
             return
         end
-
         # Remove file from list
-        new_files = [files[1:file_index-1]; files[file_index+1:end]]
-        tabs.files[] = new_files
-
+        splice!(files, file_index)
         # Adjust current file index if necessary
         current_idx = tabs.current_file_index[]
         if file_index == current_idx
             # If closing current file, switch to previous or first file
-            new_idx = min(current_idx, length(new_files))
+            new_idx = min(current_idx, length(files))
             if new_idx == 0
                 new_idx = 1
             end
@@ -571,6 +541,7 @@ function close_file!(tabs::FileTabs, file_index::Integer)
             # If closing a file before current, adjust index
             tabs.current_file_index[] = current_idx - 1
         end
+        notify(tabs.files)
     end
 end
 
@@ -593,13 +564,11 @@ function Bonito.jsrender(session::Session, tabs::FileTabs)
 
     # Connect file dialog selection to file opening
     on(session, tabs.file_dialog.file_selected) do filepath
-        if !isempty(filepath)
-            open_file!(tabs, filepath)
-        end
+        open_file!(tabs, filepath)
     end
-
+    open_files = map(tuple, tabs.files, tabs.current_file_index; ignore_equal_values=true)
     # Create reactive tabs content
-    tabs_content = map(tabs.files, tabs.current_file_index) do files, current_idx
+    tabs_content = map(open_files) do (files, current_idx)
         tab_elements = []
 
         # Create tabs for each file

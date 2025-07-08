@@ -95,16 +95,10 @@ function Book(file; folder = nothing, runner = AsyncRunner())
     end
     cells = load_book(bookfile)
     editors = cells2editors(cells, runner)
-
-    style_editor = FileEditor(style_paths[1], runner; editor_classes = ["styling file-editor"], show_editor = false)
-    run!(style_editor.editor; async = false) # run the style editor to get the output Styles
-
+    style_editor = FileEditor("", nothing; editor_classes = ["styling file-editor"], show_editor = false)
     progress = Observable((false, 0.0))
     book = Book(bookfile, folder, editors, style_editor, runner, progress)
     export_md(joinpath(folder, "book.md"), book)
-    if !(style_editor.editor.output[] isa Styles)
-        return style_editor.editor.output[]
-    end
     return book
 end
 
@@ -290,7 +284,21 @@ function new_cell_menu(session, book, editor_above_uuid, runner)
     return DOM.div(Centered(menu_div); class = "new-cell-menu")
 end
 
-function setup_menu(book)
+function setup_file_tabs(session, book)
+    # Create FileTabs component for the file editor
+    file_tabs = FileTabs([book.style_editor.current_file[]])
+
+    # Connect FileTabs to the style_editor
+    on(session, file_tabs.current_file) do filepath
+        @show filepath
+        open_file!(book.style_editor, filepath)
+    end
+
+    return file_tabs
+end
+
+function setup_menu(book::Book)
+    println("HELELLOOO?")
     buttons_enabled = Observable(true)
     keep = Button("keep"; enabled = buttons_enabled)
     reset = Button("reset"; enabled = buttons_enabled)
@@ -302,19 +310,41 @@ function setup_menu(book)
     popup = PopUp(popup_content; show = false)
     style_fe = book.style_editor
     show_editor = Observable(false)
+    style_path = joinpath(book.folder, "styles", "style.jl")
     on(show_editor) do show
-        toggle!(style_fe.editor, editor = show)
+        if show
+            open_file!(style_fe, style_path)
+        else
+            toggle!(style_fe.editor; editor=false)
+        end
     end
     style_fe_toggle = ToggleButton("paintcan", show_editor)
     menu = DOM.div(
         icon("settings"), style_fe_toggle;
         class = "settings small-menu-bar"
     )
-    last_style = Ref{Styles}(style_fe.editor.output[])
-    last_source = Ref{String}(style_fe.editor.source[])
-    output = Observable{Any}(last_style[])
+    style_source = Observable(read(style_path, String))
+    onany(style_fe.current_file, style_fe.editor.source) do file, src
+        if file == style_path && !isempty(src)
+            style_source[] = src
+        end
+        return
+    end
+    style_file_eval = map(style_source) do src
+        try
+            @show src
+            return include_string(BonitoBook, src)
+        catch e
+            return e
+        end
+    end
+    @show typeof(style_file_eval[])
+    last_style = Ref{Styles}(style_file_eval[])
+    last_source = Ref{String}(style_source[])
     should_popup = Ref(false)
-    on(style_fe.editor.output; update = true) do out
+    book_style = Observable(style_file_eval[])
+
+    on(style_file_eval; update = true) do out
         if should_popup[]
             popup.show[] = true
         end
@@ -325,7 +355,7 @@ function setup_menu(book)
                     DOM.h3("Want to keep changes?"),
                 )
             end
-            output[] = out
+            book_style[] = out
         else
             buttons_enabled[] = false
             styling_popup_text[] = DOM.div(
@@ -341,8 +371,8 @@ function setup_menu(book)
     on(keep.value) do click
         popup.show[] = false
         if buttons_enabled[]
-            last_style[] = output[]
-            last_source[] = style_fe.editor.source[]
+            last_style[] = book_style[]
+            last_source[] = style_source[]
         end
     end
     on(reset.value) do click
@@ -350,7 +380,7 @@ function setup_menu(book)
         should_popup[] = false
         style_fe.editor.set_source[] = last_source[]
     end
-    return menu, style_fe, DOM.span(popup, output)
+    return menu, style_fe, DOM.span(popup, book_style)
 end
 
 function setup_completions(session, cell_module)
@@ -368,6 +398,7 @@ function setup_completions(session, cell_module)
     """
 end
 function Bonito.jsrender(session::Session, book::Book)
+    println("JSrenderin'")
     runner = book.runner
     cells = map(book.cells) do editor
         add_cell_div = new_cell_menu(session, book, editor.uuid, runner)
@@ -384,6 +415,7 @@ function Bonito.jsrender(session::Session, book::Book)
     _setup_menu, style_editor, style_output = setup_menu(book)
     save = saving_menu(session, book)
     player = play_menu(book)
+    file_tabs = setup_file_tabs(session, book)
 
     menu = DOM.div(save, player, _setup_menu; class = "book-main-menu")
 
@@ -394,7 +426,7 @@ function Bonito.jsrender(session::Session, book::Book)
 
     content = DOM.div(cells_area, style_editor; class = "book-content")
 
-    document = DOM.div(menu, content; class = "book-document")
+    document = DOM.div(menu, file_tabs, content; class = "book-document")
 
     completions = setup_completions(session, runner.mod)
 

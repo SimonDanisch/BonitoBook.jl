@@ -243,7 +243,8 @@ end
 function run!(editor::EvalEditor; async = true)
     return run!(editor.runner, editor; async = async)
 end
-
+function run!(::Nothing, editor::EvalEditor; async = true)
+end
 function run!(runner::MarkdownRunner, editor::EvalEditor; async = true)
     return editor.output[] = parse_source(runner, editor.source[])
 end

@@ -3,13 +3,11 @@ using BonitoBook, Bonito
 using PythonCall, Observables
 rm(BonitoBook.Monaco.bundle_file)
 rm(joinpath("dev", "BonitoBook", "test", "Sunny", "01_LSWT_CoRh2O4"), recursive = true, force = true)
-begin
-    app = App(title = "BonitoBook") do s
-        return Book(joinpath(@__DIR__, "Sunny", "01_LSWT_CoRh2O4.ipynb"))
-    end
+
+app = App(title = "BonitoBook") do s
+    return Book(joinpath(@__DIR__, "Sunny", "01_LSWT_CoRh2O4.ipynb"))
 end
 
-app.session[].parent.session_objects["2731"]
 
 app = App(title = "BonitoBook") do s
     return Book(joinpath(@__DIR__, "Getting-Started.md"))

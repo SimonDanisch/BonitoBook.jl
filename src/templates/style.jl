@@ -672,6 +672,12 @@ Styles(
         "background-color" => "var(--bg-primary)"
     ),
     CSS(
+        ".book-main-menu .file-tabs-container",
+        "flex" => "1",
+        "margin-left" => "20px",
+        "border-bottom" => "none" # Remove border from tabs in menu
+    ),
+    CSS(
         ".book-content",
         "display" => "flex",
         "flex-direction" => "row",
@@ -689,7 +695,8 @@ Styles(
         "align-items" => "center",
         "overflow-y" => "auto", # Independent scrolling for book content
         "overflow-x" => "hidden",
-        "padding-right" => "10px"
+        "padding-right" => "10px",
+        "padding-top" => "15px",
     ),
     CSS(
         ".book-document",
