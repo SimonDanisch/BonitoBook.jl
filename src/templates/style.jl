@@ -484,22 +484,13 @@ Styles(
         "background-color" => "var(--hover-bg)",
         "color" => "var(--text-primary)",
     ),
-    CSS(
-        ".file-editor-container",
-        "width" => "50vw", # Fixed width for side panel
-        "height" => "100%", # Full height of container
-        "overflow-y" => "auto", # Independent scrolling for file editor
-        "overflow-x" => "hidden",
-        "background-color" => "var(--bg-primary)",
-        "border-left" => "1px solid var(--border-primary)",
-        "flex-shrink" => "0" # Don't shrink when content is large
-    ),
+
     CSS(
         ".file-editor",
         "padding" => "0px",
         "margin" => "0px",
-        "width" => editor_width,
-        "max-height" => max_height_large,
+        "width" => "50vw",
+        "height" => "90vh",
         "background-color" => "var(--bg-primary)",
         "color" => "var(--text-primary)"
     ),

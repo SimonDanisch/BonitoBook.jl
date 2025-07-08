@@ -82,7 +82,8 @@ export class EvalEditor {
         julia_to_js,
         source_obs,
         show_output,
-        show_logging
+        show_logging,
+        do_resize_to_lines = true
     ) {
         this.message_queue = [];
         this.editor = monaco_editor;
@@ -100,7 +101,9 @@ export class EvalEditor {
         });
         monaco.then((monaco) => {
             monaco_editor.editor.then((editor) => {
-                resize_to_lines(editor, monaco, this.editor.editor_div);
+                if (do_resize_to_lines) {
+                    resize_to_lines(editor, monaco, this.editor.editor_div);
+                }
                 editor.addCommand(
                     monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyP, // Ctrl+P or Cmd+P
                     () => {

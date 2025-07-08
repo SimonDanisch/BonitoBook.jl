@@ -174,6 +174,7 @@ struct EvalEditor
 
     loading::Observable{Bool}
     language::String
+    resize_to_lines::Bool
 end
 
 function process_message(editor::EvalEditor, message::Dict)
@@ -237,6 +238,7 @@ function EvalEditor(
         show_logging = true,
         editor_classes = String[],
         container_classes = String[],
+        resize_to_lines = true,
         options...
     )
     js_init_func = isnothing(js_init_func) ? js"() => {}" : js_init_func
@@ -271,7 +273,8 @@ function EvalEditor(
         show_output,
         show_editor_obs,
         loading,
-        language
+        language,
+        resize_to_lines
     )
     on(js_to_julia) do message
         process_message(editor, message)
@@ -300,7 +303,7 @@ function render_editor(editor::EvalEditor)
             const ee = new mod.EvalEditor(
                 editor, output_div, logging_div, $(direction),
                 $(editor.js_to_julia), $(editor.julia_to_js), $(editor.source),
-                $(editor.show_output), $(editor.show_logging),
+                $(editor.show_output), $(editor.show_logging), $(editor.resize_to_lines)
             );
             const callback = ($(editor.js_init_func[]));
             return callback(ee);
@@ -479,6 +482,7 @@ struct FileEditor
             language = language,
             show_editor = show_editor,
             show_logging = false,
+            resize_to_lines = false,
             opts..., options...
         )
         current_file = Observable(filepath)
@@ -512,6 +516,5 @@ end
 function Bonito.jsrender(session::Session, editor::FileEditor)
     # Editor container that fills remaining height
     meditor, _, _ = render_editor(editor.editor)
-    editor_container = DOM.div(meditor, class = "file-editor-container")
     return Bonito.jsrender(session, meditor)
 end

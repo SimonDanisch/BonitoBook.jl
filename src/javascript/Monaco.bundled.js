@@ -65,7 +65,7 @@ class MonacoEditor {
     }
 }
 class EvalEditor {
-    constructor(monaco_editor, output_div, logging_div, direction, js_to_julia, julia_to_js, source_obs, show_output, show_logging){
+    constructor(monaco_editor, output_div, logging_div, direction, js_to_julia, julia_to_js, source_obs, show_output, show_logging, do_resize_to_lines = true){
         this.message_queue = [];
         this.editor = monaco_editor;
         this.output_div = output_div;
@@ -80,7 +80,9 @@ class EvalEditor {
         });
         monaco.then((monaco)=>{
             monaco_editor.editor.then((editor)=>{
-                resize_to_lines(editor, monaco, this.editor.editor_div);
+                if (do_resize_to_lines) {
+                    resize_to_lines(editor, monaco, this.editor.editor_div);
+                }
                 editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyP, ()=>{
                     editor.trigger("keyboard", "editor.action.quickCommand", null);
                 });
