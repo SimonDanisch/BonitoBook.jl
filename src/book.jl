@@ -350,7 +350,7 @@ function setup_menu(book)
         should_popup[] = false
         style_fe.editor.set_source[] = last_source[]
     end
-    return menu, style_fe, DOM.span(popup, output)
+    return menu, style_fe, DOM.span(output, popup)
 end
 
 function setup_completions(session, cell_module)

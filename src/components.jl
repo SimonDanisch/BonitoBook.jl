@@ -1,21 +1,11 @@
-"""
-    SmallButton(; class="", kw...)
 
-Create a small interactive button component.
-
-# Arguments
-- `class`: CSS class string to apply to the button
-- `kw...`: Additional keyword arguments passed to the DOM button
-
-# Returns
-Tuple of (button_dom, click_observable) where click_observable fires when clicked.
-"""
-function SmallButton(; class = "", kw...)
+function SmallButton(icon_name::String; class = "", kw...)
     value = Observable(false)
+    ic = icon(icon_name)
     button_dom = DOM.button(
-        "";
+        ic;
         onclick = js"event=> $(value).notify(true);",
-        class = "small-button $(class)",
+        class = class,
         kw...,
     )
     return button_dom, value
@@ -91,24 +81,16 @@ function PopUp(content; show = true)
 end
 
 function Bonito.jsrender(session::Session, popup::PopUp)
-    close_icon = icon("close")
-    click = Observable(false)
-    close_button = DOM.button(
-        close_icon;
-        class = "popup-close-button",
-        onclick = js"event=> $(click).notify(true);"
-    )
+    close_button, click = SmallButton("close")
     on(click) do click
         popup.show[] = !popup.show[]
     end
-
     # Create popup content wrapper
     popup_content = DOM.div(
         popup.content,
         close_button,
         class = "popup-content"
     )
-
     # Create overlay wrapper
     overlay = DOM.div(
         popup_content,
@@ -120,26 +102,22 @@ function Bonito.jsrender(session::Session, popup::PopUp)
             }
         }"""
     )
-
     # JavaScript for showing/hiding and keyboard handling
     popup_js = js"""
         const show = $(popup.show);
         const overlay = $(overlay);
-
         // Handle ESC key
         document.addEventListener('keydown', (event) => {
             if (event.key === 'Escape' && overlay.style.display !== 'none') {
                 $(popup.show).notify(false);
             }
         });
-
         // Handle show/hide
         show.on((isShown) => {
             overlay.style.display = isShown ? "flex" : "none";
         });
     """
-
-    return Bonito.jsrender(session, DOM.div(overlay, popup_js))
+    return Bonito.jsrender(session, DOM.div(popup_js, overlay))
 end
 
 """

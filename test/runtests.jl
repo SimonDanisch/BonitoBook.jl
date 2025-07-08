@@ -4,9 +4,14 @@ using PythonCall
 rm(BonitoBook.Monaco.bundle_file)
 rm(joinpath("dev", "BonitoBook", "test", "Sunny", "01_LSWT_CoRh2O4"), recursive = true, force = true)
 
-app = App(title = "BonitoBook") do s
-    return Book(joinpath(@__DIR__, "Sunny", "01_LSWT_CoRh2O4.ipynb"))
+begin
+    Observables.OBSID_COUNTER[] = 0
+    app = App(title = "BonitoBook") do s
+        return Book(joinpath(@__DIR__, "Sunny", "01_LSWT_CoRh2O4.ipynb"))
+    end
 end
+1235
+xx = Bonito.root_session(app.session.x).session_objects["1235"]
 
 app = App(title = "BonitoBook") do s
     return Book(joinpath(@__DIR__, "Getting-Started.md"))
@@ -21,6 +26,12 @@ App() do
         @show file
     end
     DOM.div(x)
+end
+using WGLMakie
+using BonitoBook, Bonito, WGLMakie
+styles = include("../src/templates/style.jl")
+app = App() do
+    DOM.div(styles, BonitoBook.FileTabs(["file1.txt", "file2.txt", "file3.txt"]))
 end
 # TODO
 #=

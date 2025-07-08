@@ -471,16 +471,9 @@ struct FileEditor
             overviewRulerLanes = 2,
             lineDecorationsWidth = 10,
         )
-        js_init_func = js"""(editor, monaco, editor_div) => {
-            return $(Monaco).then(Monaco => {
-                // Don't auto-resize - let it fill the container
-                editor_div.style.height = "100%";
-                editor.layout();
-            })
-        }"""
+
         editor = EvalEditor(
             source, runner;
-            js_init_func = js_init_func,
             editor_classes = ["file-editor"],
             hiding_direction = "horizontal",
             language = language,
@@ -520,6 +513,5 @@ function Bonito.jsrender(session::Session, editor::FileEditor)
     # Editor container that fills remaining height
     meditor, _, _ = render_editor(editor.editor)
     editor_container = DOM.div(meditor, class = "file-editor-container")
-
     return Bonito.jsrender(session, meditor)
 end
