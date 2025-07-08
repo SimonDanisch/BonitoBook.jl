@@ -9,26 +9,16 @@ begin
     end
 end
 
+app.session[].parent.session_objects["2731"]
+
 app = App(title = "BonitoBook") do s
     return Book(joinpath(@__DIR__, "Getting-Started.md"))
 end
-app = App(title = "BonitoBook") do s
-    return BonitoBook.PopUp(DOM.div(Observable(DOM.div("heyyy"))))
-end
 
-App() do
-    x = BonitoBook.OpenFileDialog()
-    on(x.file_selected) do file
-        @show file
-    end
-    DOM.div(x)
-end
 using WGLMakie
 using BonitoBook, Bonito, WGLMakie
 styles = include("../src/templates/style.jl")
-app = App() do
-    DOM.div(styles, BonitoBook.FileTabs(["file1.txt", "file2.txt", "file3.txt"]))
-end
+
 # TODO
 #=
 - [x] cleanup hover menu + delete

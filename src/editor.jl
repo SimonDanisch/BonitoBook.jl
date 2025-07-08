@@ -290,12 +290,12 @@ function render_editor(editor::EvalEditor)
     showing = "show-$direction"
     output_class = editor.show_output[] ? showing : hiding
     logging_class = editor.show_logging[] ? showing : hiding
-    output_div = DOM.div(ANSI_CSS, editor.output, class = "cell-output $(output_class)")
+    output_div = DOM.div(editor.output, class = "cell-output $(output_class)")
     logging_html = Observable(HTML(""))
     on(editor.logging_html) do str
         logging_html[] = HTML("<pre>" * str * "</pre>")
     end
-    logging_div = DOM.div(logging_html, class = "cell-logging $(logging_class)")
+    logging_div = DOM.div(ANSI_CSS, logging_html, class = "cell-logging $(logging_class)")
     # Set the init func, which we can only do here where we have all divs
     editor.editor.js_init_func[] = js"""((editor) => {
         const output_div = $(output_div);

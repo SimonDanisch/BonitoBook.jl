@@ -350,7 +350,7 @@ function setup_menu(book)
         should_popup[] = false
         style_fe.editor.set_source[] = last_source[]
     end
-    return menu, style_fe, DOM.span(output, popup)
+    return menu, style_fe, DOM.span(popup, output)
 end
 
 function setup_completions(session, cell_module)
@@ -388,7 +388,7 @@ function Bonito.jsrender(session::Session, book::Book)
     menu = DOM.div(save, player, _setup_menu; class = "book-main-menu")
 
     cell_obs = DOM.div(cells...; class = "inline-block fit-content")
-    
+
     # Wrap cells in scrollable area
     cells_area = DOM.div(cell_obs; class = "book-cells-area")
 

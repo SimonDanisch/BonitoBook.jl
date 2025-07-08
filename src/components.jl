@@ -96,11 +96,7 @@ function Bonito.jsrender(session::Session, popup::PopUp)
         popup_content,
         class = "popup-overlay",
         style = "display: $(popup.show[] ? "flex" : "none")",
-        onclick = js"""event => {
-            if (event.target === event.currentTarget) {
-                $(popup.show).notify(false);
-            }
-        }"""
+
     )
     # JavaScript for showing/hiding and keyboard handling
     popup_js = js"""
@@ -110,6 +106,12 @@ function Bonito.jsrender(session::Session, popup::PopUp)
         document.addEventListener('keydown', (event) => {
             if (event.key === 'Escape' && overlay.style.display !== 'none') {
                 $(popup.show).notify(false);
+            }
+        });
+        document.addEventListener('click', (event) => {
+            // Hide popup when clicking outside
+            if (event.target === overlay) {
+                show.notify(false);
             }
         });
         // Handle show/hide
