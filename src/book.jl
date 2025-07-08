@@ -388,8 +388,11 @@ function Bonito.jsrender(session::Session, book::Book)
     menu = DOM.div(save, player, _setup_menu; class = "book-main-menu")
 
     cell_obs = DOM.div(cells...; class = "inline-block fit-content")
+    
+    # Wrap cells in scrollable area
+    cells_area = DOM.div(cell_obs; class = "book-cells-area")
 
-    content = DOM.div(cell_obs, style_editor; class = "book-content")
+    content = DOM.div(cells_area, style_editor; class = "book-content")
 
     document = DOM.div(menu, content; class = "book-document")
 

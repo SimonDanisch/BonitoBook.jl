@@ -395,16 +395,6 @@ Styles(
         "background-color" => "var(--hover-bg)",
     ),
 
-    # File editor styles
-    CSS(
-        ".file-editor-wrapper",
-        "display" => "flex",
-        "flex-direction" => "column",
-        "height" => "100%",
-        "background-color" => "var(--bg-primary)",
-        "border-radius" => border_radius_large,
-        "box-shadow" => "var(--shadow-soft)",
-    ),
     CSS(
         ".file-tabs-container",
         "display" => "flex",
@@ -496,9 +486,13 @@ Styles(
     ),
     CSS(
         ".file-editor-container",
-        "flex" => "1",
-        "overflow" => "hidden",
+        "width" => "50vw", # Fixed width for side panel
+        "height" => "100%", # Full height of container
+        "overflow-y" => "auto", # Independent scrolling for file editor
+        "overflow-x" => "hidden",
         "background-color" => "var(--bg-primary)",
+        "border-left" => "1px solid var(--border-primary)",
+        "flex-shrink" => "0" # Don't shrink when content is large
     ),
     CSS(
         ".file-editor",
@@ -684,11 +678,21 @@ Styles(
         ".book-content",
         "display" => "flex",
         "flex-direction" => "row",
-        "justify-content" => "center",
         "flex" => "1",
         "padding-top" => "20px", # to have some space for overlay menu
-        "overflow" => "auto",
-        "width" => "100%"
+        "overflow" => "hidden", # Prevent the container from scrolling
+        "width" => "100%",
+        "height" => "calc(100vh - 20px)" # Full height minus menu space
+    ),
+    CSS(
+        ".book-cells-area",
+        "flex" => "1",
+        "display" => "flex",
+        "flex-direction" => "column",
+        "align-items" => "center",
+        "overflow-y" => "auto", # Independent scrolling for book content
+        "overflow-x" => "hidden",
+        "padding-right" => "10px"
     ),
     CSS(
         ".book-document",

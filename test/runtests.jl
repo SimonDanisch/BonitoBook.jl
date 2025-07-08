@@ -1,11 +1,11 @@
 using WGLMakie
 using BonitoBook, Bonito
-using PythonCall
+using PythonCall, Observables
 rm(BonitoBook.Monaco.bundle_file)
 rm(joinpath("dev", "BonitoBook", "test", "Sunny", "01_LSWT_CoRh2O4"), recursive = true, force = true)
 
 begin
-    Observables.OBSID_COUNTER[] = 0
+    close(app.session[])
     app = App(title = "BonitoBook") do s
         return Book(joinpath(@__DIR__, "Sunny", "01_LSWT_CoRh2O4.ipynb"))
     end
@@ -17,7 +17,7 @@ app = App(title = "BonitoBook") do s
     return Book(joinpath(@__DIR__, "Getting-Started.md"))
 end
 app = App(title = "BonitoBook") do s
-    return Book("./book.md")
+    return BonitoBook.PopUp(DOM.div(Observable(DOM.div("heyyy"))))
 end
 
 App() do
