@@ -14,6 +14,14 @@ end
 app = App(title = "BonitoBook") do s
     return Book("./book.md")
 end
+
+App() do
+    x = BonitoBook.OpenFileDialog()
+    on(x.file_selected) do file
+        @show file
+    end
+    DOM.div(x)
+end
 # TODO
 #=
 - [x] cleanup hover menu + delete

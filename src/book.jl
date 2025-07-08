@@ -96,7 +96,7 @@ function Book(file; folder = nothing, runner = AsyncRunner())
     cells = load_book(bookfile)
     editors = cells2editors(cells, runner)
 
-    style_editor = FileEditor(style_paths, runner; editor_classes = ["styling file-editor"], show_editor = false)
+    style_editor = FileEditor(style_paths[1], runner; editor_classes = ["styling file-editor"], show_editor = false)
     run!(style_editor.editor; async = false) # run the style editor to get the output Styles
 
     progress = Observable((false, 0.0))
@@ -305,8 +305,7 @@ function setup_menu(book)
     on(show_editor) do show
         toggle!(style_fe.editor, editor = show)
     end
-    paintcan_icon = icon("paintcan")
-    style_fe_toggle = DOM.button(paintcan_icon; class = "small-button", onclick = js"event=> $(show_editor).notify(!$(show_editor).value)")
+    style_fe_toggle = ToggleButton("paintcan", show_editor)
     menu = DOM.div(
         icon("settings"), style_fe_toggle;
         class = "settings small-menu-bar"

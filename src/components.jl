@@ -91,44 +91,55 @@ function PopUp(content; show = true)
 end
 
 function Bonito.jsrender(session::Session, popup::PopUp)
-    button_style = Styles("position" => "absolute", "top" => "1px", "right" => "1px", "background-color" => "red")
     close_icon = icon("close")
     click = Observable(false)
-    button = DOM.button(
+    close_button = DOM.button(
         close_icon;
-        class = "small-button",
-        style = button_style,
+        class = "popup-close-button",
         onclick = js"event=> $(click).notify(true);"
     )
     on(click) do click
         popup.show[] = !popup.show[]
     end
-    popup_style = Styles(
-        "position" => "absolute", "top" => "100px",
-        "left" => "50%", "transform" => "translateX(-50%)",
-        "z-index" => "1000",
-        "background-color" => "white",
-        "display" => popup.show[] ? "block" : "none",
+
+    # Create popup content wrapper
+    popup_content = DOM.div(
+        popup.content,
+        close_button,
+        class = "popup-content"
     )
-    card = Card(
-        Col(popup.content, button),
-        style = popup_style
+
+    # Create overlay wrapper
+    overlay = DOM.div(
+        popup_content,
+        class = "popup-overlay",
+        style = "display: $(popup.show[] ? "flex" : "none")",
+        onclick = js"""event => {
+            if (event.target === event.currentTarget) {
+                $(popup.show).notify(false);
+            }
+        }"""
     )
-    close_js = js"""
+
+    # JavaScript for showing/hiding and keyboard handling
+    popup_js = js"""
         const show = $(popup.show);
-        const card = $(card);
+        const overlay = $(overlay);
+
+        // Handle ESC key
         document.addEventListener('keydown', (event) => {
-            if (event.key === 'Escape' && card.style.display !== 'none') {
+            if (event.key === 'Escape' && overlay.style.display !== 'none') {
                 $(popup.show).notify(false);
             }
         });
-        show.on((show) => {
-            console.log("Popup visibility changed")
-            console.log(show);
-            card.style.display = show ? "block" : "none";
-        })
+
+        // Handle show/hide
+        show.on((isShown) => {
+            overlay.style.display = isShown ? "flex" : "none";
+        });
     """
-    return Bonito.jsrender(session, DOM.div(card, close_js))
+
+    return Bonito.jsrender(session, DOM.div(overlay, popup_js))
 end
 
 """
@@ -158,16 +169,10 @@ struct OpenFileDialog
         available_files = Observable{Vector{String}}([])
 
         # Update available files when base folder or current path changes
-        function update_files()
-            path = current_path[]
-            base = base_folder_obs[]
-
+        function update_files(base, path)
             if isempty(path)
                 # Show files in base folder
                 target_dir = base
-            elseif isabs(path)
-                # Absolute path
-                target_dir = dirname(path)
             else
                 # Relative path
                 target_dir = joinpath(base, dirname(path))
@@ -201,11 +206,7 @@ struct OpenFileDialog
         end
 
         # Update files when base folder or path changes
-        on(update_files, base_folder_obs)
-        on(update_files, current_path)
-
-        # Initialize
-        update_files()
+        onany(update_files, base_folder_obs, current_path; update=true)
 
         return new(base_folder_obs, current_path, file_selected, show_dialog, available_files)
     end
@@ -239,6 +240,115 @@ function select_file!(dialog::OpenFileDialog, filepath::String)
         dialog.current_path[] = rel_path == "." ? "" : rel_path * "/"
     end
 end
+
+const FileDialogStyle = Styles(
+    CSS(
+        ".file-dialog-container",
+        "position" => "relative",
+        "display" => "inline-block",
+    ),
+    CSS(
+        ".file-dialog-dropdown",
+        "position" => "relative",
+        "background-color" => "var(--bg-primary)",
+        "border-radius" => "5px",
+        "width" => "500px",
+        "max-width" => "90vw",
+        "max-height" => "70vh",
+        "display" => "flex",
+        "flex-direction" => "column",
+        "color" => "var(--text-primary)",
+    ),
+    CSS(
+        ".file-dialog-content",
+        "background-color" => "var(--bg-primary)",
+        "border-radius" => "5px",
+        "box-shadow" => "var(--shadow-soft)",
+        "width" => "500px",
+        "max-width" => "90vw",
+        "max-height" => "70vh",
+        "display" => "flex",
+        "flex-direction" => "column",
+        "color" => "var(--text-primary)",
+    ),
+    CSS(
+        ".file-dialog-header",
+        "display" => "flex",
+        "justify-content" => "space-between",
+        "align-items" => "center",
+        "padding" => "16px",
+        "border-bottom" => "1px solid var(--border-primary)",
+        "font-weight" => "600",
+        "font-size" => "16px",
+    ),
+    CSS(
+        ".file-dialog-close",
+        "background" => "none",
+        "border" => "none",
+        "font-size" => "20px",
+        "color" => "var(--text-secondary)",
+        "cursor" => "pointer",
+        "padding" => "4px",
+        "border-radius" => "4px",
+        "width" => "28px",
+        "height" => "28px",
+        "display" => "flex",
+        "align-items" => "center",
+        "justify-content" => "center",
+    ),
+    CSS(
+        ".file-dialog-close:hover",
+        "background-color" => "var(--hover-bg)",
+        "color" => "var(--text-primary)",
+    ),
+    CSS(
+        ".file-dialog-input",
+        "border" => "1px solid var(--border-secondary)",
+        "border-radius" => "6px",
+        "padding" => "8px 12px",
+        "font-size" => "14px",
+        "margin" => "0 16px 16px 16px",
+        "background-color" => "var(--bg-primary)",
+        "color" => "var(--text-primary)",
+        "outline" => "none",
+    ),
+    CSS(
+        ".file-dialog-input:focus",
+        "border-color" => "var(--accent-blue)",
+        "box-shadow" => "0 0 0 2px rgba(3, 102, 214, 0.2)",
+    ),
+    CSS(
+        ".file-dialog-list",
+        "max-height" => "400px",
+        "overflow-y" => "auto",
+        "padding" => "0 8px 16px 8px",
+    ),
+    CSS(
+        ".file-dialog-item",
+        "display" => "flex",
+        "align-items" => "center",
+        "padding" => "8px 12px",
+        "cursor" => "pointer",
+        "border-radius" => "6px",
+        "margin" => "2px 0",
+        "font-size" => "14px",
+        "transition" => "background-color 0.2s ease",
+        "user-select" => "none",
+    ),
+    CSS(
+        ".file-dialog-item:hover",
+        "background-color" => "var(--hover-bg)",
+    ),
+    CSS(
+        ".file-dialog-folder",
+        "font-weight" => "500",
+        "color" => "var(--accent-blue)",
+    ),
+    CSS(
+        ".file-dialog-file",
+        "color" => "var(--text-primary)",
+    )
+)
 
 function Bonito.jsrender(session::Session, dialog::OpenFileDialog)
     # Create file list
@@ -292,14 +402,7 @@ function Bonito.jsrender(session::Session, dialog::OpenFileDialog)
         return DOM.div(list_items..., class = "file-dialog-list")
     end
 
-    # Create dialog content
-    dialog_header = DOM.div(
-        "Select File",
-        DOM.button("×",
-            class = "file-dialog-close",
-            onclick = js"event => $(dialog.show_dialog).notify(false)"),
-        class = "file-dialog-header"
-    )
+    # Create dialog content (no header needed in popup)
 
     # Handle input changes and enter key
     input_with_events = DOM.input(
@@ -307,6 +410,8 @@ function Bonito.jsrender(session::Session, dialog::OpenFileDialog)
         placeholder = "Enter file path...",
         class = "file-dialog-input",
         value = dialog.current_path,
+        onclick = js"event => $(dialog.show_dialog).notify(true)",
+        onfocus = js"event => $(dialog.show_dialog).notify(true)",
         onkeydown = js"""event => {
             if (event.key === 'Enter') {
                 event.preventDefault();
@@ -329,28 +434,236 @@ function Bonito.jsrender(session::Session, dialog::OpenFileDialog)
         }""",
         oninput = js"event => $(dialog.current_path).notify(event.target.value)"
     )
-
-    dialog_content = DOM.div(
-        dialog_header,
-        input_with_events,
-        file_list_content,
-        class = "file-dialog-content"
-    )
-
-    # Create overlay
-    dialog_class = map(dialog.show_dialog) do show
-        show ? "file-dialog-overlay visible" : "file-dialog-overlay hidden"
+   # Create dropdown
+    dropdown_content = map(dialog.show_dialog) do show
+        if show
+            DOM.div(
+                file_list_content,
+                class = "file-dialog-dropdown",
+                onclick = js"""event => {
+                    event.stopPropagation();
+                }"""
+            )
+        else
+            DOM.div()  # Empty div when hidden
+        end
     end
 
     return Bonito.jsrender(
         session, DOM.div(
-            dialog_content,
-            class = dialog_class,
-            onclick = js"""event => {
-                if (event.target === event.currentTarget) {
-                    $(dialog.show_dialog).notify(false);
-                }
-            }"""
+            FileDialogStyle,
+            DOM.div(
+                input_with_events,  # Always visible input
+                dropdown_content,   # Dropdown content below input
+                class = "file-dialog-container"
+            )
         )
     )
+end
+
+"""
+    FileTabs
+
+A reusable file tabs component for multi-file editing interfaces.
+
+# Fields
+- `files::Observable{Vector{String}}`: List of file paths
+- `current_file::Observable{String}`: Currently active file path
+- `current_file_index::Observable{Int}`: Index of currently active file
+- `switch_file_obs::Observable{Int}`: Observable for switching files
+- `close_file_obs::Observable{Int}`: Observable for closing files
+- `open_file_obs::Observable{String}`: Observable for opening new files
+- `file_dialog::OpenFileDialog`: File dialog for opening files
+"""
+struct FileTabs
+    files::Observable{Vector{String}}
+    current_file::Observable{String}
+    current_file_index::Observable{Int}
+    switch_file_obs::Observable{Int}
+    close_file_obs::Observable{Int}
+    open_file_obs::Observable{String}
+    file_dialog::OpenFileDialog
+end
+
+
+"""
+    FileTabs(files::Vector{String})
+
+Create a FileTabs component with the given initial files.
+"""
+function FileTabs(files::Vector{String})
+    files_obs = Observable(files)
+    current_file = Observable(isempty(files) ? "" : files[1])
+    current_file_index = Observable(isempty(files) ? 0 : 1)
+    switch_file_obs = Observable(0)
+    close_file_obs = Observable(0)
+    open_file_obs = Observable("")
+    file_dialog = OpenFileDialog()
+
+    tabs = FileTabs(files_obs, current_file, current_file_index, switch_file_obs, close_file_obs, open_file_obs, file_dialog)
+
+    # Set up file management logic
+    setup_file_management!(tabs)
+
+    return tabs
+end
+
+function setup_file_management!(tabs::FileTabs)
+    # Keep current_file in sync with current_file_index
+    on(tabs.current_file_index) do idx
+        files = tabs.files[]
+        if idx > 0 && idx <= length(files)
+            tabs.current_file[] = files[idx]
+        end
+    end
+end
+
+function open_file!(tabs::FileTabs, filepath::String)
+    if !isempty(filepath)
+        # Try different strategies to find the file
+        candidates = [
+            filepath,  # As-is (could be absolute or relative)
+            abspath(filepath),  # Make absolute from current directory
+            joinpath(dirname(tabs.current_file[]), filepath),  # Relative to current file
+        ]
+        found_file = nothing
+        for candidate in candidates
+            try
+                if isfile(candidate)
+                    found_file = abspath(candidate)  # Always store as absolute path
+                    break
+                end
+            catch
+                # Skip invalid paths
+                continue
+            end
+        end
+        if !isnothing(found_file)
+            files = tabs.files[]
+            # Check if file is already open
+            existing_index = findfirst(f -> f == found_file, files)
+            if existing_index !== nothing
+                # Switch to existing file
+                tabs.current_file_index[] = existing_index
+            else
+                # Add new file to list
+                new_files = [files; found_file]
+                tabs.files[] = new_files
+                tabs.current_file_index[] = length(new_files)
+            end
+            @info "Opened file: $found_file"
+        else
+            @warn "Could not find file: $filepath. Tried: $candidates"
+        end
+    end
+end
+
+function switch_file!(tabs::FileTabs, file_index::Integer)
+    files = tabs.files[]
+    if file_index > 0 && file_index <= length(files) && file_index != tabs.current_file_index[]
+        tabs.current_file_index[] = file_index
+    end
+end
+
+function close_file!(tabs::FileTabs, file_index::Integer)
+    files = tabs.files[]
+    if file_index > 0 && file_index <= length(files)
+        if length(files) == 1
+            # Can't close the last file
+            @warn "Cannot close the last file"
+            return
+        end
+
+        # Remove file from list
+        new_files = [files[1:file_index-1]; files[file_index+1:end]]
+        tabs.files[] = new_files
+
+        # Adjust current file index if necessary
+        current_idx = tabs.current_file_index[]
+        if file_index == current_idx
+            # If closing current file, switch to previous or first file
+            new_idx = min(current_idx, length(new_files))
+            if new_idx == 0
+                new_idx = 1
+            end
+            tabs.current_file_index[] = new_idx
+        elseif file_index < current_idx
+            # If closing a file before current, adjust index
+            tabs.current_file_index[] = current_idx - 1
+        end
+    end
+end
+
+
+function Bonito.jsrender(session::Session, tabs::FileTabs)
+    # Handle file switching
+    on(session, tabs.switch_file_obs) do file_index
+        switch_file!(tabs, file_index)
+    end
+
+    # Handle file closing
+    on(session, tabs.close_file_obs) do file_index
+        close_file!(tabs, file_index)
+    end
+
+    # Handle opening new files
+    on(session, tabs.open_file_obs) do filepath
+        open_file!(tabs, filepath)
+    end
+
+    # Connect file dialog selection to file opening
+    on(session, tabs.file_dialog.file_selected) do filepath
+        if !isempty(filepath)
+            open_file!(tabs, filepath)
+        end
+    end
+
+    # Create reactive tabs content
+    tabs_content = map(tabs.files, tabs.current_file_index) do files, current_idx
+        tab_elements = []
+
+        # Create tabs for each file
+        for (i, file) in enumerate(files)
+            is_active = i == current_idx
+            tab_class = is_active ? "file-tab active" : "file-tab"
+
+            # Tab content with file name and close button
+            tab_name = DOM.span(basename(file), class = "file-tab-name")
+
+            # Close button (only show if more than one file)
+            if length(files) > 1
+                close_btn = DOM.button("×",
+                    class = "file-tab-close",
+                    onclick = js"event => { event.stopPropagation(); $(tabs.close_file_obs).notify($(i)); }")
+                tab_content = DOM.div(tab_name, close_btn, class = "file-tab-content")
+            else
+                tab_content = DOM.div(tab_name, class = "file-tab-content")
+            end
+
+            # Full tab element
+            tab = DOM.div(tab_content,
+                class = tab_class,
+                onclick = js"event => $(tabs.switch_file_obs).notify($(i))")
+
+            push!(tab_elements, tab)
+        end
+
+        # Add "open file" button
+        open_btn = DOM.button("+",
+            class = "file-tab-add",
+            onclick = js"event => $(tabs.file_dialog.show_dialog).notify(true)")
+        push!(tab_elements, open_btn)
+
+        return DOM.div(tab_elements..., class = "file-tabs-container")
+    end
+
+    # Wrap file dialog in a popup that only shows when dialog should be shown
+    dialog_popup = PopUp(tabs.file_dialog; show = false)
+
+    # Connect the file dialog show_dialog observable to the popup
+    on(session, tabs.file_dialog.show_dialog) do show
+        dialog_popup.show[] = show
+    end
+
+    return Bonito.jsrender(session, DOM.div(dialog_popup, tabs_content))
 end
