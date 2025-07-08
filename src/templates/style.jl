@@ -490,9 +490,15 @@ Styles(
         "padding" => "0px",
         "margin" => "0px",
         "width" => "50vw",
+        "min-width" => editor_width,
         "height" => "90vh",
         "background-color" => "var(--bg-primary)",
         "color" => "var(--text-primary)"
+    ),
+    CSS(
+        ".file-editor .monaco-editor-div",
+        "width" => "100% !important",
+        "max-width" => "none !important"
     ),
     # Utility classes
     CSS(".flex-row", "display" => "flex", "flex-direction" => "row"),

@@ -89,6 +89,7 @@ function MonacoEditor(
         :scrollbar => Dict(:vertical => "hidden", :horizontal => "hidden", :verticalHasArrows => false),
         :overviewRulerBorder => false,
         :overviewRulerLanes => 0,
+        :automaticLayout => true,
         :renderLineHighlight => "none",
         :lineDecorationsWidth => 0,
     )
