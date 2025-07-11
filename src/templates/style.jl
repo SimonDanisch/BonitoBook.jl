@@ -80,7 +80,7 @@ Styles(
             "--border-secondary" => "rgba(255, 255, 255, 0.1)",
             "--shadow-soft" => "0 4px 8px rgba(255, 255, 255, 0.2)",
             "--shadow-button" => "0 2px 4px rgba(255, 255, 255, 0.2)",
-            "--shadow-inset" => "inset 2px 2px 5px rgba(255, 255, 255, 0.2)",
+            "--shadow-inset" => "inset -2px -2px 5px rgba(0, 0, 0, 0.3)",
             "--hover-bg" => "rgba(255, 255, 255, 0.1)",
             "--menu-hover-bg" => "rgba(255, 255, 255, 0.05)",
             "--accent-blue" => "#0366d6",
@@ -153,6 +153,7 @@ Styles(
     CSS(
         ".cell-editor-container",
         "width" => editor_width,
+        "min-width" => "400px",  # Don't squeeze too much
         "max-width" => "95vw",
         "position" => "relative",
         "background-color" => "var(--bg-primary)",
@@ -489,16 +490,26 @@ Styles(
         ".file-editor",
         "padding" => "0px",
         "margin" => "0px",
-        "width" => "50vw",
-        "min-width" => editor_width,
-        "height" => "90vh",
+        "width" => "100%",
+        "height" => "100%",
         "background-color" => "var(--bg-primary)",
         "color" => "var(--text-primary)"
     ),
     CSS(
+        ".sidebar-widget-content .file-editor",
+        "width" => "100%",
+        "height" => "calc(100vh - 20px)",
+        "min-width" => "unset",
+    ),
+    CSS(
         ".file-editor .monaco-editor-div",
         "width" => "100% !important",
-        "max-width" => "none !important"
+        "max-width" => "none !important",
+        "height" => "100% !important"
+    ),
+    CSS(
+        ".sidebar-widget-content .monaco-editor-div.hide-horizontal",
+        "display" => "block !important",
     ),
     # Utility classes
     CSS(".flex-row", "display" => "flex", "flex-direction" => "row"),
@@ -673,8 +684,7 @@ Styles(
     ),
     CSS(
         ".book-main-menu .file-tabs-container",
-        "flex" => "1",
-        "margin-left" => "20px",
+        "justify-content" => "center",
         "border-bottom" => "none" # Remove border from tabs in menu
     ),
     CSS(
@@ -689,27 +699,139 @@ Styles(
     ),
     CSS(
         ".book-cells-area",
-        "flex" => "1",
+        "flex" => "1 1 auto",
+        "min-width" => "0", # Allow shrinking
         "display" => "flex",
         "flex-direction" => "column",
         "align-items" => "center",
-        "overflow-y" => "auto", # Independent scrolling for book content
+        "overflow-y" => "auto",
         "overflow-x" => "hidden",
-        "padding-right" => "10px",
-        "padding-top" => "15px",
+        "padding" => "15px 10px",
     ),
     CSS(
         ".book-document",
         "display" => "flex",
         "flex-direction" => "column",
-        "align-items" => "center",
         "width" => "100%",
-        "height" => "100%",
+        "height" => "100vh",
         "overflow" => "hidden"
     ),
     CSS(
         ".book-wrapper",
         "overflow" => "hidden",
         "height" => "100vh"
+    ),
+    
+    # Sidebar styles
+    CSS(
+        ".sidebar-container",
+        "position" => "relative",
+        "height" => "100%",
+        "display" => "flex",
+        "flex-direction" => "row-reverse",  # Icon bar on the right
+        "background-color" => "var(--bg-primary)",
+        "border-left" => "1px solid var(--border-primary)",
+        "transition" => "width 0.3s ease",
+        "flex-shrink" => "0",
+    ),
+    CSS(
+        ".sidebar-container.collapsed",
+        "width" => "48px",
+    ),
+    CSS(
+        ".sidebar-container.expanded",
+        "width" => "calc(48px + var(--sidebar-width))",
+        "box-shadow" => "-4px 0 8px rgba(0, 0, 0, 0.1)",
+    ),
+    CSS(
+        ".sidebar-tabs",
+        "width" => "48px",
+        "background-color" => "var(--bg-primary)",
+        "border-right" => "1px solid var(--border-primary)",
+        "display" => "flex",
+        "flex-direction" => "column",
+        "align-items" => "center",
+        "padding-top" => "10px",
+        "gap" => "4px",
+        "flex-shrink" => "0",
+    ),
+    CSS(
+        ".sidebar-tab",
+        "position" => "relative",
+    ),
+    CSS(
+        ".sidebar-tab.active::before",
+        "content" => "''",
+        "position" => "absolute",
+        "left" => "0",
+        "top" => "50%",
+        "transform" => "translateY(-50%)",
+        "width" => "3px",
+        "height" => "18px",
+        "background-color" => "var(--accent-blue)",
+        "border-radius" => "0 3px 3px 0",
+    ),
+    CSS(
+        ".sidebar-toggle-button",
+        "width" => "36px",
+        "height" => "36px",
+        "border" => "none",
+        "background-color" => "transparent",
+        "color" => "var(--icon-color)",
+        "cursor" => "pointer",
+        "border-radius" => "6px",
+        "display" => "flex",
+        "align-items" => "center",
+        "justify-content" => "center",
+        "transition" => "all 0.2s ease",
+        "margin-top" => "auto",
+        "margin-bottom" => "10px",
+    ),
+    CSS(
+        ".sidebar-toggle-button:hover",
+        "background-color" => "var(--hover-bg)",
+        "color" => "var(--icon-hover-color)",
+    ),
+    CSS(
+        ".sidebar-toggle-button.hidden",
+        "display" => "none",
+    ),
+    CSS(
+        ".sidebar-content",
+        "flex" => "1",
+        "overflow-y" => "auto",
+        "overflow-x" => "hidden",
+        "padding" => "0",
+        "width" => "var(--sidebar-width)",
+        "background-color" => "var(--bg-primary)",
+        "position" => "relative",
+        "height" => "100vh",
+    ),
+    CSS(
+        ".sidebar-container.collapsed .sidebar-content",
+        "display" => "none",
+    ),
+    CSS(
+        ".sidebar-widget-content",
+        "width" => "100%",
+        "height" => "100%",
+    ),
+    CSS(
+        ".sidebar-widget-content.hide",
+        "display" => "none",
+    ),
+    CSS(
+        ".sidebar-widget-content.show",
+        "display" => "block",
+    ),
+    
+    # Adjust book content to account for sidebar
+    CSS(
+        ".book-content",
+        "display" => "flex",
+        "flex-direction" => "row",
+        "width" => "100%",
+        "height" => "100%",
+        "overflow" => "hidden",
     ),
 )

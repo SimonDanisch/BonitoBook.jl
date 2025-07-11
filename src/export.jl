@@ -85,11 +85,10 @@ function export_md(file::AbstractString, book::Book)
             show_editor = editor.show_editor[]
             show_logging = editor.show_logging[]
             show_output = editor.show_output[]
-            show_chat = cell_editor.show_chat[]
             if language == "markdown"
                 println(io, content)
             else
-                println(io, "```$language $(show_editor) $(show_logging) $(show_output) $(show_chat)")
+                println(io, "```$language $(show_editor) $(show_logging) $(show_output)")
                 println(io, content)
                 println(io, "```")
             end

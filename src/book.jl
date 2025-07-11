@@ -95,7 +95,7 @@ function Book(file; folder = nothing, runner = AsyncRunner())
     end
     cells = load_book(bookfile)
     editors = cells2editors(cells, runner)
-    style_editor = FileEditor("", nothing; editor_classes = ["styling file-editor"], show_editor = false)
+    style_editor = FileEditor("", nothing; editor_classes = ["styling file-editor"], show_editor = true)
     progress = Observable((false, 0.0))
     book = Book(bookfile, folder, editors, style_editor, runner, progress)
     export_md(joinpath(folder, "book.md"), book)
@@ -124,10 +124,9 @@ struct Cell
     show_editor::Bool
     show_logging::Bool
     show_output::Bool
-    show_chat::Bool
 end
 
-Cell(language, source) = Cell(language, source, nothing, false, false, true, false)
+Cell(language, source) = Cell(language, source, nothing, false, false, true)
 
 function trigger_js_download(session, file)
     return evaljs(
@@ -262,7 +261,6 @@ function new_cell_menu(session, book, editor_above_uuid, runner)
         new_cell = CellEditor("", "python", runner)
         insert_editor_below!(book, session, new_cell, editor_above_uuid)
     end
-    new_ai, click_ai = icon_button("sparkle-filled")
 
     on(click_jl) do click
         new_cell = CellEditor("", "julia", runner)
@@ -272,13 +270,9 @@ function new_cell_menu(session, book, editor_above_uuid, runner)
         new_cell = CellEditor("", "markdown", runner; show_editor = true, show_output = false)
         insert_editor_below!(book, session, new_cell, editor_above_uuid)
     end
-    on(click_ai) do click
-        new_cell = CellEditor("", "chatgpt", runner; show_chat = true, show_editor = false, show_output = false)
-        insert_editor_below!(book, session, new_cell, editor_above_uuid)
-    end
     plus, click_plus = icon_button("add")
     menu_div = DOM.div(
-        plus, new_jl, new_md, new_py, new_ai;
+        plus, new_jl, new_md, new_py;
         class = "saving small-menu-bar",
     )
     return DOM.div(Centered(menu_div); class = "new-cell-menu")
@@ -290,8 +284,10 @@ function setup_file_tabs(session, book)
 
     # Connect FileTabs to the style_editor
     on(session, file_tabs.current_file) do filepath
-        @show filepath
-        open_file!(book.style_editor, filepath)
+        # Only open file if it's different from current file to prevent circular updates
+        if !isempty(filepath) && filepath != book.style_editor.current_file[]
+            open_file!(book.style_editor, filepath)
+        end
     end
 
     return file_tabs
@@ -309,18 +305,10 @@ function setup_menu(book::Book)
     )
     popup = PopUp(popup_content; show = false)
     style_fe = book.style_editor
-    show_editor = Observable(false)
     style_path = joinpath(book.folder, "styles", "style.jl")
-    on(show_editor) do show
-        if show
-            open_file!(style_fe, style_path)
-        else
-            toggle!(style_fe.editor; editor=false)
-        end
-    end
-    style_fe_toggle = ToggleButton("paintcan", show_editor)
+    # Remove the toggle button from the menu since sidebar handles it
     menu = DOM.div(
-        icon("settings"), style_fe_toggle;
+        icon("settings");
         class = "settings small-menu-bar"
     )
     style_source = Observable(read(style_path, String))
@@ -332,13 +320,11 @@ function setup_menu(book::Book)
     end
     style_file_eval = map(style_source) do src
         try
-            @show src
             return include_string(BonitoBook, src)
         catch e
             return e
         end
     end
-    @show typeof(style_file_eval[])
     last_style = Ref{Styles}(style_file_eval[])
     last_source = Ref{String}(style_source[])
     should_popup = Ref(false)
@@ -398,7 +384,6 @@ function setup_completions(session, cell_module)
     """
 end
 function Bonito.jsrender(session::Session, book::Book)
-    println("JSrenderin'")
     runner = book.runner
     cells = map(book.cells) do editor
         add_cell_div = new_cell_menu(session, book, editor.uuid, runner)
@@ -423,8 +408,14 @@ function Bonito.jsrender(session::Session, book::Book)
 
     # Wrap cells in scrollable area
     cells_area = DOM.div(cell_obs; class = "book-cells-area")
+    # Create sidebar with FileEditor as a widget
+    style_editor.editor.show_editor[] = true
+    sidebar = Sidebar([
+        ("file-editor", style_editor, "File Editor", "file-code")
+    ]; width = "50vw")
 
-    content = DOM.div(cells_area, style_editor; class = "book-content")
+    # Create content area that includes both cells and sidebar
+    content = DOM.div(cells_area, sidebar; class = "book-content")
 
     document = DOM.div(menu, file_tabs, content; class = "book-document")
 

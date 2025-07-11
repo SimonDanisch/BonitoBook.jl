@@ -1,5 +1,3 @@
-import PromptingTools as PT
-
 const Monaco = ES6Module(joinpath(@__DIR__, "javascript", "Monaco.js"))
 
 # TODO, this better not be a global, but rather part of `Book`
@@ -327,30 +325,26 @@ end
 """
     CellEditor
 
-Interactive cell combining code editor and AI chat capabilities.
+Interactive cell for code editing and execution.
 
 # Fields
 - `language::String`: Programming language ("julia", "markdown", "python", etc.)
-- `chat::EvalEditor`: AI chat interface editor
 - `editor::EvalEditor`: Main code editor
 - `uuid::String`: Unique identifier for the cell
-- `show_chat::Observable{Bool}`: Whether to show chat interface
 - `delete_self::Observable{Bool}`: Signal for cell deletion
 """
 struct CellEditor
     language::String
-    chat::EvalEditor
     editor::EvalEditor
     uuid::String
-    show_chat::Observable{Bool}
     delete_self::Observable{Bool}
 end
 
 
 """
-    CellEditor(content, language, runner; show_editor=true, show_logging=true, show_output=true, show_chat=false)
+    CellEditor(content, language, runner; show_editor=true, show_logging=true, show_output=true)
 
-Create an interactive cell editor with code execution and AI chat capabilities.
+Create an interactive cell editor with code execution capabilities.
 
 # Arguments
 - `content`: Initial source code or content
@@ -359,12 +353,11 @@ Create an interactive cell editor with code execution and AI chat capabilities.
 - `show_editor`: Whether to show the code editor initially
 - `show_logging`: Whether to show execution logs initially
 - `show_output`: Whether to show execution output initially
-- `show_chat`: Whether to show AI chat interface initially
 
 # Returns
 Configured `CellEditor` instance ready for interactive use.
 """
-function CellEditor(content, language, runner; show_editor = true, show_logging = true, show_output = true, show_chat = false)
+function CellEditor(content, language, runner; show_editor = true, show_logging = true, show_output = true)
     runner = language == "markdown" ? MarkdownRunner() : runner
     uuid = string(UUIDs.uuid4())
 
@@ -379,32 +372,20 @@ function CellEditor(content, language, runner; show_editor = true, show_logging 
         # run immediately, since we only show output
         run!(jleditor)
     end
-    airunner = MLRunner(jleditor)
-    show_chat_obs = Observable(show_chat)
-    chat = EvalEditor(
-        "", airunner;
-        show_editor = show_chat, show_output = show_chat, show_logging = show_chat, language = "markdown",
-        lineNumbers = "off", editor_classes = ["chat"]
-    )
     for (key, obs) in (:editor => jleditor.show_editor, :logging => jleditor.show_logging, :output => jleditor.show_output)
         on(obs) do show
             toggle!(jleditor; (key => show,)...)
         end
     end
-    on(show_chat_obs) do show
-        toggle!(chat; editor = show, output = show, logging = show)
-    end
     return CellEditor(
-        language, chat, jleditor,
-        uuid, show_chat_obs, Observable(false)
+        language, jleditor,
+        uuid, Observable(false)
     )
 end
 
 function Bonito.jsrender(session::Session, editor::CellEditor)
     jleditor = editor.editor
-    chat = editor.chat
 
-    ai = ToggleButton("sparkle-filled", editor.show_chat)
     show_output = Observable(jleditor.show_output[])
     on(x -> toggle!(jleditor; output = !jleditor.show_output[]), show_output)
     out = ToggleButton("graph", show_output)
@@ -424,9 +405,9 @@ function Bonito.jsrender(session::Session, editor::CellEditor)
     hover_id = "$(editor.uuid)-hover"
     container_id = "$(editor.uuid)-container"
     card_content_id = "$(editor.uuid)-card-content"
-    any_loading = map(|, chat.loading, jleditor.loading)
+    any_loading = jleditor.loading
     hide_on_focus_obs = Observable(editor.language == "markdown")
-    any_visible = map(|, editor.chat.show_editor, jleditor.show_editor, jleditor.show_logging)
+    any_visible = map(|, jleditor.show_editor, jleditor.show_logging)
 
     editor.editor.js_init_func[] = js"""
         (editor) => {
@@ -441,7 +422,7 @@ function Bonito.jsrender(session::Session, editor::CellEditor)
             })
         }
     """
-    hover_buttons = DOM.div(ai, show_editor, show_logging, out, delete_editor; class = "hover-buttons", id = hover_id)
+    hover_buttons = DOM.div(show_editor, show_logging, out, delete_editor; class = "hover-buttons", id = hover_id)
 
     # Create small always-visible language indicator positioned in bottom right
     names = Dict(
@@ -455,7 +436,7 @@ function Bonito.jsrender(session::Session, editor::CellEditor)
     jleditor_div, logging_div, output_div = render_editor(jleditor)
     class = any_visible[] ? "show-vertical" : "hide-vertical"
     card_content = DOM.div(
-        chat, jleditor_div, logging_div, small_language_indicator;
+        jleditor_div, logging_div, small_language_indicator;
         class = "cell-editor $class", id = card_content_id, style = "position: relative;"
     )
     cell = DOM.div(hover_buttons, card_content, DOM.div(output_div, tabindex = 0), style = Styles("position" => "relative"))
@@ -503,7 +484,7 @@ function open_file!(editor::FileEditor, filepath::String)
         @info "Opening file in editor: $filepath"
         editor.current_file[] = filepath
         set_source!(editor.editor, read(filepath, String))
-        toggle!(editor; editor = true)
+        toggle!(editor.editor; editor = true)
     else
         @warn "Could not find file: $filepath"
     end

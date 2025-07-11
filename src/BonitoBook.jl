@@ -117,6 +117,7 @@ end
 include("redirect_io.jl")
 include("components.jl")
 include("editor.jl")
+include("sidebar.jl")
 include("book.jl")
 include("runners.jl")
 include("export.jl")
