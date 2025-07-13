@@ -382,16 +382,12 @@ function Bonito.jsrender(session::Session, dialog::OpenFileDialog)
         return DOM.div(list_items..., class = "file-dialog-list")
     end
 
-    # Create dialog content (no header needed in popup)
-
     # Handle input changes and enter key
     input_with_events = DOM.input(
         type = "text",
         placeholder = "Enter file path...",
         class = "file-dialog-input",
         value = dialog.current_path,
-        onclick = js"event => $(dialog.show_dialog).notify(true)",
-        onfocus = js"event => $(dialog.show_dialog).notify(true)",
         onkeydown = js"""event => {
             if (event.key === 'Enter') {
                 event.preventDefault();
@@ -414,29 +410,25 @@ function Bonito.jsrender(session::Session, dialog::OpenFileDialog)
         }""",
         oninput = js"event => $(dialog.current_path).notify(event.target.value)"
     )
-   # Create dropdown
-    dropdown_content = map(dialog.show_dialog) do show
-        if show
-            DOM.div(
-                file_list_content,
-                class = "file-dialog-dropdown",
-                onclick = js"""event => {
-                    event.stopPropagation();
-                }"""
-            )
-        else
-            DOM.div()  # Empty div when hidden
-        end
-    end
+
+    # Create the complete dialog content for popup usage
+    dialog_content = DOM.div(
+        DOM.div(
+            DOM.h3("Open File", style = "margin: 0;"),
+            DOM.button("×",
+                class = "file-dialog-close",
+                onclick = js"event => $(dialog.show_dialog).notify(false)"),
+            class = "file-dialog-header"
+        ),
+        input_with_events,
+        file_list_content,
+        class = "file-dialog-content"
+    )
 
     return Bonito.jsrender(
         session, DOM.div(
             FileDialogStyle,
-            DOM.div(
-                input_with_events,  # Always visible input
-                dropdown_content,   # Dropdown content below input
-                class = "file-dialog-container"
-            )
+            dialog_content
         )
     )
 end

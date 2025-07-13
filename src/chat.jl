@@ -17,6 +17,7 @@ A simple mock chat agent for testing purposes.
 struct MockChatAgent <: ChatAgent end
 
 function prompt(agent::MockChatAgent, question::String)
+    sleep(1)
     return "Mock response to: $question"
 end
 
@@ -106,7 +107,6 @@ function Bonito.jsrender(session::Session, chat::ChatComponent)
 
         for msg in messages
             msg_class = msg.is_user ? "chat-message chat-user" : "chat-message chat-agent"
-
             message_div = DOM.div(
                 DOM.div(msg.content, class = "chat-message-content"),
                 DOM.div(Dates.format(msg.timestamp, "HH:MM"), class = "chat-message-time"),
@@ -128,18 +128,7 @@ function Bonito.jsrender(session::Session, chat::ChatComponent)
         class = "chat-input",
         value = chat.input_text,
         disabled = chat.is_processing,
-        oninput = js"event => $(chat.input_text).notify(event.target.value)",
-        onkeydown = js"""event => {
-            if (event.key === 'Enter' && !event.shiftKey) {
-                event.preventDefault();
-                const message = event.target.value.trim();
-                if (message) {
-                    // Trigger send via Julia
-                    $(chat.input_text).notify(message);
-                    // We'll handle the actual send in Julia
-                }
-            }
-        }"""
+        oninput = js"event => $(chat.input_text).notify(event.target.value)"
     )
 
     # Send button with icon
@@ -197,18 +186,6 @@ function Bonito.jsrender(session::Session, chat::ChatComponent)
     scroll_script = js"""
         const container = $(chat_container).querySelector('.chat-messages-wrapper');
         const input = $(input_field);
-        
-        $(chat.messages).on(() => {
-            setTimeout(() => {
-                if (container) {
-                    container.scrollTop = container.scrollHeight;
-                }
-                // Refocus the input after message is sent
-                if (!$(chat.is_processing).value) {
-                    input.focus();
-                }
-            }, 50);
-        });
 
         // Enhanced enter key handling
         input.addEventListener('keydown', (event) => {
@@ -220,12 +197,25 @@ function Bonito.jsrender(session::Session, chat::ChatComponent)
                 }
             }
         });
-        
+
         // Also refocus when processing completes
         $(chat.is_processing).on((processing) => {
             if (!processing) {
-                setTimeout(() => input.focus(), 50);
+                setTimeout(() => {
+                    if (container) {
+                        container.scrollTop = container.scrollHeight;
+                    }
+                    // Refocus the input after message is sent
+                    if (!$(chat.is_processing).value) {
+                        input.focus();
+                    }
+                }, 50);
             }
+        });
+
+        // Update input value when Observable changes (for clearing after send)
+        $(chat.input_text).on((value) => {
+            input.value = value;
         });
     """
 
@@ -238,8 +228,7 @@ const ChatStyles = Styles(
         ".chat-container",
         "display" => "flex",
         "flex-direction" => "column",
-        "height" => "500px",
-        "max-height" => "80vh",
+        "height" => "600px",
         "background-color" => "var(--bg-primary)",
         "border" => "1px solid var(--border-primary)",
         "border-radius" => "10px",

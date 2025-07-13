@@ -278,19 +278,10 @@ function new_cell_menu(session, book, editor_above_uuid, runner)
     return DOM.div(Centered(menu_div); class = "new-cell-menu")
 end
 
-function setup_file_tabs(session, book)
-    # Create FileTabs component for the file editor
-    file_tabs = FileTabs([book.style_editor.current_file[]])
-
-    # Connect FileTabs to the style_editor
-    on(session, file_tabs.current_file) do filepath
-        # Only open file if it's different from current file to prevent circular updates
-        if !isempty(filepath) && filepath != book.style_editor.current_file[]
-            open_file!(book.style_editor, filepath)
-        end
-    end
-
-    return file_tabs
+function create_tabbed_editor(session, book)
+    # Create TabbedFileEditor with the style editor and initial file
+    tabbed_editor = TabbedFileEditor(book.style_editor, [book.style_editor.current_file[]])
+    return tabbed_editor
 end
 
 function setup_menu(book::Book)
@@ -399,7 +390,9 @@ function Bonito.jsrender(session::Session, book::Book)
     _setup_menu, style_editor, style_output = setup_menu(book)
     save = saving_menu(session, book)
     player = play_menu(book)
-    file_tabs = setup_file_tabs(session, book)
+    
+    # Create tabbed editor instead of separate file tabs
+    tabbed_editor = create_tabbed_editor(session, book)
 
     menu = DOM.div(save, player, _setup_menu; class = "book-main-menu")
 
@@ -411,17 +404,18 @@ function Bonito.jsrender(session::Session, book::Book)
     chat_agent = MockChatAgent()
     chat_component = ChatComponent(chat_agent)
 
-    # Create sidebar with FileEditor and Chat as widgets
+    # Create sidebar with TabbedFileEditor and Chat as widgets
     style_editor.editor.show_editor[] = true
     sidebar = Sidebar([
-        ("file-editor", style_editor, "File Editor", "file-code"),
+        ("file-editor", tabbed_editor, "File Editor", "file-code"),
         ("chat", chat_component, "AI Chat", "chat-sparkle")
     ]; width = "50vw")
 
     # Create content area that includes both cells and sidebar
     content = DOM.div(cells_area, sidebar; class = "book-content")
 
-    document = DOM.div(menu, file_tabs, content; class = "book-document")
+    # Remove file_tabs from document structure
+    document = DOM.div(menu, content; class = "book-document")
 
     completions = setup_completions(session, runner.mod)
 

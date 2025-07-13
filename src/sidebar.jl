@@ -12,8 +12,8 @@ Supports showing/hiding and switching between different widgets.
 """
 struct Sidebar
     widgets::Vector{Tuple{String, Any, String, String}}
-    current_widget::Bonito.Observable{String}
-    visible::Bonito.Observable{Bool}
+    current_widget::Observable{String}
+    visible::Observable{Bool}
     width::String
 end
 
@@ -36,8 +36,8 @@ sidebar = Sidebar([
 """
 function Sidebar(widgets::Vector{<:Tuple{String, Any, String, String}}; width = "400px")
     # Set first widget as current if any exist
-    current_widget = Bonito.Observable(isempty(widgets) ? "" : widgets[1][1])
-    visible = Bonito.Observable(false)
+    current_widget = Observable(isempty(widgets) ? "" : widgets[1][1])
+    visible = Observable(false)
 
     # Convert to the expected type
     typed_widgets = Vector{Tuple{String, Any, String, String}}(widgets)
@@ -106,30 +106,71 @@ function Bonito.jsrender(session::Bonito.Session, sidebar::Sidebar)
     # Vertical tab bar
     tab_bar = DOM.div(tabs...; class = "sidebar-tabs")
 
+    # Add resize handle
+    resize_handle = DOM.div(class = "sidebar-resize-handle")
+
     # Content area with all widgets (hidden by default)
     content_area = DOM.div(
+        resize_handle,
         widget_contents...;
         class = "sidebar-content"
     )
 
-    # Container with dynamic width based on visibility
-    container_class = map(sidebar.visible) do visible
-        return visible ? "sidebar-container expanded" : "sidebar-container collapsed"
+    # Content container that adapts to content height
+    content_container_class = map(sidebar.visible) do visible
+        return visible ? "sidebar-content-container expanded" : "sidebar-content-container collapsed"
     end
 
-    container = DOM.div(
-        tab_bar,
+    content_container = DOM.div(
         content_area;
-        class = container_class[],
-
+        class = content_container_class[]
     )
-    onjs(session, container_class, js"""(c_class) => {
-        const container = $(container);
+
+    onjs(session, content_container_class, js"""(c_class) => {
+        const container = $(content_container);
         container.className = c_class;
     }""")
+
+    # Main container that holds both tabs and content
+    main_container = DOM.div(
+        tab_bar,
+        content_container;
+        class = "sidebar-main-container"
+    )
+
+    # Add resize functionality
+    resize_script = js"""
+        const handle = $(resize_handle);
+        const contentContainer = $(content_container);
+        let isResizing = false;
+        let startX = 0;
+        let startWidth = 0;
+
+        handle.addEventListener('mousedown', (e) => {
+            isResizing = true;
+            startX = e.clientX;
+            const contentWidth = contentContainer.querySelector('.sidebar-content').offsetWidth;
+            startWidth = contentWidth;
+            document.body.style.cursor = 'ew-resize';
+            e.preventDefault();
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isResizing) return;
+
+            const dx = startX - e.clientX;
+            const newWidth = Math.max(300, Math.min(800, startWidth + dx));
+            document.documentElement.style.setProperty('--sidebar-width', newWidth + 'px');
+        });
+
+        document.addEventListener('mouseup', () => {
+            isResizing = false;
+            document.body.style.cursor = '';
+        });
+    """
 
     global_style = Styles(
         CSS(":root", "--sidebar-width" => sidebar.width)
     )
-    return Bonito.jsrender(session, DOM.div(global_style, container))
+    return Bonito.jsrender(session, DOM.div(global_style, main_container, resize_script))
 end

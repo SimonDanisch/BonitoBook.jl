@@ -653,7 +653,7 @@ Styles(
         "align-items" => "center",
         "justify-content" => "center",
         "transition" => "all 0.2s ease",
-        "z-index" => "2001",
+        "z-index" => "1500",
     ),
     CSS(
         ".popup-close-button:hover",
@@ -713,36 +713,55 @@ Styles(
 
     # Sidebar styles
     CSS(
-        ".sidebar-container",
-        "position" => "relative",
-        "height" => "100%",
+        ".sidebar-main-container",
+        "position" => "absolute",
+        "right" => "0",
+        "top" => "0",
+        "bottom" => "0",
         "display" => "flex",
         "flex-direction" => "row-reverse",  # Icon bar on the right
+        "align-items" => "center",
+        "z-index" => "100",
+        "pointer-events" => "none",
+    ),
+    CSS(
+        ".sidebar-content-container",
         "background-color" => "var(--bg-primary)",
         "border-left" => "1px solid var(--border-primary)",
-        "transition" => "width 0.3s ease",
-        "flex-shrink" => "0",
-    ),
-    CSS(
-        ".sidebar-container.collapsed",
-        "width" => "48px",
-    ),
-    CSS(
-        ".sidebar-container.expanded",
-        "width" => "calc(48px + var(--sidebar-width))",
+        "transition" => "width 0.3s ease, opacity 0.3s ease",
+        "border-radius" => "8px 0 0 8px",
         "box-shadow" => "-4px 0 8px rgba(0, 0, 0, 0.1)",
+        "overflow" => "hidden",
+        "height" => "fit-content",
+        "max-height" => "90vh",
+        "pointer-events" => "auto",
+    ),
+    CSS(
+        ".sidebar-content-container.collapsed",
+        "width" => "0",
+        "opacity" => "0",
+        "visibility" => "hidden",
+    ),
+    CSS(
+        ".sidebar-content-container.expanded",
+        "width" => "var(--sidebar-width)",
+        "opacity" => "1",
+        "visibility" => "visible",
     ),
     CSS(
         ".sidebar-tabs",
         "width" => "48px",
         "background-color" => "var(--bg-primary)",
-        "border-right" => "1px solid var(--border-primary)",
+        "border-left" => "1px solid var(--border-primary)",
+        "border-radius" => "0 8px 8px 0",
         "display" => "flex",
         "flex-direction" => "column",
         "align-items" => "center",
         "padding-top" => "10px",
         "gap" => "4px",
         "flex-shrink" => "0",
+        "height" => "fit-content",
+        "pointer-events" => "auto",
     ),
     CSS(
         ".sidebar-tab",
@@ -787,23 +806,18 @@ Styles(
     ),
     CSS(
         ".sidebar-content",
-        "flex" => "1",
         "overflow-y" => "auto",
         "overflow-x" => "hidden",
         "padding" => "0",
-        "width" => "var(--sidebar-width)",
+        "width" => "100%",
         "background-color" => "var(--bg-primary)",
         "position" => "relative",
-        "height" => "100vh",
-    ),
-    CSS(
-        ".sidebar-container.collapsed .sidebar-content",
-        "display" => "none",
+        "height" => "fit-content",
     ),
     CSS(
         ".sidebar-widget-content",
         "width" => "100%",
-        "height" => "100%",
+        "height" => "fit-content",
     ),
     CSS(
         ".sidebar-widget-content.hide",
@@ -814,6 +828,24 @@ Styles(
         "display" => "block",
     ),
 
+    # Resize handle
+    CSS(
+        ".sidebar-resize-handle",
+        "position" => "absolute",
+        "left" => "0",
+        "top" => "0",
+        "bottom" => "0",
+        "width" => "4px",
+        "cursor" => "ew-resize",
+        "background-color" => "transparent",
+        "z-index" => "10",
+    ),
+    CSS(
+        ".sidebar-resize-handle:hover",
+        "background-color" => "var(--accent-blue)",
+        "opacity" => "0.5",
+    ),
+
     # Adjust book content to account for sidebar
     CSS(
         ".book-content",
@@ -822,5 +854,6 @@ Styles(
         "width" => "100%",
         "height" => "100%",
         "overflow" => "hidden",
+        "position" => "relative",
     ),
 )
