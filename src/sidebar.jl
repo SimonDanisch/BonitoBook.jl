@@ -45,6 +45,37 @@ function Sidebar(widgets::Vector{<:Tuple{String, Any, String, String}}; width = 
     return Sidebar(typed_widgets, current_widget, visible, width)
 end
 
+
+function ToggleButton2(icon_name::String, is_active, on_click::Observable{Bool})
+    button_icon = icon(icon_name)
+    # Set initial class based on observable value
+    initial_class = is_active[] ? "small-button toggle-button active" : "small-button toggle-button"
+
+    butt = DOM.button(
+        button_icon;
+        class = initial_class,
+
+    )
+    jsss = js"""
+        const butt = $(butt);
+        butt.addEventListener('click',  event=> {
+            const button = event.target.closest('button');
+            $(on_click).notify(!$(on_click).value);
+        });
+
+        $(is_active).on(isactive => {
+            // Update button class based on new value
+            if (isactive) {
+                butt.classList.add('active');
+            } else {
+                butt.classList.remove('active');
+            }
+        });
+    """
+
+    return DOM.div(butt, jsss)
+end
+
 function Bonito.jsrender(session::Bonito.Session, sidebar::Sidebar)
     # Create vertical tabs
     tabs = []
@@ -52,33 +83,32 @@ function Bonito.jsrender(session::Bonito.Session, sidebar::Sidebar)
 
     for (widget_id, widget, label, icon_name) in sidebar.widgets
         # Update active state when sidebar state changes
-        tab_active = map(sidebar.current_widget, sidebar.visible) do current, visible
-            return current == widget_id && visible
+        tab_active = Observable(false; ignore_equal_values=true)
+        onany(sidebar.current_widget, sidebar.visible) do current, visible
+            tab_active[] = current == widget_id && visible
         end
-        # Create a simple button with icon instead of ToggleButton
-        toggle_widget = Observable(false)
-        tab_button = ToggleButton(icon_name, toggle_widget)
-        # on(tab_active) do active
-        #     toggle_widget[] = active
-        # end
-        on(toggle_widget) do widget_clicked
-            @show widget_clicked widget_id
-        end
-        # Add sidebar-specific classes and tooltip, and handle active state
-        Bonito.onjs(session, tab_active, js"""(is_active) => {
-            const btn = $(tab_button);
-            if (is_active) {
-                btn.classList.add('active');
-            } else {
-                btn.classList.remove('active');
-            }
-        }""")
+        on_toggle = Observable(false)
+        tab_button = ToggleButton2(icon_name, tab_active, on_toggle)
 
-        Bonito.on(session, toggle_widget) do clicked
-            if clicked
+        on(session, on_toggle) do clicked
+            toggled = !tab_active[]
+            if toggled && sidebar.current_widget[] != widget_id
                 sidebar.current_widget[] = widget_id
+            else sidebar.current_widget[] == widget_id
+                sidebar.visible[] = !sidebar.visible[]
             end
         end
+
+        if hasproperty(widget, :visible)
+            @show widget
+            on(session, widget.visible) do show
+                if show
+                    sidebar.current_widget[] = widget_id
+                    sidebar.visible[] = true
+                end
+            end
+        end
+
 
         push!(tabs, tab_button)
 

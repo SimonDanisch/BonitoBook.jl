@@ -282,7 +282,7 @@ function setup_menu(book::Book, tabbed_file_editor::TabbedFileEditor)
     style_setting_button, click = icon_button("paintcan")
     on(click) do _click
         # Toggle style editor visibility
-        open_file!(tabbed_file_editor.file_tabs, style_path)
+        open_file!(tabbed_file_editor, style_path)
     end
     # Settings menu button
     menu = DOM.div(
@@ -290,7 +290,7 @@ function setup_menu(book::Book, tabbed_file_editor::TabbedFileEditor)
         class = "settings small-menu-bar"
     )
 
-    return menu, style_eval, style_eval.current_output
+    return menu, style_eval, style_eval.last_valid_output
 end
 
 function setup_completions(session, cell_module)

@@ -15,21 +15,22 @@ Shows a popup on evaluation errors with options to keep or reset changes.
 - `file_watcher::Observable`: File modification watcher
 - `watcher_task::Ref{Task}`: Reference to the file watching task
 """
-struct EvalFileOnChange
+mutable struct EvalFileOnChange
     filepath::String
-    current_output::Observable
+    current_output::Observable{Any}
+    last_valid_output::Observable{Any}
     file_watcher::Observable
     watcher_task::Ref{Task}
     close::Threads.Atomic{Bool}
     function EvalFileOnChange(
-            filepath::String, current_output::Observable,
+            filepath::String, current_output::Observable, last_valid_output::Observable,
             file_watcher::Observable, watcher_task::Ref{Task},
             close::Threads.Atomic{Bool}
         )
-        obj = new(filepath, current_output, file_watcher, watcher_task, close)
-        # finalizer(obj) do obj
-        #     obj.close[] = true
-        # end
+        obj = new(filepath, current_output, last_valid_output, file_watcher, watcher_task, close)
+        finalizer(obj) do obj
+            obj.close[] = true
+        end
         return obj
     end
 end
@@ -46,13 +47,18 @@ Create a new EvalFileOnChange component for the given file.
 function EvalFileOnChange(filepath::String; module_context=Main)
     # Create file watcher observable
     file_watcher = Observable(mtime(filepath))
-    current_output = map(file_watcher) do _time
+    current_output = Observable{Any}(nothing)
+    last_valid_output = Observable{Any}(nothing)
+    on(file_watcher) do _time
         try
-            return Base._include(identity, module_context, filepath)
+            res = Base._include(identity, module_context, filepath)
+            current_output[] = res
+            last_valid_output[] = res
         catch e
-            return e
+            current_output[] = e
         end
     end
+    notify(file_watcher)
     # Create async task for file watching
     watcher_task = Ref{Task}()
     close = Threads.Atomic{Bool}(false)
@@ -76,7 +82,7 @@ function EvalFileOnChange(filepath::String; module_context=Main)
         end
     end
 
-    return EvalFileOnChange(filepath, current_output, file_watcher, watcher_task, close)
+    return EvalFileOnChange(filepath, current_output, last_valid_output, file_watcher, watcher_task, close)
 end
 
 

@@ -13,6 +13,7 @@ This combines the functionality of FileTabs and FileEditor into a single widget.
 struct TabbedFileEditor
     file_tabs::FileTabs
     file_editor::FileEditor
+    visible::Observable{Bool}
 end
 
 """
@@ -36,6 +37,9 @@ function TabbedFileEditor(files::Vector{String}; initial_file=nothing)
         editor_classes = ["styling file-editor"],
         show_editor = true
     )
+    on(file_editor.editor.source) do source
+        write(file_editor.current_file[], source)
+    end
 
     # Create file tabs
     file_tabs = FileTabs(files)
@@ -45,7 +49,13 @@ function TabbedFileEditor(files::Vector{String}; initial_file=nothing)
         open_file!(file_editor, filepath)
     end
 
-    return TabbedFileEditor(file_tabs, file_editor)
+    return TabbedFileEditor(file_tabs, file_editor, Observable(true))
+end
+
+function open_file!(editor::TabbedFileEditor, filepath::String)
+    editor.visible[] = true
+    # Set the current file in the tabs
+    open_file!(editor.file_tabs, filepath)
 end
 
 """
