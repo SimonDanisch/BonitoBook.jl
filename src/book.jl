@@ -274,15 +274,19 @@ function new_cell_menu(session, book, editor_above_uuid, runner)
     return DOM.div(Centered(menu_div); class = "new-cell-menu")
 end
 
-function setup_menu(book::Book)
+function setup_menu(book::Book, tabbed_file_editor::TabbedFileEditor)
     style_path = joinpath(book.folder, "styles", "style.jl")
 
     # Create EvalFileOnChange component for the style file
     style_eval = EvalFileOnChange(style_path; module_context = BonitoBook)
-
+    style_setting_button, click = icon_button("paintcan")
+    on(click) do _click
+        # Toggle style editor visibility
+        open_file!(tabbed_file_editor.file_tabs, style_path)
+    end
     # Settings menu button
     menu = DOM.div(
-        icon("settings");
+        icon("settings"), style_setting_button;
         class = "settings small-menu-bar"
     )
 
@@ -317,12 +321,13 @@ function Bonito.jsrender(session::Session, book::Book)
     for editor in book.cells
         setup_editor_callbacks!(session, book, editor)
     end
-    _setup_menu, style_eval, style_output = setup_menu(book)
+
+    # Create tabbed editor instead of separate file tabs
+    tabbed_editor = TabbedFileEditor(String[];)
+    _setup_menu, style_eval, style_output = setup_menu(book, tabbed_editor)
     save = saving_menu(session, book)
     player = play_menu(book)
 
-    # Create tabbed editor instead of separate file tabs
-    tabbed_editor = tabbed_editor = TabbedFileEditor(String[];)
 
     menu = DOM.div(save, player, _setup_menu; class = "book-main-menu")
 
