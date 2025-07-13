@@ -190,17 +190,6 @@ Styles(
         "color" => "var(--text-primary)"
     ),
 
-    # AI Chat
-    CSS(
-        ".chat.monaco-editor-div",
-        "border-radius" => border_radius_small,
-        "border" => "1px solid var(--border-secondary)",
-        "padding" => "5px",
-        "margin" => "5px",
-        "overflow" => "hidden",
-        "background-color" => "var(--bg-primary)",
-        "color" => "var(--text-primary)"
-    ),
 
     # Logging output
     CSS(
@@ -721,7 +710,7 @@ Styles(
         "overflow" => "hidden",
         "height" => "100vh"
     ),
-    
+
     # Sidebar styles
     CSS(
         ".sidebar-container",
@@ -824,7 +813,7 @@ Styles(
         ".sidebar-widget-content.show",
         "display" => "block",
     ),
-    
+
     # Adjust book content to account for sidebar
     CSS(
         ".book-content",

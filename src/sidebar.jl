@@ -49,36 +49,34 @@ function Bonito.jsrender(session::Bonito.Session, sidebar::Sidebar)
     # Create vertical tabs
     tabs = []
     widget_contents = []
+
     for (widget_id, widget, label, icon_name) in sidebar.widgets
-
         # Update active state when sidebar state changes
-        tab_active = map(sidebar.visible) do visible
-            return sidebar.current_widget[] == widget_id && visible
+        tab_active = map(sidebar.current_widget, sidebar.visible) do current, visible
+            return current == widget_id && visible
         end
-
-        # Use ToggleButton for the tab
-        tab_button = BonitoBook.ToggleButton(icon_name, tab_active)
-
-        # Add sidebar-specific classes and tooltip
-        Bonito.evaljs(session, js"""
+        # Create a simple button with icon instead of ToggleButton
+        toggle_widget = Observable(false)
+        tab_button = ToggleButton(icon_name, toggle_widget)
+        # on(tab_active) do active
+        #     toggle_widget[] = active
+        # end
+        on(toggle_widget) do widget_clicked
+            @show widget_clicked widget_id
+        end
+        # Add sidebar-specific classes and tooltip, and handle active state
+        Bonito.onjs(session, tab_active, js"""(is_active) => {
             const btn = $(tab_button);
-            btn.classList.add('sidebar-tab');
-            btn.title = $(label);
-        """)
+            if (is_active) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        }""")
 
-        # Handle clicks
-        Bonito.on(session, tab_active) do active
-            if active
-                # This tab was activated
-                if !sidebar.visible[]
-                    sidebar.visible[] = true
-                end
+        Bonito.on(session, toggle_widget) do clicked
+            if clicked
                 sidebar.current_widget[] = widget_id
-            else
-                # This tab was deactivated
-                if sidebar.current_widget[] == widget_id && sidebar.visible[]
-                    sidebar.visible[] = false
-                end
             end
         end
 
@@ -101,26 +99,12 @@ function Bonito.jsrender(session::Bonito.Session, sidebar::Sidebar)
         push!(widget_contents, widget_container)
     end
 
-    # Update toggle button class
-    toggle_class = map(sidebar.visible) do visible
-        return visible ? "sidebar-toggle-button hidden" : "sidebar-toggle-button"
+
+    on(sidebar.current_widget) do id
+        sidebar.visible[] = true
     end
-    toggle_button = DOM.button(
-        BonitoBook.icon("layout-sidebar-right");
-        class = toggle_class[],
-    )
-
-    onjs(session, toggle_class, js"""(c_class) => {
-        const container = $(toggle_button);
-        container.className = c_class;
-    }""")
-
     # Vertical tab bar
-    tab_bar = DOM.div(
-        tabs...,
-        toggle_button;
-        class = "sidebar-tabs"
-    )
+    tab_bar = DOM.div(tabs...; class = "sidebar-tabs")
 
     # Content area with all widgets (hidden by default)
     content_area = DOM.div(

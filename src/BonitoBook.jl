@@ -124,8 +124,9 @@ include("export.jl")
 include("import.jl")
 include("completions.jl")
 include("interact.jl")
+include("chat.jl")
 # include("ai.jl")
 
-export Book
+export Book, ChatComponent, ChatAgent, ChatMessage, MockChatAgent
 
 end

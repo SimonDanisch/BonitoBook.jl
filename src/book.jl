@@ -294,7 +294,6 @@ function setup_file_tabs(session, book)
 end
 
 function setup_menu(book::Book)
-    println("HELELLOOO?")
     buttons_enabled = Observable(true)
     keep = Button("keep"; enabled = buttons_enabled)
     reset = Button("reset"; enabled = buttons_enabled)
@@ -408,10 +407,15 @@ function Bonito.jsrender(session::Session, book::Book)
 
     # Wrap cells in scrollable area
     cells_area = DOM.div(cell_obs; class = "book-cells-area")
-    # Create sidebar with FileEditor as a widget
+    # Create chat component
+    chat_agent = MockChatAgent()
+    chat_component = ChatComponent(chat_agent)
+
+    # Create sidebar with FileEditor and Chat as widgets
     style_editor.editor.show_editor[] = true
     sidebar = Sidebar([
-        ("file-editor", style_editor, "File Editor", "file-code")
+        ("file-editor", style_editor, "File Editor", "file-code"),
+        ("chat", chat_component, "AI Chat", "chat-sparkle")
     ]; width = "50vw")
 
     # Create content area that includes both cells and sidebar
