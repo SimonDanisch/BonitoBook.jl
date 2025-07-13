@@ -1,13 +1,12 @@
 """
     Book
 
-Represents an interactive book with code cells, style editor, and execution runner.
+Represents an interactive book with code cells and execution runner.
 
 # Fields
 - `file::String`: Path to the main book file
 - `folder::String`: Directory containing the book files
 - `cells::Vector{CellEditor}`: Collection of editable code/markdown cells
-- `style_editor::FileEditor`: Editor for styling the book
 - `runner::Any`: Code execution runner (typically AsyncRunner)
 - `progress::Observable{Tuple{Bool, Float64}}`: Progress tracking for operations
 """
@@ -15,7 +14,6 @@ struct Book
     file::String
     folder::String
     cells::Vector{CellEditor}
-    style_editor::FileEditor
     runner::Any
     progress::Observable{Tuple{Bool, Float64}}
 end
@@ -95,9 +93,8 @@ function Book(file; folder = nothing, runner = AsyncRunner())
     end
     cells = load_book(bookfile)
     editors = cells2editors(cells, runner)
-    style_editor = FileEditor("", nothing; editor_classes = ["styling file-editor"], show_editor = true)
     progress = Observable((false, 0.0))
-    book = Book(bookfile, folder, editors, style_editor, runner, progress)
+    book = Book(bookfile, folder, editors, runner, progress)
     export_md(joinpath(folder, "book.md"), book)
     return book
 end
@@ -253,7 +250,6 @@ function insert_editor_below!(book, session, editor, editor_above_uuid)
 end
 
 function new_cell_menu(session, book, editor_above_uuid, runner)
-
     new_jl, click_jl = icon_button("julia-logo")
     new_md, click_md = icon_button("markdown")
     new_py, click_py = icon_button("python-logo")
@@ -278,85 +274,19 @@ function new_cell_menu(session, book, editor_above_uuid, runner)
     return DOM.div(Centered(menu_div); class = "new-cell-menu")
 end
 
-function create_tabbed_editor(session, book)
-    # Create TabbedFileEditor with the style editor and initial file
-    tabbed_editor = TabbedFileEditor(book.style_editor, [book.style_editor.current_file[]])
-    return tabbed_editor
-end
-
 function setup_menu(book::Book)
-    buttons_enabled = Observable(true)
-    keep = Button("keep"; enabled = buttons_enabled)
-    reset = Button("reset"; enabled = buttons_enabled)
-    styling_popup_text = Observable(DOM.h3("Do you want to keep the styling changes?"))
-    popup_content = DOM.div(
-        styling_popup_text,
-        DOM.div(keep, reset; class = "flex-row gap-10"),
-    )
-    popup = PopUp(popup_content; show = false)
-    style_fe = book.style_editor
     style_path = joinpath(book.folder, "styles", "style.jl")
-    # Remove the toggle button from the menu since sidebar handles it
+
+    # Create EvalFileOnChange component for the style file
+    style_eval = EvalFileOnChange(style_path; module_context = BonitoBook)
+
+    # Settings menu button
     menu = DOM.div(
         icon("settings");
         class = "settings small-menu-bar"
     )
-    style_source = Observable(read(style_path, String))
-    onany(style_fe.current_file, style_fe.editor.source) do file, src
-        if file == style_path && !isempty(src)
-            style_source[] = src
-        end
-        return
-    end
-    style_file_eval = map(style_source) do src
-        try
-            return include_string(BonitoBook, src)
-        catch e
-            return e
-        end
-    end
-    last_style = Ref{Styles}(style_file_eval[])
-    last_source = Ref{String}(style_source[])
-    should_popup = Ref(false)
-    book_style = Observable(style_file_eval[])
 
-    on(style_file_eval; update = true) do out
-        if should_popup[]
-            popup.show[] = true
-        end
-        if (out isa Styles)
-            if should_popup[]
-                buttons_enabled[] = true
-                styling_popup_text[] = DOM.div(
-                    DOM.h3("Want to keep changes?"),
-                )
-            end
-            book_style[] = out
-        else
-            buttons_enabled[] = false
-            styling_popup_text[] = DOM.div(
-                DOM.h3("Error in styling document!"),
-                out
-            )
-        end
-        if !should_popup[]
-            should_popup[] = true
-        end
-        return
-    end
-    on(keep.value) do click
-        popup.show[] = false
-        if buttons_enabled[]
-            last_style[] = book_style[]
-            last_source[] = style_source[]
-        end
-    end
-    on(reset.value) do click
-        popup.show[] = false
-        should_popup[] = false
-        style_fe.editor.set_source[] = last_source[]
-    end
-    return menu, style_fe, DOM.span(popup, book_style)
+    return menu, style_eval, style_eval.current_output
 end
 
 function setup_completions(session, cell_module)
@@ -387,12 +317,12 @@ function Bonito.jsrender(session::Session, book::Book)
     for editor in book.cells
         setup_editor_callbacks!(session, book, editor)
     end
-    _setup_menu, style_editor, style_output = setup_menu(book)
+    _setup_menu, style_eval, style_output = setup_menu(book)
     save = saving_menu(session, book)
     player = play_menu(book)
-    
+
     # Create tabbed editor instead of separate file tabs
-    tabbed_editor = create_tabbed_editor(session, book)
+    tabbed_editor = tabbed_editor = TabbedFileEditor(String[];)
 
     menu = DOM.div(save, player, _setup_menu; class = "book-main-menu")
 
@@ -405,7 +335,6 @@ function Bonito.jsrender(session::Session, book::Book)
     chat_component = ChatComponent(chat_agent)
 
     # Create sidebar with TabbedFileEditor and Chat as widgets
-    style_editor.editor.show_editor[] = true
     sidebar = Sidebar([
         ("file-editor", tabbed_editor, "File Editor", "file-code"),
         ("chat", chat_component, "AI Chat", "chat-sparkle")
@@ -424,5 +353,5 @@ function Bonito.jsrender(session::Session, book::Book)
         return
     end
 
-    return Bonito.jsrender(session, DOM.div(style_output, completions, register_book, document; class = "book-wrapper"))
+    return Bonito.jsrender(session, DOM.div(style_eval, style_output, completions, register_book, document; class = "book-wrapper"))
 end
