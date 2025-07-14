@@ -27,12 +27,12 @@ end
 Represents a single message in the chat.
 
 # Fields
-- `content::String`: The message content
+- `content::Union{String, Any}`: The message content (can be text or parsed Markdown)
 - `is_user::Bool`: Whether this message is from the user (true) or agent (false)
-- `timestamp::DateTime`: When the message was sent
+- `timestamp::Dates.DateTime`: When the message was sent
 """
 struct ChatMessage
-    content::String
+    content::Union{String, Any}
     is_user::Bool
     timestamp::DateTime
 end
@@ -47,25 +47,30 @@ A chat component for AI-powered conversations.
 - `messages::Observable{Vector{ChatMessage}}`: Observable list of chat messages
 - `input_text::Observable{String}`: Current input text
 - `is_processing::Observable{Bool}`: Whether the agent is currently processing
+- `book::Union{Any, Nothing}`: Optional book context for code execution via MCP server
 """
 struct ChatComponent
     chat_agent::ChatAgent
     messages::Observable{Vector{ChatMessage}}
     input_text::Observable{String}
     is_processing::Observable{Bool}
+    streaming_text::Observable{String}
+    book::Union{Any, Nothing}
 end
 
 """
-    ChatComponent(chat_agent::ChatAgent)
+    ChatComponent(chat_agent::ChatAgent; book=nothing)
 
 Create a new chat component with the given chat agent.
 """
-function ChatComponent(chat_agent::ChatAgent)
+function ChatComponent(chat_agent::ChatAgent; book=nothing)
     return ChatComponent(
         chat_agent,
         Observable(ChatMessage[]),
         Observable(""),
-        Observable(false)
+        Observable(false),
+        Observable(""),
+        book
     )
 end
 
@@ -75,7 +80,7 @@ function send_message!(chat::ChatComponent, message::String)
     end
 
     # Add user message
-    user_msg = ChatMessage(message, true, now())
+    user_msg = ChatMessage(message, true, Dates.now())
     push!(chat.messages[], user_msg)
     notify(chat.messages)
 
@@ -84,19 +89,64 @@ function send_message!(chat::ChatComponent, message::String)
 
     # Set processing state
     chat.is_processing[] = true
+    chat.streaming_text[] = ""
 
-    # Get response from agent (in a real implementation, this might be async)
+    # Get response from agent with streaming
     try
-        response = prompt(chat.chat_agent, message)
-        agent_msg = ChatMessage(response, false, now())
+        # Create a placeholder message for streaming
+        agent_msg = ChatMessage("", false, Dates.now())
         push!(chat.messages[], agent_msg)
         notify(chat.messages)
+        
+        # Set up streaming callback
+        accumulated_text = ""
+        final_content = nothing
+        stream_callback = function(content_chunk)
+            # Handle both text and Markdown content
+            if content_chunk isa String
+                # Text content - accumulate as string for streaming display
+                accumulated_text *= content_chunk
+                chat.streaming_text[] = accumulated_text
+                # Update message with text for now
+                chat.messages[][end] = ChatMessage(accumulated_text, false, agent_msg.timestamp)
+            else
+                # Final Markdown content - this is the processed result
+                final_content = content_chunk
+                chat.streaming_text[] = ""
+                # Update message with final Markdown content
+                chat.messages[][end] = ChatMessage(final_content, false, agent_msg.timestamp)
+            end
+            notify(chat.messages)
+        end
+        
+        # Call agent with streaming and MCP server URL if available
+        mcp_server_url = if chat.book !== nothing && hasfield(typeof(chat.book), :mcp_server) && chat.book.mcp_server !== nothing
+            get_server_url(chat.book.mcp_server)
+        else
+            nothing
+        end
+        
+        if hasmethod(prompt, (typeof(chat.chat_agent), String), (:stream_callback, :mcp_server_url))
+            prompt(chat.chat_agent, message; stream_callback=stream_callback, mcp_server_url=mcp_server_url)
+        elseif hasmethod(prompt, (typeof(chat.chat_agent), String), (:stream_callback,))
+            prompt(chat.chat_agent, message; stream_callback=stream_callback)
+        else
+            # Fallback for agents that don't support streaming
+            response = prompt(chat.chat_agent, message)
+            chat.messages[][end] = ChatMessage(response, false, agent_msg.timestamp)
+            notify(chat.messages)
+        end
     catch e
-        error_msg = ChatMessage("Error: $(string(e))", false, now())
-        push!(chat.messages[], error_msg)
+        error_msg = ChatMessage("Error: $(string(e))", false, Dates.now())
+        if isempty(chat.messages[]) 
+            push!(chat.messages[], error_msg)
+        else
+            chat.messages[][end] = error_msg
+        end
         notify(chat.messages)
     finally
         chat.is_processing[] = false
+        chat.streaming_text[] = ""
     end
 end
 
@@ -107,8 +157,18 @@ function Bonito.jsrender(session::Session, chat::ChatComponent)
 
         for msg in messages
             msg_class = msg.is_user ? "chat-message chat-user" : "chat-message chat-agent"
+            
+            # Handle different content types
+            content_display = if msg.content isa String
+                # Plain text content
+                DOM.div(msg.content, class = "chat-message-content")
+            else
+                # Markdown or other content - render as-is
+                DOM.div(msg.content, class = "chat-message-content")
+            end
+            
             message_div = DOM.div(
-                DOM.div(msg.content, class = "chat-message-content"),
+                content_display,
                 DOM.div(Dates.format(msg.timestamp, "HH:MM"), class = "chat-message-time"),
                 class = msg_class
             )

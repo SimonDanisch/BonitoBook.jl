@@ -209,7 +209,7 @@ Styles(
         "position" => "absolute",
         "right" => "-10px",
         "top" => "-23px",
-        "z-index" => 1000,
+        "z-index" => 50,
         "opacity" => 0.0,
         "pointer-events" => "auto",
     ),

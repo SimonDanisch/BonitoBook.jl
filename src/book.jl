@@ -9,13 +9,16 @@ Represents an interactive book with code cells and execution runner.
 - `cells::Vector{CellEditor}`: Collection of editable code/markdown cells
 - `runner::Any`: Code execution runner (typically AsyncRunner)
 - `progress::Observable{Tuple{Bool, Float64}}`: Progress tracking for operations
+- `mcp_server::Union{MCPJuliaServer, Nothing}`: MCP server for Claude Code integration
 """
-struct Book
+mutable struct Book
     file::String
     folder::String
     cells::Vector{CellEditor}
     runner::Any
     progress::Observable{Tuple{Bool, Float64}}
+    mcp_server::Any
+    session::Union{Session, Nothing}
 end
 
 function from_folder(folder)
@@ -94,7 +97,21 @@ function Book(file; folder = nothing, runner = AsyncRunner())
     cells = load_book(bookfile)
     editors = cells2editors(cells, runner)
     progress = Observable((false, 0.0))
-    book = Book(bookfile, folder, editors, runner, progress)
+
+    # Create and start MCP server for Claude Code integration
+    mcp_server = if !isa(runner, MarkdownRunner)
+        server = MCPJuliaServer(runner)
+        start_server!(server)
+        @info "MCP Julia Server started for Book at $(get_server_url(server))"
+        server
+    else
+        nothing
+    end
+
+    book = Book(bookfile, folder, editors, runner, progress, mcp_server, nothing)
+    if runner isa AsyncRunner
+        runner.mod.eval(runner.mod, :(macro Book(); $(book); end))
+    end
     export_md(joinpath(folder, "book.md"), book)
     return book
 end
@@ -196,15 +213,15 @@ end
 
 using Dates
 
-function setup_editor_callbacks!(session, book, editor)
-    on(session, editor.editor.source) do new_source
+function setup_editor_callbacks!(book, editor)
+    on(book.session, editor.editor.source) do new_source
         save(book)
     end
-    return on(session, editor.delete_self) do delete
+    return on(book.session, editor.delete_self) do delete
         if delete
             filter!(x -> x.uuid != editor.uuid, book.cells)
             evaljs(
-                session, js"""
+                book.session, js"""
                     $(Monaco).then(Monaco => {
                         Monaco.BOOK.remove_editor($(editor.uuid));
                     })
@@ -230,18 +247,34 @@ function WGLMakie.save(book::Book)
     return export_md(joinpath(book.folder, "book.md"), book)
 end
 
-function insert_editor_below!(book, session, editor, editor_above_uuid)
+function insert_editor_below!(book, editor, editor_above_uuid)
+    # Handle special case for inserting at beginning
+    if editor_above_uuid == "beginning"
+        pushfirst!(book.cells, editor)
+        add_cell_div = new_cell_menu(book, editor.uuid, book.runner)
+        setup_editor_callbacks!(book, editor)
+        elem = DOM.div(editor, add_cell_div)
+        return Bonito.dom_in_js(
+            book.session, elem, js"""(elem) => {
+                $(Monaco).then(Monaco => {
+                    Monaco.add_editor_at_beginning(elem, $(editor.uuid));
+                })
+            }"""
+        )
+    end
+
+    # Normal case - find the editor above and insert below it
     idx = findfirst(x -> x.uuid == editor_above_uuid, book.cells)
     if isnothing(idx)
         push!(book.cells, editor)
     else
         insert!(book.cells, idx + 1, editor)
     end
-    add_cell_div = new_cell_menu(session, book, editor.uuid, book.runner)
-    setup_editor_callbacks!(session, book, editor)
+    add_cell_div = new_cell_menu(book, editor.uuid, book.runner)
+    setup_editor_callbacks!(book, editor)
     elem = DOM.div(editor, add_cell_div)
     return Bonito.dom_in_js(
-        session, elem, js"""(elem) => {
+        book.session, elem, js"""(elem) => {
             $(Monaco).then(Monaco => {
                 Monaco.add_editor_below($editor_above_uuid, elem, $(editor.uuid));
             })
@@ -249,22 +282,108 @@ function insert_editor_below!(book, session, editor, editor_above_uuid)
     )
 end
 
-function new_cell_menu(session, book, editor_above_uuid, runner)
+"""
+    insert_cell_at!(book, source::String, lang::String, pos)
+
+Insert a new cell at the specified position in the book.
+
+# Arguments
+- `book::Book`: The book to modify
+- `source::String`: Initial source code or content for the cell
+- `lang::String`: Language for the cell ("julia", "markdown", "python", etc.)
+- `pos`: Position where to insert the cell
+  - `:begin` - Insert at the beginning of the book
+  - `:end` - Insert at the end of the book
+  - `Integer` - Insert at the specified index (1-based)
+
+# Returns
+The DOM element for the inserted cell.
+
+# Examples
+```julia
+# Add Julia cell at beginning
+insert_cell_at!(book, "println(\"Hello\")", "julia", :begin)
+
+# Add Markdown cell at end
+insert_cell_at!(book, "# My Title", "markdown", :end)
+
+# Add cell at specific position
+insert_cell_at!(book, "x = 42", "julia", 3)
+```
+"""
+function insert_cell_at!(book, source::String, lang::String, pos)
+    # Create cell editor with appropriate settings
+    editor = if lang == "markdown"
+        CellEditor(source, lang, book.runner; show_editor=true, show_output=false)
+    else
+        CellEditor(source, lang, book.runner)
+    end
+
+    # Handle different position types by finding the editor above
+    if pos == :begin
+        if isempty(book.cells)
+            # If no cells exist, add directly and handle manually
+            push!(book.cells, editor)
+            add_cell_div = new_cell_menu(book, editor.uuid, book.runner)
+            setup_editor_callbacks!(book, editor)
+            elem = DOM.div(editor, add_cell_div)
+            return Bonito.dom_in_js(
+                book.session, elem, js"""(elem) => {
+                    $(Monaco).then(Monaco => {
+                        Monaco.add_editor_at_beginning(elem, $(editor.uuid));
+                    })
+                }"""
+            )
+        else
+            # Insert at beginning by using insert_editor_below! with a special "beginning" UUID
+            return insert_editor_below!(book, editor, "beginning")
+        end
+    elseif pos == :end
+        if isempty(book.cells)
+            # If no cells exist, treat as beginning
+            return insert_cell_at!(book, source, lang, :begin)
+        else
+            # Insert at end by using the last cell as reference
+            last_editor_uuid = book.cells[end].uuid
+            return insert_editor_below!(book, editor, last_editor_uuid)
+        end
+    elseif pos isa Integer
+        if pos < 1 || pos > length(book.cells) + 1
+            error("Position $pos is out of bounds. Must be between 1 and $(length(book.cells) + 1)")
+        end
+
+        if pos == 1
+            # Insert at beginning
+            return insert_cell_at!(book, source, lang, :begin)
+        elseif pos == length(book.cells) + 1
+            # Insert at end
+            return insert_cell_at!(book, source, lang, :end)
+        else
+            # Insert at specific position by using the editor above as reference
+            editor_above_uuid = book.cells[pos - 1].uuid
+            return insert_editor_below!(book, editor, editor_above_uuid)
+        end
+    else
+        error("Invalid position $pos. Must be :begin, :end, or an integer")
+    end
+end
+
+function new_cell_menu(book, editor_above_uuid, runner)
     new_jl, click_jl = icon_button("julia-logo")
     new_md, click_md = icon_button("markdown")
     new_py, click_py = icon_button("python-logo")
     on(click_py) do click
         new_cell = CellEditor("", "python", runner)
-        insert_editor_below!(book, session, new_cell, editor_above_uuid)
+        insert_editor_below!(book, new_cell, editor_above_uuid)
     end
 
     on(click_jl) do click
         new_cell = CellEditor("", "julia", runner)
-        insert_editor_below!(book, session, new_cell, editor_above_uuid)
+        insert_editor_below!(book, new_cell, editor_above_uuid)
     end
     on(click_md) do click
         new_cell = CellEditor("", "markdown", runner; show_editor = true, show_output = false)
-        insert_editor_below!(book, session, new_cell, editor_above_uuid)
+        insert_editor_below!(book, new_cell, editor_above_uuid)
     end
     plus, click_plus = icon_button("add")
     menu_div = DOM.div(
@@ -272,6 +391,18 @@ function new_cell_menu(session, book, editor_above_uuid, runner)
         class = "saving small-menu-bar",
     )
     return DOM.div(Centered(menu_div); class = "new-cell-menu")
+end
+
+"""
+    create_chat_agent()
+
+Create the appropriate chat agent based on environment configuration.
+If ANTHROPIC_API_KEY is set, creates a ClaudeAgent, otherwise falls back to MockChatAgent.
+"""
+function create_chat_agent()
+    # Use Claude agent with local CLI (no API key needed)
+    @info "Using ClaudeAgent with local CLI, tools enabled: true"
+    return ClaudeAgent(; use_tools = true)
 end
 
 function setup_menu(book::Book, tabbed_file_editor::TabbedFileEditor)
@@ -308,9 +439,10 @@ function setup_completions(session, cell_module)
     """
 end
 function Bonito.jsrender(session::Session, book::Book)
+    book.session = session
     runner = book.runner
     cells = map(book.cells) do editor
-        add_cell_div = new_cell_menu(session, book, editor.uuid, runner)
+        add_cell_div = new_cell_menu(book, editor.uuid, runner)
         DOM.div(editor, add_cell_div)
     end
     register_book = js"""
@@ -319,7 +451,7 @@ function Bonito.jsrender(session::Session, book::Book)
         })
     """
     for editor in book.cells
-        setup_editor_callbacks!(session, book, editor)
+        setup_editor_callbacks!(book, editor)
     end
 
     # Create tabbed editor instead of separate file tabs
@@ -335,9 +467,9 @@ function Bonito.jsrender(session::Session, book::Book)
 
     # Wrap cells in scrollable area
     cells_area = DOM.div(cell_obs; class = "book-cells-area")
-    # Create chat component
-    chat_agent = MockChatAgent()
-    chat_component = ChatComponent(chat_agent)
+    # Create chat component with appropriate agent
+    chat_agent = create_chat_agent()
+    chat_component = ChatComponent(chat_agent; book=book)
 
     # Create sidebar with TabbedFileEditor and Chat as widgets
     sidebar = Sidebar([
@@ -355,6 +487,7 @@ function Bonito.jsrender(session::Session, book::Book)
 
     on(session.on_close) do close
         runner.open[] = false
+        stop_server!(book.mcp_server)
         return
     end
 

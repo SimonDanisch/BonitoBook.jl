@@ -138,7 +138,7 @@ const ANSI_CSS = Asset(joinpath(dirname(pathof(ANSIColoredPrinters)), "..", "doc
 struct RunnerTask
     source::String
     result::Observable
-    editor::EvalEditor
+    editor::Union{Nothing, EvalEditor}
     language::String
 end
 
@@ -261,9 +261,13 @@ function run!(mod::Module, python_runner::PythonRunner, task::RunnerTask)
     result = task.result
     source = task.source
     language = task.language
-    editor.loading[] = true
-    editor.show_logging[] = true
-    editor.logging_html[] = ""
+    
+    # Handle optional editor
+    if editor !== nothing
+        editor.loading[] = true
+        editor.show_logging[] = true
+        editor.logging_html[] = ""
+    end
     try
         if language == "python"
             # Execute Python code
@@ -290,9 +294,11 @@ function run!(mod::Module, python_runner::PythonRunner, task::RunnerTask)
     catch e
         result[] = Bonito.HTTPServer.err_to_html(e, Base.catch_backtrace())
     finally
-        editor.loading[] = false
-        Timer(2.5) do t
-            editor.show_logging[] = false
+        if editor !== nothing
+            editor.loading[] = false
+            Timer(2.5) do t
+                editor.show_logging[] = false
+            end
         end
     end
     return

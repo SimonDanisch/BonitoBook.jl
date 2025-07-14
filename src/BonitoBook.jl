@@ -7,6 +7,9 @@ using Pkg
 using ANSIColoredPrinters
 using Logging
 using WGLMakie
+using Markdown
+using Bonito.HTTP
+using JSON3
 
 """
     assets(paths...)
@@ -127,8 +130,10 @@ include("import.jl")
 include("completions.jl")
 include("interact.jl")
 include("chat.jl")
+include("claude_agent.jl")
+include("mcp_julia_server.jl")
 # include("ai.jl")
 
-export Book, ChatComponent, ChatAgent, ChatMessage, MockChatAgent
+export Book, ChatComponent, ChatAgent, ChatMessage, MockChatAgent, ClaudeAgent, MCPJuliaServer
 
 end
