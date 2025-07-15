@@ -46,6 +46,33 @@ export class MonacoEditor {
             div._editor_instance = this.editor;
             this.set_theme(this.theme);
             this.initialized = true;
+
+            // Prevent scroll events from being captured by the editor
+            // This allows page scrolling to work when mouse is over the editor
+            const editorDomNode = editor.getDomNode();
+            if (editorDomNode) {
+                editorDomNode.addEventListener('wheel', (e) => {
+                    // Prevent Monaco from handling the wheel event
+                    e.stopPropagation();
+                    e.preventDefault();
+
+                    // Find the scrollable parent (could be book-cells-area or window)
+                    const scrollParent = document.querySelector(".book-cells-area");
+                    
+                    if (scrollParent) {
+                        // Use scrollBy for smoother scrolling with proper delta handling
+                        scrollParent.scrollBy({
+                            top: e.deltaY,
+                            left: e.deltaX,
+                            behavior: 'auto' // Use 'auto' for immediate scrolling like native
+                        });
+                    } else {
+                        // Fallback to window scrolling
+                        window.scrollBy(e.deltaX, e.deltaY);
+                    }
+                }, { passive: false });
+            }
+
             this.resolve_setup(editor);
         });
     }

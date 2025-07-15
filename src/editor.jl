@@ -90,6 +90,11 @@ function MonacoEditor(
         :automaticLayout => true,
         :renderLineHighlight => "none",
         :lineDecorationsWidth => 0,
+        :disableLayerHinting => true,
+        :scrollBeyondLastColumn => 0,
+        :hideCursorInOverviewRuler => true,
+        :mouseWheelScrollSensitivity => 0,
+        :fastScrollSensitivity => 0,
     )
     if js_init_func === nothing
         js_init_func = js"() => {}"

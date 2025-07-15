@@ -490,6 +490,15 @@ function Bonito.jsrender(session::Session, book::Book)
         stop_server!(book.mcp_server)
         return
     end
+    codicon = Styles(
+        CSS(
+            "@font-face",
+            "font-family" => "codicon",
+            "src" => assets("codicon.ttf"),
+            "font-weight" => "normal",
+            "font-style" => "normal"
+        )
+    )
 
-    return Bonito.jsrender(session, DOM.div(style_eval, style_output, completions, register_book, document; class = "book-wrapper"))
+    return Bonito.jsrender(session, DOM.div(codicon, style_eval, style_output, completions, register_book, document; class = "book-wrapper"))
 end

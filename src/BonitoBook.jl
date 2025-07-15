@@ -134,6 +134,6 @@ include("claude_agent.jl")
 include("mcp_julia_server.jl")
 # include("ai.jl")
 
-export Book, ChatComponent, ChatAgent, ChatMessage, MockChatAgent, ClaudeAgent, MCPJuliaServer
+export Book, ChatComponent, ChatAgent, ChatMessage, MockChatAgent, ClaudeAgent, MCPJuliaServer, Collapsible
 
 end

@@ -42,6 +42,25 @@ class MonacoEditor {
             div._editor_instance = this.editor;
             this.set_theme(this.theme);
             this.initialized = true;
+            const editorDomNode = editor.getDomNode();
+            if (editorDomNode) {
+                editorDomNode.addEventListener('wheel', (e)=>{
+                    e.stopPropagation();
+                    e.preventDefault();
+                    const scrollParent = document.querySelector(".book-cells-area");
+                    if (scrollParent) {
+                        scrollParent.scrollBy({
+                            top: e.deltaY,
+                            left: e.deltaX,
+                            behavior: 'auto'
+                        });
+                    } else {
+                        window.scrollBy(e.deltaX, e.deltaY);
+                    }
+                }, {
+                    passive: false
+                });
+            }
             this.resolve_setup(editor);
         });
     }

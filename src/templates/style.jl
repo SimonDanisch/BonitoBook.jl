@@ -480,22 +480,12 @@ Styles(
         "padding" => "0px",
         "margin" => "0px",
         "width" => "100%",
-        "height" => "100%",
+        "min-width" => editor_width,
+        "height" => "calc(100vh - 20px)",
         "background-color" => "var(--bg-primary)",
         "color" => "var(--text-primary)"
     ),
-    CSS(
-        ".sidebar-widget-content .file-editor",
-        "width" => "100%",
-        "height" => "calc(100vh - 20px)",
-        "min-width" => "unset",
-    ),
-    CSS(
-        ".file-editor .monaco-editor-div",
-        "width" => "100% !important",
-        "max-width" => "none !important",
-        "height" => "100% !important"
-    ),
+
     CSS(
         ".sidebar-widget-content .monaco-editor-div.hide-horizontal",
         "display" => "block !important",
@@ -745,7 +735,6 @@ Styles(
     ),
     CSS(
         ".sidebar-content-container.expanded",
-        "width" => "var(--sidebar-width)",
         "opacity" => "1",
         "visibility" => "visible",
     ),

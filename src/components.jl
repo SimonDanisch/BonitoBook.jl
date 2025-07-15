@@ -5,7 +5,7 @@ function SmallButton(icon_name::String; class = "", kw...)
     button_dom = DOM.button(
         ic;
         onclick = js"event=> $(value).notify(true);",
-        class = class,
+        class = "small-button $(class)",
         kw...,
     )
     return button_dom, value
@@ -607,4 +607,75 @@ function Bonito.jsrender(session::Session, tabs::FileTabs)
     end
 
     return Bonito.jsrender(session, DOM.div(dialog_popup, tabs_content))
+end
+
+"""
+    Collapsible
+
+A collapsible widget that can be expanded/collapsed to show/hide content using pure CSS and JavaScript.
+
+# Fields
+- `title::String`: The title shown in the collapsed state
+- `content::Any`: The content to show when expanded
+- `expanded::Bool`: Whether the widget starts expanded (default: false)
+"""
+struct Collapsible
+    title::String
+    content::Any
+    expanded::Bool
+end
+
+"""
+    Collapsible(title::String, content; expanded=false)
+
+Create a collapsible widget with the given title and content.
+
+# Arguments
+- `title`: Title shown in the collapsed state
+- `content`: Content to display when expanded
+- `expanded`: Whether the widget starts expanded (default: false)
+
+# Returns
+`Collapsible` instance.
+"""
+function Collapsible(title::String, content; expanded::Bool = false)
+    return Collapsible(title, content, expanded)
+end
+
+function Bonito.jsrender(session::Session, collapsible::Collapsible)
+    # Create unique ID for this collapsible instance
+    widget_id = "collapsible-$(hash(collapsible.title * string(collapsible.content)))"
+
+    # Create the header with toggle functionality
+    header = DOM.div(
+        DOM.span(collapsible.expanded ? "▼" : "▶", class = "collapsible-toggle"),
+        DOM.span(" $(collapsible.title)", style = "margin-left: 5px; color: var(--text-secondary); font-size: 0.9em;"),
+        class = "collapsible-header",
+        style = "cursor: pointer; padding: 2px 4px; user-select: none; display: flex; align-items: center;",
+    )
+
+    # Create content container
+    content_container = DOM.div(
+        collapsible.content,
+        class = "collapsible-content",
+        style = "margin-top: 4px; padding-left: 16px; display: $(collapsible.expanded ? "block" : "none");"
+    )
+
+    widget = DOM.div(
+        header,
+        content_container,
+        class = "collapsible-widget",
+        id = widget_id
+    )
+    jss = js"""
+        const header = $(header);
+        const content = $(content_container);
+        const toggle = header.querySelector(".collapsible-toggle")
+        header.addEventListener("click", () => {
+            const is_expanded = content.style.display === "block";
+            content.style.display = is_expanded ? "none" : "block";
+            toggle.textContent = is_expanded ? "▶" : "▼";
+        });
+    """
+    return Bonito.jsrender(session, DOM.div(widget, jss))
 end

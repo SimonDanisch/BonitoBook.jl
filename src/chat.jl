@@ -9,17 +9,6 @@ Implement `prompt(agent::YourChatAgent, question::String)` to create a custom ch
 """
 abstract type ChatAgent end
 
-"""
-    MockChatAgent
-
-A simple mock chat agent for testing purposes.
-"""
-struct MockChatAgent <: ChatAgent end
-
-function prompt(agent::MockChatAgent, question::String)
-    sleep(1)
-    return "Mock response to: $question"
-end
 
 """
     ChatMessage
@@ -32,7 +21,7 @@ Represents a single message in the chat.
 - `timestamp::Dates.DateTime`: When the message was sent
 """
 struct ChatMessage
-    content::Union{String, Any}
+    content::Any
     is_user::Bool
     timestamp::DateTime
 end
@@ -54,7 +43,6 @@ struct ChatComponent
     messages::Observable{Vector{ChatMessage}}
     input_text::Observable{String}
     is_processing::Observable{Bool}
-    streaming_text::Observable{String}
     book::Union{Any, Nothing}
 end
 
@@ -69,137 +57,69 @@ function ChatComponent(chat_agent::ChatAgent; book=nothing)
         Observable(ChatMessage[]),
         Observable(""),
         Observable(false),
-        Observable(""),
         book
     )
 end
+
 
 function send_message!(chat::ChatComponent, message::String)
     if isempty(strip(message)) || chat.is_processing[]
         return
     end
-
     # Add user message
     user_msg = ChatMessage(message, true, Dates.now())
     push!(chat.messages[], user_msg)
     notify(chat.messages)
-
-    # Clear input
-    chat.input_text[] = ""
-
     # Set processing state
     chat.is_processing[] = true
-    chat.streaming_text[] = ""
-
-    # Get response from agent with streaming
-    try
-        # Create a placeholder message for streaming
-        agent_msg = ChatMessage("", false, Dates.now())
-        push!(chat.messages[], agent_msg)
-        notify(chat.messages)
-        
-        # Set up streaming callback
-        accumulated_text = ""
-        final_content = nothing
-        stream_callback = function(content_chunk)
-            # Handle both text and Markdown content
-            if content_chunk isa String
-                # Text content - accumulate as string for streaming display
-                accumulated_text *= content_chunk
-                chat.streaming_text[] = accumulated_text
-                # Update message with text for now
-                chat.messages[][end] = ChatMessage(accumulated_text, false, agent_msg.timestamp)
-            else
-                # Final Markdown content - this is the processed result
-                final_content = content_chunk
-                chat.streaming_text[] = ""
-                # Update message with final Markdown content
-                chat.messages[][end] = ChatMessage(final_content, false, agent_msg.timestamp)
+    agent_msg = try
+        response_channel = prompt(chat.chat_agent, message)
+        dom = Observable(DOM.div())
+        Threads.@spawn begin
+            for msg in response_channel
+                push!(Bonito.Hyperscript.children(dom[]), msg)
+                notify(dom)
             end
-            notify(chat.messages)
+            chat.is_processing[] = false
         end
-        
-        # Call agent with streaming and MCP server URL if available
-        mcp_server_url = if chat.book !== nothing && hasfield(typeof(chat.book), :mcp_server) && chat.book.mcp_server !== nothing
-            get_server_url(chat.book.mcp_server)
-        else
-            nothing
-        end
-        
-        if hasmethod(prompt, (typeof(chat.chat_agent), String), (:stream_callback, :mcp_server_url))
-            prompt(chat.chat_agent, message; stream_callback=stream_callback, mcp_server_url=mcp_server_url)
-        elseif hasmethod(prompt, (typeof(chat.chat_agent), String), (:stream_callback,))
-            prompt(chat.chat_agent, message; stream_callback=stream_callback)
-        else
-            # Fallback for agents that don't support streaming
-            response = prompt(chat.chat_agent, message)
-            chat.messages[][end] = ChatMessage(response, false, agent_msg.timestamp)
-            notify(chat.messages)
-        end
+        ChatMessage(dom, false, Dates.now())
     catch e
-        error_msg = ChatMessage("Error: $(string(e))", false, Dates.now())
-        if isempty(chat.messages[]) 
-            push!(chat.messages[], error_msg)
-        else
-            chat.messages[][end] = error_msg
-        end
-        notify(chat.messages)
+        ChatMessage(e, false, Dates.now())
     finally
-        chat.is_processing[] = false
-        chat.streaming_text[] = ""
     end
+    push!(chat.messages[], agent_msg)
+    notify(chat.messages)
+end
+
+function Bonito.jsrender(session::Session, message::ChatMessage)
+    # Render a single chat message
+    user = message.is_user ? "user" : "agent"
+    content_display = DOM.div(message.content, class = "chat-message-content")
+    return Bonito.jsrender(session, DOM.div(
+        content_display,
+        DOM.div(Dates.format(message.timestamp, "HH:MM"), class = "chat-message-time"),
+        class = "chat-message chat-$user"
+    ))
 end
 
 function Bonito.jsrender(session::Session, chat::ChatComponent)
     # Create the messages display
     messages_display = map(chat.messages) do messages
-        message_elements = []
-
-        for msg in messages
-            msg_class = msg.is_user ? "chat-message chat-user" : "chat-message chat-agent"
-            
-            # Handle different content types
-            content_display = if msg.content isa String
-                # Plain text content
-                DOM.div(msg.content, class = "chat-message-content")
-            else
-                # Markdown or other content - render as-is
-                DOM.div(msg.content, class = "chat-message-content")
-            end
-            
-            message_div = DOM.div(
-                content_display,
-                DOM.div(Dates.format(msg.timestamp, "HH:MM"), class = "chat-message-time"),
-                class = msg_class
-            )
-            push!(message_elements, message_div)
-        end
-
-        return DOM.div(
-            message_elements...,
-            class = "chat-messages-container"
-        )
+        return DOM.div(messages...; class = "chat-messages-container")
     end
 
     # Create the input area
-    input_field = DOM.input(
-        type = "text",
-        placeholder = "Type your message...",
+    input_field = DOM.textarea(
+        placeholder = "Type your message... (Press Enter to send, Shift+Enter for new line)",
         class = "chat-input",
-        value = chat.input_text,
+        value = chat.input_text[],
         disabled = chat.is_processing,
-        oninput = js"event => $(chat.input_text).notify(event.target.value)"
+        rows = "1",
+        style = "resize: none; overflow-y: hidden; min-height: 40px;"
     )
 
     # Send button with icon
-    send_clicked = Observable(false)
-    send_icon = BonitoBook.icon("send")
-    send_button = DOM.button(
-        send_icon;
-        onclick = js"event=> $(send_clicked).notify(true);",
-        class = "small-button",
-        disabled = chat.is_processing
-    )
+    send_button, send_clicked = SmallButton("send"; disabled = chat.is_processing)
 
     # Handle send button click
     on(send_clicked) do _
@@ -211,10 +131,7 @@ function Bonito.jsrender(session::Session, chat::ChatComponent)
     # Handle enter key send
     on(chat.input_text) do text
         # Check if this is a send trigger (we'll use a special marker)
-        if endswith(text, "\n<send>")
-            actual_text = replace(text, "\n<send>" => "")
-            send_message!(chat, actual_text)
-        end
+        send_message!(chat, text)
     end
 
     # Processing indicator
@@ -247,13 +164,24 @@ function Bonito.jsrender(session::Session, chat::ChatComponent)
         const container = $(chat_container).querySelector('.chat-messages-wrapper');
         const input = $(input_field);
 
-        // Enhanced enter key handling
+        // Auto-resize textarea
+        function resizeTextarea() {
+            input.style.height = 'auto';
+            input.style.height = Math.min(input.scrollHeight, 120) + 'px';
+        }
+        
+        input.addEventListener('input', resizeTextarea);
+        
+        // Enhanced enter key handling for multiline
         input.addEventListener('keydown', (event) => {
             if (event.key === 'Enter' && !event.shiftKey) {
                 event.preventDefault();
                 const message = input.value.trim();
                 if (message && !$(chat.is_processing).value) {
-                    $(chat.input_text).notify(message + '\n<send>');
+                    $(chat.input_text).notify(message);
+                    $(chat.input_text).notify(""); // Clear input after sending
+                    input.value = ""; // Clear input field
+                    resizeTextarea(); // Reset height after clearing
                 }
             }
         });
@@ -261,21 +189,10 @@ function Bonito.jsrender(session::Session, chat::ChatComponent)
         // Also refocus when processing completes
         $(chat.is_processing).on((processing) => {
             if (!processing) {
-                setTimeout(() => {
-                    if (container) {
-                        container.scrollTop = container.scrollHeight;
-                    }
-                    // Refocus the input after message is sent
-                    if (!$(chat.is_processing).value) {
-                        input.focus();
-                    }
-                }, 50);
+                container.scrollTop = container.scrollHeight;
+                // Refocus the input after message is sent
+                input.focus();
             }
-        });
-
-        // Update input value when Observable changes (for clearing after send)
-        $(chat.input_text).on((value) => {
-            input.value = value;
         });
     """
 
@@ -288,7 +205,10 @@ const ChatStyles = Styles(
         ".chat-container",
         "display" => "flex",
         "flex-direction" => "column",
-        "height" => "600px",
+        "height" => "800px",
+        "max-width" => "800px",
+        "max-height" => "80vh",
+        "min-width" => "600px",
         "background-color" => "var(--bg-primary)",
         "border" => "1px solid var(--border-primary)",
         "border-radius" => "10px",
@@ -364,13 +284,16 @@ const ChatStyles = Styles(
         ".chat-input",
         "flex" => "1",
         "border" => "1px solid var(--border-secondary)",
-        "border-radius" => "20px",
+        "border-radius" => "12px",
         "padding" => "8px 16px",
         "font-size" => "14px",
         "background-color" => "var(--bg-primary)",
         "color" => "var(--text-primary)",
         "outline" => "none",
-        "transition" => "border-color 0.2s"
+        "transition" => "border-color 0.2s",
+        "font-family" => "inherit",
+        "line-height" => "1.4",
+        "max-height" => "120px"
     ),
     CSS(
         ".chat-input:focus",
