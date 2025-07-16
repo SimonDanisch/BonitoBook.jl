@@ -39,7 +39,7 @@ Only append finished and polished code to the notebook and not steps inbetween!
 Keep it short and simple! Don't create multiple, similar versions or implement not requested features (e.g. adding an additional line plot, if only a heatmap was requested).
 Only add a new cell after you verified that the code works and does what was requested.
 """
-
+const SYSTEM_PROMPT = read(joinpath(@__DIR__, "templates", "system-prompt.md"), String)
 
 function Bonito.jsrender(session::Session, msg::SystemMessage)
     return Bonito.jsrender(session, Collapsible("System", string(msg), expanded=false))
@@ -48,7 +48,8 @@ end
 function Bonito.jsrender(session::Session, value::AssistantMessage)
     return Bonito.jsrender(session, DOM.div(value.content...))
 end
-function Bonito.jsrender(::Session, value::ToolUseBlock)
+
+function Bonito.jsrender(session::Session, value::ToolUseBlock)
     json = JSON.json(value.input)
     return Bonito.jsrender(session, Collapsible("Tool Use: $(value.name)", json, expanded=false))
 end

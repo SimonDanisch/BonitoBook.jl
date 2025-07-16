@@ -1,5 +1,6 @@
 using Bonito
 using Dates
+using Base64
 
 """
     ChatAgent
@@ -19,12 +20,17 @@ Represents a single message in the chat.
 - `content::Union{String, Any}`: The message content (can be text or parsed Markdown)
 - `is_user::Bool`: Whether this message is from the user (true) or agent (false)
 - `timestamp::Dates.DateTime`: When the message was sent
+- `attachments::Vector{String}`: File paths to attached images or files
 """
 struct ChatMessage
     content::Any
     is_user::Bool
     timestamp::DateTime
+    attachments::Vector{String}
 end
+
+# Convenience constructor for backward compatibility
+ChatMessage(content, is_user, timestamp) = ChatMessage(content, is_user, timestamp, String[])
 
 """
     ChatComponent
@@ -44,6 +50,8 @@ struct ChatComponent
     input_text::Observable{String}
     is_processing::Observable{Bool}
     book::Union{Any, Nothing}
+    current_task::Base.RefValue{Union{Task, Nothing}}
+    pending_attachments::Observable{Vector{String}}
 end
 
 """
@@ -57,8 +65,44 @@ function ChatComponent(chat_agent::ChatAgent; book=nothing)
         Observable(ChatMessage[]),
         Observable(""),
         Observable(false),
-        book
+        book,
+        Ref{Union{Task, Nothing}}(nothing),
+        Observable(String[])
     )
+end
+
+# Utility function to ensure data/tmp directory exists
+function ensure_tmp_directory()
+    tmp_dir = joinpath("data", "tmp")
+    if !isdir(tmp_dir)
+        mkpath(tmp_dir)
+    end
+    return tmp_dir
+end
+
+# Function to save pasted image data to tmp directory
+function save_pasted_image(image_data_base64::String, filename::String)
+    tmp_dir = ensure_tmp_directory()
+    
+    # Decode base64 image data
+    # Remove data:image/png;base64, prefix if present
+    if startswith(image_data_base64, "data:")
+        image_data_base64 = split(image_data_base64, ",")[2]
+    end
+    
+    # Decode base64 to bytes
+    image_bytes = base64decode(image_data_base64)
+    
+    # Generate unique filename with timestamp
+    timestamp = Dates.format(Dates.now(), "yyyymmdd_HHMMSS")
+    file_path = joinpath(tmp_dir, "$(timestamp)_$(filename)")
+    
+    # Write image to file
+    open(file_path, "w") do f
+        write(f, image_bytes)
+    end
+    
+    return file_path
 end
 
 
@@ -66,24 +110,51 @@ function send_message!(chat::ChatComponent, message::String)
     if isempty(strip(message)) || chat.is_processing[]
         return
     end
-    # Add user message
-    user_msg = ChatMessage(message, true, Dates.now())
+    # Get current attachments and clear them
+    attachments = copy(chat.pending_attachments[])
+    chat.pending_attachments[] = String[]
+    
+    # Add user message with attachments
+    user_msg = ChatMessage(message, true, Dates.now(), attachments)
     push!(chat.messages[], user_msg)
     notify(chat.messages)
     # Set processing state
     chat.is_processing[] = true
     agent_msg = try
-        response_channel = prompt(chat.chat_agent, message)
-        dom = Observable(DOM.div())
-        Threads.@spawn begin
-            for msg in response_channel
-                push!(Bonito.Hyperscript.children(dom[]), msg)
-                notify(dom)
-            end
-            chat.is_processing[] = false
+        # For Claude Code, we need to format the message with attachments
+        formatted_message = if !isempty(attachments)
+            attachment_text = join(["Image: $path" for path in attachments], "\n")
+            "$message\n\n$attachment_text"
+        else
+            message
         end
+        
+        response_channel = prompt(chat.chat_agent, formatted_message)
+        dom = Observable(DOM.div())
+        task = Threads.@spawn begin
+            try
+                for msg in response_channel
+                    push!(Bonito.Hyperscript.children(dom[]), msg)
+                    notify(dom)
+                end
+            catch e
+                if isa(e, InterruptException)
+                    # Add interrupted message
+                    push!(Bonito.Hyperscript.children(dom[]), DOM.div("[Response interrupted]", style="color: orange; font-style: italic;"))
+                    notify(dom)
+                else
+                    rethrow(e)
+                end
+            finally
+                chat.is_processing[] = false
+                chat.current_task[] = nothing
+            end
+        end
+        chat.current_task[] = task
         ChatMessage(dom, false, Dates.now())
     catch e
+        chat.is_processing[] = false
+        chat.current_task[] = nothing
         ChatMessage(e, false, Dates.now())
     finally
     end
@@ -91,12 +162,51 @@ function send_message!(chat::ChatComponent, message::String)
     notify(chat.messages)
 end
 
+function stop_streaming!(chat::ChatComponent)
+    if chat.current_task[] !== nothing
+        # Interrupt the current streaming task
+        Base.schedule(chat.current_task[], InterruptException(); error=true)
+        chat.current_task[] = nothing
+        chat.is_processing[] = false
+    end
+end
+
 function Bonito.jsrender(session::Session, message::ChatMessage)
     # Render a single chat message
     user = message.is_user ? "user" : "agent"
     content_display = DOM.div(message.content, class = "chat-message-content")
+    
+    # Add attachment previews if present
+    attachment_elements = []
+    if !isempty(message.attachments)
+        for attachment in message.attachments
+            if isfile(attachment)
+                # Create image preview
+                img_element = DOM.img(
+                    src = Asset(attachment),
+                    style = "max-width: 200px; max-height: 200px; border-radius: 8px; margin: 4px 0;",
+                    alt = "Attached image"
+                )
+                push!(attachment_elements, img_element)
+            else
+                # Show placeholder for missing files
+                placeholder = DOM.div(
+                    "📎 $(basename(attachment))",
+                    style = "color: #666; font-style: italic; margin: 4px 0;"
+                )
+                push!(attachment_elements, placeholder)
+            end
+        end
+    end
+    
+    message_content = if !isempty(attachment_elements)
+        DOM.div(content_display, attachment_elements...)
+    else
+        content_display
+    end
+    
     return Bonito.jsrender(session, DOM.div(
-        content_display,
+        message_content,
         DOM.div(Dates.format(message.timestamp, "HH:MM"), class = "chat-message-time"),
         class = "chat-message chat-$user"
     ))
@@ -120,11 +230,32 @@ function Bonito.jsrender(session::Session, chat::ChatComponent)
 
     # Send button with icon
     send_button, send_clicked = SmallButton("send"; disabled = chat.is_processing)
+    
+    # Stop button with icon
+    stop_button, stop_clicked = SmallButton("debug-stop"; disabled = map(!, chat.is_processing))
 
     # Handle send button click
     on(send_clicked) do _
         if !isempty(strip(chat.input_text[]))
             send_message!(chat, chat.input_text[])
+        end
+    end
+    
+    # Handle stop button click
+    on(stop_clicked) do _
+        stop_streaming!(chat)
+    end
+    
+    # Handle image paste events
+    paste_data = Observable{Dict}(Dict())
+    on(paste_data) do attachment_data
+        if haskey(attachment_data, "type") && attachment_data["type"] == "image"
+            # Save the pasted image
+            file_path = save_pasted_image(attachment_data["data"], attachment_data["filename"])
+            # Add to pending attachments list
+            current_attachments = copy(chat.pending_attachments[])
+            push!(current_attachments, file_path)
+            chat.pending_attachments[] = current_attachments
         end
     end
 
@@ -142,6 +273,19 @@ function Bonito.jsrender(session::Session, chat::ChatComponent)
             DOM.div()
         end
     end
+    
+    # Attachment indicator
+    attachment_indicator = map(chat.pending_attachments) do attachments
+        if !isempty(attachments)
+            DOM.div(
+                "📎 $(length(attachments)) file(s) attached",
+                class = "chat-attachment-indicator",
+                style = "padding: 4px 8px; background: #e3f2fd; border-radius: 4px; font-size: 12px; color: #1976d2; margin: 4px 0;"
+            )
+        else
+            DOM.div()
+        end
+    end
 
     # Combine all elements
     chat_container = DOM.div(
@@ -151,9 +295,11 @@ function Bonito.jsrender(session::Session, chat::ChatComponent)
             processing_indicator,
             class = "chat-messages-wrapper"
         ),
+        attachment_indicator,
         DOM.div(
             input_field,
             send_button,
+            stop_button,
             class = "chat-input-area"
         ),
         class = "chat-container"
@@ -182,6 +328,28 @@ function Bonito.jsrender(session::Session, chat::ChatComponent)
                     $(chat.input_text).notify(""); // Clear input after sending
                     input.value = ""; // Clear input field
                     resizeTextarea(); // Reset height after clearing
+                }
+            }
+        });
+        
+        // Handle paste events for images
+        input.addEventListener('paste', (event) => {
+            const items = event.clipboardData.items;
+            for (let i = 0; i < items.length; i++) {
+                const item = items[i];
+                if (item.type.indexOf('image') !== -1) {
+                    event.preventDefault();
+                    const file = item.getAsFile();
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        // Send image data to Julia for processing
+                        $(paste_data).notify({
+                            type: 'image',
+                            data: e.target.result,
+                            filename: file.name || 'pasted_image.png'
+                        });
+                    };
+                    reader.readAsDataURL(file);
                 }
             }
         });

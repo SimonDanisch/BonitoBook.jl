@@ -118,17 +118,11 @@ function Bonito.jsrender(session::Bonito.Session, sidebar::Sidebar)
         end
         widget_container = DOM.div(
             widget;
-            class = widget_class[],
+            class = widget_class,
             data_widget_id = widget_id
         )
-        onjs(session, widget_class, js"""(w_class) => {
-            const container = $(widget_container);
-            container.className = w_class;
-        }""")
-
         push!(widget_contents, widget_container)
     end
-
 
     on(sidebar.current_widget) do id
         sidebar.visible[] = true
@@ -153,14 +147,8 @@ function Bonito.jsrender(session::Bonito.Session, sidebar::Sidebar)
 
     content_container = DOM.div(
         content_area;
-        class = content_container_class[]
+        class = content_container_class
     )
-
-    onjs(session, content_container_class, js"""(c_class) => {
-        const container = $(content_container);
-        container.className = c_class;
-    }""")
-
     # Main container that holds both tabs and content
     main_container = DOM.div(
         tab_bar,
@@ -187,7 +175,6 @@ function Bonito.jsrender(session::Bonito.Session, sidebar::Sidebar)
 
         document.addEventListener('mousemove', (e) => {
             if (!isResizing) return;
-
             const dx = startX - e.clientX;
             const newWidth = Math.max(300, Math.min(800, startWidth + dx));
             document.documentElement.style.setProperty('--sidebar-width', newWidth + 'px');

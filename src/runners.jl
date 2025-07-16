@@ -137,8 +137,8 @@ const ANSI_CSS = Asset(joinpath(dirname(pathof(ANSIColoredPrinters)), "..", "doc
 
 struct RunnerTask
     source::String
-    result::Observable
-    editor::Union{Nothing, EvalEditor}
+    result::Observable{Any}
+    logging::Observable
     language::String
 end
 
@@ -206,7 +206,7 @@ function AsyncRunner(mod::Module = Module(gensym("BonitoBook")); callback = iden
         for task in task_queue
             lock(loki) do
                 try
-                    redirect_target[] = task.editor.logging
+                    redirect_target[] = task.logging
                     run!(mod, python_runner, task)
                 catch e
                     @error "Error running code: $(task.source)" exception = (e, catch_backtrace())
@@ -240,34 +240,38 @@ function book_display(value)
     return value
 end
 
-function run!(editor::EvalEditor; async = true)
-    return run!(editor.runner, editor; async = async)
+function run!(editor::EvalEditor)
+    return run!(editor.runner, editor)
 end
-function run!(::Nothing, editor::EvalEditor; async = true)
+
+function run!(::Nothing, editor::EvalEditor)
 end
-function run!(runner::MarkdownRunner, editor::EvalEditor; async = true)
-    return editor.output[] = parse_source(runner, editor.source[])
+
+function run!(runner::MarkdownRunner, editor::EvalEditor)
+    editor.output[] = parse_source(runner, editor.source[])
+    return
 end
-function run!(runner::AsyncRunner, editor::EvalEditor; async = true)
-    return if async
-        put!(runner.task_queue, RunnerTask(editor.source[], editor.output, editor, editor.language))
-    else
-        run!(runner.mod, runner.python_runner, RunnerTask(editor.source[], editor.output, editor, editor.language))
+
+function run!(runner::AsyncRunner, editor::EvalEditor)
+    editor.loading[] = true
+    editor.show_logging[] = true
+    editor.logging_html[] = ""
+    put!(runner.task_queue, RunnerTask(editor.source[], editor.output, editor.logging, editor.language))
+    deregister = nothing
+    deregister = on(editor.result) do result
+        editor.loading[] = false
+        Timer(2.5) do t
+            editor.show_logging[] = false
+        end
+        off(deregister)
     end
+    return
 end
 
 function run!(mod::Module, python_runner::PythonRunner, task::RunnerTask)
-    editor = task.editor
     result = task.result
     source = task.source
     language = task.language
-    
-    # Handle optional editor
-    if editor !== nothing
-        editor.loading[] = true
-        editor.show_logging[] = true
-        editor.logging_html[] = ""
-    end
     try
         if language == "python"
             # Execute Python code
@@ -293,67 +297,6 @@ function run!(mod::Module, python_runner::PythonRunner, task::RunnerTask)
         end
     catch e
         result[] = Bonito.HTTPServer.err_to_html(e, Base.catch_backtrace())
-    finally
-        if editor !== nothing
-            editor.loading[] = false
-            Timer(2.5) do t
-                editor.show_logging[] = false
-            end
-        end
     end
     return
-end
-
-
-struct MLRunner
-    editor::BonitoBook.EvalEditor
-end
-
-const SYSTEM_PROMPT = read(joinpath(@__DIR__, "templates", "system-prompt.md"), String)
-
-function eval_source!(chat_editor, result::Observable, runner::MLRunner, source)
-    str = Observable{String}("")
-    chat_editor.loading[] = true
-    chat_editor.show_output[] = true
-    result[] = nothing
-    on(str) do s
-        try
-            result[] = Markdown.parse(s)
-        catch e
-            result[] = s
-        end
-    end
-    callback = Channel(Inf) do c
-        for msg in c
-            yield() # Somehow needed?
-            str[] = str[] * msg
-        end
-    end
-
-    Base.errormonitor(
-        Threads.@async begin
-            conversation = [
-                PT.SystemMessage(SYSTEM_PROMPT),
-                PT.UserMessage(
-                    """
-                    Cell I currently work on:
-                    $(runner.editor.source[])
-                    Question being asked:
-                    $(source)
-                    """
-                ),
-            ]
-            msg = PT.aigenerate(conversation; streamcallback = callback)
-            jleditor = runner.editor
-            if isempty(strip(jleditor.source[])) && startswith(msg.content, "```julia") && endswith(msg.content, "```")
-                result[] = nothing
-                toggle!(jleditor, editor = true, output = true)
-                jleditor.set_source[] = strip(msg.content[9:(end - 3)])
-                chat_editor.show_output[] = false
-            else
-                chat_editor.show_output[] = true
-            end
-            chat_editor.loading[] = false
-        end
-    )
 end

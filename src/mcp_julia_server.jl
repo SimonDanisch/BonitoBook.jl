@@ -2,38 +2,101 @@
 MCP (Model Context Protocol) HTTP server for Julia code execution in BonitoBook
 """
 
-using Bonito.HTTP
-using JSON3
+using JSON3, Random
 
 """
 MCP server that provides Julia code execution capabilities
 """
-mutable struct MCPJuliaServer
-    runner::Union{AsyncRunner, Nothing}
-    server::Union{HTTP.Server, Nothing}
-    port::Int
-    host::String
-
-    function MCPJuliaServer(runner; port=8237, host="127.0.0.1")
-        new(runner, nothing, port, host)
+struct MCPJuliaServer
+    runner::AsyncRunner
+    server::Bonito.Server
+    secret::String
+    function MCPJuliaServer(runner::AsyncRunner, server::Bonito.Server)
+        return new(runner, server, randstring(32))
     end
 end
 
-"""
-MCP JSON-RPC 2.0 message structure
-"""
-struct MCPRequest
-    jsonrpc::String
-    id::Union{String, Int, Nothing}
-    method::String
-    params::Union{Dict{String, Any}, Nothing}
+function find_server(session::Session)
+    root = Bonito.root_session(session)
+    if root.asset_server isa Bonito.HTTPAssetServer
+        return root.asset_server.server
+    end
+    if root.connection isa Bonito.AbstractWebsocketConnection
+        return root.connection.server
+    end
+    return nothing
 end
 
-struct MCPResponse
-    jsonrpc::String
-    id::Union{String, Int, Nothing}
-    result::Union{Dict{String, Any}, Nothing}
-    error::Union{Dict{String, Any}, Nothing}
+
+"""
+Get the server URL
+"""
+function get_server_url(server::MCPJuliaServer)
+    return Bonito.online_url(server.server, "/julia-mcp/$(server.secret)")
+end
+
+
+function add_mcp_to_session!(session::Session, runner::AsyncRunner)
+    server = find_server(session)
+    if isnothing(server)
+        @warn "No server found for session $(session), cannot add MCP Julia server"
+        return nothing
+    end
+    mcp_server = MCPJuliaServer(runner, server)
+    route!(server, "/julia-mcp/$(server.secret)" => mcp_server)
+    return mcp_server
+end
+
+function respond_to_request(server, method, params, id)
+    if method == "tools/list"
+        return create_response(id, handle_list_tools())
+    elseif method == "tools/call"
+        result, err = handle_call_tool(server, params)
+        return create_response(id, result, err)
+    elseif method == "initialize"
+        # Initialize response
+        result = Dict{String, Any}(
+            "protocolVersion" => "2024-11-05",
+            "capabilities" => Dict{String, Any}(
+                "tools" => Dict{String, Any}()
+            ),
+            "serverInfo" => Dict{String, Any}(
+                "name" => "BonitoBook Julia Executor",
+                "version" => "1.0.0"
+            )
+        )
+        return create_response(id, result)
+    elseif method == "initialized"
+        # No response needed for initialized notification
+        return create_response(id, Dict())
+    else
+        return create_response(id, nothing, Dict("code" => -32601, "message" => "Method not found: $method"))
+    end
+end
+
+## Handler for requests!
+function (server::MCPJuliaServer)(context)
+    req = context.request
+    try
+        # Parse the JSON-RPC request
+        request_data = JSON3.read(String(req.body))
+        method = get(request_data, "method", "")
+        id = get(request_data, "id", nothing)
+        params = get(request_data, "params", nothing)
+        response = respond_to_request(server, method, params, id)
+        # Return HTTP response
+        return HTTP.Response(200,
+            ["Content-Type" => "application/json"],
+            JSON3.write(response)
+        )
+    catch e
+        @error "Error handling MCP request" exception=e
+        err = Dict("code" => -32700, "message" => "Parse error: $(string(e))")
+        error_response = create_response(nothing, nothing, err)
+        return HTTP.Response(500,
+            ["Content-Type" => "application/json"],
+            JSON3.write(error_response))
+    end
 end
 
 """
@@ -44,13 +107,12 @@ function create_response(id, result=nothing, error=nothing)
         "jsonrpc" => "2.0",
         "id" => id
     )
-
     if error !== nothing
-        response["error"] = error
+        err = error isa String ? Dict("error" => Dict("code" => -1, "message" => error)) : error
+        response["error"] = err
     else
         response["result"] = result
     end
-
     return response
 end
 
@@ -74,182 +136,76 @@ function handle_list_tools()
             )
         )
     ]
-
     return Dict("tools" => tools)
 end
+
 
 """
 Execute Julia code using the server's runner
 """
 function execute_julia_code(server::MCPJuliaServer, code::String)
-    @show code
-    if server.runner === nothing
-        return (false, "No runner available - server not properly initialized")
+    runner = server.runner
+    output = Observable{Any}()
+    logging = Observable{String}("")
+    result_log = Observable{String}("")
+    on(logging) do log
+        result_log[] = result_log[] * log
     end
-    mod = (server.runner isa AsyncRunner) ? server.runner.mod : Main
-    result = fetch(spawnat(1) do
-        try
-            return include_string(mod, code)
-        catch e
-            return e
-        end
-    end)
-
-    return (!(result isa Exception), result)
+    put!(runner.task_queue, RunnerTask(code, output, logging, "julia"))
+    result_chan = Channel{Any}(1)
+    on(output) do res
+        put!(result_chan, res)
+    end
+    result = take!(result_chan)
+    return (!(result isa Exception), result, result_log[])
 end
 
 """
 Handle call_tool request - executes the specified tool
 """
-function handle_call_tool(server::MCPJuliaServer, id, params)
+function handle_call_tool(server::MCPJuliaServer, params)
     if params === nothing || !haskey(params, "name")
-        return Dict("error" => Dict("code" => -1, "message" => "Missing tool name"))
+        return nothing, "Missing 'name' parameter"
     end
-
     tool_name = params["name"]
     arguments = get(params, "arguments", Dict())
 
-    if tool_name == "julia_exec"
-        if !haskey(arguments, "code")
-            return Dict("error" => Dict("code" => -1, "message" => "Missing 'code' argument"))
-        end
+    tool_name != "julia_exec" && return nothing, "Unknown tool: $tool_name"
+    !haskey(arguments, "code") && return nothing, "Missing 'code' argument"
 
-        code = arguments["code"]
-        success, output = execute_julia_code(server, code)
+    code = arguments["code"]
+    success, output, logging = execute_julia_code(server, code)
 
-        if success
-            result = Dict{String, Any}(
-                "content" => [
-                    Dict{String, Any}(
-                        "type" => "text",
-                        "text" => "Julia code executed successfully:\\n```julia\\n$code\\n```\\n\\nOutput:\\n```\\n$output\\n```"
-                    )
-                ]
-            )
-            return Dict("result" => result)
-        else
-            return Dict("error" => Dict("code" => -1, "message" => output))
-        end
-    else
-        return Dict("error" => Dict("code" => -1, "message" => "Unknown tool: $tool_name"))
-    end
-end
+    if success
+        # Build the response text with output and logging
+        response_text = """
+            Julia code executed successfully:
+            Result of the execution:
+            $output
+            Logs:
+            $logging
+        """
 
-"""
-HTTP request handler for MCP requests
-"""
-function mcp_request_handler(server::MCPJuliaServer)
-    return function(req::HTTP.Request)
-        try
-            # Parse the JSON-RPC request
-            request_data = JSON3.read(String(req.body))
-
-            method = get(request_data, "method", "")
-            id = get(request_data, "id", nothing)
-            params = get(request_data, "params", nothing)
-
-            response = if method == "tools/list"
-                create_response(id, handle_list_tools())
-            elseif method == "tools/call"
-                response_data = handle_call_tool(server, id, params)
-                if haskey(response_data, "error")
-                    create_response(id, nothing, response_data["error"])
-                else
-                    create_response(id, response_data["result"])
-                end
-            elseif method == "initialize"
-                # Initialize response
-                result = Dict{String, Any}(
-                    "protocolVersion" => "2024-11-05",
-                    "capabilities" => Dict{String, Any}(
-                        "tools" => Dict{String, Any}()
-                    ),
-                    "serverInfo" => Dict{String, Any}(
-                        "name" => "BonitoBook Julia Executor",
-                        "version" => "1.0.0"
-                    )
+        result = Dict{String, Any}(
+            "content" => [
+                Dict{String, Any}(
+                    "type" => "text",
+                    "text" => response_text
                 )
-                create_response(id, result)
-            elseif method == "initialized"
-                # No response needed for initialized notification
-                create_response(id, Dict())
-            else
-                create_response(id, nothing, Dict("code" => -32601, "message" => "Method not found: $method"))
-            end
-
-            # Return HTTP response
-            return HTTP.Response(200,
-                ["Content-Type" => "application/json"],
-                JSON3.write(response))
-
-        catch e
-            @error "Error handling MCP request" exception=e
-            error_response = create_response(nothing, nothing,
-                Dict("code" => -32700, "message" => "Parse error: $(string(e))"))
-            return HTTP.Response(500,
-                ["Content-Type" => "application/json"],
-                JSON3.write(error_response))
-        end
-    end
-end
-
-
-function try_listen(handler, url, port)
-    try
-        return HTTP.serve!(handler, url, port)
-    catch e
-        if e isa Base.IOError
-            #address already in use
-            if e.code == Base.UV_EADDRINUSE
-                return try_listen(handler, url, port + 1)
-            end
-        end
-        rethrow(e)
-    end
-end
-
-
-"""
-Start the MCP HTTP server
-"""
-function start_server!(server::MCPJuliaServer)
-    if server.server !== nothing
-        @warn "Server already running"
-        return server.port
-    end
-
-    handler = mcp_request_handler(server)
-    # Start HTTP server
-    server.server = try_listen(handler, server.host, server.port)
-
-    @info "MCP Julia Server started on $(server.host):$(server.port)"
-    cli = ClaudeCodeSDK.find_cli()
-    if !isnothing(cli)
-        run(`$cli mcp add --transport http julia-server $(get_server_url(server))`)
+            ]
+        )
+        return Dict("result" => result), nothing
     else
-        @warn "Claude CLI not found, MCP server may not be fully functional"
-    end
-    return server.port
-end
-
-"""
-Stop the MCP HTTP server
-"""
-function stop_server!(server::MCPJuliaServer)
-    if server.server !== nothing
-        close(server.server)
-        server.server = nothing
-        @info "MCP Julia Server stopped"
+        err = sprint() do io
+            println("error:")
+            showerror(io, output)
+            println("logs:")
+            println(logging)
+        end
+        return nothing, err
     end
 end
 
-"""
-Get the server URL
-"""
-function get_server_url(server::MCPJuliaServer)
-    port = server.server.listener.hostport
-    return "http://$(server.host):$(port)"
-end
 
 # Export functions
-export MCPJuliaServer, start_server!, stop_server!, get_server_url
+export MCPJuliaServer, get_server_url
