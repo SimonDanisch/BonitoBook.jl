@@ -2,7 +2,8 @@
 MCP (Model Context Protocol) HTTP server for Julia code execution in BonitoBook
 """
 
-using JSON3, Random
+using JSON3
+using Random
 
 """
 MCP server that provides Julia code execution capabilities
@@ -36,14 +37,26 @@ function get_server_url(server::MCPJuliaServer)
 end
 
 
-function add_mcp_to_session!(session::Session, runner::AsyncRunner)
+function add_julia_mpc_route!(book::Book)
+    session = book.session
+    runner = book.runner
     server = find_server(session)
     if isnothing(server)
         @warn "No server found for session $(session), cannot add MCP Julia server"
         return nothing
     end
     mcp_server = MCPJuliaServer(runner, server)
-    route!(server, "/julia-mcp/$(server.secret)" => mcp_server)
+    book.mcp_server = mcp_server
+    route!(server, "/julia-mcp/$(mcp_server.secret)" => mcp_server)
+    cli = ClaudeCodeSDK.find_cli()
+    if !isnothing(cli)
+        @show (get_server_url(mcp_server))
+        cd(book.folder) do
+            run(`$cli mcp add --transport http julia-server $(get_server_url(mcp_server))`)
+        end
+    else
+        @warn "Claude CLI not found, MCP server may not be fully functional"
+    end
     return mcp_server
 end
 
@@ -66,7 +79,7 @@ function respond_to_request(server, method, params, id)
             )
         )
         return create_response(id, result)
-    elseif method == "initialized"
+    elseif method == "notifications/initialized"
         # No response needed for initialized notification
         return create_response(id, Dict())
     else
@@ -84,6 +97,7 @@ function (server::MCPJuliaServer)(context)
         id = get(request_data, "id", nothing)
         params = get(request_data, "params", nothing)
         response = respond_to_request(server, method, params, id)
+        @show response
         # Return HTTP response
         return HTTP.Response(200,
             ["Content-Type" => "application/json"],
@@ -108,7 +122,7 @@ function create_response(id, result=nothing, error=nothing)
         "id" => id
     )
     if error !== nothing
-        err = error isa String ? Dict("error" => Dict("code" => -1, "message" => error)) : error
+        err = error isa String ? Dict("code" => -1, "message" => error) : error
         response["error"] = err
     else
         response["result"] = result
@@ -151,6 +165,7 @@ function execute_julia_code(server::MCPJuliaServer, code::String)
     on(logging) do log
         result_log[] = result_log[] * log
     end
+    println("Runninc code via mpc:\n", code)
     put!(runner.task_queue, RunnerTask(code, output, logging, "julia"))
     result_chan = Channel{Any}(1)
     on(output) do res
@@ -194,7 +209,7 @@ function handle_call_tool(server::MCPJuliaServer, params)
                 )
             ]
         )
-        return Dict("result" => result), nothing
+        return result, nothing
     else
         err = sprint() do io
             println("error:")

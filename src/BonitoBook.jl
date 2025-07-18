@@ -10,6 +10,7 @@ using WGLMakie
 using Markdown
 using Bonito.HTTP
 using JSON3
+using CondaPkg
 
 """
     assets(paths...)
@@ -119,6 +120,7 @@ end
 
 include("redirect_io.jl")
 include("components.jl")
+include("Components.jl")
 include("editor.jl")
 include("sidebar.jl")
 include("tabbed_editor.jl")
@@ -134,6 +136,6 @@ include("claude_agent.jl")
 include("mcp_julia_server.jl")
 # include("ai.jl")
 
-export Book, ChatComponent, ChatAgent, ChatMessage, MockChatAgent, ClaudeAgent, MCPJuliaServer, Collapsible
+export Book, ChatComponent, ChatAgent, ChatMessage, MockChatAgent, ClaudeAgent, MCPJuliaServer, Collapsible, Components
 
 end

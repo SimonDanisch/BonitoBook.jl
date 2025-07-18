@@ -80,7 +80,7 @@ Styles(
             "--border-secondary" => "rgba(255, 255, 255, 0.1)",
             "--shadow-soft" => "0 4px 8px rgba(255, 255, 255, 0.2)",
             "--shadow-button" => "0 2px 4px rgba(255, 255, 255, 0.2)",
-            "--shadow-inset" => "inset -2px -2px 5px rgba(0, 0, 0, 0.3)",
+            "--shadow-inset" => "inset 2px 2px 3px rgba(0, 0, 0, 0.5)",
             "--hover-bg" => "rgba(255, 255, 255, 0.1)",
             "--menu-hover-bg" => "rgba(255, 255, 255, 0.05)",
             "--accent-blue" => "#0366d6",
@@ -376,7 +376,6 @@ Styles(
     ),
     CSS(
         ".toggle-button.active",
-        "background-color" => "var(--hover-bg)",
         "box-shadow" => "var(--shadow-inset)",
         "color" => "var(--text-primary)",
     ),
@@ -628,17 +627,17 @@ Styles(
     CSS(
         ".popup-close-button",
         "position" => "absolute",
-        "top" => "8px",
-        "right" => "8px",
+        "top" => "4px",
+        "right" => "4px",
         "background" => "none",
         "border" => "none",
-        "font-size" => "16px",
+        "font-size" => "18px",
         "color" => "var(--text-secondary)",
         "cursor" => "pointer",
-        "padding" => "4px",
+        "padding" => "2px",
         "border-radius" => "50%",
-        "width" => "24px",
-        "height" => "24px",
+        "width" => "20px",
+        "height" => "20px",
         "display" => "flex",
         "align-items" => "center",
         "justify-content" => "center",
@@ -845,5 +844,282 @@ Styles(
         "height" => "100%",
         "overflow" => "hidden",
         "position" => "relative",
+    ),
+
+    # BonitoBook Components Styling
+    CSS(
+        ".bonitobook-button",
+        "background-color" => "var(--bg-primary)",
+        "color" => "var(--text-primary)",
+        "border" => "1px solid var(--border-secondary)",
+        "border-radius" => "6px",
+        "padding" => "8px 16px",
+        "font-size" => "14px",
+        "font-weight" => "500",
+        "cursor" => "pointer",
+        "transition" => "all 0.2s ease",
+        "box-shadow" => "0 1px 3px rgba(0, 0, 0, 0.1)",
+        "min-width" => "80px",
+        "display" => "inline-flex",
+        "align-items" => "center",
+        "justify-content" => "center",
+        "font-family" => "inherit"
+    ),
+    CSS(
+        ".bonitobook-button:hover",
+        "background-color" => "var(--hover-bg)",
+        "border-color" => "var(--accent-blue)",
+        "box-shadow" => "0 2px 6px rgba(0, 0, 0, 0.15)"
+    ),
+    CSS(
+        ".bonitobook-button:focus",
+        "outline" => "none",
+        "border-color" => "var(--accent-blue)",
+        "box-shadow" => "0 0 0 2px rgba(3, 102, 214, 0.2)"
+    ),
+    CSS(
+        ".bonitobook-button:active",
+        "transform" => "translateY(1px)",
+        "box-shadow" => "0 1px 2px rgba(0, 0, 0, 0.1)"
+    ),
+
+    # Input field styling
+    CSS(
+        ".bonitobook-input",
+        "background-color" => "var(--bg-primary)",
+        "color" => "var(--text-primary)",
+        "border" => "1px solid var(--border-secondary)",
+        "border-radius" => "6px",
+        "padding" => "8px 12px",
+        "font-size" => "14px",
+        "font-family" => "inherit",
+        "transition" => "all 0.2s ease",
+        "outline" => "none",
+        "width" => "100%",
+        "box-sizing" => "border-box"
+    ),
+    CSS(
+        ".bonitobook-input:hover",
+        "border-color" => "var(--accent-blue)"
+    ),
+    CSS(
+        ".bonitobook-input:focus",
+        "border-color" => "var(--accent-blue)",
+        "box-shadow" => "0 0 0 2px rgba(3, 102, 214, 0.2)"
+    ),
+    CSS(
+        ".bonitobook-input:disabled",
+        "background-color" => "var(--hover-bg)",
+        "color" => "var(--text-secondary)",
+        "cursor" => "not-allowed"
+    ),
+
+    # Checkbox styling
+    CSS(
+        ".bonitobook-checkbox",
+        "width" => "16px",
+        "height" => "16px",
+        "border" => "1px solid var(--border-secondary)",
+        "border-radius" => "3px",
+        "background-color" => "var(--bg-primary)",
+        "cursor" => "pointer",
+        "transition" => "all 0.2s ease",
+        "appearance" => "none",
+        "-webkit-appearance" => "none",
+        "position" => "relative",
+        "margin" => "0 8px 0 0",
+        "flex-shrink" => "0"
+    ),
+    CSS(
+        ".bonitobook-checkbox:hover",
+        "border-color" => "var(--accent-blue)"
+    ),
+    CSS(
+        ".bonitobook-checkbox:focus",
+        "outline" => "none",
+        "border-color" => "var(--accent-blue)",
+        "box-shadow" => "0 0 0 2px rgba(3, 102, 214, 0.2)"
+    ),
+    CSS(
+        ".bonitobook-checkbox:checked",
+        "background-color" => "var(--accent-blue)",
+        "border-color" => "var(--accent-blue)"
+    ),
+    CSS(
+        ".bonitobook-checkbox:checked::after",
+        "content" => "\"✓\"",
+        "position" => "absolute",
+        "top" => "50%",
+        "left" => "50%",
+        "transform" => "translate(-50%, -50%)",
+        "color" => "white",
+        "font-size" => "12px",
+        "line-height" => "1"
+    ),
+
+    # Dropdown styling
+    CSS(
+        ".bonitobook-dropdown",
+        "background-color" => "var(--bg-primary)",
+        "color" => "var(--text-primary)",
+        "border" => "1px solid var(--border-secondary)",
+        "border-radius" => "6px",
+        "padding" => "8px 12px",
+        "font-size" => "14px",
+        "font-family" => "inherit",
+        "cursor" => "pointer",
+        "transition" => "all 0.2s ease",
+        "outline" => "none",
+        "width" => "100%",
+        "box-sizing" => "border-box",
+        "appearance" => "none",
+        "-webkit-appearance" => "none",
+        "background-repeat" => "no-repeat",
+        "background-position" => "right 12px center",
+        "background-size" => "12px",
+        "padding-right" => "36px"
+    ),
+    CSS(
+        ".bonitobook-dropdown:hover",
+        "border-color" => "var(--accent-blue)"
+    ),
+    CSS(
+        ".bonitobook-dropdown:focus",
+        "border-color" => "var(--accent-blue)",
+        "box-shadow" => "0 0 0 2px rgba(3, 102, 214, 0.2)"
+    ),
+    CSS(
+        ".bonitobook-dropdown option",
+        "background-color" => "var(--bg-primary)",
+        "color" => "var(--text-primary)"
+    ),
+
+    # Light theme dropdown arrow
+    CSS(
+        light_media_query,
+        CSS(
+            ".bonitobook-dropdown",
+            "background-image" => "url('data:image/svg+xml;charset=US-ASCII,<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 4 5\"><path fill=\"%23666\" d=\"M2 0L0 2h4zm0 5L0 3h4z\"/></svg>')"
+        )
+    ),
+
+    # Dark theme dropdown arrow
+    CSS(
+        dark_media_query,
+        CSS(
+            ".bonitobook-dropdown",
+            "background-image" => "url('data:image/svg+xml;charset=US-ASCII,<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 4 5\"><path fill=\"%23ccc\" d=\"M2 0L0 2h4zm0 5L0 3h4z\"/></svg>')"
+        )
+    ),
+
+    # Slider styling
+    CSS(
+        ".bonitobook-slider",
+        "width" => "100%",
+        "height" => "6px",
+        "border-radius" => "3px",
+        "background" => "var(--border-secondary)",
+        "outline" => "none",
+        "appearance" => "none",
+        "-webkit-appearance" => "none",
+        "cursor" => "pointer",
+        "transition" => "all 0.2s ease"
+    ),
+    CSS(
+        ".bonitobook-slider::-webkit-slider-thumb",
+        "appearance" => "none",
+        "-webkit-appearance" => "none",
+        "width" => "20px",
+        "height" => "20px",
+        "border-radius" => "50%",
+        "background" => "var(--accent-blue)",
+        "cursor" => "pointer",
+        "border" => "2px solid var(--bg-primary)",
+        "box-shadow" => "0 2px 6px rgba(0, 0, 0, 0.2)",
+        "transition" => "all 0.2s ease"
+    ),
+    CSS(
+        ".bonitobook-slider::-webkit-slider-thumb:hover",
+        "transform" => "scale(1.1)",
+        "box-shadow" => "0 3px 8px rgba(0, 0, 0, 0.3)"
+    ),
+    CSS(
+        ".bonitobook-slider::-moz-range-thumb",
+        "width" => "20px",
+        "height" => "20px",
+        "border-radius" => "50%",
+        "background" => "var(--accent-blue)",
+        "cursor" => "pointer",
+        "border" => "2px solid var(--bg-primary)",
+        "box-shadow" => "0 2px 6px rgba(0, 0, 0, 0.2)",
+        "transition" => "all 0.2s ease"
+    ),
+    CSS(
+        ".bonitobook-slider::-moz-range-track",
+        "width" => "100%",
+        "height" => "6px",
+        "border-radius" => "3px",
+        "background" => "var(--border-secondary)",
+        "border" => "none"
+    ),
+    CSS(
+        ".bonitobook-slider:focus",
+        "outline" => "none"
+    ),
+    CSS(
+        ".bonitobook-slider:focus::-webkit-slider-thumb",
+        "box-shadow" => "0 0 0 2px rgba(3, 102, 214, 0.2), 0 2px 6px rgba(0, 0, 0, 0.2)"
+    ),
+
+    # Manipulate widget styling
+    CSS(
+        ".manipulate-container",
+        "background-color" => "var(--bg-primary)",
+        "border" => "1px solid var(--border-primary)",
+        "border-radius" => "8px",
+        "padding" => "16px",
+        "margin" => "16px 0",
+        "display" => "flex",
+        "flex-direction" => "column",
+        "gap" => "16px"
+    ),
+    CSS(
+        ".manipulate-controls",
+        "background-color" => "var(--hover-bg)",
+        "border-radius" => "6px",
+        "padding" => "12px",
+        "display" => "flex",
+        "flex-direction" => "column",
+        "gap" => "12px"
+    ),
+    CSS(
+        ".manipulate-control-row",
+        "display" => "flex",
+        "align-items" => "center",
+        "gap" => "12px"
+    ),
+    CSS(
+        ".manipulate-label",
+        "font-size" => "13px",
+        "font-weight" => "500",
+        "color" => "var(--text-secondary)",
+        "min-width" => "120px",
+        "text-align" => "left",
+        "flex-shrink" => "0"
+    ),
+    CSS(
+        ".manipulate-widget",
+        "flex" => "1",
+        "min-width" => "0"
+    ),
+    CSS(
+        ".manipulate-output",
+        "background-color" => "var(--bg-primary)",
+        "border-radius" => "6px",
+        "padding" => "12px",
+        "min-height" => "100px",
+        "display" => "flex",
+        "align-items" => "center",
+        "justify-content" => "center"
     ),
 )

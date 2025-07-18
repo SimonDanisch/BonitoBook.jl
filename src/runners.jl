@@ -159,6 +159,7 @@ Asynchronous code execution runner that handles Julia and Python code evaluation
 """
 struct AsyncRunner
     mod::Module
+    project::String
     python_runner::PythonRunner
     task_queue::Channel{RunnerTask}
     thread::Task
@@ -181,7 +182,7 @@ end
 
 
 """
-    AsyncRunner(mod=Module(); callback=identity, spawn=false)
+    AsyncRunner(project::String, mod=Module(); callback=identity, spawn=false)
 
 Create a new asynchronous code runner.
 
@@ -193,7 +194,7 @@ Create a new asynchronous code runner.
 # Returns
 Configured `AsyncRunner` instance ready for code execution.
 """
-function AsyncRunner(mod::Module = Module(gensym("BonitoBook")); callback = identity, spawn = false)
+function AsyncRunner(project::String, mod::Module = Module(gensym("BonitoBook")); callback = identity, spawn = false)
     redirect_target = Base.RefValue{Observable{String}}()
     python_runner = fetch(
         spawnat(1) do
@@ -206,8 +207,11 @@ function AsyncRunner(mod::Module = Module(gensym("BonitoBook")); callback = iden
         for task in task_queue
             lock(loki) do
                 try
+                    # active_project = Pkg.project().path
+                    # Pkg.activate(project; io=IOBuffer())
                     redirect_target[] = task.logging
                     run!(mod, python_runner, task)
+                    # Pkg.activate(active_project; io=IOBuffer())
                 catch e
                     @error "Error running code: $(task.source)" exception = (e, catch_backtrace())
                 end
@@ -229,7 +233,7 @@ function AsyncRunner(mod::Module = Module(gensym("BonitoBook")); callback = iden
         end
     end
     Base.errormonitor(task)
-    return AsyncRunner(mod, python_runner, task_queue, taskref, Base.RefValue{Function}(callback), io_chan, redirect_target, open)
+    return AsyncRunner(mod, project, python_runner, task_queue, taskref, Base.RefValue{Function}(callback), io_chan, redirect_target, open)
 end
 
 function interrupt!(runner::AsyncRunner)
@@ -258,7 +262,7 @@ function run!(runner::AsyncRunner, editor::EvalEditor)
     editor.logging_html[] = ""
     put!(runner.task_queue, RunnerTask(editor.source[], editor.output, editor.logging, editor.language))
     deregister = nothing
-    deregister = on(editor.result) do result
+    deregister = on(editor.output) do _
         editor.loading[] = false
         Timer(2.5) do t
             editor.show_logging[] = false
@@ -275,8 +279,14 @@ function run!(mod::Module, python_runner::PythonRunner, task::RunnerTask)
     try
         if language == "python"
             # Execute Python code
-            py_result = eval_python_code_jl(python_runner, mod, "", 1, source)
-            result[] = py_result
+            if startswith(source, "]add ")
+                packages = split(replace(source, "]add " => ""), " ")
+                CondaPkg.add(packages)
+                result[] = "Packages installed: $(join(packages, ", "))"
+            else
+                py_result = eval_python_code_jl(python_runner, mod, "", 1, source)
+                result[] = py_result
+            end
         else
             # Execute Julia code (default behavior)
             if startswith(source, "]")

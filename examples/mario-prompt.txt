@@ -1,0 +1,7 @@
+Can you create a nice looking mario game with WGLMakie?
+Use scatter(position, color=sprite) to draw sprites and dont make new plots to animate, but instead update the existing plot..
+Use julia exec to make sure everything works.
+Make the simple physics engine with gravity and jumping and collision detection with the ground but keep it simple.
+Only add a new julia cell to the book after you verified that the code works and does what was requested.
+Use !Makie.isclosed(scene) for loop condition.
+I attached an image to show you how it should look!

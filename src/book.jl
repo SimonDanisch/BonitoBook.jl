@@ -10,6 +10,7 @@ Represents an interactive book with code cells and execution runner.
 - `runner::Any`: Code execution runner (typically AsyncRunner)
 - `progress::Observable{Tuple{Bool, Float64}}`: Progress tracking for operations
 - `mcp_server::Union{MCPJuliaServer, Nothing}`: MCP server for Claude Code integration
+- `widgets::Dict{String, Any}`: Dictionary of UI widgets (file editor, chat, etc.)
 """
 mutable struct Book
     file::String
@@ -19,6 +20,7 @@ mutable struct Book
     progress::Observable{Tuple{Bool, Float64}}
     mcp_server::Any
     session::Union{Session, Nothing}
+    widgets::Dict{String, Any}
 end
 
 function from_folder(folder)
@@ -26,7 +28,9 @@ function from_folder(folder)
     manifest = joinpath(folder, "Manifest.toml")
     book = joinpath(folder, "book.md")
     style_path = joinpath(folder, "styles", "style.jl")
-    files = [book, project, manifest, style_path]
+    ai_config_path = joinpath(folder, "ai", "config.toml")
+    ai_prompt_path = joinpath(folder, "ai", "system-prompt.md")
+    files = [book, project, manifest, style_path, ai_config_path, ai_prompt_path]
     for file in files
         if !isfile(file)
             error("File $file not found, not a BonitoBook?")
@@ -54,6 +58,20 @@ function from_file(book, folder)
     style_path = joinpath(folder, "styles", "style.jl")
 
     cp(style_path_template, style_path)
+
+    # Create AI folder with configuration and system prompt
+    ai_folder = joinpath(folder, "ai")
+    mkpath(ai_folder)
+
+    # Copy AI configuration template
+    ai_config_template = joinpath(@__DIR__, "templates/ai/config.toml")
+    ai_config_path = joinpath(ai_folder, "config.toml")
+    cp(ai_config_template, ai_config_path)
+
+    # Copy system prompt template
+    system_prompt_template = joinpath(@__DIR__, "templates/ai/system-prompt.md")
+    system_prompt_path = joinpath(ai_folder, "system-prompt.md")
+    cp(system_prompt_template, system_prompt_path)
     # Copy over project so mutations stay in the book
     project = Pkg.project().path
     cp(project, joinpath(folder, "Project.toml"))
@@ -83,10 +101,7 @@ book = Book("mybook.md")
 book = Book("/path/to/book/folder")
 ```
 """
-function Book(file; folder = nothing, runner = AsyncRunner())
-    if !isa(runner, MarkdownRunner)
-        runner.mod.eval(runner.mod, :(using BonitoBook, BonitoBook.Bonito, BonitoBook.Markdown, BonitoBook.WGLMakie))
-    end
+function Book(file; folder = nothing)
     if isfile(file)
         bookfile, folder, style_paths = from_file(file, folder)
     elseif isdir(file)
@@ -95,25 +110,23 @@ function Book(file; folder = nothing, runner = AsyncRunner())
         error("File $file isnt a file or folder")
     end
     cells = load_book(bookfile)
+    runner = AsyncRunner(folder)
     editors = cells2editors(cells, runner)
     progress = Observable((false, 0.0))
-
-    # Create and start MCP server for Claude Code integration
-    mcp_server = if !isa(runner, MarkdownRunner)
-        server = MCPJuliaServer(runner)
-        start_server!(server)
-        @info "MCP Julia Server started for Book at $(get_server_url(server))"
-        server
-    else
-        nothing
-    end
-
-    book = Book(bookfile, folder, editors, runner, progress, mcp_server, nothing)
-    if runner isa AsyncRunner
-        runner.mod.eval(runner.mod, :(macro Book(); $(book); end))
-    end
+    runner.mod.eval(runner.mod, :(using BonitoBook, BonitoBook.Bonito, BonitoBook.Markdown, BonitoBook.WGLMakie))
+    book = Book(bookfile, folder, editors, runner, progress, nothing, nothing, Dict{String, Any}())
+    runner.mod.eval(runner.mod, :(macro Book(); $(book); end))
     export_md(joinpath(folder, "book.md"), book)
     return book
+end
+
+"""
+    get_file_editor(book::Book)::TabbedFileEditor
+
+Get the tabbed file editor from the book's widgets dictionary.
+"""
+function get_file_editor(book::Book)::TabbedFileEditor
+    return book.widgets["file_editor"]
 end
 
 """
@@ -394,15 +407,15 @@ function new_cell_menu(book, editor_above_uuid, runner)
 end
 
 """
-    create_chat_agent()
+    create_chat_agent(book::Book)
 
 Create the appropriate chat agent based on environment configuration.
 If ANTHROPIC_API_KEY is set, creates a ClaudeAgent, otherwise falls back to MockChatAgent.
 """
-function create_chat_agent()
+function create_chat_agent(book::Book)
     # Use Claude agent with local CLI (no API key needed)
     @info "Using ClaudeAgent with local CLI, tools enabled: true"
-    return ClaudeAgent(; use_tools = true)
+    return ClaudeAgent(book)
 end
 
 function setup_menu(book::Book, tabbed_file_editor::TabbedFileEditor)
@@ -438,9 +451,11 @@ function setup_completions(session, cell_module)
         })
     """
 end
+
 function Bonito.jsrender(session::Session, book::Book)
     book.session = session
     runner = book.runner
+    add_julia_mpc_route!(book)
     cells = map(book.cells) do editor
         add_cell_div = new_cell_menu(book, editor.uuid, runner)
         DOM.div(editor, add_cell_div)
@@ -456,6 +471,7 @@ function Bonito.jsrender(session::Session, book::Book)
 
     # Create tabbed editor instead of separate file tabs
     tabbed_editor = TabbedFileEditor(String[];)
+    book.widgets["file_editor"] = tabbed_editor
     _setup_menu, style_eval, style_output = setup_menu(book, tabbed_editor)
     save = saving_menu(session, book)
     player = play_menu(book)
@@ -468,13 +484,14 @@ function Bonito.jsrender(session::Session, book::Book)
     # Wrap cells in scrollable area
     cells_area = DOM.div(cell_obs; class = "book-cells-area")
     # Create chat component with appropriate agent
-    chat_agent = create_chat_agent()
+    chat_agent = create_chat_agent(book)
     chat_component = ChatComponent(chat_agent; book=book)
+    book.widgets["chat"] = chat_component
 
-    # Create sidebar with TabbedFileEditor and Chat as widgets
+    # Create sidebar with widgets from book
     sidebar = Sidebar([
-        ("file-editor", tabbed_editor, "File Editor", "file-code"),
-        ("chat", chat_component, "AI Chat", "chat-sparkle")
+        ("file-editor", book.widgets["file_editor"], "File Editor", "file-code"),
+        ("chat", book.widgets["chat"], "AI Chat", "chat-sparkle")
     ]; width = "50vw")
 
     # Create content area that includes both cells and sidebar
@@ -487,7 +504,6 @@ function Bonito.jsrender(session::Session, book::Book)
 
     on(session.on_close) do close
         runner.open[] = false
-        stop_server!(book.mcp_server)
         return
     end
     codicon = Styles(

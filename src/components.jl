@@ -81,14 +81,16 @@ function PopUp(content; show = true)
 end
 
 function Bonito.jsrender(session::Session, popup::PopUp)
-    close_button, click = SmallButton("close")
-    on(click) do click
-        popup.show[] = !popup.show[]
-    end
+    # Create proper close button with correct styling
+    close_button = DOM.button("×",
+        class = "popup-close-button",
+        onclick = js"event => $(popup.show).notify(false)"
+    )
+    
     # Create popup content wrapper
     popup_content = DOM.div(
-        popup.content,
         close_button,
+        popup.content,
         class = "popup-content"
     )
     # Create overlay wrapper

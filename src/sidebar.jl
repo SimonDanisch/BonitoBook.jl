@@ -100,7 +100,6 @@ function Bonito.jsrender(session::Bonito.Session, sidebar::Sidebar)
         end
 
         if hasproperty(widget, :visible)
-            @show widget
             on(session, widget.visible) do show
                 if show
                     sidebar.current_widget[] = widget_id

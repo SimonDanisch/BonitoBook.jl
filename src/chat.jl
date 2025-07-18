@@ -10,6 +10,17 @@ Implement `prompt(agent::YourChatAgent, question::String)` to create a custom ch
 """
 abstract type ChatAgent end
 
+"""
+    settings_menu(agent::ChatAgent)
+
+Returns a Bonito widget for configuring agent settings.
+Default implementation returns a simple text widget.
+Override this method for custom agents to provide specific settings UI.
+"""
+function settings_menu(agent::ChatAgent)
+    return DOM.div("No settings available for this agent type.")
+end
+
 
 """
     ChatMessage
@@ -233,6 +244,9 @@ function Bonito.jsrender(session::Session, chat::ChatComponent)
     
     # Stop button with icon
     stop_button, stop_clicked = SmallButton("debug-stop"; disabled = map(!, chat.is_processing))
+    
+    # Settings button with icon
+    settings_button, settings_clicked = SmallButton("settings"; disabled = false)
 
     # Handle send button click
     on(send_clicked) do _
@@ -244,6 +258,14 @@ function Bonito.jsrender(session::Session, chat::ChatComponent)
     # Handle stop button click
     on(stop_clicked) do _
         stop_streaming!(chat)
+    end
+    
+    # Create settings popup
+    settings_popup = PopUp(settings_menu(chat.chat_agent); show = false)
+    
+    # Handle settings button click
+    on(settings_clicked) do _
+        settings_popup.show[] = true
     end
     
     # Handle image paste events
@@ -298,6 +320,7 @@ function Bonito.jsrender(session::Session, chat::ChatComponent)
         attachment_indicator,
         DOM.div(
             input_field,
+            settings_button,
             send_button,
             stop_button,
             class = "chat-input-area"
@@ -364,7 +387,7 @@ function Bonito.jsrender(session::Session, chat::ChatComponent)
         });
     """
 
-    return Bonito.jsrender(session, DOM.div(chat_container, scroll_script))
+    return Bonito.jsrender(session, DOM.div(chat_container, scroll_script, settings_popup))
 end
 
 # Chat-specific styles
