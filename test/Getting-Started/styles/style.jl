@@ -200,7 +200,26 @@ Styles(
         "margin" => "0",
         "padding" => "0",
         "background-color" => "var(--bg-primary)",
-        "color" => "var(--text-primary)"
+        "color" => "var(--text-primary)",
+        "white-space" => "pre-wrap",
+        "word-wrap" => "break-word"
+    ),
+    # When cell-logging is hidden, it should take no space
+    CSS(
+        ".cell-logging.hide-horizontal, .cell-logging.hide-vertical",
+        "height" => "0",
+        "min-height" => "0",
+        "padding" => "0",
+        "margin" => "0",
+        "overflow" => "hidden"
+    ),
+    # When cell-logging is empty (no content), minimize space
+    CSS(
+        ".cell-logging:empty",
+        "height" => "0",
+        "min-height" => "0",
+        "padding" => "0",
+        "margin" => "0"
     ),
     CSS(
         ".logging-widget",
@@ -213,7 +232,9 @@ Styles(
         "color" => "var(--text-primary)",
         "font-family" => "monospace",
         "font-size" => "12px",
-        "line-height" => "1.4"
+        "line-height" => "1.4",
+        "white-space" => "pre-wrap",
+        "word-wrap" => "break-word"
     ),
     CSS(
         ".logging-widget pre",

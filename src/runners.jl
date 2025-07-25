@@ -183,7 +183,7 @@ function spawnat(f, tid)
     return task
 end
 
-
+global LOGGING_OBS = []
 """
     AsyncRunner(project::String, mod=Module(); callback=identity, spawn=false, global_logging_widget=nothing)
 
@@ -209,16 +209,17 @@ function AsyncRunner(project::String, mod::Module = Module(gensym("BonitoBook"))
     task_queue = Channel{RunnerTask}(Inf)
     taskref = spawnat(1) do
         for task in task_queue
-            lock(loki) do
-                try
-                    cd(project) do
-                        redirect_target[] = task.logging
-                        run!(mod, python_runner, task)
-                    end
-                catch e
-                    @error "Error running code: $(task.source)" exception = (e, catch_backtrace())
-                finally
-                    redirect_target[] = global_logger
+            @lock loki redirect_target[] = task.logging
+            try
+                cd(project) do
+                    run!(mod, python_runner, task)
+                end
+            catch e
+                @error "Error running code: $(task.source)" exception = (e, catch_backtrace())
+            finally
+                @async begin
+                    sleep(0.5)
+                    @lock loki redirect_target[] = global_logger
                 end
             end
         end
@@ -227,13 +228,13 @@ function AsyncRunner(project::String, mod::Module = Module(gensym("BonitoBook"))
     open = Threads.Atomic{Bool}(true)
     task = Threads.@spawn begin
         while open[] && isopen(io_chan)
-            bytes = take!(io_chan)
-            lock(loki) do
-                if !isempty(bytes) && isassigned(redirect_target)
-                    printer = HTMLPrinter(IOBuffer(copy(bytes)); root_tag = "span")
-                    str = sprint(io -> show(io, MIME"text/html"(), printer))
-                    redirect_target[][] = str
-                end
+            # take obs first, to print to the correct logging target
+            obs = @lock loki isassigned(redirect_target) ? redirect_target[] : nothing
+            bytes = copy(take!(io_chan))
+            if !isempty(bytes) && !isnothing(obs)
+                printer = HTMLPrinter(IOBuffer(bytes); root_tag = "span")
+                str = sprint(io -> show(io, MIME"text/html"(), printer))
+                @lock loki obs[] = str
             end
         end
     end
@@ -282,13 +283,12 @@ function run!(mod::Module, python_runner::PythonRunner, task::RunnerTask)
     source = task.source
     language = task.language
     try
-        cd()
         if language == "python"
             # Execute Python code
             if startswith(source, "]add ")
                 packages = split(replace(source, "]add " => ""), " ")
                 CondaPkg.add(packages)
-                result[] = "Packages installed: $(join(packages, ", "))"
+                result[] = nothing
             else
                 py_result = eval_python_code_jl(python_runner, mod, "", 1, source)
                 result[] = py_result
@@ -306,10 +306,11 @@ function run!(mod::Module, python_runner::PythonRunner, task::RunnerTask)
                 run(cmd)
                 result[] = nothing
             else
+                res = Base.include_string(mod, source)
                 if endswith(source, ";")
                     result[] = nothing
                 else
-                    result[] = book_display(Base.include_string(mod, source))
+                    result[] = book_display(res)
                 end
             end
         end

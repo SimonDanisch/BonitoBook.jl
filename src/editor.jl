@@ -244,7 +244,7 @@ function EvalEditor(
         js_init_func = nothing,
         show_output = true,
         show_editor = true,
-        show_logging = true,
+        show_logging = false,
         editor_classes = String[],
         container_classes = String[],
         resize_to_lines = true,
@@ -263,7 +263,10 @@ function EvalEditor(
     logging = @D Observable("")
     logging_html = @D Observable("")
     on(logging) do str
-        logging_html[] = logging_html[] * str
+        if !isempty(str)
+            # Append the new HTML content (already formatted by ANSIColoredPrinters)
+            logging_html[] = logging_html[] * str
+        end
     end
     editor = EvalEditor(
         editor,
@@ -296,14 +299,19 @@ function render_editor(editor::EvalEditor)
     direction = editor.editor.hiding_direction
     hiding = "hide-$direction"
     showing = "show-$direction"
-    output_class = editor.show_output[] ? showing : hiding
-    logging_class = editor.show_logging[] ? showing : hiding
-    output_div = DOM.div(editor.output, class = "cell-output $(output_class)")
+    output_class = map(editor.show_output) do show
+        show ? showing : hiding
+    end
+    logging_class = map(editor.show_logging) do show
+        show ? showing : hiding
+    end
+    output_div = DOM.div(editor.output, class = map(c -> "cell-output $(c)", output_class))
     logging_html = @D Observable(HTML(""))
     on(editor.logging_html) do str
-        logging_html[] = HTML("<pre>" * str * "</pre>")
+        # Don't wrap in <pre> since ANSIColoredPrinters already provides formatted HTML
+        logging_html[] = HTML(str)
     end
-    logging_div = DOM.div(ANSI_CSS, logging_html, class = "cell-logging $(logging_class)")
+    logging_div = DOM.div(ANSI_CSS, logging_html, class = map(c -> "cell-logging $(c)", logging_class))
     # Set the init func, which we can only do here where we have all divs
     editor.editor.js_init_func[] = js"""((editor) => {
         const output_div = $(output_div);
@@ -347,7 +355,7 @@ end
 
 
 """
-    CellEditor(content, language, runner; show_editor=true, show_logging=true, show_output=true)
+    CellEditor(content, language, runner; show_editor=true, show_logging=false, show_output=true)
 
 Create an interactive cell editor with code execution capabilities.
 
@@ -362,7 +370,7 @@ Create an interactive cell editor with code execution capabilities.
 # Returns
 Configured `CellEditor` instance ready for interactive use.
 """
-function CellEditor(content, language, runner; show_editor = true, show_logging = true, show_output = true)
+function CellEditor(content, language, runner; show_editor = true, show_logging = false, show_output = true)
     runner = language == "markdown" ? MarkdownRunner() : runner
     uuid = string(UUIDs.uuid4())
 

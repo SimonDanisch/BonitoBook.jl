@@ -7,7 +7,7 @@ rm(BonitoBook.Monaco.bundle_file)
 rm(Bonito.BonitoLib.bundle_file)
 # rm(joinpath(@__DIR__, "Getting-Started"), recursive = true, force = true)
 app = App(title = "BonitoBook") do s
-    return Book(joinpath(@__DIR__, "Getting-Started.md"); all_blocks_as_cell=true)
+    return Book(joinpath(@__DIR__, "Getting-Started.md"); all_blocks_as_cell=true, replace_style=true)
 end
 
 app = App(title = "BonitoBook") do s

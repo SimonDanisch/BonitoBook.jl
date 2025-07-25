@@ -41,7 +41,6 @@ Clear all logging content from the widget.
 function clear_logging!(widget::LoggingWidget)
     widget.logging[] = ""
     widget.logging_html[] = ""
-    widget.new_content[] = false
 end
 
 """
@@ -62,7 +61,8 @@ function Bonito.jsrender(session::Session, widget::LoggingWidget)
     logging_html = @D Observable(HTML(""))
     on(widget.logging_html) do str
         isempty(str) && return
-        logging_html[] = HTML("<pre>" * str * "</pre>")
+        # Don't wrap in <pre> since ANSIColoredPrinters already provides formatted HTML
+        logging_html[] = HTML(str)
     end
 
     # Dynamic class based on visibility

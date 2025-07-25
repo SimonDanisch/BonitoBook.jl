@@ -20,6 +20,7 @@ const WIDGET_STYLES = Styles(
         "border" => "1px solid var(--border-secondary)",
         "border-radius" => "6px",
         "padding" => "8px 16px",
+        "margin" => "4px",
         "font-size" => "14px",
         "font-weight" => "500",
         "cursor" => "pointer",
@@ -58,11 +59,12 @@ const INPUT_STYLES = Styles(
         "border" => "1px solid var(--border-secondary)",
         "border-radius" => "6px",
         "padding" => "8px 12px",
+        "margin" => "4px",
         "font-size" => "14px",
         "font-family" => "inherit",
         "transition" => "all 0.2s ease",
         "outline" => "none",
-        "width" => "100%",
+        "width" => "calc(100% - 8px)",
         "box-sizing" => "border-box"
     ),
     CSS(
@@ -95,7 +97,7 @@ const CHECKBOX_STYLES = Styles(
         "appearance" => "none",
         "-webkit-appearance" => "none",
         "position" => "relative",
-        "margin" => "0 8px 0 0",
+        "margin" => "4px 8px 4px 4px",
         "flex-shrink" => "0"
     ),
     CSS(
@@ -134,12 +136,13 @@ const DROPDOWN_STYLES = Styles(
         "border" => "1px solid var(--border-secondary)",
         "border-radius" => "6px",
         "padding" => "8px 12px",
+        "margin" => "4px",
         "font-size" => "14px",
         "font-family" => "inherit",
         "cursor" => "pointer",
         "transition" => "all 0.2s ease",
         "outline" => "none",
-        "width" => "100%",
+        "width" => "calc(100% - 8px)",
         "box-sizing" => "border-box",
         "appearance" => "none",
         "-webkit-appearance" => "none",
@@ -168,7 +171,7 @@ const DROPDOWN_STYLES = Styles(
 const SLIDER_STYLES = Styles(
     CSS(
         ".bonitobook-slider",
-        "width" => "100%",
+        "width" => "calc(100% - 8px)",
         "height" => "6px",
         "border-radius" => "3px",
         "background" => "var(--border-secondary)",
@@ -176,7 +179,8 @@ const SLIDER_STYLES = Styles(
         "appearance" => "none",
         "-webkit-appearance" => "none",
         "cursor" => "pointer",
-        "transition" => "all 0.2s ease"
+        "transition" => "all 0.2s ease",
+        "margin" => "4px"
     ),
     CSS(
         ".bonitobook-slider::-webkit-slider-thumb",

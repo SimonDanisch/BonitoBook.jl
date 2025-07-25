@@ -44,14 +44,14 @@ function from_folder(folder; replace_style=false)
 
     # Handle style file replacement
     if replace_style || !isfile(style_path)
-        style_path_template = joinpath(@__DIR__, "templates/style.jl")
+        style_path_template = joinpath(@__DIR__, "templates", "style.jl")
         cp(style_path_template, style_path; force=true)
     end
 
     return book, folder, [style_path]
 end
 
-function from_file(book, folder)
+function from_file(book, folder; replace_style=false)
     if isnothing(folder)
         book_file = normpath(abspath(book))
         name, ext = splitext(book)
@@ -60,7 +60,7 @@ function from_file(book, folder)
         end
         folder = joinpath(dirname(book_file), basename(name))
         if isdir(folder)
-            return from_folder(folder)
+            return from_folder(folder; replace_style=replace_style)
         else
             mkpath(folder)
         end
@@ -119,7 +119,7 @@ book = Book("/path/to/book/folder"; replace_style=true)
 """
 function Book(file; folder = nothing, replace_style = false, all_blocks_as_cell = false)
     if isfile(file)
-        bookfile, folder, style_paths = from_file(file, folder)
+        bookfile, folder, style_paths = from_file(file, folder; replace_style=replace_style)
     elseif isdir(file)
         bookfile, folder, style_paths = from_folder(file; replace_style=replace_style)
     else
@@ -127,8 +127,6 @@ function Book(file; folder = nothing, replace_style = false, all_blocks_as_cell 
     end
     cells = load_book(bookfile; all_blocks_as_cell=all_blocks_as_cell)
     global_logging_widget = LoggingWidget()
-    # Add some test content to make sure the widget is working
-    global_logging_widget.logging[] = "Global logging initialized. This is where output from cells will appear after execution.\n"
     runner = AsyncRunner(folder; global_logger=global_logging_widget.logging)
     editors = cells2editors(cells, runner)
     progress = @D Observable((false, 0.0))
