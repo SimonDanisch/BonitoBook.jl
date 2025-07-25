@@ -96,12 +96,119 @@ Styles(
     ),
     CSS(
         "@media print",
+        # Preserve all colors and styles
         CSS(
             "*",
             "-webkit-print-color-adjust" => "exact !important",
-            "print-color-adjust" => "exact !important",
+            "print-color-adjust" => "exact !important", 
             "color-adjust" => "exact !important",
             "filter" => "none !important"
+        ),
+        CSS(
+            "@page",
+            "margin" => "0.7in",
+            "size" => "A4"
+        ),
+        CSS(
+            "html, body",
+            "font-size" => "13px",
+            "line-height" => "1.5",
+            "background" => "white !important",
+            "height" => "auto !important",
+            "max-height" => "none !important",
+            "overflow" => "visible !important"
+        ),
+        # Reset main containers to allow natural flow
+        CSS(
+            "#application, .application-container, .main-content, .book-container, .notebook-container",
+            "height" => "auto !important",
+            "max-height" => "none !important",
+            "overflow" => "visible !important",
+            "display" => "block !important",
+            "position" => "static !important",
+            "flex" => "none !important"
+        ),
+        # Reset any flexbox containers
+        CSS(
+            ".flex, .flex-col, .flex-row",
+            "display" => "block !important",
+            "flex" => "none !important",
+            "height" => "auto !important"
+        ),
+        # Hide only specific UI elements, preserve most styling
+        CSS(
+            ".small-menu-bar, .hover-buttons, .sidebar-tabs, .sidebar-content-container, .footer, .sidebar-main-container",
+            "display" => "none !important"
+        ),
+        # Preserve Monaco editor styling but make it printable
+        CSS(
+            ".monaco-editor",
+            "background" => "var(--bg-primary) !important",
+            "border" => "1px solid var(--border-primary) !important",
+            "border-radius" => "6px !important",
+            "padding" => "12px !important",
+            "margin" => "8px 0 !important",
+            "height" => "auto !important",
+            "max-height" => "none !important",
+            "overflow" => "visible !important",
+            "page-break-inside" => "auto",
+            "break-inside" => "auto"
+        ),
+        CSS(
+            ".monaco-editor .view-lines",
+            "background" => "transparent !important"
+        ),
+        # Preserve cell styling but allow breaking for long cells
+        CSS(
+            ".cell-editor",
+            "background" => "var(--bg-primary) !important",
+            "border" => "1px solid var(--border-secondary) !important",
+            "border-radius" => "8px !important",
+            "padding" => "16px !important",
+            "margin" => "16px 0 !important",
+            "height" => "auto !important",
+            "max-height" => "none !important",
+            "overflow" => "visible !important",
+            "page-break-inside" => "auto",
+            "break-inside" => "auto"
+        ),
+        # Style cell outputs
+        CSS(
+            ".cell-output",
+            "background" => "var(--bg-secondary) !important",
+            "border" => "1px solid var(--border-secondary) !important",
+            "border-radius" => "6px !important",
+            "padding" => "12px !important",
+            "margin" => "8px 0 !important"
+        ),
+        # Style logging output
+        CSS(
+            ".cell-logging",
+            "background" => "var(--bg-secondary) !important",
+            "border" => "1px solid var(--border-secondary) !important",
+            "border-radius" => "6px !important",
+            "padding" => "8px !important",
+            "margin" => "8px 0 !important",
+            "font-family" => "monospace !important"
+        ),
+        # Ensure plots and images scale properly
+        CSS(
+            "canvas, svg, img",
+            "max-width" => "100% !important",
+            "height" => "auto !important",
+            "page-break-inside" => "avoid",
+            "break-inside" => "avoid"
+        ),
+        # Handle long code blocks by allowing breaks if necessary
+        CSS(
+            ".monaco-editor .view-line",
+            "white-space" => "pre-wrap !important",
+            "word-break" => "break-word !important"
+        ),
+        # Preserve syntax highlighting
+        CSS(
+            ".monaco-editor .token",
+            "color" => "inherit !important"
         )
     ),
     # Global styling for all elements

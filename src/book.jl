@@ -206,13 +206,13 @@ function saving_menu(session, book)
         )
     end
     save_pdf, click_pdf = SmallButton("file-pdf")
-    on(click_pdf) do click
-        Base.errormonitor(
-            Threads.@async begin
-                println("PDF export not yet implemented")
-            end
-        )
-    end
+    pdf_js = js"""
+        $(click_pdf).on(click => {
+            // Trigger print dialog
+            window.print();
+        });
+    """
+    evaljs(session, pdf_js)
     return DOM.div(
         icon("save"), save_jl, save_md, save_pdf;
         class = "saving small-menu-bar"
@@ -258,6 +258,7 @@ function setup_editor_callbacks!(book, editor)
                     })
                 """
             )
+            save(book)  # Save the notebook after cell deletion
         end
     end
 end
@@ -285,6 +286,7 @@ function insert_editor_below!(book, editor, editor_above_uuid)
         add_cell_div = new_cell_menu(book, editor.uuid, book.runner)
         setup_editor_callbacks!(book, editor)
         elem = DOM.div(editor, add_cell_div)
+        save(book)  # Save the notebook after cell insertion
         return Bonito.dom_in_js(
             book.session, elem, js"""(elem) => {
                 $(Monaco).then(Monaco => {
@@ -304,6 +306,7 @@ function insert_editor_below!(book, editor, editor_above_uuid)
     add_cell_div = new_cell_menu(book, editor.uuid, book.runner)
     setup_editor_callbacks!(book, editor)
     elem = DOM.div(editor, add_cell_div)
+    save(book)  # Save the notebook after cell insertion
     return Bonito.dom_in_js(
         book.session, elem, js"""(elem) => {
             $(Monaco).then(Monaco => {

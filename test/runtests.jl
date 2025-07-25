@@ -11,15 +11,9 @@ app = App(title = "BonitoBook") do s
 end
 
 app = App(title = "BonitoBook") do s
-    return Book(joinpath(@__DIR__, "..", "examples", "hots.md"); all_blocks_as_cell=true)
+    return Book(joinpath(@__DIR__, "..", "docs", "intro2.md"); replace_style=true)
 end
 
-
-
-rm(Bonito.BonitoLib.bundle_file)
-App() do
-    DOM.div(scatter(rand(Point2f, 10)))
-end
 
 
 rm(joinpath(@__DIR__, "Sunny", "01_LSWT_CoRh2O4"), recursive = true, force = true)
