@@ -7,7 +7,7 @@ const MONACO_THEME = Observable{String}[]
 
 function get_monaco_theme()
     if isempty(MONACO_THEME)
-        push!(MONACO_THEME, Observable("default"))
+        push!(MONACO_THEME, @D Observable("default"))
     end
     return MONACO_THEME[1]
 end
@@ -252,16 +252,16 @@ function EvalEditor(
     )
     js_init_func = isnothing(js_init_func) ? js"() => {}" : js_init_func
     editor = MonacoEditor(source; language = language, show_editor = show_editor, editor_classes = editor_classes, options...)
-    loading = Observable(false)
-    js_to_julia = Observable(Dict{String, Any}())
-    julia_to_js = Observable(Dict{String, Any}())
-    show_output = Observable(show_output)
-    show_editor_obs = Observable(show_editor)
+    loading = @D Observable(false)
+    js_to_julia = @D Observable(Dict{String, Any}())
+    julia_to_js = @D Observable(Dict{String, Any}())
+    show_output = @D Observable(show_output)
+    show_editor_obs = @D Observable(show_editor)
 
     result = Observable{Any}(nothing)
-    src = Observable(source)
-    logging = Observable("")
-    logging_html = Observable("")
+    src = @D Observable(source)
+    logging = @D Observable("")
+    logging_html = @D Observable("")
     on(logging) do str
         logging_html[] = logging_html[] * str
     end
@@ -278,7 +278,7 @@ function EvalEditor(
         logging,
         logging_html,
 
-        Observable(show_logging),
+        @D(Observable(show_logging)),
         show_output,
         show_editor_obs,
         loading,
@@ -299,7 +299,7 @@ function render_editor(editor::EvalEditor)
     output_class = editor.show_output[] ? showing : hiding
     logging_class = editor.show_logging[] ? showing : hiding
     output_div = DOM.div(editor.output, class = "cell-output $(output_class)")
-    logging_html = Observable(HTML(""))
+    logging_html = @D Observable(HTML(""))
     on(editor.logging_html) do str
         logging_html[] = HTML("<pre>" * str * "</pre>")
     end
@@ -384,24 +384,24 @@ function CellEditor(content, language, runner; show_editor = true, show_logging 
     end
     return CellEditor(
         language, jleditor,
-        uuid, Observable(false)
+        uuid, @D Observable(false)
     )
 end
 
 function Bonito.jsrender(session::Session, editor::CellEditor)
     jleditor = editor.editor
 
-    show_output = Observable(jleditor.show_output[])
+    show_output = @D Observable(jleditor.show_output[])
     on(x -> toggle!(jleditor; output = !jleditor.show_output[]), show_output)
     out = ToggleButton("graph", show_output)
-    show_editor_obs = Observable(jleditor.show_editor[])
+    show_editor_obs = @D Observable(jleditor.show_editor[])
     on(x -> toggle!(jleditor; editor = !jleditor.show_editor[]), show_editor_obs)
     show_editor = ToggleButton("code", show_editor_obs)
-    show_logging_obs = Observable(jleditor.show_logging[])
+    show_logging_obs = @D Observable(jleditor.show_logging[])
     on(x -> toggle!(jleditor; logging = !jleditor.show_logging[]), show_logging_obs)
     show_logging = ToggleButton("terminal", show_logging_obs)
     delete_icon = icon("close", style = Styles("color" => "red"))
-    click = Observable(false)
+    click = @D Observable(false)
     delete_editor = DOM.button(delete_icon; class = "small-button", onclick = js"event=> $(click).notify(true)")
     on(session, click) do x
         editor.delete_self[] = true
@@ -411,7 +411,7 @@ function Bonito.jsrender(session::Session, editor::CellEditor)
     container_id = "$(editor.uuid)-container"
     card_content_id = "$(editor.uuid)-card-content"
     any_loading = jleditor.loading
-    hide_on_focus_obs = Observable(editor.language == "markdown")
+    hide_on_focus_obs = @D Observable(editor.language == "markdown")
     any_visible = map(|, jleditor.show_editor, jleditor.show_logging)
 
     editor.editor.js_init_func[] = js"""
@@ -477,7 +477,7 @@ struct FileEditor
             resize_to_lines = false,
             opts..., options...
         )
-        current_file = Observable(filepath)
+        current_file = @D Observable(filepath)
 
         return new(editor, current_file)
     end

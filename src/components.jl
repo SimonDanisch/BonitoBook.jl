@@ -1,6 +1,6 @@
 
 function SmallButton(icon_name::String; class = "", kw...)
-    value = Observable(false)
+    value = @D Observable(false)
     ic = icon(icon_name)
     button_dom = DOM.button(
         ic;
@@ -27,9 +27,8 @@ DOM element with toggle functionality.
 """
 function SmallToggle(active, args...; class = "", kw...)
     class = active[] ? class : "toggled $class"
-    value = Observable(false)
+    value = @D Observable(false)
     button_dom = DOM.button(args...; class = "small-button $(class)", kw...)
-
     toggle_script = js"""
         const elem = $(button_dom);
         $(active).on((x) => {
@@ -77,16 +76,15 @@ Create a popup with the given content.
 `PopUp` instance.
 """
 function PopUp(content; show = true)
-    return PopUp(Observable(content), Observable(show))
+    return PopUp(@D(Observable(content)), @D(Observable(show)))
 end
 
 function Bonito.jsrender(session::Session, popup::PopUp)
     # Create proper close button with correct styling
     close_button = DOM.button("×",
         class = "popup-close-button",
-        onclick = js"event => $(popup.show).notify(false)"
     )
-    
+
     # Create popup content wrapper
     popup_content = DOM.div(
         close_button,
@@ -102,8 +100,12 @@ function Bonito.jsrender(session::Session, popup::PopUp)
     )
     # JavaScript for showing/hiding and keyboard handling
     popup_js = js"""
+        const close_button = $(close_button);
         const show = $(popup.show);
         const overlay = $(overlay);
+        close_button.addEventListener('click', () => {
+            show.notify(false);
+        });
         // Handle ESC key
         document.addEventListener('keydown', (event) => {
             if (event.key === 'Escape' && overlay.style.display !== 'none') {
@@ -117,8 +119,8 @@ function Bonito.jsrender(session::Session, popup::PopUp)
             }
         });
         // Handle show/hide
-        show.on((isShown) => {
-            overlay.style.display = isShown ? "flex" : "none";
+        show.on((show) => {
+            overlay.style.display = show ? "flex" : "none";
         });
     """
     return Bonito.jsrender(session, DOM.div(popup_js, overlay))
@@ -144,10 +146,10 @@ struct OpenFileDialog
     available_files::Observable{Vector{String}}
 
     function OpenFileDialog(base_folder::String = pwd())
-        base_folder_obs = Observable(base_folder)
-        current_path = Observable("")
-        file_selected = Observable("")
-        show_dialog = Observable(false)
+        base_folder_obs = @D Observable(base_folder)
+        current_path = @D Observable("")
+        file_selected = @D Observable("")
+        show_dialog = @D Observable(false)
         available_files = Observable{Vector{String}}([])
 
         # Update available files when base folder or current path changes
@@ -466,12 +468,12 @@ end
 Create a FileTabs component with the given initial files.
 """
 function FileTabs(files::Vector{String})
-    files_obs = Observable(files)
-    current_file = Observable(isempty(files) ? "" : files[1])
-    current_file_index = Observable(isempty(files) ? 0 : 1)
-    switch_file_obs = Observable(0)
-    close_file_obs = Observable(0)
-    open_file_obs = Observable("")
+    files_obs = @D Observable(files)
+    current_file = @D Observable(isempty(files) ? "" : files[1])
+    current_file_index = @D Observable(isempty(files) ? 0 : 1)
+    switch_file_obs = @D Observable(0)
+    close_file_obs = @D Observable(0)
+    open_file_obs = @D Observable("")
     file_dialog = OpenFileDialog()
 
     tabs = FileTabs(files_obs, current_file, current_file_index, switch_file_obs, close_file_obs, open_file_obs, file_dialog)

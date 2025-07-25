@@ -115,9 +115,10 @@ function parse_source(::MarkdownRunner, source)
                 else
                     editor = MonacoEditor(node.code; language = node.language, readOnly = true, lineNumbers = "off", editor_classes = ["markdown-inline-code"])
                     editor.js_init_func[] = js"""
-                    (editor, monaco, editor_div) => {
-                        $(Monaco).then(mod => {
-                            mod.resize_to_lines(editor, monaco, editor_div);
+                    (editor) => {
+                        Promise.all([$(Monaco), editor.monaco, editor.editor]).then(([mod, monaco, e]) => {
+                            // Resize editor to fit content
+                            mod.resize_to_lines(e, monaco, editor.editor_div);
                         });
                     }
                     """
@@ -156,6 +157,7 @@ Asynchronous code execution runner that handles Julia and Python code evaluation
 - `iochannel::Channel{Vector{UInt8}}`: IO redirection channel
 - `redirect_target::Base.RefValue{Observable{String}}`: Target for redirected output
 - `open::Threads.Atomic{Bool}`: Whether the runner is active
+- `global_logging_widget::Base.RefValue{Any}`: Global logging widget for output
 """
 struct AsyncRunner
     mod::Module
@@ -167,6 +169,7 @@ struct AsyncRunner
     iochannel::Channel{Vector{UInt8}}
     redirect_target::Base.RefValue{Observable{String}}
     open::Threads.Atomic{Bool}
+    global_logging_widget::Base.RefValue{Any}
 end
 
 function set_task_tid!(task::Task, tid::Integer)
@@ -182,7 +185,7 @@ end
 
 
 """
-    AsyncRunner(project::String, mod=Module(); callback=identity, spawn=false)
+    AsyncRunner(project::String, mod=Module(); callback=identity, spawn=false, global_logging_widget=nothing)
 
 Create a new asynchronous code runner.
 
@@ -190,12 +193,13 @@ Create a new asynchronous code runner.
 - `mod`: Module for code execution (defaults to new module)
 - `callback`: Function to process results (defaults to identity)
 - `spawn`: Whether to spawn the task (defaults to false)
+- `global_logging_widget`: Global logging widget for output redirection after task completion
 
 # Returns
 Configured `AsyncRunner` instance ready for code execution.
 """
-function AsyncRunner(project::String, mod::Module = Module(gensym("BonitoBook")); callback = identity, spawn = false)
-    redirect_target = Base.RefValue{Observable{String}}()
+function AsyncRunner(project::String, mod::Module = Module(gensym("BonitoBook")); callback = identity, spawn = false, global_logger = @D Observable(""))
+    redirect_target = Base.RefValue{Observable{String}}(global_logger)
     python_runner = fetch(
         spawnat(1) do
             PythonRunner()
@@ -207,13 +211,14 @@ function AsyncRunner(project::String, mod::Module = Module(gensym("BonitoBook"))
         for task in task_queue
             lock(loki) do
                 try
-                    # active_project = Pkg.project().path
-                    # Pkg.activate(project; io=IOBuffer())
-                    redirect_target[] = task.logging
-                    run!(mod, python_runner, task)
-                    # Pkg.activate(active_project; io=IOBuffer())
+                    cd(project) do
+                        redirect_target[] = task.logging
+                        run!(mod, python_runner, task)
+                    end
                 catch e
                     @error "Error running code: $(task.source)" exception = (e, catch_backtrace())
+                finally
+                    redirect_target[] = global_logger
                 end
             end
         end
@@ -233,7 +238,7 @@ function AsyncRunner(project::String, mod::Module = Module(gensym("BonitoBook"))
         end
     end
     Base.errormonitor(task)
-    return AsyncRunner(mod, project, python_runner, task_queue, taskref, Base.RefValue{Function}(callback), io_chan, redirect_target, open)
+    return AsyncRunner(mod, project, python_runner, task_queue, taskref, Base.RefValue{Function}(callback), io_chan, redirect_target, open, Base.RefValue{Any}())
 end
 
 function interrupt!(runner::AsyncRunner)
@@ -277,6 +282,7 @@ function run!(mod::Module, python_runner::PythonRunner, task::RunnerTask)
     source = task.source
     language = task.language
     try
+        cd()
         if language == "python"
             # Execute Python code
             if startswith(source, "]add ")
@@ -291,12 +297,14 @@ function run!(mod::Module, python_runner::PythonRunner, task::RunnerTask)
             # Execute Julia code (default behavior)
             if startswith(source, "]")
                 Pkg.REPLMode.pkgstr(source[2:end])
+                result[] = nothing
             elseif startswith(source, "?")
                 sym = Base.eval(mod, Meta.parse(source[2:end]))
                 result[] = Base.Docs.doc(sym)
             elseif startswith(source, ";")
                 cmd = `$(split(source[2:end]))`
                 run(cmd)
+                result[] = nothing
             else
                 if endswith(source, ";")
                     result[] = nothing

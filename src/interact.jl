@@ -74,13 +74,19 @@ function Bonito.jsrender(s::Session, mw::ManipulateWidgets)
     end
     observies = map(x -> x.value, widgets)
     init = map(to_value, observies)
-    obs = Observable(func(init...))
+    obs = @D Observable(func(init...))
     l = Base.ReentrantLock()
     Bonito.onany(observies...) do args...
-        lock(l) do
+        task = @async lock(l) do
             # Prevent reentrant calls to func
-            obs[] = func(args...)
+            try
+                obs[] = func(args...)
+            catch e
+                return CapturedException(e, Base.catch_backtrace())
+            end
         end
+        Base.errormonitor(task)
+        return
     end
 
     # Create controls panel

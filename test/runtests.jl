@@ -1,17 +1,39 @@
+using Revise
 using WGLMakie
 using BonitoBook, Bonito
 using PythonCall, Observables
 using ClaudeCodeSDK
 rm(BonitoBook.Monaco.bundle_file)
-rm(joinpath(@__DIR__, "Getting-Started"), recursive = true, force = true)
+rm(Bonito.BonitoLib.bundle_file)
+# rm(joinpath(@__DIR__, "Getting-Started"), recursive = true, force = true)
 app = App(title = "BonitoBook") do s
-    return Book(joinpath(@__DIR__, "Getting-Started.md"))
+    return Book(joinpath(@__DIR__, "Getting-Started.md"); all_blocks_as_cell=true)
 end
+
+app = App(title = "BonitoBook") do s
+    return Book(joinpath(@__DIR__, "..", "examples", "hots.md"); all_blocks_as_cell=true)
+end
+
+
+
+rm(Bonito.BonitoLib.bundle_file)
+App() do
+    DOM.div(scatter(rand(Point2f, 10)))
+end
+
 
 rm(joinpath(@__DIR__, "Sunny", "01_LSWT_CoRh2O4"), recursive = true, force = true)
 app = App(title = "BonitoBook") do s
     return Book(joinpath(@__DIR__, "Sunny", "01_LSWT_CoRh2O4.ipynb"))
 end
+
+style = include(joinpath(@__DIR__, "..", "src", "templates", "style.jl"))
+w = LoggingWidget()
+App() do
+    DOM.div(style, w)
+end
+w.logging[] = "This is a test log message.\n"
+
 
 import Makie.SpecApi as S
 p1 = S.Scatter(1:4; color=1:4)
@@ -131,28 +153,3 @@ julia_config = McpServerConfig(
 mcp_servers=Dict{String, McpServerConfig}(
     "julia_exec" => julia_config
 )
-
-mcp_tools = ["mcp__julia-server__julia_exec"]
-tools = ["Read", "Write", "Bash", "Glob", "Grep", "Edit", mcp_tools[1]]
-options = ClaudeCodeOptions(
-    allowed_tools=tools,
-    max_thinking_tokens=8000,
-    system_prompt="",
-    append_system_prompt=nothing,
-    mcp_tools=mcp_tools,
-    # mcp_servers=mcp_servers,
-    permission_mode="acceptEdits",
-    continue_conversation=true,
-    max_turns=20,
-    disallowed_tools=String[],
-    model="claude-sonnet-4-20250514",
-    permission_prompt_tool_name=nothing,
-    cwd="."
-)
-for message in query(prompt="Can you run julia code `rand(10) .+ 10`", options=options)
-    if message isa AssistantMessage
-        for block in message.content
-            println(block)
-        end
-    end
-end

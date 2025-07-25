@@ -56,7 +56,7 @@ function export_jl(file::AbstractString, book::Book)
     app = App() do s
         body = Centered(DOM.div(book.cells...))
         document = DOM.div(DOM.div(body; style = Styles("width" => "100%")))
-        return DOM.div(book.style_editor.editor.output, document)
+        return DOM.div(book.style_eval.last_valid_output, document)
     end
     Bonito.export_static(file, app)
     return file

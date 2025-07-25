@@ -5,3 +5,41 @@ Make the simple physics engine with gravity and jumping and collision detection 
 Only add a new julia cell to the book after you verified that the code works and does what was requested.
 Use !Makie.isclosed(scene) for loop condition.
 I attached an image to show you how it should look!
+
+
+# JS export example
+i have the following app in Julia using WGLMakie and updating the plot in javascript.
+This allows to animate this for exports, where Julia isn't avaialable.
+The example is pretty boring, can you create something more exciting?
+Stick to the general structure, but make it more interactive and visually appealing.
+You should only use scatter plots, since other objects are hard to update.
+Add the final result as a new cell in the book.
+Add a play button to animate the slider, which needs to happen in JS as well - you will need to update the slider observable from JS for that via (obs.notify(new_value)).
+```julia
+using WGLMakie, Bonito
+s1 = Components.Slider(1:100)
+markersize = Components.Slider(1:100)
+
+fig, ax, splot = scatter(rand(Point3f, 10); axis=(;show_axis=false))
+jss = js"""
+console.log("hulu");
+$(splot).then(plots=>{
+    const scatter_plot = plots[0];
+    const plot = scatter_plot.plot_object;
+    const pos_buff = scatter_plot.geometry.attributes.positions_transformed_f32c.array;
+    const initial_pos = [...pos_buff]
+    console.log(initial_pos)
+    $(s1.value).on(new_value => {
+        console.log(new_value)
+        const news = initial_pos.map(i => (i) + (new_value/10))
+        plot.update([['positions_transformed_f32c', news]])
+    })
+    $(markersize.value).on(size => {
+        console.log(size)
+        plot.update([['quad_scale', [size, size]], ['quad_offset', [-size/2, -size/2]]])
+    })
+});
+"""
+
+DOM.div(s1, markersize, fig, jss)
+```

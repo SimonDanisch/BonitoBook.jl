@@ -73,12 +73,12 @@ Create a new chat component with the given chat agent.
 function ChatComponent(chat_agent::ChatAgent; book=nothing)
     return ChatComponent(
         chat_agent,
-        Observable(ChatMessage[]),
-        Observable(""),
-        Observable(false),
+        @D(Observable(ChatMessage[])),
+        @D(Observable("")),
+        @D(Observable(false)),
         book,
         Ref{Union{Task, Nothing}}(nothing),
-        Observable(String[])
+        @D(Observable(String[]))
     )
 end
 
@@ -94,25 +94,25 @@ end
 # Function to save pasted image data to tmp directory
 function save_pasted_image(image_data_base64::String, filename::String)
     tmp_dir = ensure_tmp_directory()
-    
+
     # Decode base64 image data
     # Remove data:image/png;base64, prefix if present
     if startswith(image_data_base64, "data:")
         image_data_base64 = split(image_data_base64, ",")[2]
     end
-    
+
     # Decode base64 to bytes
     image_bytes = base64decode(image_data_base64)
-    
+
     # Generate unique filename with timestamp
     timestamp = Dates.format(Dates.now(), "yyyymmdd_HHMMSS")
     file_path = joinpath(tmp_dir, "$(timestamp)_$(filename)")
-    
+
     # Write image to file
     open(file_path, "w") do f
         write(f, image_bytes)
     end
-    
+
     return file_path
 end
 
@@ -124,7 +124,7 @@ function send_message!(chat::ChatComponent, message::String)
     # Get current attachments and clear them
     attachments = copy(chat.pending_attachments[])
     chat.pending_attachments[] = String[]
-    
+
     # Add user message with attachments
     user_msg = ChatMessage(message, true, Dates.now(), attachments)
     push!(chat.messages[], user_msg)
@@ -139,9 +139,9 @@ function send_message!(chat::ChatComponent, message::String)
         else
             message
         end
-        
+
         response_channel = prompt(chat.chat_agent, formatted_message)
-        dom = Observable(DOM.div())
+        dom = @D Observable(DOM.div())
         task = Threads.@spawn begin
             try
                 for msg in response_channel
@@ -186,7 +186,7 @@ function Bonito.jsrender(session::Session, message::ChatMessage)
     # Render a single chat message
     user = message.is_user ? "user" : "agent"
     content_display = DOM.div(message.content, class = "chat-message-content")
-    
+
     # Add attachment previews if present
     attachment_elements = []
     if !isempty(message.attachments)
@@ -209,13 +209,13 @@ function Bonito.jsrender(session::Session, message::ChatMessage)
             end
         end
     end
-    
+
     message_content = if !isempty(attachment_elements)
         DOM.div(content_display, attachment_elements...)
     else
         content_display
     end
-    
+
     return Bonito.jsrender(session, DOM.div(
         message_content,
         DOM.div(Dates.format(message.timestamp, "HH:MM"), class = "chat-message-time"),
@@ -241,10 +241,10 @@ function Bonito.jsrender(session::Session, chat::ChatComponent)
 
     # Send button with icon
     send_button, send_clicked = SmallButton("send"; disabled = chat.is_processing)
-    
+
     # Stop button with icon
     stop_button, stop_clicked = SmallButton("debug-stop"; disabled = map(!, chat.is_processing))
-    
+
     # Settings button with icon
     settings_button, settings_clicked = SmallButton("settings"; disabled = false)
 
@@ -254,20 +254,20 @@ function Bonito.jsrender(session::Session, chat::ChatComponent)
             send_message!(chat, chat.input_text[])
         end
     end
-    
+
     # Handle stop button click
     on(stop_clicked) do _
         stop_streaming!(chat)
     end
-    
+
     # Create settings popup
     settings_popup = PopUp(settings_menu(chat.chat_agent); show = false)
-    
+
     # Handle settings button click
     on(settings_clicked) do _
         settings_popup.show[] = true
     end
-    
+
     # Handle image paste events
     paste_data = Observable{Dict}(Dict())
     on(paste_data) do attachment_data
@@ -295,7 +295,7 @@ function Bonito.jsrender(session::Session, chat::ChatComponent)
             DOM.div()
         end
     end
-    
+
     # Attachment indicator
     attachment_indicator = map(chat.pending_attachments) do attachments
         if !isempty(attachments)
@@ -338,9 +338,9 @@ function Bonito.jsrender(session::Session, chat::ChatComponent)
             input.style.height = 'auto';
             input.style.height = Math.min(input.scrollHeight, 120) + 'px';
         }
-        
+
         input.addEventListener('input', resizeTextarea);
-        
+
         // Enhanced enter key handling for multiline
         input.addEventListener('keydown', (event) => {
             if (event.key === 'Enter' && !event.shiftKey) {
@@ -354,7 +354,7 @@ function Bonito.jsrender(session::Session, chat::ChatComponent)
                 }
             }
         });
-        
+
         // Handle paste events for images
         input.addEventListener('paste', (event) => {
             const items = event.clipboardData.items;

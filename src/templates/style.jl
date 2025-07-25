@@ -84,7 +84,7 @@ Styles(
             "--hover-bg" => "rgba(255, 255, 255, 0.1)",
             "--menu-hover-bg" => "rgba(255, 255, 255, 0.05)",
             "--accent-blue" => "#0366d6",
-            "--animation-glow" => "0 0 15px rgba(255, 255, 255, 0.3)",
+            "--animation-glow" => "0 0 20px rgba(10, 155, 55, 0.5)",
             "--icon-color" => "#cccccc",
             "--icon-hover-color" => "#ffffff",
             "--icon-filter" => "invert(1)",
@@ -201,6 +201,31 @@ Styles(
         "padding" => "0",
         "background-color" => "var(--bg-primary)",
         "color" => "var(--text-primary)"
+    ),
+    CSS(
+        ".logging-widget",
+        "height" => "100%",
+        "width" => "100%",
+        "overflow-y" => "auto",
+        "margin" => "0",
+        "padding" => "8px",
+        "background-color" => "var(--bg-primary)",
+        "color" => "var(--text-primary)",
+        "font-family" => "monospace",
+        "font-size" => "12px",
+        "line-height" => "1.4"
+    ),
+    CSS(
+        ".logging-widget pre",
+        "margin" => "0",
+        "padding" => "0",
+        "background-color" => "transparent",
+        "color" => "inherit",
+        "font-family" => "inherit",
+        "font-size" => "inherit",
+        "line-height" => "inherit",
+        "white-space" => "pre-wrap",
+        "word-wrap" => "break-word"
     ),
 
     # Hover buttons
@@ -382,6 +407,16 @@ Styles(
     CSS(
         ".small-button:hover",
         "background-color" => "var(--hover-bg)",
+    ),
+    CSS(
+        ".small-button.has-new-content",
+        "animation" => "blink-notification 1.5s ease-in-out infinite",
+    ),
+    CSS(
+        "@keyframes blink-notification",
+        CSS("0%", "opacity" => "1"),
+        CSS("50%", "opacity" => "0.5"),
+        CSS("100%", "opacity" => "1")
     ),
 
     CSS(
@@ -700,6 +735,23 @@ Styles(
         "overflow" => "hidden",
         "height" => "100vh"
     ),
+    CSS(
+        ".book-bottom-panel",
+        "position" => "fixed",
+        "bottom" => "0",
+        "left" => "0",
+        "right" => "0",
+        "z-index" => "1000",
+        "background-color" => "var(--bg-primary)",
+    ),
+    CSS(
+        ".book-main-content",
+        "padding-bottom" => "50px", # Add padding to avoid overlap with horizontal sidebar
+        "flex" => "1",
+        "display" => "flex",
+        "flex-direction" => "column",
+        "overflow" => "hidden",
+    ),
 
     # Sidebar styles
     CSS(
@@ -722,7 +774,7 @@ Styles(
         "border-radius" => "8px 0 0 8px",
         "box-shadow" => "-4px 0 8px rgba(0, 0, 0, 0.1)",
         "overflow" => "hidden",
-        "height" => "fit-content",
+        "height" => "100%",
         "max-height" => "90vh",
         "pointer-events" => "auto",
     ),
@@ -736,6 +788,48 @@ Styles(
         ".sidebar-content-container.expanded",
         "opacity" => "1",
         "visibility" => "visible",
+    ),
+    # Horizontal sidebar styles
+    CSS(
+        ".sidebar-content-container.horizontal.expanded",
+        "opacity" => "1",
+        "visibility" => "visible",
+        "height" => "var(--sidebar-height, 300px)",
+    ),
+    CSS(
+        ".sidebar-content-container.horizontal",
+        "background-color" => "var(--bg-primary)",
+        "border-top" => "1px solid var(--border-primary)",
+        "transition" => "height 0.3s ease, opacity 0.3s ease",
+        "overflow" => "hidden",
+        "width" => "100%",
+        "opacity" => "1",
+        "visibility" => "visible",
+    ),
+    CSS(
+        ".sidebar-content-container.horizontal.collapsed",
+        "height" => "0px",
+        "opacity" => "0",
+        "visibility" => "hidden",
+    ),
+    CSS(
+        ".sidebar-main-container.horizontal",
+        "position" => "relative",
+        "width" => "100%",
+        "display" => "flex",
+        "flex-direction" => "column-reverse",
+        "height" => "auto",
+    ),
+    CSS(
+        ".sidebar-tabs.horizontal",
+        "display" => "flex",
+        "flex-direction" => "row",
+        "justify-content" => "center",
+        "background-color" => "var(--bg-primary)",
+        "border-top" => "1px solid var(--border-primary)",
+        "padding" => "4px",
+        "width" => "100%",
+        "height" => "auto",
     ),
     CSS(
         ".sidebar-tabs",
@@ -801,7 +895,7 @@ Styles(
         "width" => "100%",
         "background-color" => "var(--bg-primary)",
         "position" => "relative",
-        "height" => "fit-content",
+        "height" => "100%",
     ),
     CSS(
         ".sidebar-widget-content",

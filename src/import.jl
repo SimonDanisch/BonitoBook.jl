@@ -29,6 +29,7 @@ function markdown2book(md; all_blocks_as_cell = false)
         if content isa Markdown.Code
             languages = split(content.language, " ")
             language = languages[1]
+            @show language
             if !isempty(language) && language in ("markdown", "julia", "python")
                 # We only treat ```language bool bool bool as a code block (our format)
                 # Option to force all blocks as code blocks, for markdown not written by us
@@ -38,7 +39,7 @@ function markdown2book(md; all_blocks_as_cell = false)
                         show_fields = parse.(Bool, languages[2:end])
                     else
                         # Default show fields for all_blocks_as_cell mode
-                        show_fields = (false, false, true)
+                        show_fields = (true, false, true)
                     end
                     push!(cells, Cell(language, content.code, nothing, show_fields...))
                 else
@@ -116,12 +117,12 @@ Vector of `Cell` objects representing the book content.
 - `.md`: Markdown files with embedded code blocks
 - `.ipynb`: Jupyter notebook files
 """
-function load_book(path)
+function load_book(path; all_blocks_as_cell=false)
     if endswith(path, ".ipynb")
         return ipynb2book(path)
     elseif endswith(path, ".md")
         md = Markdown.parse_file(path)
-        return markdown2book(md)
+        return markdown2book(md, all_blocks_as_cell=all_blocks_as_cell)
     else
         error("Unsupported file format. Only .ipynb and .md files are supported.")
     end

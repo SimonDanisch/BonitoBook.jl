@@ -11,6 +11,7 @@ class MonacoEditor {
         this.initialized = false;
         this.hiding_direction = hiding_direction;
         this.theme = theme.value;
+        this.monaco = monaco;
         theme.on((new_theme)=>{
             this.set_theme(new_theme);
         });
@@ -283,9 +284,6 @@ function add_command(editor, label, keybinding, callback) {
     });
 }
 function resize_to_lines(editor, monaco, editor_div, retryCount = 0) {
-    if (!editor || typeof editor.onDidChangeModelContent !== 'function') {
-        return;
-    }
     function updateEditorHeight() {
         try {
             const model = editor.getModel();

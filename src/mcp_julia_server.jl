@@ -48,11 +48,23 @@ function add_julia_mpc_route!(book::Book)
     mcp_server = MCPJuliaServer(runner, server)
     book.mcp_server = mcp_server
     route!(server, "/julia-mcp/$(mcp_server.secret)" => mcp_server)
-    cli = ClaudeCodeSDK.find_cli()
+    cli = try
+        ClaudeCodeSDK.find_cli()
+    catch e
+        @warn "Claude CLI not found, MCP server may not be fully functional" exception=(e, Base.catch_backtrace())
+        nothing
+    end
     if !isnothing(cli)
-        @show (get_server_url(mcp_server))
         cd(book.folder) do
-            run(`$cli mcp add --transport http julia-server $(get_server_url(mcp_server))`)
+            try
+                try
+                    run(`$cli mcp remove julia-server`)
+                catch e
+                end
+                run(`$cli mcp add --transport http julia-server $(get_server_url(mcp_server))`)
+            catch e
+                @warn "Error when adding the MCP julia server" exception=(e, Base.catch_backtrace())
+            end
         end
     else
         @warn "Claude CLI not found, MCP server may not be fully functional"

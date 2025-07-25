@@ -1,30 +1,34 @@
 """
     Sidebar
 
-A vertical sidebar container that holds multiple widgets with tab navigation.
+A sidebar container that holds multiple widgets with tab navigation.
 Supports showing/hiding and switching between different widgets.
+Can be oriented vertically (default) or horizontally.
 
 # Fields
 - `widgets::Vector{Tuple{String, Any, String, String}}`: Vector of (id, widget, label, icon)
 - `current_widget::Observable{String}`: Currently active widget ID
 - `visible::Observable{Bool}`: Whether sidebar is visible
 - `width::String`: Width when expanded (default "400px")
+- `orientation::String`: Orientation ("vertical" or "horizontal")
 """
 struct Sidebar
     widgets::Vector{Tuple{String, Any, String, String}}
     current_widget::Observable{String}
     visible::Observable{Bool}
     width::String
+    orientation::String
 end
 
 """
-    Sidebar(widgets; width = "400px")
+    Sidebar(widgets; width = "400px", orientation = "vertical")
 
 Create a new sidebar with static widgets.
 
 # Arguments
 - `widgets`: Vector of tuples (widget_id, widget, label, icon_name)
 - `width`: Width when expanded (default "400px")
+- `orientation`: Orientation ("vertical" or "horizontal", default "vertical")
 
 # Example
 ```julia
@@ -34,19 +38,19 @@ sidebar = Sidebar([
 ])
 ```
 """
-function Sidebar(widgets::Vector{<:Tuple{String, Any, String, String}}; width = "400px")
+function Sidebar(widgets::Vector{<:Tuple{String, Any, String, String}}; width = "400px", orientation = "vertical")
     # Set first widget as current if any exist
-    current_widget = Observable(isempty(widgets) ? "" : widgets[1][1])
-    visible = Observable(false)
+    current_widget = @D Observable(isempty(widgets) ? "" : widgets[1][1])
+    visible = @D Observable(false)
 
     # Convert to the expected type
     typed_widgets = Vector{Tuple{String, Any, String, String}}(widgets)
 
-    return Sidebar(typed_widgets, current_widget, visible, width)
+    return Sidebar(typed_widgets, current_widget, visible, width, orientation)
 end
 
 
-function ToggleButton2(icon_name::String, is_active, on_click::Observable{Bool})
+function ToggleButton2(icon_name::String, is_active, on_click::Observable{Bool}, has_new_content::Observable{Bool} = @D Observable(false))
     button_icon = icon(icon_name)
     # Set initial class based on observable value
     initial_class = is_active[] ? "small-button toggle-button active" : "small-button toggle-button"
@@ -77,17 +81,18 @@ function ToggleButton2(icon_name::String, is_active, on_click::Observable{Bool})
 end
 
 function Bonito.jsrender(session::Bonito.Session, sidebar::Sidebar)
-    # Create vertical tabs
+    # Create tabs
     tabs = []
     widget_contents = []
 
     for (widget_id, widget, label, icon_name) in sidebar.widgets
         # Update active state when sidebar state changes
-        tab_active = Observable(false; ignore_equal_values=true)
+        tab_active = @D Observable(false; ignore_equal_values=true)
         onany(sidebar.current_widget, sidebar.visible) do current, visible
             tab_active[] = current == widget_id && visible
         end
-        on_toggle = Observable(false)
+        on_toggle = @D Observable(false)
+
         tab_button = ToggleButton2(icon_name, tab_active, on_toggle)
 
         on(session, on_toggle) do clicked
@@ -100,14 +105,18 @@ function Bonito.jsrender(session::Bonito.Session, sidebar::Sidebar)
         end
 
         if hasproperty(widget, :visible)
+            # Sync widget visibility with sidebar visibility
             on(session, widget.visible) do show
                 if show
                     sidebar.current_widget[] = widget_id
                     sidebar.visible[] = true
                 end
             end
+            # Also sync sidebar visibility to widget visibility
+            on(session, tab_active) do active
+                widget.visible[] = active
+            end
         end
-
 
         push!(tabs, tab_button)
 
@@ -126,8 +135,9 @@ function Bonito.jsrender(session::Bonito.Session, sidebar::Sidebar)
     on(sidebar.current_widget) do id
         sidebar.visible[] = true
     end
-    # Vertical tab bar
-    tab_bar = DOM.div(tabs...; class = "sidebar-tabs")
+
+    # Tab bar with orientation class
+    tab_bar = DOM.div(tabs...; class = "sidebar-tabs $(sidebar.orientation)")
 
     # Add resize handle
     resize_handle = DOM.div(class = "sidebar-resize-handle")
@@ -139,54 +149,30 @@ function Bonito.jsrender(session::Bonito.Session, sidebar::Sidebar)
         class = "sidebar-content"
     )
 
-    # Content container that adapts to content height
+    # Content container that adapts to content height/width based on orientation
     content_container_class = map(sidebar.visible) do visible
-        return visible ? "sidebar-content-container expanded" : "sidebar-content-container collapsed"
+        state = visible ? "expanded" : "collapsed"
+        return "sidebar-content-container $(sidebar.orientation) $state"
     end
 
     content_container = DOM.div(
         content_area;
         class = content_container_class
     )
-    # Main container that holds both tabs and content
+
+    # Main container that holds both tabs and content with orientation class
     main_container = DOM.div(
         tab_bar,
         content_container;
-        class = "sidebar-main-container"
+        class = "sidebar-main-container $(sidebar.orientation)"
     )
 
-    # Add resize functionality
-    resize_script = js"""
-        const handle = $(resize_handle);
-        const contentContainer = $(content_container);
-        let isResizing = false;
-        let startX = 0;
-        let startWidth = 0;
-
-        handle.addEventListener('mousedown', (e) => {
-            isResizing = true;
-            startX = e.clientX;
-            const contentWidth = contentContainer.querySelector('.sidebar-content').offsetWidth;
-            startWidth = contentWidth;
-            document.body.style.cursor = 'ew-resize';
-            e.preventDefault();
-        });
-
-        document.addEventListener('mousemove', (e) => {
-            if (!isResizing) return;
-            const dx = startX - e.clientX;
-            const newWidth = Math.max(300, Math.min(800, startWidth + dx));
-            document.documentElement.style.setProperty('--sidebar-width', newWidth + 'px');
-        });
-
-        document.addEventListener('mouseup', () => {
-            isResizing = false;
-            document.body.style.cursor = '';
-        });
-    """
-
+    # Global style with both width and height CSS variables
     global_style = Styles(
-        CSS(":root", "--sidebar-width" => sidebar.width)
+        CSS(":root", "--sidebar-width" => sidebar.width, "--sidebar-height" => "300px")
     )
-    return Bonito.jsrender(session, DOM.div(global_style, main_container, resize_script))
+
+    # No additional styles needed - all handled in style template now
+    horizontal_styles = Styles()
+    return Bonito.jsrender(session, DOM.div(global_style, horizontal_styles, main_container))
 end

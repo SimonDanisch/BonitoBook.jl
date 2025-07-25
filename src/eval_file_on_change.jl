@@ -46,7 +46,7 @@ Create a new EvalFileOnChange component for the given file.
 """
 function EvalFileOnChange(filepath::String; module_context=Main)
     # Create file watcher observable
-    file_watcher = Observable(mtime(filepath))
+    file_watcher = @D Observable(mtime(filepath))
     current_output = Observable{Any}(nothing)
     last_valid_output = Observable{Any}(nothing)
     on(file_watcher) do _time
@@ -75,6 +75,9 @@ function EvalFileOnChange(filepath::String; module_context=Main)
                 if e isa InterruptException
                     break
                 end
+                if !isfile(filepath)
+                    break
+                end
                 @error "Error watching file $filepath: $(string(e))" exception=(e, catch_backtrace())
                 # Sleep briefly on error and try again
                 sleep(0.1)
@@ -85,10 +88,9 @@ function EvalFileOnChange(filepath::String; module_context=Main)
     return EvalFileOnChange(filepath, current_output, last_valid_output, file_watcher, watcher_task, close)
 end
 
-
 function Bonito.jsrender(session::Session, eval_component::EvalFileOnChange)
     # Create popup for errors only
-    popup_content = Observable(DOM.div())
+    popup_content = @D Observable(DOM.div())
     popup = PopUp(popup_content; show = false)
 
     # Handle output changes

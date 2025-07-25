@@ -15,6 +15,7 @@ export class MonacoEditor {
         this.initialized = false;
         this.hiding_direction = hiding_direction;
         this.theme = theme.value;
+        this.monaco = monaco;
         theme.on((new_theme) => {
             this.set_theme(new_theme);
         });
@@ -58,7 +59,7 @@ export class MonacoEditor {
 
                     // Find the scrollable parent (could be book-cells-area or window)
                     const scrollParent = document.querySelector(".book-cells-area");
-                    
+
                     if (scrollParent) {
                         // Use scrollBy for smoother scrolling with proper delta handling
                         scrollParent.scrollBy({
@@ -348,10 +349,6 @@ export function add_command(editor, label, keybinding, callback) {
 
 export function resize_to_lines(editor, monaco, editor_div, retryCount = 0) {
     // Check if editor and required methods exist
-    if (!editor || typeof editor.onDidChangeModelContent !== 'function') {
-        return;
-    }
-
     // Resize editor based on content
     function updateEditorHeight() {
         try {
@@ -360,7 +357,6 @@ export function resize_to_lines(editor, monaco, editor_div, retryCount = 0) {
                 console.warn('Editor model not available yet');
                 return;
             }
-
             const lineHeight = editor.getOption(
                 monaco.editor.EditorOption.lineHeight
             );
@@ -375,8 +371,8 @@ export function resize_to_lines(editor, monaco, editor_div, retryCount = 0) {
 
     // Update height on content change
     try {
-        editor.onDidChangeModelContent(updateEditorHeight);
         // Initial resize
+        editor.onDidChangeModelContent(updateEditorHeight);
         updateEditorHeight();
     } catch (error) {
         console.error('Error setting up resize_to_lines:', error);
