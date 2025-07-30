@@ -368,7 +368,6 @@ function setup_cell_editor(eval_editor, buttons_id, container_id, card_content_i
         });
     });
     focused.on((x)=>{
-        console.log(card_content);
         if (x) {
             card_content.classList.add("focused");
         } else {

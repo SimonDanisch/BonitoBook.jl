@@ -26,6 +26,7 @@ mutable struct Book
     style_eval::EvalFileOnChange
     spinner::BookSpinner
     current_cell::Observable{Union{CellEditor, Nothing}}
+    theme_preference::Observable{String}
 end
 
 function from_folder(folder; replace_style=false)
@@ -133,11 +134,16 @@ function Book(file; folder = nothing, replace_style = false, all_blocks_as_cell 
     editors = cells2editors(cells, runner)
     progress = Observable((false, 0.0))
     Core.eval(runner.mod, :(using BonitoBook, BonitoBook.Bonito, BonitoBook.Markdown, BonitoBook.WGLMakie))
-    style_eval = EvalFileOnChange(style_paths[1]; module_context = BonitoBook)
+    style_eval = EvalFileOnChange(style_paths[1]; module_context = runner.mod)
     spinner = BookSpinner()
     current_cell = Observable{Union{CellEditor, Nothing}}(nothing)
-    book = Book(bookfile, folder, editors, runner, progress, nothing, nothing, Dict{String, Any}(), global_logging_widget, style_eval, spinner, current_cell)
+    theme_preference = Observable{String}("auto")
+    book = Book(
+        bookfile, folder, editors, runner, progress, nothing, nothing, Dict{String, Any}(),
+        global_logging_widget, style_eval, spinner, current_cell, theme_preference
+    )
     Core.eval(runner.mod, :(macro Book(); $(book); end))
+    notify(style_eval.file_watcher)
     export_md(joinpath(folder, "book.md"), book)
     return book
 end
@@ -554,6 +560,33 @@ function Bonito.jsrender(session::Session, book::Book)
 
     completions = setup_completions(session, runner.mod)
 
+    # Set up theme preference tracking
+    theme_tracking = js"""
+        // Function to get current theme preference
+        function getCurrentTheme() {
+            if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                return 'dark';
+            } else if (window.matchMedia('(prefers-color-scheme: light)').matches) {
+                return 'light';
+            } else {
+                return 'auto';
+            }
+        }
+
+        // Set initial theme
+        $(book.theme_preference).notify(getCurrentTheme());
+
+        // Listen for theme changes
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+            $(book.theme_preference).notify(getCurrentTheme());
+        });
+
+        window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', (e) => {
+            $(book.theme_preference).notify(getCurrentTheme());
+        });
+    """
+    evaljs(session, theme_tracking)
+
     on(session.on_close) do close
         runner.open[] = false
         return
@@ -593,4 +626,31 @@ end
 """
 function current_cell(book::Book)::Union{CellEditor, Nothing}
     return book.current_cell[]
+end
+
+"""
+    theme_preference(book::Book)::String
+
+Get the current browser theme preference.
+
+# Arguments
+- `book::Book`: The book instance
+
+# Returns
+The current theme preference: "light", "dark", or "auto" (if no preference is set).
+
+# Examples
+```julia
+theme = theme_preference(book)
+if theme == "dark"
+    println("User prefers dark mode")
+elseif theme == "light"
+    println("User prefers light mode")
+else
+    println("User has no theme preference (auto)")
+end
+```
+"""
+function theme_preference(book::Book)::String
+    return book.theme_preference[]
 end

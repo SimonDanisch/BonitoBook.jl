@@ -58,7 +58,6 @@ function EvalFileOnChange(filepath::String; module_context=Main)
             current_output[] = e
         end
     end
-    notify(file_watcher)
     # Create async task for file watching
     watcher_task = Ref{Task}()
     close = Threads.Atomic{Bool}(false)

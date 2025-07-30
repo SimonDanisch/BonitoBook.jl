@@ -5,11 +5,8 @@ Features of BonitBook
 ```julia true false true
 @Book().current_cell[].editor.source[]
 ```
-```python true false true
-
-```
 ```julia true false true
-sleep(1)
+scatter(1:4)
 ```
 ```julia true false true
 ]st

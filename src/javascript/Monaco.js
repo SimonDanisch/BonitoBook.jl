@@ -464,7 +464,6 @@ export function setup_cell_editor(
     });
     // Track loading state with minimum 1 second visibility
     focused.on((x) => {
-        console.log(card_content);
         if (x) {
             card_content.classList.add("focused");
         } else {

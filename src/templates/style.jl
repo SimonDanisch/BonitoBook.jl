@@ -36,6 +36,16 @@ else
     "@media (max-width: 0px)"  # Never apply
 end
 
+on(@Book().theme_preference) do browser_preference
+    @show browser_preference
+    theme = light_theme === nothing ? browser_preference : (light_theme ? "light" : "dark")
+    if theme == "light"
+        Makie.set_theme!(size = (650, 450))
+    else
+        Makie.set_theme!(Makie.theme_dark(), size = (650, 450))
+    end
+end
+
 Styles(
     CSS(
         "body",
