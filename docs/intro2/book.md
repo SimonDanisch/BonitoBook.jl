@@ -15,6 +15,9 @@ BonitoBook is a Julia-native interactive notebook system built on Bonito.jl that
 # Best Makie integration
 
 ```julia true false true
+BonitoBook.show_spinner!(@Book().spinner, @async sleep(5), "lolofant")
+```
+```julia true false true
 # Create sliders for different parameters
 time_slider = Components.Slider(1:360; value=1)
 spiral_factor = Components.Slider(1:50; value=20)

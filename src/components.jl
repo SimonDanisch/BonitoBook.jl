@@ -683,3 +683,70 @@ function Bonito.jsrender(session::Session, collapsible::Collapsible)
     """
     return Bonito.jsrender(session, DOM.div(widget, jss))
 end
+
+"""
+    BookSpinner
+
+A horizontal progress spinner component for displaying task progress.
+
+# Fields
+- `visible::Observable{Bool}`: Controls visibility of the spinner
+- `message::Observable{String}`: Optional text message to display
+"""
+struct BookSpinner
+    visible::Observable{Bool}
+    message::Observable{String}
+end
+
+"""
+    BookSpinner()
+
+Create a new book spinner with pulsing animation.
+
+# Returns
+A `BookSpinner` instance with default hidden state.
+"""
+function BookSpinner()
+    visible = Observable(false)
+    message = Observable("")
+    return BookSpinner(visible, message)
+end
+
+function Bonito.jsrender(session::Session, spinner::BookSpinner)
+    # Main spinner container with visibility control
+    spinner_class = map(spinner.visible) do visible
+        visible ? "book-spinner" : "book-spinner hidden"
+    end
+
+    spinner_container = DOM.div(
+        class = spinner_class
+    )
+    return Bonito.jsrender(session, spinner_container)
+end
+
+function show_spinner!(spinner::BookSpinner, task; message = "")
+    # Set the message if provided
+    if !isempty(message)
+        spinner.message[] = message
+    end
+
+    # Show the spinner
+    spinner.visible[] = true
+
+    # Monitor the task and hide spinner when complete
+    Threads.@spawn begin
+        try
+            # Wait for the task to complete
+            wait(task)
+        catch e
+            # Task failed, but we still want to hide the spinner
+            @debug "Task failed with error: $e"
+        finally
+            # Hide the spinner regardless of task outcome
+            spinner.visible[] = false
+            spinner.message[] = ""
+        end
+    end
+
+    return task
+end

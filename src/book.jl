@@ -24,6 +24,7 @@ mutable struct Book
     widgets::Dict{String, Any}
     global_logging_widget::Any
     style_eval::EvalFileOnChange
+    spinner::BookSpinner
 end
 
 function from_folder(folder; replace_style=false)
@@ -132,7 +133,8 @@ function Book(file; folder = nothing, replace_style = false, all_blocks_as_cell 
     progress = @D Observable((false, 0.0))
     Core.eval(runner.mod, :(using BonitoBook, BonitoBook.Bonito, BonitoBook.Markdown, BonitoBook.WGLMakie))
     style_eval = EvalFileOnChange(style_paths[1]; module_context = BonitoBook)
-    book = Book(bookfile, folder, editors, runner, progress, nothing, nothing, Dict{String, Any}(), global_logging_widget, style_eval)
+    spinner = BookSpinner()
+    book = Book(bookfile, folder, editors, runner, progress, nothing, nothing, Dict{String, Any}(), global_logging_widget, style_eval, spinner)
     Core.eval(runner.mod, :(macro Book(); $(book); end))
     export_md(joinpath(folder, "book.md"), book)
     return book
@@ -189,28 +191,27 @@ end
 function saving_menu(session, book)
     save_jl, click_jl = SmallButton("julia-logo")
     on(click_jl) do click
-        Base.errormonitor(
-            spawnat(1) do
-                file = export_jl(joinpath(book.folder, "book.html"), book)
-                trigger_js_download(session, file)
-            end
-        )
+        task = spawnat(1) do
+            file = export_jl(joinpath(book.folder, "book.html"), book)
+            trigger_js_download(session, file)
+        end
+        show_spinner!(book.spinner, task; message="Exporting to HTML...")
+        Base.errormonitor(task)
     end
     save_md, click_md = SmallButton("markdown")
     on(click_md) do click
-        Base.errormonitor(
-            Threads.@async begin
-                file = export_md(joinpath(book.folder, "book.md"), book)
-                trigger_js_download(session, file)
-            end
-        )
+        task = Threads.@async begin
+            file = export_md(joinpath(book.folder, "book.md"), book)
+            trigger_js_download(session, file)
+        end
+        show_spinner!(book.spinner, task; message="Exporting to Markdown...")
+        Base.errormonitor(task)
     end
     save_pdf, click_pdf = SmallButton("file-pdf")
     pdf_js = js"""
-        $(click_pdf).on(click => {
-            // Trigger print dialog
-            window.print();
-        });
+    $(click_pdf).on(click => {
+        window.print();
+    });
     """
     evaljs(session, pdf_js)
     return DOM.div(
@@ -490,7 +491,7 @@ function Bonito.jsrender(session::Session, book::Book)
     end
 
     # Create tabbed editor instead of separate file tabs
-    tabbed_editor = TabbedFileEditor(String[];)
+    tabbed_editor = TabbedFileEditor(String[])
     book.widgets["file_editor"] = tabbed_editor
     _setup_menu, style_eval, style_output = setup_menu(book, tabbed_editor)
     save = saving_menu(session, book)
@@ -512,7 +513,7 @@ function Bonito.jsrender(session::Session, book::Book)
     sidebar = Sidebar([
         ("file-editor", book.widgets["file_editor"], "File Editor", "file-code"),
         ("chat", book.widgets["chat"], "AI Chat", "chat-sparkle")
-    ]; width = "50vw")
+    ]; width = "800px")
 
     # Create horizontal sidebar for global logging
     global_logging_sidebar = Sidebar([
@@ -522,8 +523,11 @@ function Bonito.jsrender(session::Session, book::Book)
     # Create content area that includes both cells and sidebar
     content = DOM.div(cells_area, sidebar; class = "book-content")
 
+    # Create menu and spinner container to match width
+    menu_and_spinner = DOM.div(book.spinner, menu; class = "book-menu-container")
+
     # Create main content area (everything except the bottom global logging)
-    main_content = DOM.div(menu, content; class = "book-main-content")
+    main_content = DOM.div(menu_and_spinner, content; class = "book-main-content")
 
     # Create document structure with main content and bottom global logging
     document = DOM.div(

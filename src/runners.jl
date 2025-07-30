@@ -134,7 +134,6 @@ end
 
 parse_source(runner::Nothing, source) = nothing
 
-const ANSI_CSS = Asset(joinpath(dirname(pathof(ANSIColoredPrinters)), "..", "docs", "src", "assets", "default.css"))
 
 struct RunnerTask
     source::String
@@ -210,6 +209,7 @@ function AsyncRunner(project::String, mod::Module = Module(gensym("BonitoBook"))
     taskref = spawnat(1) do
         for task in task_queue
             @lock loki redirect_target[] = task.logging
+            yield() # yield to allow e.g. the logging task to run
             try
                 cd(project) do
                     run!(mod, python_runner, task)
@@ -229,8 +229,8 @@ function AsyncRunner(project::String, mod::Module = Module(gensym("BonitoBook"))
     task = Threads.@spawn begin
         while open[] && isopen(io_chan)
             # take obs first, to print to the correct logging target
-            obs = @lock loki isassigned(redirect_target) ? redirect_target[] : nothing
             bytes = copy(take!(io_chan))
+            obs = @lock loki isassigned(redirect_target) ? redirect_target[] : nothing
             if !isempty(bytes) && !isnothing(obs)
                 printer = HTMLPrinter(IOBuffer(bytes); root_tag = "span")
                 str = sprint(io -> show(io, MIME"text/html"(), printer))

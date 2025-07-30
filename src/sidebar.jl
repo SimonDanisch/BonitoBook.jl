@@ -139,12 +139,68 @@ function Bonito.jsrender(session::Bonito.Session, sidebar::Sidebar)
     # Tab bar with orientation class
     tab_bar = DOM.div(tabs...; class = "sidebar-tabs $(sidebar.orientation)")
 
-    # Add resize handle
-    resize_handle = DOM.div(class = "sidebar-resize-handle")
+    # Add resize handle with unified resize functionality
+    resize_handle = DOM.div(
+        class = "sidebar-resize-handle $(sidebar.orientation)"
+    )
+    resize_js = js"""
+    const handle = $(resize_handle);
+    const sidebar = handle.closest('.sidebar-main-container');
+    const container = handle.closest('.sidebar-content-container');
+    const orientation = $(sidebar.orientation);
+
+    let isResizing = false;
+    let startPos = 0;
+    let startSize = 0;
+
+    handle.addEventListener('mousedown', (e) => {
+        isResizing = true;
+        startPos = orientation === 'vertical' ? e.clientX : e.clientY;
+
+        if (orientation === 'vertical') {
+            startSize = parseInt(getComputedStyle(container).width, 10);
+        } else {
+            startSize = parseInt(getComputedStyle(container).height, 10);
+        }
+
+        document.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('mouseup', handleMouseUp);
+        e.preventDefault();
+    });
+
+    const handleMouseMove = (e) => {
+        if (!isResizing) return;
+
+        let newSize;
+        if (orientation === 'vertical') {
+            // For vertical sidebar: drag LEFT to make wider
+            const deltaX = startPos - e.clientX;
+            const maxWidth = window.innerWidth * 0.8;
+            newSize = Math.max(200, Math.min(maxWidth, startSize + deltaX));
+            container.style.setProperty('--sidebar-width', newSize + 'px');
+            container.style.width = newSize + 'px';
+        } else {
+            // For horizontal sidebar: drag UP to make taller  
+            const deltaY = startPos - e.clientY;
+            const maxHeight = window.innerHeight * 0.8;
+            newSize = Math.max(100, Math.min(maxHeight, startSize + deltaY));
+            container.style.setProperty('--sidebar-height', newSize + 'px');
+            container.style.height = newSize + 'px';
+        }
+    };
+
+    const handleMouseUp = () => {
+        isResizing = false;
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+    };
+    """
+
 
     # Content area with all widgets (hidden by default)
     content_area = DOM.div(
         resize_handle,
+        resize_js,
         widget_contents...;
         class = "sidebar-content"
     )
@@ -167,12 +223,14 @@ function Bonito.jsrender(session::Bonito.Session, sidebar::Sidebar)
         class = "sidebar-main-container $(sidebar.orientation)"
     )
 
-    # Global style with both width and height CSS variables
-    global_style = Styles(
-        CSS(":root", "--sidebar-width" => sidebar.width, "--sidebar-height" => "300px")
+    # Scoped style - set CSS variables on the specific sidebar container
+    scoped_style = Styles(
+        CSS(
+            ".sidebar-main-container.$(sidebar.orientation)",
+            "--sidebar-width" => sidebar.width,
+            "--sidebar-height" => "300px"
+        )
     )
 
-    # No additional styles needed - all handled in style template now
-    horizontal_styles = Styles()
-    return Bonito.jsrender(session, DOM.div(global_style, horizontal_styles, main_container))
+    return Bonito.jsrender(session, DOM.div(scoped_style, main_container))
 end

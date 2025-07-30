@@ -187,7 +187,6 @@ Styles(
             "border-radius" => "6px !important",
             "padding" => "8px !important",
             "margin" => "8px 0 !important",
-            "font-family" => "monospace !important"
         ),
         # Ensure plots and images scale properly
         CSS(
@@ -300,7 +299,6 @@ Styles(
     CSS(
         ".cell-logging",
         "max-height" => "500px",
-        "max-width" => editor_width,
         "overflow-y" => "auto",
         "margin" => "0",
         "padding" => "0",
@@ -317,14 +315,6 @@ Styles(
         "padding" => "0",
         "margin" => "0",
         "overflow" => "hidden"
-    ),
-    # When cell-logging is empty (no content), minimize space
-    CSS(
-        ".cell-logging:empty",
-        "height" => "0",
-        "min-height" => "0",
-        "padding" => "0",
-        "margin" => "0"
     ),
     CSS(
         ".logging-widget",
@@ -521,6 +511,7 @@ Styles(
         "box-shadow" => "var(--shadow-button)",
         "transition" => "background-color 0.2s",
         "padding" => "8px",
+        "margin" => "5px",
         "display" => "inline-flex",
         "align-items" => "center",
         "justify-content" => "center"
