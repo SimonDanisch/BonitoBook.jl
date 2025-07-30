@@ -12,17 +12,6 @@ using Bonito.HTTP
 using JSON3
 using CondaPkg
 
-const OBS_DEBUG = Dict{String, Any}()
-
-macro D(expr)
-    quote
-        let
-            obs = $(esc(expr))
-            OBS_DEBUG[obs.id] = $(QuoteNode(__source__))
-            obs
-        end
-    end
-end
 
 """
     assets(paths...)

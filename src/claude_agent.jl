@@ -336,7 +336,7 @@ function settings_menu(agent::ClaudeAgent)
     permission_dropdown = Components.Dropdown(permission_labels; index=permission_index)
 
     # Continue conversation toggle
-    continue_toggle = @D Observable(get_option(agent, :continue_conversation))
+    continue_toggle = Observable(get_option(agent, :continue_conversation))
     continue_checkbox = Components.Checkbox(continue_toggle[])
 
     # Tools configuration
@@ -356,7 +356,7 @@ function settings_menu(agent::ClaudeAgent)
 
     for tool in all_available_tools
         is_enabled = tool in current_allowed_tools
-        tool_states[tool] = @D Observable(is_enabled)
+        tool_states[tool] = Observable(is_enabled)
         tool_checkboxes[tool] = Components.Checkbox(is_enabled)
     end
 

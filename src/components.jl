@@ -1,6 +1,6 @@
 
 function SmallButton(icon_name::String; class = "", kw...)
-    value = @D Observable(false)
+    value = Observable(false)
     ic = icon(icon_name)
     button_dom = DOM.button(
         ic;
@@ -27,7 +27,7 @@ DOM element with toggle functionality.
 """
 function SmallToggle(active, args...; class = "", kw...)
     class = active[] ? class : "toggled $class"
-    value = @D Observable(false)
+    value = Observable(false)
     button_dom = DOM.button(args...; class = "small-button $(class)", kw...)
     toggle_script = js"""
         const elem = $(button_dom);
@@ -76,7 +76,7 @@ Create a popup with the given content.
 `PopUp` instance.
 """
 function PopUp(content; show = true)
-    return PopUp(@D(Observable(content)), @D(Observable(show)))
+    return PopUp(Observable(content), Observable(show))
 end
 
 function Bonito.jsrender(session::Session, popup::PopUp)
@@ -146,10 +146,10 @@ struct OpenFileDialog
     available_files::Observable{Vector{String}}
 
     function OpenFileDialog(base_folder::String = pwd())
-        base_folder_obs = @D Observable(base_folder)
-        current_path = @D Observable("")
-        file_selected = @D Observable("")
-        show_dialog = @D Observable(false)
+        base_folder_obs = Observable(base_folder)
+        current_path = Observable("")
+        file_selected = Observable("")
+        show_dialog = Observable(false)
         available_files = Observable{Vector{String}}([])
 
         # Update available files when base folder or current path changes
@@ -468,12 +468,12 @@ end
 Create a FileTabs component with the given initial files.
 """
 function FileTabs(files::Vector{String})
-    files_obs = @D Observable(files)
-    current_file = @D Observable(isempty(files) ? "" : files[1])
-    current_file_index = @D Observable(isempty(files) ? 0 : 1)
-    switch_file_obs = @D Observable(0)
-    close_file_obs = @D Observable(0)
-    open_file_obs = @D Observable("")
+    files_obs = Observable(files)
+    current_file = Observable(isempty(files) ? "" : files[1])
+    current_file_index = Observable(isempty(files) ? 0 : 1)
+    switch_file_obs = Observable(0)
+    close_file_obs = Observable(0)
+    open_file_obs = Observable("")
     file_dialog = OpenFileDialog()
 
     tabs = FileTabs(files_obs, current_file, current_file_index, switch_file_obs, close_file_obs, open_file_obs, file_dialog)

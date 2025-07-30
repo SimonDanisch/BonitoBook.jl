@@ -2,18 +2,11 @@
 
 Features of BonitBook
 
-```python true false true
-
+```julia true false true
+@Book().cells |> typeof
 ```
 ```julia true false true
-import Makie.SpecApi as S
-@manipulate for vis in (
-        scatter = visual(BoxPlot),
-        violin = visual(Violin),
-    )
-    data(penguins) * visual(QQPlot) *
-    mapping(:species, :bill_depth_mm, color=:sex, dodge=:sex)
-end
+1 + 1
 ```
 ```julia true false true
 ]st

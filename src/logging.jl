@@ -133,8 +133,8 @@ end
 Create a new logging widget with empty initial state.
 """
 function LoggingWidget(; direction="horizontal")
-    logging = @D Observable("")
-    logging_html = @D Observable("")
+    logging = Observable("")
+    logging_html = Observable("")
     # Convert raw logging to HTML when logging changes
     on(logging) do str
         if !isempty(str)
@@ -169,7 +169,7 @@ function Bonito.jsrender(session::Session, widget::LoggingWidget)
     showing = "show-$direction"
 
     # Create the HTML observable for rendering
-    logging_html = @D Observable(HTML(""))
+    logging_html = Observable(HTML(""))
     on(widget.logging_html) do str
         isempty(str) && return
         # Don't wrap in <pre> since ANSIColoredPrinters already provides formatted HTML

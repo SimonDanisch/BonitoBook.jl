@@ -40,8 +40,8 @@ sidebar = Sidebar([
 """
 function Sidebar(widgets::Vector{<:Tuple{String, Any, String, String}}; width = "400px", orientation = "vertical")
     # Set first widget as current if any exist
-    current_widget = @D Observable(isempty(widgets) ? "" : widgets[1][1])
-    visible = @D Observable(false)
+    current_widget = Observable(isempty(widgets) ? "" : widgets[1][1])
+    visible = Observable(false)
 
     # Convert to the expected type
     typed_widgets = Vector{Tuple{String, Any, String, String}}(widgets)
@@ -50,7 +50,7 @@ function Sidebar(widgets::Vector{<:Tuple{String, Any, String, String}}; width = 
 end
 
 
-function ToggleButton2(icon_name::String, is_active, on_click::Observable{Bool}, has_new_content::Observable{Bool} = @D Observable(false))
+function ToggleButton2(icon_name::String, is_active, on_click::Observable{Bool}, has_new_content::Observable{Bool} = Observable(false))
     button_icon = icon(icon_name)
     # Set initial class based on observable value
     initial_class = is_active[] ? "small-button toggle-button active" : "small-button toggle-button"
@@ -87,11 +87,11 @@ function Bonito.jsrender(session::Bonito.Session, sidebar::Sidebar)
 
     for (widget_id, widget, label, icon_name) in sidebar.widgets
         # Update active state when sidebar state changes
-        tab_active = @D Observable(false; ignore_equal_values=true)
+        tab_active = Observable(false; ignore_equal_values=true)
         onany(sidebar.current_widget, sidebar.visible) do current, visible
             tab_active[] = current == widget_id && visible
         end
-        on_toggle = @D Observable(false)
+        on_toggle = Observable(false)
 
         tab_button = ToggleButton2(icon_name, tab_active, on_toggle)
 
@@ -180,7 +180,7 @@ function Bonito.jsrender(session::Bonito.Session, sidebar::Sidebar)
             container.style.setProperty('--sidebar-width', newSize + 'px');
             container.style.width = newSize + 'px';
         } else {
-            // For horizontal sidebar: drag UP to make taller  
+            // For horizontal sidebar: drag UP to make taller
             const deltaY = startPos - e.clientY;
             const maxHeight = window.innerHeight * 0.8;
             newSize = Math.max(100, Math.min(maxHeight, startSize + deltaY));

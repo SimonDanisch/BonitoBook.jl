@@ -7,7 +7,7 @@ const MONACO_THEME = Observable{String}[]
 
 function get_monaco_theme()
     if isempty(MONACO_THEME)
-        push!(MONACO_THEME, @D Observable("default"))
+        push!(MONACO_THEME, Observable("default"))
     end
     return MONACO_THEME[1]
 end
@@ -252,16 +252,16 @@ function EvalEditor(
     )
     js_init_func = isnothing(js_init_func) ? js"() => {}" : js_init_func
     editor = MonacoEditor(source; language = language, show_editor = show_editor, editor_classes = editor_classes, options...)
-    loading = @D Observable(false)
-    js_to_julia = @D Observable(Dict{String, Any}())
-    julia_to_js = @D Observable(Dict{String, Any}())
-    show_output = @D Observable(show_output)
-    show_editor_obs = @D Observable(show_editor)
+    loading = Observable(false)
+    js_to_julia = Observable(Dict{String, Any}())
+    julia_to_js = Observable(Dict{String, Any}())
+    show_output = Observable(show_output)
+    show_editor_obs = Observable(show_editor)
 
     result = Observable{Any}(nothing)
-    src = @D Observable(source)
-    logging = @D Observable("")
-    logging_html = @D Observable("")
+    src = Observable(source)
+    logging = Observable("")
+    logging_html = Observable("")
     on(logging) do str
         if !isempty(str)
             # Append the new HTML content (already formatted by ANSIColoredPrinters)
@@ -281,7 +281,7 @@ function EvalEditor(
         logging,
         logging_html,
 
-        @D(Observable(show_logging)),
+        Observable(show_logging),
         show_output,
         show_editor_obs,
         loading,
@@ -306,7 +306,7 @@ function render_editor(editor::EvalEditor)
         show ? showing : hiding
     end
     output_div = DOM.div(editor.output, class = map(c -> "cell-output $(c)", output_class))
-    logging_html = @D Observable(HTML(""))
+    logging_html = Observable(HTML(""))
     on(editor.logging_html) do str
         # Don't wrap in <pre> since ANSIColoredPrinters already provides formatted HTML
         logging_html[] = HTML(str)
@@ -351,6 +351,7 @@ struct CellEditor
     editor::EvalEditor
     uuid::String
     delete_self::Observable{Bool}
+    focused::Observable{Bool}
 end
 
 
@@ -390,26 +391,27 @@ function CellEditor(content, language, runner; show_editor = true, show_logging 
             toggle!(jleditor; (key => show,)...)
         end
     end
+    focused = Observable(false)
     return CellEditor(
         language, jleditor,
-        uuid, @D Observable(false)
+        uuid, Observable(false), focused
     )
 end
 
 function Bonito.jsrender(session::Session, editor::CellEditor)
     jleditor = editor.editor
 
-    show_output = @D Observable(jleditor.show_output[])
+    show_output = Observable(jleditor.show_output[])
     on(x -> toggle!(jleditor; output = !jleditor.show_output[]), show_output)
     out = ToggleButton("graph", show_output)
-    show_editor_obs = @D Observable(jleditor.show_editor[])
+    show_editor_obs = Observable(jleditor.show_editor[])
     on(x -> toggle!(jleditor; editor = !jleditor.show_editor[]), show_editor_obs)
     show_editor = ToggleButton("code", show_editor_obs)
-    show_logging_obs = @D Observable(jleditor.show_logging[])
+    show_logging_obs = Observable(jleditor.show_logging[])
     on(x -> toggle!(jleditor; logging = !jleditor.show_logging[]), show_logging_obs)
     show_logging = ToggleButton("terminal", show_logging_obs)
     delete_icon = icon("close", style = Styles("color" => "red"))
-    click = @D Observable(false)
+    click = Observable(false)
     delete_editor = DOM.button(delete_icon; class = "small-button", onclick = js"event=> $(click).notify(true)")
     on(session, click) do x
         editor.delete_self[] = true
@@ -419,7 +421,7 @@ function Bonito.jsrender(session::Session, editor::CellEditor)
     container_id = "$(editor.uuid)-container"
     card_content_id = "$(editor.uuid)-card-content"
     any_loading = jleditor.loading
-    hide_on_focus_obs = @D Observable(editor.language == "markdown")
+    hide_on_focus_obs = Observable(editor.language == "markdown")
     any_visible = map(|, jleditor.show_editor, jleditor.show_logging)
 
     editor.editor.js_init_func[] = js"""
@@ -432,6 +434,9 @@ function Bonito.jsrender(session::Session, editor::CellEditor)
                     $any_loading, $any_visible,
                     $(hide_on_focus_obs),
                 );
+                editor.editor.editor.then(editor=> {
+                    Monaco.setup_cell_focus_tracking(editor, $(editor.focused));
+                });
             })
         }
     """
@@ -485,7 +490,7 @@ struct FileEditor
             resize_to_lines = false,
             opts..., options...
         )
-        current_file = @D Observable(filepath)
+        current_file = Observable(filepath)
 
         return new(editor, current_file)
     end
@@ -497,12 +502,12 @@ function open_file!(editor::FileEditor, filepath::String; line::Union{Int, Nothi
         @info "Opening file in editor: $filepath" * (isnothing(line) ? "" : " at line $line")
         editor.current_file[] = filepath
         set_source!(editor.editor, read(filepath, String))
-        
+
         # Jump to line if specified
         if !isnothing(line) && line > 0
             send(editor.editor; type = "goto-line", line = line)
         end
-        
+
         toggle!(editor.editor; editor = true)
     else
         @warn "Could not find file: $filepath"

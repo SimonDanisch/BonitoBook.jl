@@ -7,7 +7,6 @@ These widgets use the global theme CSS variables defined in style.jl.
 module Components
 
 using Bonito
-using ..BonitoBook: @D
 
 export Button, Checkbox, Dropdown, NumberInput, Slider
 
@@ -243,7 +242,7 @@ end
 
 function Button(content; style=Styles(), attributes...)
     content_obs = convert(Observable{String}, content)
-    value_obs = @D Observable(false)
+    value_obs = Observable(false)
     attrs = Dict{Symbol,Any}(attributes)
     if haskey(attrs, :style)
         attrs[:style] = Styles(attrs[:style], style)
@@ -434,8 +433,8 @@ end
 function Slider(values::AbstractArray{T}; value=first(values), style=Styles(), attributes...) where {T}
     values_obs = convert(Observable{Vector{T}}, values)
     initial_idx = findfirst((==)(value), values_obs[])
-    index = @D Observable(initial_idx)
-    value_obs = @D Observable(values_obs[][initial_idx])
+    index = Observable(initial_idx)
+    value_obs = Observable(values_obs[][initial_idx])
     attrs = Dict{Symbol,Any}(attributes)
     if haskey(attrs, :style)
         attrs[:style] = Styles(attrs[:style], style)

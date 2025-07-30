@@ -49,7 +49,7 @@ function TabbedFileEditor(files::Vector{String}; initial_file=nothing)
         open_file!(file_editor, filepath)
     end
 
-    return TabbedFileEditor(file_tabs, file_editor, @D Observable(true))
+    return TabbedFileEditor(file_tabs, file_editor, Observable(true))
 end
 
 function open_file!(editor::TabbedFileEditor, filepath::String; line::Union{Int, Nothing} = nothing)

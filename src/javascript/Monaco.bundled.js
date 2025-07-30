@@ -576,6 +576,14 @@ function register_cell_editor(eval_editor, uuid1) {
         });
     });
 }
+function setup_cell_focus_tracking(editor, focus_obs) {
+    editor.onDidFocusEditorWidget(()=>{
+        focus_obs.notify(true);
+    });
+    editor.onDidBlurEditorWidget(()=>{
+        focus_obs.notify(false);
+    });
+}
 export { MonacoEditor as MonacoEditor };
 export { EvalEditor as EvalEditor };
 export { BOOK as BOOK };
@@ -586,4 +594,5 @@ export { toggle_elem as toggle_elem };
 export { setup_cell_editor as setup_cell_editor };
 export { register_completions as register_completions };
 export { register_cell_editor as register_cell_editor };
+export { setup_cell_focus_tracking as setup_cell_focus_tracking };
 

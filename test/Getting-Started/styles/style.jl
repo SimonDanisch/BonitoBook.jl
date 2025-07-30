@@ -463,7 +463,7 @@ Styles(
     ),
     CSS(
         ".small-button",
-        "background-color" => "transparent",
+        "background-color" => "var(--bg-primary)",
         "border" => "none",
         "border-radius" => "8px",
         "color" => "var(--text-secondary)",
@@ -471,6 +471,7 @@ Styles(
         "box-shadow" => "var(--shadow-button)",
         "transition" => "background-color 0.2s",
         "padding" => "8px",
+        "margin-right" => "5px",
         "display" => "inline-flex",
         "align-items" => "center",
         "justify-content" => "center"
@@ -483,16 +484,6 @@ Styles(
     CSS(
         ".small-button:hover",
         "background-color" => "var(--hover-bg)",
-    ),
-    CSS(
-        ".small-button.has-new-content",
-        "animation" => "blink-notification 1.5s ease-in-out infinite",
-    ),
-    CSS(
-        "@keyframes blink-notification",
-        CSS("0%", "opacity" => "1"),
-        CSS("50%", "opacity" => "0.5"),
-        CSS("100%", "opacity" => "1")
     ),
 
     CSS(
@@ -1344,27 +1335,24 @@ Styles(
     CSS(
         ".book-spinner",
         "width" => "100%",
-        "height" => "6px",
+        "height" => "8px",
         "position" => "relative",
         "overflow" => "hidden",
         "pointer-events" => "none",
-        "display" => "block"
+        "display" => "block",
+        "background" => "repeating-linear-gradient(45deg, var(--accent-blue) 0px, var(--accent-blue) 10px, var(--border-primary) 10px, var(--border-primary) 20px)",
+        "background-size" => "40px 100%",
+        "animation" => "spinner-stripes 1.5s linear infinite",
+        "border-radius" => "4px",
+        "box-shadow" => "0 0 8px rgba(3, 102, 214, 0.2)"
     ),
     CSS(
-        ".book-spinner-bar",
-        "width" => "100%",
-        "height" => "100%",
-        "background-color" => "var(--accent-blue)",
-        "animation" => "spinner-pulse 1.5s ease-in-out infinite"
-    ),
-    CSS(
-        "@keyframes spinner-pulse",
-        "0%" => Dict("opacity" => "0.3"),
-        "50%" => Dict("opacity" => "1"),
-        "100%" => Dict("opacity" => "0.3")
+        "@keyframes spinner-stripes",
+        CSS("0%", "background-position" => "0 0"),
+        CSS("100%", "background-position" => "40px 0")
     ),
     CSS(
         ".book-spinner.hidden",
-        "display" => "none"
+        "opacity" => "0"
     ),
 )

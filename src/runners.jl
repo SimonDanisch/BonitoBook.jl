@@ -197,7 +197,7 @@ Create a new asynchronous code runner.
 # Returns
 Configured `AsyncRunner` instance ready for code execution.
 """
-function AsyncRunner(project::String, mod::Module = Module(gensym("BonitoBook")); callback = identity, spawn = false, global_logger = @D Observable(""))
+function AsyncRunner(project::String, mod::Module = Module(gensym("BonitoBook")); callback = identity, spawn = false, global_logger = Observable(""))
     redirect_target = Base.RefValue{Observable{String}}(global_logger)
     python_runner = fetch(
         spawnat(1) do

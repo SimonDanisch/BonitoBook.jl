@@ -73,12 +73,12 @@ Create a new chat component with the given chat agent.
 function ChatComponent(chat_agent::ChatAgent; book=nothing)
     return ChatComponent(
         chat_agent,
-        @D(Observable(ChatMessage[])),
-        @D(Observable("")),
-        @D(Observable(false)),
+        Observable(ChatMessage[]),
+        Observable(""),
+        Observable(false),
         book,
         Ref{Union{Task, Nothing}}(nothing),
-        @D(Observable(String[]))
+        Observable(String[])
     )
 end
 
@@ -141,7 +141,7 @@ function send_message!(chat::ChatComponent, message::String)
         end
 
         response_channel = prompt(chat.chat_agent, formatted_message)
-        dom = @D Observable(DOM.div())
+        dom = Observable(DOM.div())
         task = Threads.@spawn begin
             try
                 for msg in response_channel

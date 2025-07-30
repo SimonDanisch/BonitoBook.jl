@@ -25,6 +25,7 @@ mutable struct Book
     global_logging_widget::Any
     style_eval::EvalFileOnChange
     spinner::BookSpinner
+    current_cell::Observable{Union{CellEditor, Nothing}}
 end
 
 function from_folder(folder; replace_style=false)
@@ -130,11 +131,12 @@ function Book(file; folder = nothing, replace_style = false, all_blocks_as_cell 
     global_logging_widget = LoggingWidget()
     runner = AsyncRunner(folder; global_logger=global_logging_widget.logging)
     editors = cells2editors(cells, runner)
-    progress = @D Observable((false, 0.0))
+    progress = Observable((false, 0.0))
     Core.eval(runner.mod, :(using BonitoBook, BonitoBook.Bonito, BonitoBook.Markdown, BonitoBook.WGLMakie))
     style_eval = EvalFileOnChange(style_paths[1]; module_context = BonitoBook)
     spinner = BookSpinner()
-    book = Book(bookfile, folder, editors, runner, progress, nothing, nothing, Dict{String, Any}(), global_logging_widget, style_eval, spinner)
+    current_cell = Observable{Union{CellEditor, Nothing}}(nothing)
+    book = Book(bookfile, folder, editors, runner, progress, nothing, nothing, Dict{String, Any}(), global_logging_widget, style_eval, spinner, current_cell)
     Core.eval(runner.mod, :(macro Book(); $(book); end))
     export_md(joinpath(folder, "book.md"), book)
     return book
@@ -249,8 +251,21 @@ function setup_editor_callbacks!(book, editor)
     on(book.session, editor.editor.source) do new_source
         save(book)
     end
-    return on(book.session, editor.delete_self) do delete
+
+    # Use the editor's focused observable to track current cell
+    on(book.session, editor.focused) do focused
+        if focused
+            # When this editor gains focus, set it as current cell
+            book.current_cell[] = editor
+        end
+    end
+
+    on(book.session, editor.delete_self) do delete
         if delete
+            # Clear current cell if it's being deleted
+            if book.current_cell[] === editor
+                book.current_cell[] = nothing
+            end
             filter!(x -> x.uuid != editor.uuid, book.cells)
             evaljs(
                 book.session, js"""
@@ -262,6 +277,7 @@ function setup_editor_callbacks!(book, editor)
             save(book)  # Save the notebook after cell deletion
         end
     end
+    return
 end
 
 """
@@ -553,4 +569,28 @@ function Bonito.jsrender(session::Session, book::Book)
     )
 
     return Bonito.jsrender(session, DOM.div(codicon, style_eval, style_output, completions, register_book, document; class = "book-wrapper"))
+end
+
+"""
+    current_cell(book::Book)::Union{CellEditor, Nothing}
+
+Get the currently selected cell editor in the book.
+
+# Arguments
+- `book::Book`: The book instance
+
+# Returns
+The currently active `CellEditor` or `nothing` if no cell is selected.
+
+# Examples
+```julia
+cell = current_cell(book)
+if cell !== nothing
+    println("Current cell language: ", cell.language)
+    println("Current cell source: ", cell.editor.source[])
+end
+```
+"""
+function current_cell(book::Book)::Union{CellEditor, Nothing}
+    return book.current_cell[]
 end

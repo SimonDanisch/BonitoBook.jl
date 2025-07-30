@@ -239,10 +239,10 @@ export class EvalEditor {
                 const lineNumber = Math.max(1, message.line);
                 const model = editor.getModel();
                 const totalLines = model.getLineCount();
-                
+
                 // Ensure line number is within bounds
                 const targetLine = Math.max(1, Math.min(lineNumber, totalLines));
-                
+
                 // Set cursor position and reveal line
                 editor.setPosition({
                     lineNumber: targetLine,
@@ -441,7 +441,7 @@ export function setup_cell_editor(
     const hide = () => {
         buttons.style.opacity = 0.0;
     };
-    
+
     // Only add hover behavior if not in export mode
     if (!is_export_mode()) {
         container.addEventListener("mouseover", make_visible);
@@ -683,5 +683,16 @@ export function register_cell_editor(eval_editor, uuid) {
                 contextMenuGroupId: "navigation",
             });
         });
+    });
+}
+
+export function setup_cell_focus_tracking(editor, focus_obs) {
+    // Track focus events on the Monaco editor
+    editor.onDidFocusEditorWidget(() => {
+        focus_obs.notify(true);
+    });
+
+    editor.onDidBlurEditorWidget(() => {
+        focus_obs.notify(false);
     });
 }
