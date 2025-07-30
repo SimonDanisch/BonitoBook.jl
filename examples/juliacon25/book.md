@@ -6,7 +6,7 @@ using HTTP, JSON
 function get_subtitle_url(video_url::String)
     try
         # Get video info including subtitle URLs
-        cmd = `yt-dlp --list-subs --print-json $video_url`
+        cmd = `yt-dlp.exe --list-subs --print-json $video_url`
         output = read(cmd, String)
 
         # Parse each line as JSON (yt-dlp outputs one JSON per line for this command)
@@ -102,7 +102,13 @@ urls = [
     "https://www.youtube.com/watch?v=ZjcfHooWmb0",
     "https://www.youtube.com/watch?v=5vllhdzecJM",
     "https://www.youtube.com/watch?v=2KbMQyklVaE",
-    "https://www.youtube.com/watch?v=oeYhwagpI98"
+    "https://www.youtube.com/watch?v=oeYhwagpI98",
+    "https://www.youtube.com/watch?v=_Uf2KQXtPNg",
+    "https://www.youtube.com/watch?v=33rxNE4e50A",
+    "https://www.youtube.com/watch?v=WhwSpXLyNaA",
+    "https://www.youtube.com/watch?v=-1ZkdVs2zko",
+    "https://www.youtube.com/watch?v=9JWnu5ecET8",
+    "https://www.youtube.com/watch?v=0YszUgzh7is"
 ]
 
 ```
@@ -136,7 +142,7 @@ subtitles = map(urls) do url
     end
     return subs
 end
-nothing
+length(subtitles)
 
 ```
 ```julia true false true
@@ -381,7 +387,7 @@ function visualize_mentions_with_thumbnails(mentions)
             style="max-height: 500px; overflow-y: auto;",
             mention_items...
         )
-    )
+    ))
 end
 
 function find_mentions_with_thumbnails(regex)

@@ -100,7 +100,7 @@ Styles(
         CSS(
             "*",
             "-webkit-print-color-adjust" => "exact !important",
-            "print-color-adjust" => "exact !important", 
+            "print-color-adjust" => "exact !important",
             "color-adjust" => "exact !important",
             "filter" => "none !important"
         ),
@@ -162,7 +162,6 @@ Styles(
         CSS(
             ".cell-editor",
             "background" => "var(--bg-primary) !important",
-            "border" => "1px solid var(--border-secondary) !important",
             "border-radius" => "8px !important",
             "padding" => "16px !important",
             "margin" => "16px 0 !important",
@@ -176,16 +175,15 @@ Styles(
         CSS(
             ".cell-output",
             "background" => "var(--bg-secondary) !important",
-            "border" => "1px solid var(--border-secondary) !important",
             "border-radius" => "6px !important",
             "padding" => "12px !important",
-            "margin" => "8px 0 !important"
+            "margin" => "8px 0 !important",
+
         ),
         # Style logging output
         CSS(
             ".cell-logging",
             "background" => "var(--bg-secondary) !important",
-            "border" => "1px solid var(--border-secondary) !important",
             "border-radius" => "6px !important",
             "padding" => "8px !important",
             "margin" => "8px 0 !important",
@@ -372,7 +370,7 @@ Styles(
         ".cell-output",
         "width" => "100%",
         "margin" => "5px",
-        "max-height" => "700px",
+        "max-height" => "900px",
         "overflow-y" => "auto",
         "overflow-x" => "visible",
         "background-color" => "var(--bg-primary)",

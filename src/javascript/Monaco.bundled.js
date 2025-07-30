@@ -4,6 +4,9 @@
 
 const MONACO = "https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/+esm";
 const monaco = import(MONACO);
+function is_export_mode() {
+    return window.BONITO_EXPORT_MODE === true;
+}
 class MonacoEditor {
     constructor(editor_div, options, init_callback, hiding_direction, visible, theme){
         this.editor_div = editor_div;
@@ -185,6 +188,19 @@ class EvalEditor {
         } else if (message.type === "toggle-logging") {
             this.show_logging = message.data;
             toggle_elem(message.data, this.logging_div, this.direction);
+        } else if (message.type === "goto-line") {
+            this.editor.editor.then((editor)=>{
+                const lineNumber = Math.max(1, message.line);
+                const model = editor.getModel();
+                const totalLines = model.getLineCount();
+                const targetLine = Math.max(1, Math.min(lineNumber, totalLines));
+                editor.setPosition({
+                    lineNumber: targetLine,
+                    column: 1
+                });
+                editor.revealLineInCenter(targetLine);
+                editor.focus();
+            });
         } else if (message.type === "multi") {
             message.data.forEach(this.process_message.bind(this));
         } else {
@@ -336,8 +352,10 @@ function setup_cell_editor(eval_editor, buttons_id, container_id, card_content_i
     const hide = ()=>{
         buttons.style.opacity = 0.0;
     };
-    container.addEventListener("mouseover", make_visible);
-    container.addEventListener("mouseout", hide);
+    if (!is_export_mode()) {
+        container.addEventListener("mouseover", make_visible);
+        container.addEventListener("mouseout", hide);
+    }
     let loadingTimeout = null;
     let loadingStartTime = null;
     loading_obs.on((x)=>{
@@ -365,41 +383,43 @@ function setup_cell_editor(eval_editor, buttons_id, container_id, card_content_i
     all_visible_obs.on((x)=>{
         toggle_elem(x, card_content, "vertical");
     });
-    container.addEventListener("focus", (e)=>{
-        if (hide_on_focus_obs.value) {
-            eval_editor.toggle_editor(true);
-            eval_editor.toggle_output(false);
-        }
-    });
-    container.addEventListener("click", (e)=>{
-        if (hide_on_focus_obs.value) {
-            const monacoEditor = container.querySelector('.monaco-editor');
-            if (!monacoEditor || !monacoEditor.contains(e.target)) {
+    if (!is_export_mode()) {
+        container.addEventListener("focus", (e)=>{
+            if (hide_on_focus_obs.value) {
                 eval_editor.toggle_editor(true);
                 eval_editor.toggle_output(false);
-                eval_editor.js_to_julia.notify({
-                    type: "get-source"
-                });
-                eval_editor.editor.editor.then((editor)=>{
-                    editor.focus();
-                });
             }
-        }
-    });
-    container.addEventListener("focusout", (e)=>{
-        console.log("Focus out!");
-        if (hide_on_focus_obs.value) {
-            if (!container.contains(e.relatedTarget)) {
-                eval_editor.editor.editor.then((editor)=>{
-                    eval_editor.toggle_editor(false);
-                    eval_editor.toggle_output(true);
-                    eval_editor.set_source(editor);
-                    eval_editor.run();
-                    eval_editor.send();
-                });
+        });
+        container.addEventListener("click", (e)=>{
+            if (hide_on_focus_obs.value) {
+                const monacoEditor = container.querySelector('.monaco-editor');
+                if (!monacoEditor || !monacoEditor.contains(e.target)) {
+                    eval_editor.toggle_editor(true);
+                    eval_editor.toggle_output(false);
+                    eval_editor.js_to_julia.notify({
+                        type: "get-source"
+                    });
+                    eval_editor.editor.editor.then((editor)=>{
+                        editor.focus();
+                    });
+                }
             }
-        }
-    });
+        });
+        container.addEventListener("focusout", (e)=>{
+            console.log("Focus out!");
+            if (hide_on_focus_obs.value) {
+                if (!container.contains(e.relatedTarget)) {
+                    eval_editor.editor.editor.then((editor)=>{
+                        eval_editor.toggle_editor(false);
+                        eval_editor.toggle_output(true);
+                        eval_editor.set_source(editor);
+                        eval_editor.run();
+                        eval_editor.send();
+                    });
+                }
+            }
+        });
+    }
 }
 class Connection {
     constructor(inbox, outbox){

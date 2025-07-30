@@ -29,7 +29,6 @@ function markdown2book(md; all_blocks_as_cell = false)
         if content isa Markdown.Code
             languages = split(content.language, " ")
             language = languages[1]
-            @show language
             if !isempty(language) && language in ("markdown", "julia", "python")
                 # We only treat ```language bool bool bool as a code block (our format)
                 # Option to force all blocks as code blocks, for markdown not written by us

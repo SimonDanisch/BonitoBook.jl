@@ -96,14 +96,50 @@ Styles(
     ),
     CSS(
         "@media print",
+        # Preserve all colors and styles
         CSS(
             "*",
             "-webkit-print-color-adjust" => "exact !important",
             "print-color-adjust" => "exact !important",
             "color-adjust" => "exact !important",
             "filter" => "none !important"
-        )
+        ),
+        CSS(
+            "@page",
+            "margin" => "0.5in",
+            "size" => "A4"
+        ),
+        CSS(
+            "@page :first",
+            "margin-top" => "0.3in"
+        ),
+
+        # Hide non-essential elements, but keep the content path visible
+        CSS(
+            ".book-main-menu, .cell-logging, .sidebar-main-container, .sidebar-tabs, .sidebar-content-container, .book-bottom-panel, .new-cell-menu, .hover-buttons",
+            "display" => "none !important"
+        ),
+        # Ensure main structure is visible and flows properly, eliminating empty space
+        CSS(
+            ".book-wrapper, .book-document, .book-main-content, .book-content",
+            "display" => "block !important",
+            "height" => "auto !important",
+            "max-height" => "none !important",
+            "overflow" => "visible !important",
+            "position" => "static !important",
+            "flex" => "none !important",
+            "margin" => "0 !important",
+            "padding" => "0 !important"
+        ),
+
     ),
+    
+    # Export mode styles - hide interactive elements when BONITO_EXPORT_MODE is true
+    CSS(
+        "body.bonito-export-mode .hover-buttons, body.bonito-export-mode .cell-menu-proximity-area",
+        "display" => "none !important"
+    ),
+    
     # Global styling for all elements
     CSS(
         "html",

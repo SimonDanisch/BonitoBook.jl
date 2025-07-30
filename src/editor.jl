@@ -491,12 +491,18 @@ struct FileEditor
     end
 end
 
-function open_file!(editor::FileEditor, filepath::String)
+function open_file!(editor::FileEditor, filepath::String; line::Union{Int, Nothing} = nothing)
     if isfile(filepath)
         # Switch to new file
-        @info "Opening file in editor: $filepath"
+        @info "Opening file in editor: $filepath" * (isnothing(line) ? "" : " at line $line")
         editor.current_file[] = filepath
         set_source!(editor.editor, read(filepath, String))
+        
+        # Jump to line if specified
+        if !isnothing(line) && line > 0
+            send(editor.editor; type = "goto-line", line = line)
+        end
+        
         toggle!(editor.editor; editor = true)
     else
         @warn "Could not find file: $filepath"

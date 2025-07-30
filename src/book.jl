@@ -190,7 +190,7 @@ function saving_menu(session, book)
     save_jl, click_jl = SmallButton("julia-logo")
     on(click_jl) do click
         Base.errormonitor(
-            Threads.@spawn begin
+            spawnat(1) do
                 file = export_jl(joinpath(book.folder, "book.html"), book)
                 trigger_js_download(session, file)
             end

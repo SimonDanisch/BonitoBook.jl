@@ -133,6 +133,13 @@ Styles(
         ),
 
     ),
+    
+    # Export mode styles - hide interactive elements when BONITO_EXPORT_MODE is true
+    CSS(
+        "body.bonito-export-mode .hover-buttons, body.bonito-export-mode .cell-menu-proximity-area",
+        "display" => "none !important"
+    ),
+    
     # Global styling for all elements
     CSS(
         "html",

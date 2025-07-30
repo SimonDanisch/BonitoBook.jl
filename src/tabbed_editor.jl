@@ -52,10 +52,12 @@ function TabbedFileEditor(files::Vector{String}; initial_file=nothing)
     return TabbedFileEditor(file_tabs, file_editor, @D Observable(true))
 end
 
-function open_file!(editor::TabbedFileEditor, filepath::String)
+function open_file!(editor::TabbedFileEditor, filepath::String; line::Union{Int, Nothing} = nothing)
     editor.visible[] = true
     # Set the current file in the tabs
     open_file!(editor.file_tabs, filepath)
+    # Open the file in the editor with optional line positioning
+    open_file!(editor.file_editor, filepath; line=line)
 end
 
 """
@@ -97,4 +99,19 @@ function Bonito.jsrender(session::Session, widget::TabbedFileEditor)
     )
 
     return Bonito.jsrender(session, DOM.div(styles, container))
+end
+
+
+using InteractiveUtils
+
+bedit(func, types) =  (func, types)
+
+macro bedit(expr)
+    quote
+        func, types = $(InteractiveUtils.gen_call_with_extracted_types(__module__, bedit, expr))
+        book = $(__module__).@Book()
+        fe = BonitoBook.get_file_editor(book)
+        file, line = InteractiveUtils.functionloc(func, types)
+        BonitoBook.open_file!(fe, file; line=Int64(line))
+    end
 end

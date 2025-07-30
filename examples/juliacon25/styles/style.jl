@@ -96,13 +96,42 @@ Styles(
     ),
     CSS(
         "@media print",
+        # Preserve all colors and styles
         CSS(
             "*",
             "-webkit-print-color-adjust" => "exact !important",
             "print-color-adjust" => "exact !important",
             "color-adjust" => "exact !important",
             "filter" => "none !important"
-        )
+        ),
+        CSS(
+            "@page",
+            "margin" => "0.5in",
+            "size" => "A4"
+        ),
+        CSS(
+            "@page :first",
+            "margin-top" => "0.3in"
+        ),
+
+        # Hide non-essential elements, but keep the content path visible
+        CSS(
+            ".book-main-menu, .cell-logging, .sidebar-main-container, .sidebar-tabs, .sidebar-content-container, .book-bottom-panel, .new-cell-menu, .hover-buttons",
+            "display" => "none !important"
+        ),
+        # Ensure main structure is visible and flows properly, eliminating empty space
+        CSS(
+            ".book-wrapper, .book-document, .book-main-content, .book-content",
+            "display" => "block !important",
+            "height" => "auto !important",
+            "max-height" => "none !important",
+            "overflow" => "visible !important",
+            "position" => "static !important",
+            "flex" => "none !important",
+            "margin" => "0 !important",
+            "padding" => "0 !important"
+        ),
+
     ),
     # Global styling for all elements
     CSS(
@@ -200,11 +229,30 @@ Styles(
         "margin" => "0",
         "padding" => "0",
         "background-color" => "var(--bg-primary)",
-        "color" => "var(--text-primary)"
+        "color" => "var(--text-primary)",
+        "white-space" => "pre-wrap",
+        "word-wrap" => "break-word"
+    ),
+    # When cell-logging is hidden, it should take no space
+    CSS(
+        ".cell-logging.hide-horizontal, .cell-logging.hide-vertical",
+        "height" => "0",
+        "min-height" => "0",
+        "padding" => "0",
+        "margin" => "0",
+        "overflow" => "hidden"
+    ),
+    # When cell-logging is empty (no content), minimize space
+    CSS(
+        ".cell-logging:empty",
+        "height" => "0",
+        "min-height" => "0",
+        "padding" => "0",
+        "margin" => "0"
     ),
     CSS(
         ".logging-widget",
-        "max-height" => "100%",
+        "height" => "100%",
         "width" => "100%",
         "overflow-y" => "auto",
         "margin" => "0",
@@ -213,7 +261,9 @@ Styles(
         "color" => "var(--text-primary)",
         "font-family" => "monospace",
         "font-size" => "12px",
-        "line-height" => "1.4"
+        "line-height" => "1.4",
+        "white-space" => "pre-wrap",
+        "word-wrap" => "break-word"
     ),
     CSS(
         ".logging-widget pre",
@@ -774,7 +824,7 @@ Styles(
         "border-radius" => "8px 0 0 8px",
         "box-shadow" => "-4px 0 8px rgba(0, 0, 0, 0.1)",
         "overflow" => "hidden",
-        "height" => "fit-content",
+        "height" => "100%",
         "max-height" => "90vh",
         "pointer-events" => "auto",
     ),
@@ -895,7 +945,7 @@ Styles(
         "width" => "100%",
         "background-color" => "var(--bg-primary)",
         "position" => "relative",
-        "height" => "fit-content",
+        "height" => "100%",
     ),
     CSS(
         ".sidebar-widget-content",

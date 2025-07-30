@@ -1,6 +1,11 @@
 const MONACO = "https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/+esm";
 const monaco = import(MONACO);
 
+// Function to check if we're in export mode
+function is_export_mode() {
+    return window.BONITO_EXPORT_MODE === true;
+}
+
 export class MonacoEditor {
     constructor(
         editor_div,
@@ -229,6 +234,23 @@ export class EvalEditor {
         } else if (message.type === "toggle-logging") {
             this.show_logging = message.data;
             toggle_elem(message.data, this.logging_div, this.direction);
+        } else if (message.type === "goto-line") {
+            this.editor.editor.then((editor) => {
+                const lineNumber = Math.max(1, message.line);
+                const model = editor.getModel();
+                const totalLines = model.getLineCount();
+                
+                // Ensure line number is within bounds
+                const targetLine = Math.max(1, Math.min(lineNumber, totalLines));
+                
+                // Set cursor position and reveal line
+                editor.setPosition({
+                    lineNumber: targetLine,
+                    column: 1
+                });
+                editor.revealLineInCenter(targetLine);
+                editor.focus();
+            });
         } else if (message.type === "multi") {
             message.data.forEach(this.process_message.bind(this));
         } else {
@@ -419,8 +441,12 @@ export function setup_cell_editor(
     const hide = () => {
         buttons.style.opacity = 0.0;
     };
-    container.addEventListener("mouseover", make_visible);
-    container.addEventListener("mouseout", hide);
+    
+    // Only add hover behavior if not in export mode
+    if (!is_export_mode()) {
+        container.addEventListener("mouseover", make_visible);
+        container.addEventListener("mouseout", hide);
+    }
 
     // Track loading state with minimum 1 second visibility
     let loadingTimeout = null;
@@ -457,44 +483,47 @@ export function setup_cell_editor(
     all_visible_obs.on((x) => {
         toggle_elem(x, card_content, "vertical");
     });
-    container.addEventListener("focus", (e) => {
-        if (hide_on_focus_obs.value) {
-            eval_editor.toggle_editor(true);
-            eval_editor.toggle_output(false);
-        }
-    });
-    container.addEventListener("click", (e) => {
-        if (hide_on_focus_obs.value) {
-            // Only trigger if click is on output area, not on the Monaco editor
-            const monacoEditor = container.querySelector('.monaco-editor');
-            if (!monacoEditor || !monacoEditor.contains(e.target)) {
+    // Only add markdown click-to-edit behavior if not in export mode
+    if (!is_export_mode()) {
+        container.addEventListener("focus", (e) => {
+            if (hide_on_focus_obs.value) {
                 eval_editor.toggle_editor(true);
                 eval_editor.toggle_output(false);
-                // Request current source from Julia to ensure editor has the right content
-                eval_editor.js_to_julia.notify({
-                    type: "get-source"
-                });
-                // Focus the editor once it's ready
-                eval_editor.editor.editor.then((editor) => {
-                    editor.focus();
-                });
             }
-        }
-    });
-    container.addEventListener("focusout", (e) => {
-        console.log("Focus out!")
-        if (hide_on_focus_obs.value) {
-            if (!container.contains(e.relatedTarget)) {
-                eval_editor.editor.editor.then((editor) => {
-                    eval_editor.toggle_editor(false);
-                    eval_editor.toggle_output(true);
-                    eval_editor.set_source(editor);
-                    eval_editor.run();
-                    eval_editor.send();
-                })
+        });
+        container.addEventListener("click", (e) => {
+            if (hide_on_focus_obs.value) {
+                // Only trigger if click is on output area, not on the Monaco editor
+                const monacoEditor = container.querySelector('.monaco-editor');
+                if (!monacoEditor || !monacoEditor.contains(e.target)) {
+                    eval_editor.toggle_editor(true);
+                    eval_editor.toggle_output(false);
+                    // Request current source from Julia to ensure editor has the right content
+                    eval_editor.js_to_julia.notify({
+                        type: "get-source"
+                    });
+                    // Focus the editor once it's ready
+                    eval_editor.editor.editor.then((editor) => {
+                        editor.focus();
+                    });
+                }
             }
-        }
-    });
+        });
+        container.addEventListener("focusout", (e) => {
+            console.log("Focus out!")
+            if (hide_on_focus_obs.value) {
+                if (!container.contains(e.relatedTarget)) {
+                    eval_editor.editor.editor.then((editor) => {
+                        eval_editor.toggle_editor(false);
+                        eval_editor.toggle_output(true);
+                        eval_editor.set_source(editor);
+                        eval_editor.run();
+                        eval_editor.send();
+                    })
+                }
+            }
+        });
+    }
 }
 
 

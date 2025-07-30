@@ -14,62 +14,14 @@ app = App(title = "BonitoBook") do s
     return Book(joinpath(@__DIR__, "..", "docs", "intro2.md"); replace_style=true)
 end
 
-
-
 rm(joinpath(@__DIR__, "Sunny", "01_LSWT_CoRh2O4"), recursive = true, force = true)
 app = App(title = "BonitoBook") do s
     return Book(joinpath(@__DIR__, "Sunny", "01_LSWT_CoRh2O4.ipynb"))
 end
 
-style = include(joinpath(@__DIR__, "..", "src", "templates", "style.jl"))
-w = LoggingWidget()
-App() do
-    DOM.div(style, w)
+app = App(title = "BonitoBook") do s
+    return  Book(joinpath(@__DIR__, "..", "examples", "juliacon25.md"); replace_style=true)
 end
-w.logging[] = "This is a test log message.\n"
-
-
-import Makie.SpecApi as S
-p1 = S.Scatter(1:4; color=1:4)
-p2 = S.Lines(1:4; color=1:4)
-a = S.Colorbar(p1)
-b = S.Colorbar(p2)
-
-Makie.distance_score(
-    p1,
-    p2,
-    Dict()
-)
-
-using AlgebraOfGraphics
-
-begin
-    Vis = visual(Violin)
-    penguins = AlgebraOfGraphics.penguins()
-    p = data(penguins) * Vis * mapping(:species, :bill_depth_mm, color=:sex, dodge=:sex)
-    gspec = AlgebraOfGraphics.draw_to_spec(p)
-    f, ax, pl = plot(gspec)
-end
-
-begin
-    Vis = visual(Violin)
-    penguins = AlgebraOfGraphics.penguins()
-    p = data(penguins) * Vis * mapping(:species, :bill_depth_mm, color=:sex, dodge=:sex)
-    gspec = AlgebraOfGraphics.draw_to_spec(p)
-    pl[1] = gspec
-end
-
-gspec.content[1][2].plots[1].kwargs
-
-
-
-
-
-
-x = rand(1:4, 333)
-y = rand(333)
-violin(x, y; color=map(x -> x == 1 ? :red : x == 2 ? :blue : x == 3 ? :green : :orange, x))
-
 
 import Makie.SpecApi as S
 function to_spec(Typ)
