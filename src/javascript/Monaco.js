@@ -425,7 +425,8 @@ export function setup_cell_editor(
     loading_obs,
     all_visible_obs,
     // Markdown unhiding behavior
-    hide_on_focus_obs
+    hide_on_focus_obs,
+    focused,
 ) {
     const buttons = document.getElementById(buttons_id);
     const container = document.getElementById(container_id);
@@ -435,6 +436,7 @@ export function setup_cell_editor(
         console.warn("No editor found for uuid:", uuid);
         console.log(BOOK.editors);
     }
+    eval_editor.focused = focused;
     const make_visible = () => {
         buttons.style.opacity = 1.0;
     };
@@ -447,8 +449,29 @@ export function setup_cell_editor(
         container.addEventListener("mouseover", make_visible);
         container.addEventListener("mouseout", hide);
     }
-
+    // Track focus events on the Monaco editor
+    eval_editor.editor.editor.then((editor) => {
+        editor.onDidFocusEditorWidget(() => {
+            // Clear focus from all other cells first
+            Object.entries(BOOK.editors).forEach(([uuid, other]) => {
+                if (other !== editor) {
+                    other.focused.notify(false);
+                }
+            });
+            // Set this cell as focused
+            focused.notify(true);
+        });
+    });
     // Track loading state with minimum 1 second visibility
+    focused.on((x) => {
+        console.log(card_content);
+        if (x) {
+            card_content.classList.add("focused");
+        } else {
+            card_content.classList.remove("focused");
+        }
+    });
+
     let loadingTimeout = null;
     let loadingStartTime = null;
 
@@ -494,13 +517,13 @@ export function setup_cell_editor(
         container.addEventListener("click", (e) => {
             if (hide_on_focus_obs.value) {
                 // Only trigger if click is on output area, not on the Monaco editor
-                const monacoEditor = container.querySelector('.monaco-editor');
+                const monacoEditor = container.querySelector(".monaco-editor");
                 if (!monacoEditor || !monacoEditor.contains(e.target)) {
                     eval_editor.toggle_editor(true);
                     eval_editor.toggle_output(false);
                     // Request current source from Julia to ensure editor has the right content
                     eval_editor.js_to_julia.notify({
-                        type: "get-source"
+                        type: "get-source",
                     });
                     // Focus the editor once it's ready
                     eval_editor.editor.editor.then((editor) => {
@@ -510,7 +533,7 @@ export function setup_cell_editor(
             }
         });
         container.addEventListener("focusout", (e) => {
-            console.log("Focus out!")
+            console.log("Focus out!");
             if (hide_on_focus_obs.value) {
                 if (!container.contains(e.relatedTarget)) {
                     eval_editor.editor.editor.then((editor) => {
@@ -519,7 +542,7 @@ export function setup_cell_editor(
                         eval_editor.set_source(editor);
                         eval_editor.run();
                         eval_editor.send();
-                    })
+                    });
                 }
             }
         });
@@ -683,16 +706,5 @@ export function register_cell_editor(eval_editor, uuid) {
                 contextMenuGroupId: "navigation",
             });
         });
-    });
-}
-
-export function setup_cell_focus_tracking(editor, focus_obs) {
-    // Track focus events on the Monaco editor
-    editor.onDidFocusEditorWidget(() => {
-        focus_obs.notify(true);
-    });
-
-    editor.onDidBlurEditorWidget(() => {
-        focus_obs.notify(false);
     });
 }

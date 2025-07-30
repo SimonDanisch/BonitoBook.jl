@@ -1355,4 +1355,11 @@ Styles(
         ".book-spinner.hidden",
         "opacity" => "0"
     ),
+
+    # Cell editor focus highlight - target elements that have both classes
+    CSS(
+        ".cell-editor.focused",
+        "box-shadow" => "0 4px 8px rgba(3, 102, 214, 0.4)",
+    ),
+
 )

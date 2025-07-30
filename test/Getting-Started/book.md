@@ -3,10 +3,13 @@
 Features of BonitBook
 
 ```julia true false true
-@Book().cells |> typeof
+@Book().current_cell[].editor.source[]
+```
+```python true false true
+
 ```
 ```julia true false true
-1 + 1
+sleep(1)
 ```
 ```julia true false true
 ]st

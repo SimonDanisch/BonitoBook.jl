@@ -425,20 +425,18 @@ function Bonito.jsrender(session::Session, editor::CellEditor)
     any_visible = map(|, jleditor.show_editor, jleditor.show_logging)
 
     editor.editor.js_init_func[] = js"""
-        (editor) => {
-            return $(Monaco).then(Monaco => {
-                Monaco.register_cell_editor(editor, $(editor.uuid))
-                Monaco.setup_cell_editor(
-                    editor,
-                    $hover_id, $container_id, $card_content_id,
-                    $any_loading, $any_visible,
-                    $(hide_on_focus_obs),
-                );
-                editor.editor.editor.then(editor=> {
-                    Monaco.setup_cell_focus_tracking(editor, $(editor.focused));
-                });
-            })
-        }
+    (editor) => {
+        return $(Monaco).then(Monaco => {
+            Monaco.register_cell_editor(editor, $(editor.uuid))
+            Monaco.setup_cell_editor(
+                editor,
+                $hover_id, $container_id, $card_content_id,
+                $any_loading, $any_visible,
+                $(hide_on_focus_obs),
+                $(editor.focused)
+            );
+        })
+    }
     """
     hover_buttons = DOM.div(show_editor, show_logging, out, delete_editor; class = "hover-buttons", id = hover_id)
 

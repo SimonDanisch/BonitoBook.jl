@@ -338,7 +338,7 @@ function toggle_elem(show, elem, direction) {
         elem.classList.remove(show_class);
     }
 }
-function setup_cell_editor(eval_editor, buttons_id, container_id, card_content_id, loading_obs, all_visible_obs, hide_on_focus_obs) {
+function setup_cell_editor(eval_editor, buttons_id, container_id, card_content_id, loading_obs, all_visible_obs, hide_on_focus_obs, focused) {
     const buttons = document.getElementById(buttons_id);
     const container = document.getElementById(container_id);
     const card_content = document.getElementById(card_content_id);
@@ -346,6 +346,7 @@ function setup_cell_editor(eval_editor, buttons_id, container_id, card_content_i
         console.warn("No editor found for uuid:", uuid);
         console.log(BOOK.editors);
     }
+    eval_editor.focused = focused;
     const make_visible = ()=>{
         buttons.style.opacity = 1.0;
     };
@@ -356,6 +357,24 @@ function setup_cell_editor(eval_editor, buttons_id, container_id, card_content_i
         container.addEventListener("mouseover", make_visible);
         container.addEventListener("mouseout", hide);
     }
+    eval_editor.editor.editor.then((editor)=>{
+        editor.onDidFocusEditorWidget(()=>{
+            Object.entries(BOOK.editors).forEach(([uuid1, other])=>{
+                if (other !== editor) {
+                    other.focused.notify(false);
+                }
+            });
+            focused.notify(true);
+        });
+    });
+    focused.on((x)=>{
+        console.log(card_content);
+        if (x) {
+            card_content.classList.add("focused");
+        } else {
+            card_content.classList.remove("focused");
+        }
+    });
     let loadingTimeout = null;
     let loadingStartTime = null;
     loading_obs.on((x)=>{
@@ -392,7 +411,7 @@ function setup_cell_editor(eval_editor, buttons_id, container_id, card_content_i
         });
         container.addEventListener("click", (e)=>{
             if (hide_on_focus_obs.value) {
-                const monacoEditor = container.querySelector('.monaco-editor');
+                const monacoEditor = container.querySelector(".monaco-editor");
                 if (!monacoEditor || !monacoEditor.contains(e.target)) {
                     eval_editor.toggle_editor(true);
                     eval_editor.toggle_output(false);
@@ -576,14 +595,6 @@ function register_cell_editor(eval_editor, uuid1) {
         });
     });
 }
-function setup_cell_focus_tracking(editor, focus_obs) {
-    editor.onDidFocusEditorWidget(()=>{
-        focus_obs.notify(true);
-    });
-    editor.onDidBlurEditorWidget(()=>{
-        focus_obs.notify(false);
-    });
-}
 export { MonacoEditor as MonacoEditor };
 export { EvalEditor as EvalEditor };
 export { BOOK as BOOK };
@@ -594,5 +605,4 @@ export { toggle_elem as toggle_elem };
 export { setup_cell_editor as setup_cell_editor };
 export { register_completions as register_completions };
 export { register_cell_editor as register_cell_editor };
-export { setup_cell_focus_tracking as setup_cell_focus_tracking };
 
