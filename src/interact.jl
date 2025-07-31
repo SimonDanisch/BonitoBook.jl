@@ -74,7 +74,7 @@ function Bonito.jsrender(s::Session, mw::ManipulateWidgets)
     end
     observies = map(x -> x.value, widgets)
     init = map(to_value, observies)
-    obs = Observable(func(init...))
+    obs = Observable(Base.invokelatest(func, init...))
     l = Base.ReentrantLock()
     Bonito.onany(observies...) do args...
         task = @async lock(l) do

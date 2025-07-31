@@ -285,10 +285,14 @@ function play_menu(book)
         end
     end
     on(run_all_click) do click
-        task = @async for cell in book.cells
-            # fetches source only if unsaved source is there
-            # After that, runs cell
-            run_from_newest!(cell.editor)
+        task = @async begin
+            for cell in book.cells
+                # fetches source only if unsaved source is there
+                # After that, runs cell
+                run_from_newest!(cell.editor)
+            end
+            sleep(0.5)
+            x = Bonito.wait_for(()-> isempty(book.runner.task_queue))
         end
         show_spinner!(book.spinner, task; message="Running all cells...")
     end

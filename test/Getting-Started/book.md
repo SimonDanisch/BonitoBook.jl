@@ -332,13 +332,8 @@ end
 
 ```
 ```julia true false true
-svg = Asset("/sim/Programmieren/Books/test.svg")
+sleep(10)
 ```
 ```julia true false true
-sample_svg = read(svg.local_path, String)
-# Parse and plot the SVG
-fig, elements, svg_info = parse_svg_to_makie(sample_svg,
-    axis_kwargs=(title="SVG to Makie Conversion Demo", xlabel="X", ylabel="Y"))
-hidedecorations!(fig.content[1])
-fig
+sleep(10)
 ```

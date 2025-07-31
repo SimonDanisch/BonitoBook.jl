@@ -15,14 +15,13 @@ app = App(title = "BonitoBook") do s
 end
 
 app = App(title = "BonitoBook") do s
-    return Book(joinpath(@__DIR__, "..", "docs", "intro2.md"); replace_style=true)
+    return Book(joinpath(@__DIR__, "..", "docs", "intro.md"); replace_style=true)
 end
 
 rm(joinpath(@__DIR__, "Sunny", "01_LSWT_CoRh2O4"), recursive = true, force = true)
 
-book = Book(joinpath(@__DIR__, "Sunny", "01_LSWT_CoRh2O4.ipynb"))
 app = App(title = "BonitoBook") do s
-    return book
+    return  Book(joinpath(@__DIR__, "Sunny", "01_LSWT_CoRh2O4.ipynb"))
 end
 
 @edit Bonito.jsrender(Session(), book.current_cell[].editor.output[])

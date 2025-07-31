@@ -22,7 +22,7 @@ function index()
         ),
         class="hero-section"
     )
-    
+
     features = DOM.section(
         DOM.h2("Features", class="section-title"),
         DOM.div(
@@ -31,53 +31,37 @@ function index()
         ),
         class="section"
     )
-    
+
+    # Create interactive getting started section using InlineBook
+    getting_started_path = joinpath(@__DIR__, "..", "getting-started.md")
     getting_started = DOM.section(
         DOM.h2("Getting Started", class="section-title"),
         DOM.div(
-            DOM.p("Install BonitoBook with:"),
-            DOM.pre(
-                DOM.code("""
-                using Pkg
-                Pkg.add("BonitoBook")
-                """, class="language-julia")
-            ),
-            DOM.p("Create your first book:"),
-            DOM.pre(
-                DOM.code("""
-                using BonitoBook
-                
-                # Create a new book from a markdown file
-                book = Book("mybook.md")
-                
-                # Or load an existing book folder
-                book = Book("/path/to/book/folder")
-                """, class="language-julia")
-            ),
-            class="section-content"
+            BonitoBook.InlineBook(getting_started_path),
+            class="section-content getting-started-inline"
         ),
         class="section"
     )
-    
+
     content = DOM.div(
         hero,
         features,
         getting_started
     )
-    
+
     return Page(content, "BonitoBook - Interactive Julia Notebooks")
 end
 
 function feature_list()
     features = [
         ("📝", "Live Code Editing", "Edit Julia, Python, and Markdown cells with syntax highlighting and auto-completion"),
-        ("🚀", "Interactive Execution", "Run code cells individually or all at once with real-time output"),
+        ("🚀", "Easy Dashboard creation", "The notebook can be easily reconfigured to be used as a Bonito.jl Dashboard or any other format"),
         ("🤖", "AI Integration", "Built-in AI assistant powered by Claude for code help and explanations"),
         ("🎨", "Customizable Styling", "Theme your notebooks with custom CSS using live style editing"),
-        ("📤", "Multiple Export Formats", "Export to HTML, Markdown, or PDF for sharing and publishing"),
-        ("🔧", "Extensible", "Add custom widgets and components using the Bonito framework")
+        ("📤", "Many Import/Export Formats", "Export to HTML, Quarto, Markdown, IPynb, or PDF for sharing and publishing"),
+        ("🔧", "Composable Ecosystem", "Add custom widgets and components using the Bonito framework")
     ]
-    
+
     feature_items = map(features) do (icon, title, desc)
         DOM.div(
             DOM.span(icon, style=Styles("font-size" => "2rem", "margin-bottom" => "10px", "display" => "block")),
@@ -90,7 +74,7 @@ function feature_list()
             )
         )
     end
-    
+
     return DOM.div(
         feature_items...,
         style=Styles(

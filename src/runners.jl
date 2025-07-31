@@ -271,7 +271,7 @@ end
 function run_sync!(runner::AsyncRunner, editor::EvalEditor)
     task = RunnerTask(editor.source[], editor.output, editor.logging, editor.language)
     fetch(spawnat(1) do
-        run!(runner.mod, runner.python_runner, task)
+        Base.invokelatest(run!, runner.mod, runner.python_runner, task)
     end)
     return
 end
