@@ -216,6 +216,30 @@ Styles(
         "pointer-events" => "auto",
         "z-index" => "-1"
     ),
+    # Special styling for collapsed editors - use container-level class
+    CSS(
+        ".cell-editor-container.editor-collapsed .cell-menu-proximity-area",
+        "position" => "absolute",
+        "top" => "0px",
+        "left" => "0px",
+        "height" => "6px",
+        "width" => "100%",
+        "background-color" => "transparent",
+        "border" => "none",
+        "border-radius" => "2px",
+        "pointer-events" => "auto",
+        "z-index" => "1",
+        "transition" => "all 0.2s ease",
+        "opacity" => "0"
+    ),
+    # Add visual feedback on hover for collapsed state
+    CSS(
+        ".cell-editor-container.editor-collapsed .cell-menu-proximity-area:hover",
+        "background-color" => "var(--hover-bg)",
+        "border-style" => "solid",
+        "opacity" => "1",
+        "transform" => "scaleY(1.2)"
+    ),
     CSS(
         ".cell-editor",
         "width" => editor_width,
@@ -336,13 +360,20 @@ Styles(
         "background-color" => "var(--bg-primary)",
         "color" => "var(--text-primary)"
     ),
-
+    # Remove max-height for markdown outputs
+    CSS(
+        ".cell-output-markdown.cell-output",
+        "max-height" => "none",
+        "overflow-y" => "visible"
+    ),
     # Visibility controls
     CSS(".hide-vertical", "display" => "none"),
     CSS(".show-vertical", "display" => "block"),
     CSS(
         ".hide-horizontal",
-        "display" => "none"
+        "height" => "6px",
+        "overflow" => "hidden",
+        "position" => "relative"
     ),
     CSS(
         ".show-horizontal",
@@ -401,11 +432,7 @@ Styles(
         "filter" => "var(--icon-hover-filter)"
     ),
 
-    # SVG icons (excluding colored icons identified by filename)
-    CSS(
-        "img:not([src*='python-logo']):not([src*='julia-logo']), svg",
-        "filter" => "var(--icon-filter)"
-    ),
+    # Only apply filters to specific icon contexts, not general content
     CSS(
         ".small-button img:not([src*='python-logo']):not([src*='julia-logo']), .small-button svg",
         "filter" => "var(--icon-filter)"
@@ -413,6 +440,11 @@ Styles(
     CSS(
         ".small-button:hover img:not([src*='python-logo']):not([src*='julia-logo']), .small-button:hover svg",
         "filter" => "var(--icon-hover-filter)"
+    ),
+    # Only apply filter to small icons in codicon system, not content SVGs
+    CSS(
+        ".codicon svg, .small-language-icon svg, .codicon img",
+        "filter" => "var(--icon-filter)"
     ),
 
     # Colored icons - handle separately for dark theme

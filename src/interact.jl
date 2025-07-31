@@ -80,7 +80,7 @@ function Bonito.jsrender(s::Session, mw::ManipulateWidgets)
         task = @async lock(l) do
             # Prevent reentrant calls to func
             try
-                obs[] = func(args...)
+                obs[] = Base.invokelatest(func, args...)
             catch e
                 return CapturedException(e, Base.catch_backtrace())
             end

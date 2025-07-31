@@ -183,24 +183,28 @@ end
 
 Cell(language, source) = Cell(language, source, nothing, false, false, true)
 
+function download_file_js(session, file)
+    return js"""
+    const a = document.createElement('a');
+    a.href = $(Bonito.url(session, Asset(file)));
+    a.download = $(basename(file));
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    """
+end
+
 function trigger_js_download(session, file)
     return evaljs(
-        session, js"""
-            const a = document.createElement('a');
-            a.href = $(Bonito.url(session, Asset(file)));
-            a.download = $(basename(file));
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-        """
+        session, download_file_js(session, file)
     )
 end
 
 function saving_menu(session, book)
-    save_jl, click_jl = SmallButton("julia-logo")
-    on(click_jl) do click
+    save_html, click_html = SmallButton("html-file")
+    on(click_html) do click
         task = spawnat(1) do
-            file = export_jl(joinpath(book.folder, "book.html"), book)
+            file = export_html(joinpath(book.folder, "book.html"), book)
             trigger_js_download(session, file)
         end
         show_spinner!(book.spinner, task; message="Exporting to HTML...")
@@ -222,8 +226,51 @@ function saving_menu(session, book)
     });
     """
     evaljs(session, pdf_js)
+
+    # Add Quarto export
+    save_quarto, click_quarto = SmallButton("quarto.png")
+    on(click_quarto) do click
+        task = Threads.@async begin
+            file = export_quarto(joinpath(book.folder, "book.qmd"), book)
+            trigger_js_download(session, file)
+        end
+        show_spinner!(book.spinner, task; message="Exporting to Quarto...")
+        Base.errormonitor(task)
+    end
+
+    # Add Jupyter notebook export
+    save_ipynb, click_ipynb = SmallButton("notebook")
+    on(click_ipynb) do click
+        task = Threads.@async begin
+            file = export_ipynb(joinpath(book.folder, "book.ipynb"), book)
+            trigger_js_download(session, file)
+        end
+        show_spinner!(book.spinner, task; message="Exporting to Jupyter Notebook...")
+        Base.errormonitor(task)
+    end
+
+    save_html_tooltip = Tooltip(
+        save_html,
+        "Export the book to HTML"; position="bottom"
+    )
+    save_md_tooltip = Tooltip(
+        save_md,
+        "Export the book to Markdown"; position="bottom"
+    )
+    save_pdf_tooltip = Tooltip(
+        save_pdf,
+        "Print or save as PDF"; position="bottom"
+    )
+    save_quarto_tooltip = Tooltip(
+        save_quarto,
+        "Export the book to Quarto format"; position="bottom"
+    )
+    save_ipynb_tooltip = Tooltip(
+        save_ipynb,
+        "Export the book to Jupyter Notebook"; position="bottom"
+    )
     return DOM.div(
-        icon("save"), save_jl, save_md, save_pdf;
+        icon("save"), save_html_tooltip, save_md_tooltip, save_pdf_tooltip, save_quarto_tooltip, save_ipynb_tooltip;
         class = "saving small-menu-bar"
     )
 end
@@ -243,10 +290,18 @@ function play_menu(book)
             # After that, runs cell
             run_from_newest!(cell.editor)
         end
-        Base.errormonitor(task)
+        show_spinner!(book.spinner, task; message="Running all cells...")
     end
+    run_all_tooltip = Tooltip(
+        run_all_div,
+        "Run all cells in sequence"; position="bottom"
+    )
+    stop_all_tooltip = Tooltip(
+        stop_all_div,
+        "Stop all running cells"; position="bottom"
+    )
     return DOM.div(
-        DOM.div(run_all_div, stop_all_div);
+        run_all_tooltip, stop_all_tooltip;
         class = "saving small-menu-bar"
     )
 end
@@ -472,8 +527,12 @@ function setup_menu(book::Book, tabbed_file_editor::TabbedFileEditor)
         open_file!(tabbed_file_editor, style_path)
     end
     # Settings menu button
+    style_button_tooltip = Tooltip(
+        style_setting_button,
+        "Open style editor"; position="bottom"
+    )
     menu = DOM.div(
-        icon("settings"), style_setting_button;
+        icon("settings"), style_button_tooltip;
         class = "settings small-menu-bar"
     )
 
@@ -572,7 +631,6 @@ function Bonito.jsrender(session::Session, book::Book)
                 return 'auto';
             }
         }
-
         // Set initial theme
         $(book.theme_preference).notify(getCurrentTheme());
 

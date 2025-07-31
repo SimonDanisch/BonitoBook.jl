@@ -13,28 +13,12 @@ using JSON3
 using CondaPkg
 
 
-"""
-    assets(paths...)
+function asset_path(paths...)
+    return joinpath(@__DIR__, "assets", paths...)
+end
 
-Get an asset file from the package assets directory.
-
-# Arguments
-- `paths...`: Path components relative to the assets directory
-
-# Returns
-`Asset` object for the specified file.
-
-# Examples
-```julia
-# Get the Julia logo
-logo = assets("julia-logo.svg")
-
-# Get a font file
-font = assets("codicon.ttf")
-```
-"""
 function assets(paths...)
-    return Asset(joinpath(@__DIR__, "assets", paths...))
+    return Asset(asset_path(paths...))
 end
 
 """
@@ -65,7 +49,12 @@ error_icon = icon("error", style="color: red;")
 ```
 """
 function icon(name::String; size = "1.2em", class = "", style = Styles(), kw...)
-    asset = assets("icons", "$(name).svg")
+    candidates = [f for f in map(x->asset_path("icons", x), [name, "$(name).png", "$(name).svg"]) if isfile(f)]
+    if isempty(candidates)
+        error("No icon found for '$name'.")
+    end
+    file = only(candidates)
+    asset = Asset(file)
     # Just return the asset with minimal styling to match codicon behavior
     return DOM.img(
         src = asset;

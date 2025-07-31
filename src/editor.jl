@@ -305,7 +305,7 @@ function render_editor(editor::EvalEditor)
     logging_class = map(editor.show_logging) do show
         show ? showing : hiding
     end
-    output_div = DOM.div(editor.output, class = map(c -> "cell-output $(c)", output_class))
+    output_div = DOM.div(editor.output, class = map(c -> "cell-output cell-output-$(editor.language) $(c)", output_class))
     logging_html = Observable(HTML(""))
     on(editor.logging_html) do str
         # Don't wrap in <pre> since ANSIColoredPrinters already provides formatted HTML
@@ -460,7 +460,11 @@ function Bonito.jsrender(session::Session, editor::CellEditor)
     proximity_area = DOM.div(class = "cell-menu-proximity-area")
     container = DOM.div(cell, proximity_area, style = Styles("position" => "relative"), id = container_id, tabindex = 0)
 
-    cell_div = DOM.div(container, class = "cell-editor-container", id = editor.uuid)
+    # Add collapsed class to container based on editor visibility
+    container_class = map(any_visible) do visible
+        visible ? "cell-editor-container" : "cell-editor-container editor-collapsed"
+    end
+    cell_div = DOM.div(container, class = container_class, id = editor.uuid)
     return Bonito.jsrender(session, cell_div)
 end
 

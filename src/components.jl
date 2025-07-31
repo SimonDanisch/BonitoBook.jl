@@ -750,3 +750,122 @@ function show_spinner!(spinner::BookSpinner, task; message = "")
 
     return task
 end
+
+"""
+    Tooltip
+
+A tooltip widget that displays explanatory text when hovering over an element.
+
+# Fields
+- `element::Any`: The element to attach the tooltip to
+- `text::String`: The tooltip text to display
+- `position::String`: Position of the tooltip ("top", "bottom", "left", "right")
+"""
+struct Tooltip
+    element::Any
+    text::String
+    position::String
+end
+
+"""
+    Tooltip(element, text; position="top")
+
+Create a tooltip that displays text when hovering over the element.
+
+# Arguments
+- `element`: The DOM element to attach the tooltip to
+- `text`: The text to display in the tooltip
+- `position`: Position of the tooltip relative to the element (default: "top")
+
+# Returns
+`Tooltip` instance that renders as a wrapper around the element.
+
+# Example
+```julia
+button, click = SmallButton("save")
+tooltip_button = Tooltip(button, "Save the current document"; position="top")
+```
+"""
+function Tooltip(element, text::String; position::String = "top")
+    return Tooltip(element, text, position)
+end
+
+const TooltipStyles = Styles(
+    CSS(
+        ".tooltip-container",
+        "position" => "relative",
+        "display" => "inline-flex",
+        "margin" => "0",
+        "padding" => "0",
+        "vertical-align" => "top"
+    ),
+    CSS(
+        ".tooltip-text",
+        "visibility" => "hidden",
+        "opacity" => "0",
+        "position" => "absolute",
+        "z-index" => "1000",
+        "background-color" => "var(--bg-primary)",
+        "color" => "var(--text-primary)",
+        "border" => "1px solid var(--border-primary)",
+        "border-radius" => "6px",
+        "padding" => "8px 12px",
+        "font-size" => "12px",
+        "white-space" => "nowrap",
+        "box-shadow" => "var(--shadow-soft)",
+        "transition" => "opacity 0.2s ease, visibility 0.2s ease",
+        "transition-delay" => "0s",
+        "pointer-events" => "none"
+    ),
+    CSS(
+        ".tooltip-container:hover .tooltip-text",
+        "visibility" => "visible",
+        "opacity" => "1",
+        "transition-delay" => "0.5s"
+    ),
+    CSS(
+        ".tooltip-top",
+        "bottom" => "100%",
+        "left" => "50%",
+        "transform" => "translateX(-50%)",
+        "margin-bottom" => "8px"
+    ),
+    CSS(
+        ".tooltip-bottom",
+        "top" => "100%",
+        "left" => "50%",
+        "transform" => "translateX(-50%)",
+        "margin-top" => "8px"
+    ),
+    CSS(
+        ".tooltip-left",
+        "right" => "100%",
+        "top" => "50%",
+        "transform" => "translateY(-50%)",
+        "margin-right" => "8px"
+    ),
+    CSS(
+        ".tooltip-right",
+        "left" => "100%",
+        "top" => "50%",
+        "transform" => "translateY(-50%)",
+        "margin-left" => "8px"
+    )
+)
+
+function Bonito.jsrender(session::Session, tooltip::Tooltip)
+    # Create the tooltip text element
+    tooltip_element = DOM.div(
+        tooltip.text,
+        class = "tooltip-text tooltip-$(tooltip.position)"
+    )
+
+    # Wrap the original element with tooltip container
+    container = DOM.div(
+        tooltip.element,
+        tooltip_element,
+        class = "tooltip-container"
+    )
+
+    return Bonito.jsrender(session, DOM.div(TooltipStyles, container))
+end

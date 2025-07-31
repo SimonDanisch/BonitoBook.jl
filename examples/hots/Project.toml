@@ -1,5 +1,0 @@
-[deps]
-AlgebraOfGraphics = "cbdf2221-f076-402e-a563-3d30da359d67"
-Bonito = "824d6782-a2ef-11e9-3a09-e5662e0c26f8"
-CondaPkg = "992eb4ea-22a4-4c89-a5bb-47a3300528ab"
-WGLMakie = "276b4fcb-3e11-5398-bf8b-a0c2d153d008"

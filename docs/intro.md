@@ -4,20 +4,51 @@ BonitoBook is a Julia-native interactive notebook system built on Bonito.jl that
 
 # Runs everywhere
 
-- VSCode Plot Pane
-- Browser
-- Server deployments
-- HTML displays (Documenter, Pluto)
-- Electron applications
-- JuliaHub
-- Google Colab
+  * VSCode Plot Pane
+  * Browser
+  * Server deployments
+  * HTML displays (Documenter, Pluto)
+  * Electron applications
+  * JuliaHub
+  * Google Colab
 
 # Best Makie integration
 
-```julia
+```julia true false true
+# Interactive 3D Visualization with LScene
 using WGLMakie
-# Interactive 3D plots with LScene preserve interactivity after export
-mesh(Sphere(Point3f(0), 1f0), color=:red)
+
+# Create a beautiful wavy 3D surface
+n = 80
+x = range(-3, 3, length=n)
+y = range(-3, 3, length=n)
+
+# Mathematical surface with interesting topology
+z = [sin(sqrt(xi^2 + yi^2)) * exp(-0.2 * sqrt(xi^2 + yi^2)) +
+     0.4 * cos(2*xi) * sin(2*yi) for xi in x, yi in y]
+
+# Create the interactive 3D scene
+fig = Figure(size=(700, 600))
+lscene = LScene(fig[1, 1], show_axis=false)
+
+# Add the surface with vibrant colors
+surface!(lscene, x, y, z,
+         colormap=:plasma,
+         shading=NoShading)
+
+# Add some 3D scatter points for extra visual interest
+n_points = 200
+scatter_x = 6 * (rand(n_points) .- 0.5)
+scatter_y = 6 * (rand(n_points) .- 0.5)
+scatter_z = 2 * (rand(n_points) .- 0.5)
+
+scatter!(lscene, scatter_x, scatter_y, scatter_z,
+         color=scatter_z,
+         colormap=:turbo,
+         markersize=8,
+         transparency=true)
+
+fig
 ```
 
 # Julia native
@@ -38,33 +69,71 @@ BonitoBook is built entirely in Julia using Bonito.jl, providing native performa
 
 ## Easy to create new components in Julia
 
-```julia
-using BonitoBook.Components
-slider = Slider(1:100, value=50)
-button = Button("Click me")
-DOM.div(slider, button)
+```julia true false true
+struct MyCheckbox
+    value::Observable{Bool}
+end
+
+function Checkbox(default_value::Bool)
+    return Checkbox(Observable(default_value))
+end
+
+function Bonito.jsrender(session::Session, checkbox::MyCheckbox)
+    return Bonito.jsrender(
+        session,
+        DOM.input(;
+            type="checkbox",
+            checked=checkbox.value,
+            onchange=js"event=> $(checkbox.value).notify(event.srcElement.checked);",
+        ),
+    )
+end
 ```
 
 ## All components work standalone and can be reused
 
-```julia
+```julia true false true
 using BonitoBook
-App() do
-    runner = BonitoBook.AsyncRunner()
-    BonitoBook.CellEditor("println(\"Hello World\")", "julia", )
-end
+BonitoBook.EvalEditor("println(\"Hello World\")\n1+1")
 ```
 
-## Simple to create new layouts or books
+## Simple to create new book types with different layouts
 
-```julia
-book = @Book() # Access current notebook
-Row(book.cells[1:3]...) # Custom layout with first 3 cells
+```julia true false true
+# Properly Centered Row Example
+using BonitoBook
+using WGLMakie  # for Row
+
+style = Styles(
+    CSS(".small-vertical .cell-editor-container",
+        "width" => "200px !important",
+        "min-width" => "0px !important"
+    ),
+    CSS(".small-vertical .cell-editor",
+        "width" => "200px !important"),
+    CSS(".small-vertical",
+        "margin-top" => "20px",
+        "margin-bottom" => "20px",
+        "width" => "100%"
+    )
+)
+
+# Create the properly centered Row
+DOM.div(
+    style,
+    Centered(Row(
+        BonitoBook.CellEditor("1+1", "julia", nothing),
+        BonitoBook.CellEditor("1+2", "julia", nothing),
+        width="fit-content",
+        gap="50px"
+    ));
+    class="small-vertical"
+)
 ```
 
 ## Full composability with existing Bonito apps
 
-```julia
+```julia true false true
 using BonitoBook, Bonito
 # Embed book components in larger applications
 app = App() do
@@ -74,47 +143,116 @@ app = App() do
     )
 end
 ```
-
 ## Default components
 
 ### BonitoBook.Components
 
-```julia
-using BonitoBook.Components
-# UI Controls
-Button("Submit")
-Slider(1:100, value=25)
-Checkbox(false, "Enable feature")
-TextInput("Enter text")
-Dropdown(["Option 1", "Option 2"], value="Option 1")
+```julia true false true
+# Create one of each component type
+button = Components.Button("Submit")
+slider = Components.Slider(1:100, value=50)
+checkbox = Components.Checkbox(true)
+dropdown = Components.Dropdown(["Option 1", "Option 2", "Option 3"], value="Option 2")
+number_input = Components.NumberInput(42.0)
 
-# Layout
-Row(elem1, elem2, elem3)
-Column(elem1, elem2, elem3)
-Card("Title", content)
+# Create clean layout with proper Styles
+DOM.div(
+    style=Styles("max-width" => "600px", "margin" => "20px auto", "padding" => "20px"),
+    DOM.div(
+        DOM.h3("Button"),
+        button,
+        style=Styles("margin-bottom" => "20px")
+    ),
+    DOM.div(
+        DOM.h3("Slider"),
+        DOM.p("Range: 1-100, Value: 50"),
+        slider,
+        style=Styles("margin-bottom" => "20px")
+    ),
+    DOM.div(
+        DOM.h3("Checkbox"),
+        DOM.div(checkbox, " Enabled", style=Styles("display" => "flex", "align-items" => "center")),
+        style=Styles("margin-bottom" => "20px")
+    ),
+    DOM.div(
+        DOM.h3("Dropdown"),
+        dropdown,
+        style=Styles("margin-bottom" => "20px")
+    ),
+    DOM.div(
+        DOM.h3("Number Input"),
+        number_input,
+        style=Styles("margin-bottom" => "20px")
+    )
+)
+
 ```
-
 ## Bonito widgets
 
-```julia
-using Bonito
-# Native Bonito components work seamlessly
-input = Bonito.Input("")
-output = map(input) do text
-    "You typed: $text"
-end
-DOM.div(input, output)
-```
+Bonito widgets are great, but don't nicely interact with the BonitoBook theme:
 
+```julia true false true
+# Create one of each component type
+button = Bonito.Button("Submit")
+slider = Bonito.Slider(1:100, value=50)
+checkbox = Bonito.Checkbox(true)
+dropdown = Bonito.Dropdown(["Option 1", "Option 2", "Option 3"], value="Option 2")
+number_input = Bonito.NumberInput(42.0)
+
+# Create clean layout with proper Styles
+DOM.div(
+    style=Styles("max-width" => "600px", "margin" => "20px auto", "padding" => "20px"),
+    DOM.div(
+        DOM.h3("Button"),
+        button,
+        style=Styles("margin-bottom" => "20px")
+    ),
+    DOM.div(
+        DOM.h3("Slider"),
+        DOM.p("Range: 1-100, Value: 50"),
+        slider,
+        style=Styles("margin-bottom" => "20px")
+    ),
+    DOM.div(
+        DOM.h3("Checkbox"),
+        DOM.div(checkbox, " Enabled", style=Styles("display" => "flex", "align-items" => "center")),
+        style=Styles("margin-bottom" => "20px")
+    ),
+    DOM.div(
+        DOM.h3("Dropdown"),
+        dropdown,
+        style=Styles("margin-bottom" => "20px")
+    ),
+    DOM.div(
+        DOM.h3("Number Input"),
+        number_input,
+        style=Styles("margin-bottom" => "20px")
+    )
+)
+
+```
 ### @manipulate
 
-```julia
-using BonitoBook.Components
-@manipulate for n in 1:100, color in ["red", "blue", "green"]
-    scatter(rand(n), color=color)
+```julia true false true
+import Makie.SpecApi as S
+funcs = (sqrt=sqrt, x_square=x->x^2, sin=sin, cos=cos)
+colormaps = ["viridis", "heat", "blues"]
+types = (scatter=S.Scatter, lines=S.Lines, linesegments=S.LineSegments)
+sizes=10:0.1:100
+checkbox = (true, false)
+@manipulate for cmap=colormaps, func=funcs, Typ=types, size=sizes, show_legend=checkbox
+    x = 0:0.3:10
+    s = Typ == S.Scatter ? (; markersize=size) : (; linewidth=size)
+    splot = Typ(x, func.(x); colormap=cmap, color=x, s...)
+    ax = S.Axis(; plots=[splot])
+    if show_legend
+        cbar = S.Colorbar(splot)
+        S.GridLayout([ax cbar])
+    else
+        S.GridLayout([ax])
+    end
 end
 ```
-
 ### LaTeX support
 
 ```latex
@@ -130,61 +268,56 @@ a_{21} & a_{22}
 
 ## Package management
 
-```python
+```python true false true
 ]add numpy matplotlib pandas # Install Python packages via Conda
 ```
-
 ## Shared namespace
 
-```python
+```python true false true
 import numpy as np
 data = np.random.randn(1000, 2)
 labels = ["x", "y"]
 ```
-
-```julia
+```julia true false true
 using WGLMakie
 # Access Python variables directly in Julia
 scatter(data[:, 1], data[:, 2], axis=(xlabel=labels[1], ylabel=labels[2]))
 ```
-
 ## Rich MIME support
 
-```python
+```python true false true
 import matplotlib.pyplot as plt
 fig, ax = plt.subplots()
 ax.plot([1, 2, 3, 4], [1, 4, 2, 3])
 fig # Automatically displays in notebook
 ```
-
 # Claude Code integration
 
 BonitoBook includes first-class integration with Claude via the Claude Code CLI:
 
-- **MCP Server**: Julia RPC server for tool access
-- **File operations**: Claude can read/write project files
-- **Code execution**: Claude can run cells and see results
-- **Chat interface**: Built-in chat sidebar with image support
+  * **MCP Server**: Julia RPC server for tool access
+  * **File operations**: Claude can read/write project files
+  * **Code execution**: Claude can run cells and see results
+  * **Chat interface**: Built-in chat sidebar with image support
 
 Example books demonstrating Claude integration:
-- `examples/juliacon25.md` - JuliaCon 25 video subtitle analysis
-- `examples/mario.md` - Interactive game
-- `examples/penguins.md` - Data analysis
+
+  * `examples/juliacon25.md` - JuliaCon 25 video subtitle analysis
+  * `examples/mario.md` - Interactive game
+  * `examples/penguins.md` - Data analysis
 
 # File editor included
 
 ## Integrated Monaco editor
 
-- Syntax highlighting for Julia, Python, Markdown, JSON, TOML
-- Code completion
-- Find/replace functionality
-- Multiple theme support (auto/light/dark)
-
-
+  * Syntax highlighting for Julia, Python, Markdown, JSON, TOML
+  * Code completion
+  * Find/replace functionality
+  * Multiple theme support (auto/light/dark)
 
 ## @edit compatibility
 
-```julia
+```julia true false true
 @edit println("hello") # Opens function source in editor
 ```
 ## Revise.jl integration
@@ -194,57 +327,58 @@ Changes from e.g. `@edit` are automatically applied.
 ## Style customization
 
 Edit `styles/style.jl` by pressing the paintcan icon to customize appearance:
-```julia
+
+```julia true false true
 # Modify colors, fonts, layout dimensions
 light_theme = true # Force light theme
 editor_width = "800px" # Adjust editor width
 ```
-
 # Export/import options
 
 ## Import formats
 
 ### Jupyter notebooks (.ipynb)
-```julia
+
+```julia true false true
 book = Book("notebook.ipynb")
 # Preserves cell metadata, outputs, and structure
 ```
-
 ### Markdown files (.md)
-```julia
+
+```julia true false true
 book = Book("document.md")
 # Converts code blocks to executable cells
 # Supports cell visibility metadata:
 # ```julia true false true
 # # show_editor show_logging show_output
 ```
-
 ## Export formats
 
 ### HTML export
-```julia
+
+```julia true false true
 export_html("mybook.html", book)
 # Creates standalone HTML with embedded assets
 # Preserves interactivity where possible
 ```
-
 ### Markdown export
-```julia
+
+```julia true false true
 export_md("output.md", book)
 # Maintains cell metadata and structure
 # Compatible with re-import
 ```
-
 ### Julia script export
-```julia
+
+```julia true false true
 export_jl("script.jl", book)
 # Converts to plain Julia file
 # Strips notebook metadata
 ```
-
 ## Folder structure
 
 Each book creates a structured project:
+
 ```
 mybook/
 ├── Project.toml         # Julia dependencies
@@ -257,10 +391,8 @@ mybook/
 ├── data/               # Data files
 └── .versions/          # Automatic backups
 ```
-This folder can be zipped and shared with all data, settings and style.
-With Project.toml and Manifest being part of the format, each notebook is reproducable.
 
-
+This folder can be zipped and shared with all data, settings and style. With Project.toml and Manifest being part of the format, each notebook is reproducable.
 
 # Advanced features
 

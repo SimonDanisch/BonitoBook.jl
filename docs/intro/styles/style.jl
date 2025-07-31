@@ -36,6 +36,16 @@ else
     "@media (max-width: 0px)"  # Never apply
 end
 
+on(@Book().theme_preference) do browser_preference
+    @show browser_preference
+    theme = light_theme === nothing ? browser_preference : (light_theme ? "light" : "dark")
+    if theme == "light"
+        Makie.set_theme!(size = (650, 450))
+    else
+        Makie.set_theme!(Makie.theme_dark(), size = (650, 450))
+    end
+end
+
 Styles(
     CSS(
         "body",
@@ -106,108 +116,40 @@ Styles(
         ),
         CSS(
             "@page",
-            "margin" => "0.7in",
+            "margin" => "0.5in",
             "size" => "A4"
         ),
         CSS(
-            "html, body",
-            "font-size" => "13px",
-            "line-height" => "1.5",
-            "background" => "white !important",
-            "height" => "auto !important",
-            "max-height" => "none !important",
-            "overflow" => "visible !important"
+            "@page :first",
+            "margin-top" => "0.3in"
         ),
-        # Reset main containers to allow natural flow
+
+        # Hide non-essential elements, but keep the content path visible
         CSS(
-            "#application, .application-container, .main-content, .book-container, .notebook-container",
-            "height" => "auto !important",
-            "max-height" => "none !important",
-            "overflow" => "visible !important",
-            "display" => "block !important",
-            "position" => "static !important",
-            "flex" => "none !important"
-        ),
-        # Reset any flexbox containers
-        CSS(
-            ".flex, .flex-col, .flex-row",
-            "display" => "block !important",
-            "flex" => "none !important",
-            "height" => "auto !important"
-        ),
-        # Hide only specific UI elements, preserve most styling
-        CSS(
-            ".small-menu-bar, .hover-buttons, .sidebar-tabs, .sidebar-content-container, .footer, .sidebar-main-container",
+            ".book-main-menu, .cell-logging, .sidebar-main-container, .sidebar-tabs, .sidebar-content-container, .book-bottom-panel, .new-cell-menu, .hover-buttons",
             "display" => "none !important"
         ),
-        # Preserve Monaco editor styling but make it printable
+        # Ensure main structure is visible and flows properly, eliminating empty space
         CSS(
-            ".monaco-editor",
-            "background" => "var(--bg-primary) !important",
-            "border" => "1px solid var(--border-primary) !important",
-            "border-radius" => "6px !important",
-            "padding" => "12px !important",
-            "margin" => "8px 0 !important",
+            ".book-wrapper, .book-document, .book-main-content, .book-content",
+            "display" => "block !important",
             "height" => "auto !important",
             "max-height" => "none !important",
             "overflow" => "visible !important",
-            "page-break-inside" => "auto",
-            "break-inside" => "auto"
+            "position" => "static !important",
+            "flex" => "none !important",
+            "margin" => "0 !important",
+            "padding" => "0 !important"
         ),
-        CSS(
-            ".monaco-editor .view-lines",
-            "background" => "transparent !important"
-        ),
-        # Preserve cell styling but allow breaking for long cells
-        CSS(
-            ".cell-editor",
-            "background" => "var(--bg-primary) !important",
-            "border-radius" => "8px !important",
-            "padding" => "16px !important",
-            "margin" => "16px 0 !important",
-            "height" => "auto !important",
-            "max-height" => "none !important",
-            "overflow" => "visible !important",
-            "page-break-inside" => "auto",
-            "break-inside" => "auto"
-        ),
-        # Style cell outputs
-        CSS(
-            ".cell-output",
-            "background" => "var(--bg-secondary) !important",
-            "border-radius" => "6px !important",
-            "padding" => "12px !important",
-            "margin" => "8px 0 !important",
 
-        ),
-        # Style logging output
-        CSS(
-            ".cell-logging",
-            "background" => "var(--bg-secondary) !important",
-            "border-radius" => "6px !important",
-            "padding" => "8px !important",
-            "margin" => "8px 0 !important",
-        ),
-        # Ensure plots and images scale properly
-        CSS(
-            "canvas, svg, img",
-            "max-width" => "100% !important",
-            "height" => "auto !important",
-            "page-break-inside" => "avoid",
-            "break-inside" => "avoid"
-        ),
-        # Handle long code blocks by allowing breaks if necessary
-        CSS(
-            ".monaco-editor .view-line",
-            "white-space" => "pre-wrap !important",
-            "word-break" => "break-word !important"
-        ),
-        # Preserve syntax highlighting
-        CSS(
-            ".monaco-editor .token",
-            "color" => "inherit !important"
-        )
     ),
+
+    # Export mode styles - hide interactive elements when BONITO_EXPORT_MODE is true
+    CSS(
+        "body.bonito-export-mode .hover-buttons, body.bonito-export-mode .cell-menu-proximity-area",
+        "display" => "none !important"
+    ),
+
     # Global styling for all elements
     CSS(
         "html",
@@ -274,6 +216,30 @@ Styles(
         "pointer-events" => "auto",
         "z-index" => "-1"
     ),
+    # Special styling for collapsed editors - use container-level class
+    CSS(
+        ".cell-editor-container.editor-collapsed .cell-menu-proximity-area",
+        "position" => "absolute",
+        "top" => "0px",
+        "left" => "0px",
+        "height" => "6px",
+        "width" => "100%",
+        "background-color" => "transparent",
+        "border" => "none",
+        "border-radius" => "2px",
+        "pointer-events" => "auto",
+        "z-index" => "1",
+        "transition" => "all 0.2s ease",
+        "opacity" => "0"
+    ),
+    # Add visual feedback on hover for collapsed state
+    CSS(
+        ".cell-editor-container.editor-collapsed .cell-menu-proximity-area:hover",
+        "background-color" => "var(--hover-bg)",
+        "border-style" => "solid",
+        "opacity" => "1",
+        "transform" => "scaleY(1.2)"
+    ),
     CSS(
         ".cell-editor",
         "width" => editor_width,
@@ -299,6 +265,7 @@ Styles(
     CSS(
         ".cell-logging",
         "max-height" => "500px",
+        "max-width" => editor_width,
         "overflow-y" => "auto",
         "margin" => "0",
         "padding" => "0",
@@ -315,6 +282,33 @@ Styles(
         "padding" => "0",
         "margin" => "0",
         "overflow" => "hidden"
+    ),
+    # When cell-logging is empty (no content), minimize space
+    CSS(
+        ".cell-logging:empty",
+        "height" => "0",
+        "min-height" => "0",
+        "padding" => "0",
+        "margin" => "0"
+    ),
+    # Make cell-logging a flex container that shrinks when empty
+    CSS(
+        ".cell-logging",
+        "display" => "flex",
+        "flex-direction" => "column",
+        "min-height" => "0"
+    ),
+    # The direct child div should not take space when empty
+    CSS(
+        ".cell-logging > div",
+        "flex" => "0 1 auto",
+        "min-height" => "0",
+        "overflow" => "hidden"
+    ),
+    # When we have actual log content, it should be visible
+    CSS(
+        ".cell-logging pre, .cell-logging .ansi",
+        "margin" => "8px 0"
     ),
     CSS(
         ".logging-widget",
@@ -360,19 +354,26 @@ Styles(
         ".cell-output",
         "width" => "100%",
         "margin" => "5px",
-        "max-height" => "900px",
+        "max-height" => "700px",
         "overflow-y" => "auto",
         "overflow-x" => "visible",
         "background-color" => "var(--bg-primary)",
         "color" => "var(--text-primary)"
     ),
-
+    # Remove max-height for markdown outputs
+    CSS(
+        ".cell-output-markdown.cell-output",
+        "max-height" => "none",
+        "overflow-y" => "visible"
+    ),
     # Visibility controls
     CSS(".hide-vertical", "display" => "none"),
     CSS(".show-vertical", "display" => "block"),
     CSS(
         ".hide-horizontal",
-        "display" => "none"
+        "height" => "6px",
+        "overflow" => "hidden",
+        "position" => "relative"
     ),
     CSS(
         ".show-horizontal",
@@ -431,11 +432,7 @@ Styles(
         "filter" => "var(--icon-hover-filter)"
     ),
 
-    # SVG icons (excluding colored icons identified by filename)
-    CSS(
-        "img:not([src*='python-logo']):not([src*='julia-logo']), svg",
-        "filter" => "var(--icon-filter)"
-    ),
+    # Only apply filters to specific icon contexts, not general content
     CSS(
         ".small-button img:not([src*='python-logo']):not([src*='julia-logo']), .small-button svg",
         "filter" => "var(--icon-filter)"
@@ -443,6 +440,11 @@ Styles(
     CSS(
         ".small-button:hover img:not([src*='python-logo']):not([src*='julia-logo']), .small-button:hover svg",
         "filter" => "var(--icon-hover-filter)"
+    ),
+    # Only apply filter to small icons in codicon system, not content SVGs
+    CSS(
+        ".codicon svg, .small-language-icon svg, .codicon img",
+        "filter" => "var(--icon-filter)"
     ),
 
     # Colored icons - handle separately for dark theme
@@ -503,7 +505,7 @@ Styles(
     ),
     CSS(
         ".small-button",
-        "background-color" => "transparent",
+        "background-color" => "var(--bg-primary)",
         "border" => "none",
         "border-radius" => "8px",
         "color" => "var(--text-secondary)",
@@ -511,7 +513,7 @@ Styles(
         "box-shadow" => "var(--shadow-button)",
         "transition" => "background-color 0.2s",
         "padding" => "8px",
-        "margin" => "5px",
+        "margin-right" => "5px",
         "display" => "inline-flex",
         "align-items" => "center",
         "justify-content" => "center"
@@ -524,16 +526,6 @@ Styles(
     CSS(
         ".small-button:hover",
         "background-color" => "var(--hover-bg)",
-    ),
-    CSS(
-        ".small-button.has-new-content",
-        "animation" => "blink-notification 1.5s ease-in-out infinite",
-    ),
-    CSS(
-        "@keyframes blink-notification",
-        CSS("0%", "opacity" => "1"),
-        CSS("50%", "opacity" => "0.5"),
-        CSS("100%", "opacity" => "1")
     ),
 
     CSS(
@@ -873,27 +865,48 @@ Styles(
     # Sidebar styles
     CSS(
         ".sidebar-main-container",
-        "position" => "absolute",
+        "position" => "fixed",  # Use fixed positioning
         "right" => "0",
-        "top" => "0",
-        "bottom" => "0",
         "display" => "flex",
-        "flex-direction" => "row-reverse",  # Icon bar on the right
-        "align-items" => "center",
         "z-index" => "100",
         "pointer-events" => "none",
+    ),
+    # Vertical sidebar - center and size to content
+    CSS(
+        ".sidebar-main-container.vertical",
+        "top" => "50%",
+        "transform" => "translateY(-50%)",
+        "align-items" => "center",
+        "height" => "fit-content",
+        "max-height" => "90vh",
+        "flex-direction" => "row-reverse",  # Keep tabs on the right
+    ),
+    # Horizontal sidebar - fill width at bottom
+    CSS(
+        ".sidebar-main-container.horizontal",
+        "bottom" => "0",
+        "left" => "0",
+        "right" => "0",
+        "width" => "100%",
+        "align-items" => "flex-end",
     ),
     CSS(
         ".sidebar-content-container",
         "background-color" => "var(--bg-primary)",
-        "border-left" => "1px solid var(--border-primary)",
         "transition" => "width 0.3s ease, opacity 0.3s ease",
-        "border-radius" => "8px 0 0 8px",
-        "box-shadow" => "-4px 0 8px rgba(0, 0, 0, 0.1)",
         "overflow" => "hidden",
-        "height" => "100%",
-        "max-height" => "90vh",
         "pointer-events" => "auto",
+    ),
+    # Vertical sidebar specific - resize to content and stay connected
+    CSS(
+        ".sidebar-content-container.vertical",
+        "height" => "fit-content",
+        "max-height" => "80vh",
+        "display" => "flex",
+        "flex-direction" => "column",
+        "border-left" => "1px solid var(--border-primary)",
+        "border-radius" => "8px 0 0 8px",
+        "box-shadow" => "-4px 0 8px rgba(0, 0, 0, 0.1)"
     ),
     CSS(
         ".sidebar-content-container.collapsed",
@@ -905,6 +918,11 @@ Styles(
         ".sidebar-content-container.expanded",
         "opacity" => "1",
         "visibility" => "visible",
+    ),
+    # Vertical expanded state - use sidebar width
+    CSS(
+        ".sidebar-content-container.vertical.expanded",
+        "width" => "var(--sidebar-width, 400px)",
     ),
     # Horizontal sidebar styles
     CSS(
@@ -960,8 +978,8 @@ Styles(
         "padding-top" => "10px",
         "gap" => "4px",
         "flex-shrink" => "0",
-        "height" => "fit-content",
         "pointer-events" => "auto",
+        "height" => "fit-content",
     ),
     CSS(
         ".sidebar-tab",
@@ -1014,6 +1032,13 @@ Styles(
         "position" => "relative",
         "height" => "100%",
     ),
+    # Vertical sidebar content - adapt height to content
+    CSS(
+        ".sidebar-content-container.vertical .sidebar-content",
+        "height" => "fit-content",
+        "min-height" => "200px",  # Minimum height for usability
+        "overflow-y" => "visible",
+    ),
     CSS(
         ".sidebar-widget-content",
         "width" => "100%",
@@ -1028,22 +1053,36 @@ Styles(
         "display" => "block",
     ),
 
-    # Resize handle
+    # Resize handle - base styles
     CSS(
         ".sidebar-resize-handle",
         "position" => "absolute",
-        "left" => "0",
-        "top" => "0",
-        "bottom" => "0",
-        "width" => "4px",
-        "cursor" => "ew-resize",
         "background-color" => "transparent",
         "z-index" => "10",
+        "transition" => "background-color 0.2s ease",
     ),
     CSS(
         ".sidebar-resize-handle:hover",
         "background-color" => "var(--accent-blue)",
         "opacity" => "0.5",
+    ),
+    # Vertical sidebar resize handle (drag left/right)
+    CSS(
+        ".sidebar-resize-handle.vertical",
+        "left" => "0",
+        "top" => "0",
+        "bottom" => "0",
+        "width" => "4px",
+        "cursor" => "ew-resize",
+    ),
+    # Horizontal sidebar resize handle (drag up/down)
+    CSS(
+        ".sidebar-resize-handle.horizontal",
+        "top" => "0",
+        "left" => "0",
+        "right" => "0",
+        "height" => "4px",
+        "cursor" => "ns-resize",
     ),
 
     # Adjust book content to account for sidebar
@@ -1333,4 +1372,36 @@ Styles(
         "align-items" => "center",
         "justify-content" => "center"
     ),
+
+    # Spinner component for export tasks
+    CSS(
+        ".book-spinner",
+        "width" => "100%",
+        "height" => "8px",
+        "position" => "relative",
+        "overflow" => "hidden",
+        "pointer-events" => "none",
+        "display" => "block",
+        "background" => "repeating-linear-gradient(45deg, var(--accent-blue) 0px, var(--accent-blue) 10px, var(--border-primary) 10px, var(--border-primary) 20px)",
+        "background-size" => "40px 100%",
+        "animation" => "spinner-stripes 1.5s linear infinite",
+        "border-radius" => "4px",
+        "box-shadow" => "0 0 8px rgba(3, 102, 214, 0.2)"
+    ),
+    CSS(
+        "@keyframes spinner-stripes",
+        CSS("0%", "background-position" => "0 0"),
+        CSS("100%", "background-position" => "40px 0")
+    ),
+    CSS(
+        ".book-spinner.hidden",
+        "opacity" => "0"
+    ),
+
+    # Cell editor focus highlight - target elements that have both classes
+    CSS(
+        ".cell-editor.focused",
+        "box-shadow" => "0 4px 8px rgba(3, 102, 214, 0.4)",
+    ),
+
 )

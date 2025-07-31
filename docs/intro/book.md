@@ -15,41 +15,123 @@ BonitoBook is a Julia-native interactive notebook system built on Bonito.jl that
 # Best Makie integration
 
 ```julia true false true
-# Interactive 3D Visualization with LScene
-using WGLMakie
+# Create sliders for different parameters
+time_slider = Components.Slider(1:360; value=1)
+spiral_factor = Components.Slider(1:50; value=20)
+explosion = Components.Slider(1:100; value=50)
+markersize = Components.Slider(1:100; value=30)
 
-# Create a beautiful wavy 3D surface
-n = 80
-x = range(-3, 3, length=n)
-y = range(-3, 3, length=n)
-
-# Mathematical surface with interesting topology
-z = [sin(sqrt(xi^2 + yi^2)) * exp(-0.2 * sqrt(xi^2 + yi^2)) + 
-     0.4 * cos(2*xi) * sin(2*yi) for xi in x, yi in y]
-
-# Create the interactive 3D scene
-fig = Figure(size=(700, 600))
-lscene = LScene(fig[1, 1], show_axis=false)
-
-# Add the surface with vibrant colors
-surface!(lscene, x, y, z, 
-         colormap=:plasma, 
-         shading=NoShading)
-
-# Add some 3D scatter points for extra visual interest
+# Generate initial 3D galaxy data
 n_points = 200
-scatter_x = 6 * (rand(n_points) .- 0.5)
-scatter_y = 6 * (rand(n_points) .- 0.5) 
-scatter_z = 2 * (rand(n_points) .- 0.5)
+angles = LinRange(0, 4π, n_points)
+radii = sqrt.(LinRange(0.1, 1, n_points)) * 8
+spiral_angles = angles .+ radii * 0.3
 
-scatter!(lscene, scatter_x, scatter_y, scatter_z,
-         color=scatter_z,
-         colormap=:turbo,
-         markersize=8,
-         transparency=true)
+initial_points = Point3f[]
+for i in 1:n_points
+    x = radii[i] * cos(spiral_angles[i]) + randn() * 0.3
+    y = radii[i] * sin(spiral_angles[i]) + randn() * 0.3
+    z = randn() * 2
+    push!(initial_points, Point3f(x, y, z))
+end
 
-fig
+# Create figure and scatter plot
+fig = Figure(backgroundcolor=:black)
+ax = LScene(fig[1, 1]; show_axis=false)
+splot = scatter!(ax, initial_points; color=first.(initial_points), markersize=15, transparency=true)
 
+# JavaScript following YOUR EXACT PATTERN
+jss = js"""
+console.log("Initializing Galaxy...");
+
+$(splot).then(plots=>{
+    const scatter_plot = plots[0];
+    const plot = scatter_plot.plot_object;
+    const pos_buff = scatter_plot.geometry.attributes.positions_transformed_f32c.array;
+    const initial_pos = [...pos_buff];
+    console.log("Initial positions:", initial_pos.length);
+
+    // Function to generate galaxy positions
+    function generateGalaxy(timeVal, spiralVal, explosionVal) {
+        const newPos = [];
+        const numPoints = initial_pos.length / 3;
+
+        for (let i = 0; i < numPoints; i++) {
+            const idx = i * 3;
+            const x = initial_pos[idx];
+            const y = initial_pos[idx + 1];
+            const z = initial_pos[idx + 2];
+
+            // Apply time rotation
+            const angle = Math.atan2(y, x) + timeVal * 0.02;
+            const radius = Math.sqrt(x*x + y*y);
+
+            // Apply spiral effect
+            const spiralAngle = angle + radius * spiralVal * 0.05;
+
+            // Apply explosion
+            const scale = explosionVal / 50;
+
+            newPos.push(
+                radius * Math.cos(spiralAngle) * scale,
+                radius * Math.sin(spiralAngle) * scale,
+                z * scale
+            );
+        }
+        return newPos;
+    }
+
+    // Update positions based on time slider
+    $(time_slider.value).on(time_val => {
+        console.log("Time:", time_val);
+        const spiral = $(spiral_factor.value).value;
+        const explosion = $(explosion.value).value;
+        const newPos = generateGalaxy(time_val, spiral, explosion);
+        plot.update([['positions_transformed_f32c', newPos]]);
+    });
+
+    // Update positions based on spiral slider
+    $(spiral_factor.value).on(spiral_val => {
+        console.log("Spiral:", spiral_val);
+        const time = $(time_slider.value).value;
+        const explosion = $(explosion.value).value;
+        const newPos = generateGalaxy(time, spiral_val, explosion);
+        plot.update([['positions_transformed_f32c', newPos]]);
+    });
+
+    // Update positions based on explosion slider
+    $(explosion.value).on(explosion_val => {
+        console.log("Explosion:", explosion_val);
+        const time = $(time_slider.value).value;
+        const spiral = $(spiral_factor.value).value;
+        const newPos = generateGalaxy(time, spiral, explosion_val);
+        plot.update([['positions_transformed_f32c', newPos]]);
+    });
+
+    // Update marker size
+    $(markersize.value).on(size => {
+        console.log("Size:", size);
+        plot.update([['quad_scale', [size, size]], ['quad_offset', [-size/2, -size/2]]]);
+    });
+
+
+});
+"""
+
+# Layout
+DOM.div(
+
+    DOM.h3("🌌 3D Galaxy Explorer", style="text-align: center; color: white; margin: 10px;"),
+    DOM.div(
+        style="display: flex; gap: 20px; align-items: center; justify-content: center; padding: 15px; background: #1a1a2e; border-radius: 10px; margin: 10px;",
+        DOM.div([DOM.label("Time: ", style="color: white; margin-right: 5px;"), time_slider]),
+        DOM.div([DOM.label("Spiral: ", style="color: white; margin-right: 5px;"), spiral_factor]),
+        DOM.div([DOM.label("Explosion: ", style="color: white; margin-right: 5px;"), explosion]),
+        DOM.div([DOM.label("Size: ", style="color: white; margin-right: 5px;"), markersize])
+    ),
+    fig,
+    jss,
+)
 ```
 # Julia native
 
@@ -59,11 +141,12 @@ BonitoBook is built entirely in Julia using Bonito.jl, providing native performa
 
 ## Supports Julia commands
 
-```julia true false true
+```julia
 ]add DataFrames CSV # Package management
 ?println # Documentation lookup
 ;ls -la # Shell commands
 ```
+
 # Ecosystem of Components vs Notebook
 
 ## Easy to create new components in Julia
@@ -71,10 +154,6 @@ BonitoBook is built entirely in Julia using Bonito.jl, providing native performa
 ```julia true false true
 struct MyCheckbox
     value::Observable{Bool}
-end
-
-function MyCheckbox(default_value::Bool)
-    return MyCheckbox(Observable(default_value))
 end
 
 function Bonito.jsrender(session::Session, checkbox::MyCheckbox)
@@ -102,17 +181,15 @@ BonitoBook.EvalEditor("println(\"Hello World\")\n1+1")
 using BonitoBook
 using WGLMakie  # for Row
 
-style = Styles( 
+style = Styles(
     CSS(".small-vertical .cell-editor-container",
-        "width" => "200px !important",
-        "min-width" => "0px !important"
+        "width" => "200px",
+        "min-width" => "0px"
     ),
-    CSS(".small-vertical .cell-editor",
-        "width" => "200px !important"),
+    CSS(".small-vertical .cell-editor", "width" => "200px"),
     CSS(".small-vertical",
         "margin-top" => "20px",
         "margin-bottom" => "20px",
-        "width" => "100%"
     )
 )
 
@@ -120,27 +197,16 @@ style = Styles(
 DOM.div(
     style,
     Centered(Row(
-        BonitoBook.CellEditor("1+1", "julia", nothing), 
+        BonitoBook.CellEditor("1+1", "julia", nothing),
         BonitoBook.CellEditor("1+2", "julia", nothing),
         width="fit-content",
         gap="50px"
-    )); 
+    ));
     class="small-vertical"
 )
-
 ```
 ## Full composability with existing Bonito apps
 
-```julia true false true
-using BonitoBook, Bonito
-# Embed book components in larger applications
-app = App() do
-    DOM.div(
-        book.global_logging_widget,
-        Row(book.cells...)
-    )
-end
-```
 ## Default components
 
 ### BonitoBook.Components
@@ -267,7 +333,7 @@ a_{21} & a_{22}
 ## Package management
 
 ```python true false true
-]add numpy matplotlib pandas # Install Python packages via Conda
+]add numpy matplotlib pandas
 ```
 ## Shared namespace
 
@@ -289,35 +355,12 @@ fig, ax = plt.subplots()
 ax.plot([1, 2, 3, 4], [1, 4, 2, 3])
 fig # Automatically displays in notebook
 ```
-# Claude Code integration
+## @edit support
 
-BonitoBook includes first-class integration with Claude via the Claude Code CLI:
-
-  * **MCP Server**: Julia RPC server for tool access
-  * **File operations**: Claude can read/write project files
-  * **Code execution**: Claude can run cells and see results
-  * **Chat interface**: Built-in chat sidebar with image support
-
-Example books demonstrating Claude integration:
-
-  * `examples/juliacon25.md` - JuliaCon 25 video subtitle analysis
-  * `examples/mario.md` - Interactive game
-  * `examples/penguins.md` - Data analysis
-
-# File editor included
-
-## Integrated Monaco editor
-
-  * Syntax highlighting for Julia, Python, Markdown, JSON, TOML
-  * Code completion
-  * Find/replace functionality
-  * Multiple theme support (auto/light/dark)
-
-## @edit compatibility
-
-```julia true false true
-@edit println("hello") # Opens function source in editor
+```julia
+BonitoBook.@bedit println("hello") # Opens function source in editor
 ```
+
 ## Revise.jl integration
 
 Changes from e.g. `@edit` are automatically applied.
@@ -329,7 +372,7 @@ Edit `styles/style.jl` by pressing the paintcan icon to customize appearance:
 ```julia true false true
 # Modify colors, fonts, layout dimensions
 light_theme = true # Force light theme
-editor_width = "800px" # Adjust editor width
+editor_width = "800px" # Adjust editor width;
 ```
 # Export/import options
 
@@ -337,42 +380,16 @@ editor_width = "800px" # Adjust editor width
 
 ### Jupyter notebooks (.ipynb)
 
-```julia true false true
-book = Book("notebook.ipynb")
-# Preserves cell metadata, outputs, and structure
-```
 ### Markdown files (.md)
 
-```julia true false true
-book = Book("document.md")
-# Converts code blocks to executable cells
-# Supports cell visibility metadata:
-# ```julia true false true
-# # show_editor show_logging show_output
-```
 ## Export formats
 
 ### HTML export
 
-```julia true false true
-export_html("mybook.html", book)
-# Creates standalone HTML with embedded assets
-# Preserves interactivity where possible
-```
 ### Markdown export
 
-```julia true false true
-export_md("output.md", book)
-# Maintains cell metadata and structure
-# Compatible with re-import
-```
 ### Julia script export
 
-```julia true false true
-export_jl("script.jl", book)
-# Converts to plain Julia file
-# Strips notebook metadata
-```
 ## Folder structure
 
 Each book creates a structured project:

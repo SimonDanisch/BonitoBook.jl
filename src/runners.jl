@@ -254,11 +254,25 @@ function run!(editor::EvalEditor)
     return run!(editor.runner, editor)
 end
 
-function run!(::Nothing, editor::EvalEditor)
-end
+run!(::Nothing, ::EvalEditor) = nothing
 
 function run!(runner::MarkdownRunner, editor::EvalEditor)
     editor.output[] = parse_source(runner, editor.source[])
+    return
+end
+
+run_sync!(editor::EvalEditor) = run_sync!(editor.runner, editor)
+
+function run_sync!(runner::MarkdownRunner, editor::EvalEditor)
+    editor.output[] = parse_source(runner, editor.source[])
+    return
+end
+
+function run_sync!(runner::AsyncRunner, editor::EvalEditor)
+    task = RunnerTask(editor.source[], editor.output, editor.logging, editor.language)
+    fetch(spawnat(1) do
+        run!(runner.mod, runner.python_runner, task)
+    end)
     return
 end
 

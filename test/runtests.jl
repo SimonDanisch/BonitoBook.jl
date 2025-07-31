@@ -11,13 +11,25 @@ app = App(title = "BonitoBook") do s
 end
 
 app = App(title = "BonitoBook") do s
+    return BonitoBook.InlineBook(joinpath(@__DIR__, "..", "docs", "intro2.md"))
+end
+
+app = App(title = "BonitoBook") do s
     return Book(joinpath(@__DIR__, "..", "docs", "intro2.md"); replace_style=true)
 end
 
 rm(joinpath(@__DIR__, "Sunny", "01_LSWT_CoRh2O4"), recursive = true, force = true)
+
+book = Book(joinpath(@__DIR__, "Sunny", "01_LSWT_CoRh2O4.ipynb"))
 app = App(title = "BonitoBook") do s
-    return Book(joinpath(@__DIR__, "Sunny", "01_LSWT_CoRh2O4.ipynb"))
+    return book
 end
+
+@edit Bonito.jsrender(Session(), book.current_cell[].editor.output[])
+m = Bonito.richest_mime(book.current_cell[].editor.output[])
+@edit show(IOBuffer(), m, book.current_cell[].editor.output[].figure)
+book.current_cell[].editor.output[].scene.current_screens
+
 
 app = App(title = "BonitoBook") do s
     return  Book(joinpath(@__DIR__, "..", "examples", "juliacon25.md"); replace_style=true)
@@ -99,3 +111,25 @@ julia_config = McpServerConfig(
 mcp_servers=Dict{String, McpServerConfig}(
     "julia_exec" => julia_config
 )
+
+style = include("../src/templates/style.jl")
+App() do
+    style = Styles(CSS(
+        ".book-spinner",
+        "width" => "100%",
+        "height" => "6px",
+        "position" => "relative",
+        "overflow" => "hidden",
+        "pointer-events" => "none",
+        "display" => "block",
+        "background-color" => "black",
+        "animation" => "spinner-pulse 1.5s ease-in-out infinite"
+    ),
+    CSS(
+        "@keyframes spinner-pulse",
+         CSS("0%", "background-color" => "black"),
+         CSS("50%", "background-color" => "green"),
+         CSS("100%", "background-color" => "blue")
+     ))
+    DOM.div(style, DOM.div(class="book-spinner"))
+end
