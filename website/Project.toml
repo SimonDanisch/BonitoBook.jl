@@ -4,6 +4,5 @@ BonitoBook = "b416d416-7a6e-4336-8c1a-1f8a8cd59518"
 BonitoSites = "8b3cd1a5-63d9-421b-9fde-46b64b830918"
 
 [sources]
-Bonito = {rev = "sd/serialization-order", url = "https://github.com/SimonDanisch/Bonito.jl"}
 BonitoBook = {path = ".."}
 BonitoSites = {url = "https://github.com/SimonDanisch/BonitoSites.jl"}
