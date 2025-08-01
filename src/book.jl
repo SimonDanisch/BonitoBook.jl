@@ -106,6 +106,18 @@ function Book(file; replace_style = false, all_blocks_as_cell = false)
         error("File $file not found")
     end
 
+    # Handle ZIP files by importing them first
+    original_file = normpath(abspath(file))
+    name, ext = splitext(original_file)
+
+    if ext == ".zip"
+        @info "Detected ZIP file, importing..."
+        # Import the ZIP file and get the extracted book file path
+        book_file_path = import_zip(original_file)
+        file = book_file_path
+        @info "Imported ZIP to: $book_file_path"
+    end
+
     # Create the book folder structure and get the folder path
     folder = create_book_structure(file; replace_style=replace_style)
 
@@ -264,6 +276,19 @@ function saving_menu(session, book)
         Base.errormonitor(task)
     end
 
+    # Add ZIP export
+    save_zip, click_zip = SmallButton("archive")
+    on(click_zip) do click
+        task = Threads.@async begin
+            book_name = splitext(basename(book.file))[1]
+            zip_file = joinpath(book.folder, "$(book_name).zip")
+            file = export_zip(book, zip_file)
+            trigger_js_download(session, file)
+        end
+        show_spinner!(book.spinner, task; message="Exporting to ZIP archive...")
+        Base.errormonitor(task)
+    end
+
     save_html_tooltip = Tooltip(
         save_html,
         "Export the book to HTML"; position="bottom"
@@ -284,8 +309,12 @@ function saving_menu(session, book)
         save_ipynb,
         "Export the book to Jupyter Notebook"; position="bottom"
     )
+    save_zip_tooltip = Tooltip(
+        save_zip,
+        "Export the book project as ZIP archive (includes dependencies)"; position="bottom"
+    )
     return DOM.div(
-        icon("save"), save_html_tooltip, save_md_tooltip, save_pdf_tooltip, save_quarto_tooltip, save_ipynb_tooltip;
+        icon("save"), save_html_tooltip, save_md_tooltip, save_pdf_tooltip, save_quarto_tooltip, save_ipynb_tooltip, save_zip_tooltip;
         class = "saving small-menu-bar"
     )
 end
