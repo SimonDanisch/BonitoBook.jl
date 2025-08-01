@@ -29,80 +29,63 @@ mutable struct Book
     theme_preference::Observable{String}
 end
 
-function from_folder(folder; replace_style=false)
-    project = joinpath(folder, "Project.toml")
-    manifest = joinpath(folder, "Manifest.toml")
-    book = joinpath(folder, "book.md")
-    style_path = joinpath(folder, "styles", "style.jl")
-    ai_config_path = joinpath(folder, "ai", "config.toml")
-    ai_prompt_path = joinpath(folder, "ai", "system-prompt.md")
+function create_book_structure(bookfile; replace_style=false)
+    # Always create .book-name-bbook folder structure
+    book_file = normpath(abspath(bookfile))
+    name, ext = splitext(book_file)
+    if !(ext in (".md", ".ipynb"))
+        error("File $bookfile is not a markdown or ipynb file: $(ext)")
+    end
 
-    # Check required files (exclude style_path from the check initially)
-    required_files = [book, project, manifest, ai_config_path, ai_prompt_path]
-    for file in required_files
-        if !isfile(file)
-            error("File $file not found, not a BonitoBook?")
+    # Create hidden folder structure: .book-name-bbook
+    book_dir = dirname(book_file)
+    book_basename = basename(name)
+    folder = joinpath(book_dir, ".$(book_basename)-bbook")
+
+    # Create the folder structure if it doesn't exist
+    if !isdir(folder)
+        mkpath(folder)
+
+        # Create styles folder and copy template
+        mkpath(joinpath(folder, "styles"))
+        style_path_template = joinpath(@__DIR__, "templates/style.jl")
+        style_path = joinpath(folder, "styles", "style.jl")
+        cp(style_path_template, style_path)
+
+        # Create AI folder with configuration and system prompt
+        ai_folder = joinpath(folder, "ai")
+        mkpath(ai_folder)
+
+        # Copy AI configuration template
+        ai_config_template = joinpath(@__DIR__, "templates/ai/config.toml")
+        ai_config_path = joinpath(ai_folder, "config.toml")
+        cp(ai_config_template, ai_config_path)
+
+        # Copy system prompt template
+        system_prompt_template = joinpath(@__DIR__, "templates/ai/system-prompt.md")
+        system_prompt_path = joinpath(ai_folder, "system-prompt.md")
+        cp(system_prompt_template, system_prompt_path)
+    else
+        # Handle style file replacement for existing folders
+        style_path = joinpath(folder, "styles", "style.jl")
+        if replace_style || !isfile(style_path)
+            style_path_template = joinpath(@__DIR__, "templates", "style.jl")
+            mkpath(joinpath(folder, "styles"))
+            cp(style_path_template, style_path; force=true)
         end
     end
 
-    # Handle style file replacement
-    if replace_style || !isfile(style_path)
-        style_path_template = joinpath(@__DIR__, "templates", "style.jl")
-        cp(style_path_template, style_path; force=true)
-    end
-
-    return book, folder, [style_path]
-end
-
-function from_file(book, folder; replace_style=false)
-    if isnothing(folder)
-        book_file = normpath(abspath(book))
-        name, ext = splitext(book)
-        if !(ext in (".md", ".ipynb"))
-            error("File $book is not a markdown or ipynb file: $(ext)")
-        end
-        folder = joinpath(dirname(book_file), basename(name))
-        if isdir(folder)
-            return from_folder(folder; replace_style=replace_style)
-        else
-            mkpath(folder)
-        end
-    end
-    style_path_template = joinpath(@__DIR__, "templates/style.jl")
-    mkpath(joinpath(folder, "styles"))
-    style_path = joinpath(folder, "styles", "style.jl")
-
-    cp(style_path_template, style_path)
-
-    # Create AI folder with configuration and system prompt
-    ai_folder = joinpath(folder, "ai")
-    mkpath(ai_folder)
-
-    # Copy AI configuration template
-    ai_config_template = joinpath(@__DIR__, "templates/ai/config.toml")
-    ai_config_path = joinpath(ai_folder, "config.toml")
-    cp(ai_config_template, ai_config_path)
-
-    # Copy system prompt template
-    system_prompt_template = joinpath(@__DIR__, "templates/ai/system-prompt.md")
-    system_prompt_path = joinpath(ai_folder, "system-prompt.md")
-    cp(system_prompt_template, system_prompt_path)
-    # Copy over project so mutations stay in the book
-    project = Pkg.project().path
-    cp(project, joinpath(folder, "Project.toml"))
-    cp(joinpath(dirname(project), "Manifest.toml"), joinpath(folder, "Manifest.toml"))
-    return book, folder, [style_path]
+    return folder
 end
 
 """
-    Book(file; folder=nothing, replace_style=false, all_blocks_as_cell=false)
+    Book(file; replace_style=false, all_blocks_as_cell=false)
 
-Create a new Book from a file or folder.
+Create a new Book from a file path.
 
 # Arguments
-- `file`: Path to a markdown file (.md), Jupyter notebook (.ipynb), or folder containing book files
-- `folder`: Optional target folder for book files (if not provided, auto-generated)
-- `replace_style`: When loading from an existing book folder, replace style.jl with latest template (default: false)
+- `file`: Path to a markdown file (.md) or Jupyter notebook (.ipynb)
+- `replace_style`: Replace style.jl with latest template (default: false)
 - `all_blocks_as_cell`: Whether to treat all code blocks as executable cells (default: false)
 
 # Returns
@@ -113,38 +96,70 @@ A `Book` instance ready for interactive editing and execution.
 # Create from markdown file
 book = Book("mybook.md")
 
-# Create from existing book folder, preserving custom styles
-book = Book("/path/to/book/folder")
-
-# Update existing book folder with latest style template
-book = Book("/path/to/book/folder"; replace_style=true)
+# Create with style replacement
+book = Book("mybook.md"; replace_style=true)
 ```
 """
-function Book(file; folder = nothing, replace_style = false, all_blocks_as_cell = false)
-    if isfile(file)
-        bookfile, folder, style_paths = from_file(file, folder; replace_style=replace_style)
-    elseif isdir(file)
-        bookfile, folder, style_paths = from_folder(file; replace_style=replace_style)
-    else
-        error("File $file isnt a file or folder")
+function Book(file; replace_style = false, all_blocks_as_cell = false)
+    # Ensure we have a file path
+    if !isfile(file)
+        error("File $file not found")
     end
-    cells = load_book(bookfile; all_blocks_as_cell=all_blocks_as_cell)
+
+    # Create the book folder structure and get the folder path
+    folder = create_book_structure(file; replace_style=replace_style)
+
+    # Determine the correct file paths
+    original_file = normpath(abspath(file))
+    name, ext = splitext(original_file)
+    original_basename = basename(name)
+
+    # Set book.file to point to the .md file where content should be saved
+    if ext == ".md"
+        # For .md files, book.file points to the original file
+        book_file = original_file
+        load_file = original_file
+    elseif ext == ".ipynb"
+        # For .ipynb files, book.file points to a .md file in the folder
+        book_file = joinpath(folder, "$(original_basename).md")
+        # Try to load from the .md in folder first, fallback to original .ipynb
+        md_in_folder = joinpath(folder, "$(original_basename).md")
+        load_file = isfile(md_in_folder) ? md_in_folder : original_file
+    else
+        error("File $file is not a markdown or ipynb file: $(ext)")
+    end
+
+    # Load the book content
+    cells = load_book(load_file; all_blocks_as_cell=all_blocks_as_cell)
     global_logging_widget = LoggingWidget()
-    runner = AsyncRunner(folder; global_logger=global_logging_widget.logging)
+
+    # Set up directories
+    project_dir = dirname(file)  # Directory containing the .md file and Project.toml
+    execution_dir = folder       # The .book-name-bbook folder for execution
+
+    # The runner will cd into execution_dir for code execution
+    runner = AsyncRunner(execution_dir; global_logger=global_logging_widget.logging)
     editors = cells2editors(cells, runner)
     progress = Observable((false, 0.0))
+
+    # Activate the project in the parent directory (where Project.toml is)
+    # Load required packages
     Core.eval(runner.mod, :(using BonitoBook, BonitoBook.Bonito, BonitoBook.Markdown, BonitoBook.WGLMakie))
-    style_eval = EvalFileOnChange(style_paths[1]; module_context = runner.mod)
+
+    # Set up style evaluation with single style path
+    style_path = joinpath(folder, "styles", "style.jl")
+    style_eval = EvalFileOnChange(style_path; module_context = runner.mod)
     spinner = BookSpinner()
     current_cell = Observable{Union{CellEditor, Nothing}}(nothing)
     theme_preference = Observable{String}("auto")
+
     book = Book(
-        bookfile, folder, editors, runner, progress, nothing, nothing, Dict{String, Any}(),
+        book_file, folder, editors, runner, progress, nothing, nothing, Dict{String, Any}(),
         global_logging_widget, style_eval, spinner, current_cell, theme_preference
     )
     Core.eval(runner.mod, :(macro Book(); $(book); end))
     notify(style_eval.file_watcher)
-    export_md(joinpath(folder, "book.md"), book)
+    export_md(book_file, book)
     return book
 end
 
@@ -213,7 +228,7 @@ function saving_menu(session, book)
     save_md, click_md = SmallButton("markdown")
     on(click_md) do click
         task = Threads.@async begin
-            file = export_md(joinpath(book.folder, "book.md"), book)
+            file = export_md(book.file, book)
             trigger_js_download(session, file)
         end
         show_spinner!(book.spinner, task; message="Exporting to Markdown...")
@@ -357,8 +372,10 @@ function WGLMakie.save(book::Book)
         mkpath(joinpath(book.folder, ".versions"))
     end
     version = Dates.format(Dates.now(), "yyyy-mm-dd_HHMMSS")
-    cp(book.file, joinpath(book.folder, ".versions", "book-$version.md"))
-    return export_md(joinpath(book.folder, "book.md"), book)
+    # Create backup with original filename
+    backup_name = "$(splitext(basename(book.file))[1])-$version.md"
+    cp(book.file, joinpath(book.folder, ".versions", backup_name))
+    return export_md(book.file, book)
 end
 
 function insert_editor_below!(book, editor, editor_above_uuid)
@@ -715,4 +732,35 @@ end
 """
 function theme_preference(book::Book)::String
     return book.theme_preference[]
+end
+
+const BOOK_SERVERS = Dict{String, Bonito.Server}()
+
+function get_server(url, port, proxy_url)
+    key = isempty(proxy_url) ? "$(url):$(port)" : proxy_url
+    return get!(BOOK_SERVERS, key) do
+        return Bonito.Server(url, port; proxy_url=proxy_url)
+    end
+end
+
+function book(path::AbstractString;
+        replace_style=false,
+        all_blocks_as_cell=false,
+        url="127.0.0.1",
+        port=8773,
+        proxy_url="",
+        openbrowser=true
+    )
+    name = splitext(basename(path))[1]
+    app = App(title=name) do
+        book = Book(path; replace_style=replace_style, all_blocks_as_cell=all_blocks_as_cell)
+    end
+    server = get_server(url, port, proxy_url)
+    route!(server, "/$(name)" => app)
+    if openbrowser
+        Bonito.HTTPServer.openurl(Bonito.online_url(server, "/$(name)"))
+    else
+        println("Book server running at: $(Bonito.online_url(server, "/$(name)"))")
+    end
+    return
 end

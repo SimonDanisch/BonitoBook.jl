@@ -12,3 +12,14 @@ import Makie.SpecApi as S
     mapping(:species, :bill_depth_mm, color=:sex, dodge=:sex)
 end
 ```
+
+```julia true false true
+import Makie.SpecApi as S
+@manipulate for vis in (
+        scatter = visual(BoxPlot),
+        violin = visual(Violin),
+    )
+    data(penguins) * visual(QQPlot) *
+    mapping(:species, :bill_depth_mm, color=:sex, dodge=:sex)
+end
+```

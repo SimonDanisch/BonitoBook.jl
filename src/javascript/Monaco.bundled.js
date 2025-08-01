@@ -149,6 +149,7 @@ class EvalEditor {
         if (this.message_queue.length === 1) {
             this.js_to_julia.notify(this.message_queue[0]);
         } else {
+            console.log(this.message_queue);
             this.js_to_julia.notify({
                 type: "multi",
                 data: this.message_queue

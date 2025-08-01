@@ -193,25 +193,12 @@ macro manipulate(for_expr)
 end
 export @manipulate
 
-
-using AlgebraOfGraphics
-
-function Bonito.jsrender(s::Session, value::AlgebraOfGraphics.Layers)
-    spec = AlgebraOfGraphics.draw_to_spec(value)
-    f, ax, pl = plot(spec)
+function Bonito.jsrender(s::Bonito.Session, value::Makie.GridLayoutSpec)
+    f, ax, pl = plot(value)
     return Bonito.jsrender(s, f)
 end
 
-function Bonito.jsrender(s::Session, value::AlgebraOfGraphics.FigureGrid)
-    return Bonito.jsrender(s, value.figure)
-end
-
-function Bonito.jsrender(s::Session, value::Observable{AlgebraOfGraphics.Layers})
-    spec_obs = map(AlgebraOfGraphics.draw_to_spec, value)
-    return Bonito.jsrender(s, spec_obs)
-end
-
-function Bonito.jsrender(s::Session, value::Observable{Makie.GridLayoutSpec})
+function Bonito.jsrender(s::Bonito.Session, value::Observable{Makie.GridLayoutSpec})
     f, ax, pl = plot(value)
     return Bonito.jsrender(s, f)
 end

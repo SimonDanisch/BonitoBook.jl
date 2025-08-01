@@ -5,7 +5,6 @@ version = "1.0.0-DEV"
 
 [deps]
 ANSIColoredPrinters = "a4c015fc-c6ff-483c-b24f-f7ea428134e9"
-AlgebraOfGraphics = "cbdf2221-f076-402e-a563-3d30da359d67"
 Base64 = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
 Bonito = "824d6782-a2ef-11e9-3a09-e5662e0c26f8"
 ClaudeCodeSDK = "38ea0fac-78ee-46bd-bc10-f52e7269b833"
@@ -25,6 +24,12 @@ Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 TOML = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
 UUIDs = "cf7118a7-6976-5b1a-9a39-7adc72f591a4"
 WGLMakie = "276b4fcb-3e11-5398-bf8b-a0c2d153d008"
+
+[extensions]
+BonitoBookAlgebraOfGraphicsExt = "AlgebraOfGraphics"
+
+[weakdeps]
+AlgebraOfGraphics = "cbdf2221-f076-402e-a563-3d30da359d67"
 
 [compat]
 ANSIColoredPrinters = "0.0.1"

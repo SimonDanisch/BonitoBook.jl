@@ -433,8 +433,9 @@ end
 function Slider(values::AbstractArray{T}; value=first(values), style=Styles(), attributes...) where {T}
     values_obs = convert(Observable{Vector{T}}, values)
     initial_idx = findfirst((==)(value), values_obs[])
-    index = Observable(initial_idx)
-    value_obs = Observable(values_obs[][initial_idx])
+    idx = isnothing(initial_idx) ? 1 : initial_idx
+    index = Observable(idx)
+    value_obs = Observable(values_obs[][idx])
     attrs = Dict{Symbol,Any}(attributes)
     if haskey(attrs, :style)
         attrs[:style] = Styles(attrs[:style], style)

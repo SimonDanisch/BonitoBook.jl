@@ -59,7 +59,7 @@ end
 function export_dom(session::Session, book::Book)
     # Create export menu that matches saving_menu style
         # Pre-save the markdown file
-    md_file = joinpath(book.folder, "book.md")
+    md_file = book.file
     export_md(md_file, book)
     save_md = DOM.div(
         BonitoBook.icon("markdown");
