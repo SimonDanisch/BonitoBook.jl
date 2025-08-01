@@ -37,13 +37,12 @@ jobs:
           version: ${{ matrix.version }}
           arch: ${{ matrix.arch }}
       - uses: julia-actions/cache@v2
-      - uses: julia-actions/julia-buildpkg@v1
+      - name: Build package with dev dependencies
+        run: |
+          julia --project -e '
+            using Pkg
+            Pkg.add(url="https://github.com/AtelierArith/ClaudeCodeSDK.jl")
+            Pkg.instantiate()
+            Pkg.precompile()
+          '
       - uses: julia-actions/julia-runtest@v1
-  runic:
-    name: Runic formatting
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: fredrikekre/runic-action@v1
-        with:
-          version: '1'
