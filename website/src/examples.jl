@@ -10,7 +10,7 @@ function examples()
     )
 
     # Get all example folders
-    examples_dir = normpath(joinpath(@__DIR__, "..", "..", "examples"))
+    examples_dir = normpath(joinpath(@__DIR__, "..", "..", "docs", "examples"))
     example_folders = filter(isdir, readdir(examples_dir; join=true))
 
     # Create example cards
