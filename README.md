@@ -3,6 +3,22 @@
 [![Build Status](https://github.com/SimonDanisch/BonitoBook.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/SimonDanisch/BonitoBook.jl/actions/workflows/CI.yml?query=branch%3Amain)
 
 
+```julia
+using Pkg
+Pkg.add("https://github.com/SimonDanisch/BonitoBook.jl/")
+using BonitoBook
+# Usage:
+BonitoBook.book("path-to-notebook-file")
+# Example notebooks:
+path = normpath(joinpath(dirname(pathof(BonitoBook)), "..", "docs", "examples"))
+BonitoBook.book(joinpath(path, "intro.md"))
+BonitoBook.book(joinpath(path, "sunny.md"))
+BonitoBook.book(joinpath(path, "juliacon25.md"))
+
+```
+
+```julia
+
 ## License
 
 BonitoBook.jl is dual-licensed:
