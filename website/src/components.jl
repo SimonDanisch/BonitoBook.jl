@@ -19,7 +19,7 @@ function NavBar(items::Vector{Pair{String, String}})
     nav_items = map(items) do (label, href)
         DOM.a(
             label,
-            href=href,
+            href=Bonito.Link(href),
             class="nav-item"
         )
     end
@@ -37,7 +37,7 @@ function ExampleCard(title::AbstractString, description::AbstractString)
         DOM.p(description, class="example-description"),
         DOM.a(
             "Open Example",
-            href="/$(title)",
+            href=Bonito.Link("/$(title)"),
             class="example-link"
         ),
         class="example-card"
