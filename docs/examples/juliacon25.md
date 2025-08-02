@@ -1,7 +1,7 @@
 # Makie Mentions at JuliaCon
 
-One save data to `./data/**`, which will get packaged into the Books zip format, to be fully reproducable and allow caching.
-In this notebook, we cache the video downloads and thumbnails into the data folder, to be able to run this notebook many times, without the many minutes of downloading and unpacking the preview thumbnails.
+One save data to `./data/**`, which will get packaged into the Books zip format, to be fully reproducable and allow caching. In this notebook, we cache the video downloads and thumbnails into the data folder, to be able to run this notebook many times, without the many minutes of downloading and unpacking the preview thumbnails.
+
 ```julia true false true
 urls = [
     "https://www.youtube.com/watch?v=yh3ZuJH3I20",

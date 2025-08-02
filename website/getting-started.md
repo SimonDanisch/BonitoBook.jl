@@ -25,3 +25,4 @@ book = Book("mybook.md")
 ## Basic Usage
 
 BonitoBook supports multiple cell types. Here are some examples:
+

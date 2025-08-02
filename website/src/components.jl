@@ -31,13 +31,13 @@ function NavBar(items::Vector{Pair{String, String}})
 end
 
 # Card component for examples
-function ExampleCard(title::AbstractString, description::AbstractString, path::AbstractString)
+function ExampleCard(title::AbstractString, description::AbstractString)
     return DOM.div(
         DOM.h3(title, class="example-title"),
         DOM.p(description, class="example-description"),
         DOM.a(
             "Open Example",
-            href="/$(basename(path))",
+            href="/$(title)",
             class="example-link"
         ),
         class="example-card"
@@ -75,7 +75,7 @@ const PageStyles = Styles(
         "--card-gap" => "20px",
         "--max-content-width" => "1200px",
     ),
-    
+
     # Light theme colors - matching BonitoBook exactly
     CSS(
         "@media (prefers-color-scheme: light), (prefers-color-scheme: no-preference)",
