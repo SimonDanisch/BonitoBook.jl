@@ -1,5 +1,3 @@
-import PromptingTools as PT
-
 const Monaco = ES6Module(joinpath(@__DIR__, "javascript", "Monaco.js"))
 
 # TODO, this better not be a global, but rather part of `Book`
@@ -19,6 +17,40 @@ function monaco_theme!(name::String)
     return obs[] = name
 end
 
+"""
+    ToggleButton(icon_name::String, obs_to_toggle::Observable{Bool})
+
+Create a toggle button with dark/light friendly styling that toggles a boolean observable.
+
+# Arguments
+- `icon_name::String`: Name of the icon to display
+- `obs_to_toggle::Observable{Bool}`: Observable boolean to toggle
+
+# Returns
+A DOM button element with toggle functionality and appropriate styling.
+"""
+function ToggleButton(icon_name::String, obs_to_toggle::Observable{Bool})
+    button_icon = icon(icon_name)
+    # Set initial class based on observable value
+    initial_class = obs_to_toggle[] ? "small-button toggle-button active" : "small-button toggle-button"
+
+    return DOM.button(
+        button_icon;
+        class = initial_class,
+        onclick = js"""event=> {
+            const button = event.target.closest('button');
+            const newValue = !$(obs_to_toggle).value;
+            $(obs_to_toggle).notify(newValue);
+
+            // Toggle the active class based on new value
+            if (newValue) {
+                button.classList.add('active');
+            } else {
+                button.classList.remove('active');
+            }
+        }"""
+    )
+end
 
 """
     MonacoEditor
@@ -55,8 +87,14 @@ function MonacoEditor(
         :scrollbar => Dict(:vertical => "hidden", :horizontal => "hidden", :verticalHasArrows => false),
         :overviewRulerBorder => false,
         :overviewRulerLanes => 0,
+        :automaticLayout => true,
         :renderLineHighlight => "none",
         :lineDecorationsWidth => 0,
+        :disableLayerHinting => true,
+        :scrollBeyondLastColumn => 0,
+        :hideCursorInOverviewRuler => true,
+        :mouseWheelScrollSensitivity => 0,
+        :fastScrollSensitivity => 0,
     )
     if js_init_func === nothing
         js_init_func = js"() => {}"
@@ -79,7 +117,7 @@ function Bonito.jsrender(session::Session, editor::MonacoEditor)
     eclasses = join(classes, " ")
     editor_div = DOM.div(class = "monaco-editor-div $(eclasses)")
     # needs a return statement to actually return a function
-    theme = get_monaco_theme()
+    theme = copy(get_monaco_theme())
     return Bonito.jsrender(
         session, DOM.div(
             editor_div,
@@ -140,6 +178,7 @@ struct EvalEditor
 
     loading::Observable{Bool}
     language::String
+    resize_to_lines::Bool
 end
 
 function process_message(editor::EvalEditor, message::Dict)
@@ -172,8 +211,13 @@ function send(editor::EvalEditor; msg...)
 end
 
 function run_from_newest!(editor::EvalEditor)
-    cell.editor.loading[] = true
+    editor.loading[] = true
     send(editor; type = "run-from-newest")
+    return
+end
+
+function set_source!(editor::EvalEditor, source::String)
+    send(editor; type = "set-source", data = source)
     return
 end
 
@@ -200,9 +244,10 @@ function EvalEditor(
         js_init_func = nothing,
         show_output = true,
         show_editor = true,
-        show_logging = true,
+        show_logging = false,
         editor_classes = String[],
         container_classes = String[],
+        resize_to_lines = true,
         options...
     )
     js_init_func = isnothing(js_init_func) ? js"() => {}" : js_init_func
@@ -218,7 +263,10 @@ function EvalEditor(
     logging = Observable("")
     logging_html = Observable("")
     on(logging) do str
-        logging_html[] = logging_html[] * str
+        if !isempty(str)
+            # Append the new HTML content (already formatted by ANSIColoredPrinters)
+            logging_html[] = logging_html[] * str
+        end
     end
     editor = EvalEditor(
         editor,
@@ -237,7 +285,8 @@ function EvalEditor(
         show_output,
         show_editor_obs,
         loading,
-        language
+        language,
+        resize_to_lines
     )
     on(js_to_julia) do message
         process_message(editor, message)
@@ -250,14 +299,19 @@ function render_editor(editor::EvalEditor)
     direction = editor.editor.hiding_direction
     hiding = "hide-$direction"
     showing = "show-$direction"
-    output_class = editor.show_output[] ? showing : hiding
-    logging_class = editor.show_logging[] ? showing : hiding
-    output_div = DOM.div(ANSI_CSS, editor.output, class = "cell-output $(output_class)")
+    output_class = map(editor.show_output) do show
+        show ? showing : hiding
+    end
+    logging_class = map(editor.show_logging) do show
+        show ? showing : hiding
+    end
+    output_div = DOM.div(editor.output, class = map(c -> "cell-output cell-output-$(editor.language) $(c)", output_class))
     logging_html = Observable(HTML(""))
     on(editor.logging_html) do str
-        logging_html[] = HTML("<pre>" * str * "</pre>")
+        # Don't wrap in <pre> since ANSIColoredPrinters already provides formatted HTML
+        logging_html[] = HTML(str)
     end
-    logging_div = DOM.div(logging_html, class = "cell-logging $(logging_class)")
+    logging_div = DOM.div(ANSI_CSS, logging_html, class = map(c -> "cell-logging $(c)", logging_class))
     # Set the init func, which we can only do here where we have all divs
     editor.editor.js_init_func[] = js"""((editor) => {
         const output_div = $(output_div);
@@ -266,7 +320,7 @@ function render_editor(editor::EvalEditor)
             const ee = new mod.EvalEditor(
                 editor, output_div, logging_div, $(direction),
                 $(editor.js_to_julia), $(editor.julia_to_js), $(editor.source),
-                $(editor.show_output), $(editor.show_logging),
+                $(editor.show_output), $(editor.show_logging), $(editor.resize_to_lines)
             );
             const callback = ($(editor.js_init_func[]));
             return callback(ee);
@@ -284,30 +338,27 @@ end
 """
     CellEditor
 
-Interactive cell combining code editor and AI chat capabilities.
+Interactive cell for code editing and execution.
 
 # Fields
 - `language::String`: Programming language ("julia", "markdown", "python", etc.)
-- `chat::EvalEditor`: AI chat interface editor
 - `editor::EvalEditor`: Main code editor
 - `uuid::String`: Unique identifier for the cell
-- `show_chat::Observable{Bool}`: Whether to show chat interface
 - `delete_self::Observable{Bool}`: Signal for cell deletion
 """
 struct CellEditor
     language::String
-    chat::EvalEditor
     editor::EvalEditor
     uuid::String
-    show_chat::Observable{Bool}
     delete_self::Observable{Bool}
+    focused::Observable{Bool}
 end
 
 
 """
-    CellEditor(content, language, runner; show_editor=true, show_logging=true, show_output=true, show_chat=false)
+    CellEditor(content, language, runner; show_editor=true, show_logging=false, show_output=true)
 
-Create an interactive cell editor with code execution and AI chat capabilities.
+Create an interactive cell editor with code execution capabilities.
 
 # Arguments
 - `content`: Initial source code or content
@@ -316,12 +367,11 @@ Create an interactive cell editor with code execution and AI chat capabilities.
 - `show_editor`: Whether to show the code editor initially
 - `show_logging`: Whether to show execution logs initially
 - `show_output`: Whether to show execution output initially
-- `show_chat`: Whether to show AI chat interface initially
 
 # Returns
 Configured `CellEditor` instance ready for interactive use.
 """
-function CellEditor(content, language, runner; show_editor = true, show_logging = true, show_output = true, show_chat = false)
+function CellEditor(content, language, runner; show_editor = true, show_logging = false, show_output = true)
     runner = language == "markdown" ? MarkdownRunner() : runner
     uuid = string(UUIDs.uuid4())
 
@@ -336,45 +386,30 @@ function CellEditor(content, language, runner; show_editor = true, show_logging 
         # run immediately, since we only show output
         run!(jleditor)
     end
-    airunner = MLRunner(jleditor)
-    show_chat_obs = Observable(show_chat)
-    chat = EvalEditor(
-        "", airunner;
-        show_editor = show_chat, show_output = show_chat, show_logging = show_chat, language = "markdown",
-        lineNumbers = "off", editor_classes = ["chat"]
-    )
     for (key, obs) in (:editor => jleditor.show_editor, :logging => jleditor.show_logging, :output => jleditor.show_output)
         on(obs) do show
             toggle!(jleditor; (key => show,)...)
         end
     end
-    on(show_chat_obs) do show
-        toggle!(chat; editor = show, output = show, logging = show)
-    end
+    focused = Observable(false)
     return CellEditor(
-        language, chat, jleditor,
-        uuid, show_chat_obs, Observable(false)
+        language, jleditor,
+        uuid, Observable(false), focused
     )
 end
 
 function Bonito.jsrender(session::Session, editor::CellEditor)
     jleditor = editor.editor
-    chat = editor.chat
 
-    ai_icon = icon("sparkle-filled")
-    ai = DOM.button(ai_icon; class = "small-button", onclick = js"event=> $(editor.show_chat).notify(!$(editor.show_chat).value)")
     show_output = Observable(jleditor.show_output[])
     on(x -> toggle!(jleditor; output = !jleditor.show_output[]), show_output)
-    out_icon = icon("graph")
-    out = DOM.button(out_icon; class = "small-button", onclick = js"event=> $(show_output).notify(!$(show_output).value)")
+    out = ToggleButton("graph", show_output)
     show_editor_obs = Observable(jleditor.show_editor[])
     on(x -> toggle!(jleditor; editor = !jleditor.show_editor[]), show_editor_obs)
-    editor_icon = icon("code")
-    show_editor = DOM.button(editor_icon; class = "small-button", onclick = js"event=> $(show_editor_obs).notify(!$(show_editor_obs).value)")
+    show_editor = ToggleButton("code", show_editor_obs)
     show_logging_obs = Observable(jleditor.show_logging[])
     on(x -> toggle!(jleditor; logging = !jleditor.show_logging[]), show_logging_obs)
-    logging_icon = icon("terminal")
-    show_logging = DOM.button(logging_icon; class = "small-button", onclick = js"event=> $(show_logging_obs).notify(!$(show_logging_obs).value)")
+    show_logging = ToggleButton("terminal", show_logging_obs)
     delete_icon = icon("close", style = Styles("color" => "red"))
     click = Observable(false)
     delete_editor = DOM.button(delete_icon; class = "small-button", onclick = js"event=> $(click).notify(true)")
@@ -385,24 +420,25 @@ function Bonito.jsrender(session::Session, editor::CellEditor)
     hover_id = "$(editor.uuid)-hover"
     container_id = "$(editor.uuid)-container"
     card_content_id = "$(editor.uuid)-card-content"
-    any_loading = map(|, chat.loading, jleditor.loading)
+    any_loading = jleditor.loading
     hide_on_focus_obs = Observable(editor.language == "markdown")
-    any_visible = map(|, editor.chat.show_editor, jleditor.show_editor, jleditor.show_logging)
+    any_visible = map(|, jleditor.show_editor, jleditor.show_logging)
 
     editor.editor.js_init_func[] = js"""
-        (editor) => {
-            return $(Monaco).then(Monaco => {
-                Monaco.register_cell_editor(editor, $(editor.uuid))
-                Monaco.setup_cell_editor(
-                    editor,
-                    $hover_id, $container_id, $card_content_id,
-                    $any_loading, $any_visible,
-                    $(hide_on_focus_obs),
-                );
-            })
-        }
+    (editor) => {
+        return $(Monaco).then(Monaco => {
+            Monaco.register_cell_editor(editor, $(editor.uuid))
+            Monaco.setup_cell_editor(
+                editor,
+                $hover_id, $container_id, $card_content_id,
+                $any_loading, $any_visible,
+                $(hide_on_focus_obs),
+                $(editor.focused)
+            );
+        })
+    }
     """
-    hover_buttons = DOM.div(ai, show_editor, show_logging, out, delete_editor; class = "hover-buttons", id = hover_id)
+    hover_buttons = DOM.div(show_editor, show_logging, out, delete_editor; class = "hover-buttons", id = hover_id)
 
     # Create small always-visible language indicator positioned in bottom right
     names = Dict(
@@ -416,7 +452,7 @@ function Bonito.jsrender(session::Session, editor::CellEditor)
     jleditor_div, logging_div, output_div = render_editor(jleditor)
     class = any_visible[] ? "show-vertical" : "hide-vertical"
     card_content = DOM.div(
-        chat, jleditor_div, logging_div, small_language_indicator;
+        jleditor_div, logging_div, small_language_indicator;
         class = "cell-editor $class", id = card_content_id, style = "position: relative;"
     )
     cell = DOM.div(hover_buttons, card_content, DOM.div(output_div, tabindex = 0), style = Styles("position" => "relative"))
@@ -424,16 +460,20 @@ function Bonito.jsrender(session::Session, editor::CellEditor)
     proximity_area = DOM.div(class = "cell-menu-proximity-area")
     container = DOM.div(cell, proximity_area, style = Styles("position" => "relative"), id = container_id, tabindex = 0)
 
-    cell_div = DOM.div(container, class = "cell-editor-container", id = editor.uuid)
+    # Add collapsed class to container based on editor visibility
+    container_class = map(any_visible) do visible
+        visible ? "cell-editor-container" : "cell-editor-container editor-collapsed"
+    end
+    cell_div = DOM.div(container, class = container_class, id = editor.uuid)
     return Bonito.jsrender(session, cell_div)
 end
 
 struct FileEditor
-    files::Vector{String}
     editor::EvalEditor
     current_file::Observable{String}
-    function FileEditor(filepath::Vector{String}, runner = nothing; language = "julia", options...)
-        source = read(filepath[1], String)
+
+    function FileEditor(filepath::String="", runner = nothing; language = "julia", show_editor = true, options...)
+        source = isempty(filepath) ? "" : read(filepath, String)
         opts = (
             minimap = Dict(:enabled => true, :autohide => true),
             scrollbar = Dict(),
@@ -441,50 +481,49 @@ struct FileEditor
             overviewRulerLanes = 2,
             lineDecorationsWidth = 10,
         )
-        js_init_func = js"""(editor, monaco, editor_div) => {
-            return $(Monaco).then(Monaco => {
-                Monaco.resize_to_lines(editor, monaco, editor_div)
-            })
-        }"""
+
         editor = EvalEditor(
             source, runner;
-            js_init_func = js_init_func,
             editor_classes = ["file-editor"],
             hiding_direction = "horizontal",
-            language = language, show_logging = false,
+            language = language,
+            show_editor = show_editor,
+            show_logging = false,
+            resize_to_lines = false,
             opts..., options...
         )
-        current_file = Observable(filepath[1])
+        current_file = Observable(filepath)
 
-        # Set up auto-save when source changes
-        on(editor.source) do new_source
-            write(current_file[], new_source)
-        end
-
-        return new(filepath, editor, current_file)
+        return new(editor, current_file)
     end
 end
 
-function Bonito.jsrender(session::Session, editor::FileEditor)
-    buttons = map(editor.files) do file
-        button = Button(basename(file))
-        on(session, button.value) do x
-            # Save current file before switching
-            write(editor.current_file[], editor.editor.source[])
-            # Switch to new file
-            editor.current_file[] = file
-            editor.editor.source[] = read(file, String)
-        end
-        return button
-    end
-    name = DOM.div(buttons...; class = "hide-horizontal file-editor-path")
+function open_file!(editor::FileEditor, filepath::String; line::Union{Int, Nothing} = nothing)
+    if isfile(filepath)
+        # Switch to new file
+        @info "Opening file in editor: $filepath" * (isnothing(line) ? "" : " at line $line")
+        editor.current_file[] = filepath
+        set_source!(editor.editor, read(filepath, String))
 
-    editor_div = DOM.div(editor.editor.editor, class = "file-cell-editor")
-    meditor, logging_div, output_div = render_editor(editor.editor)
-    return Bonito.jsrender(
-        session, DOM.div(
-            name,
-            editor_div,
-        )
-    )
+        # Jump to line if specified
+        if !isnothing(line) && line > 0
+            send(editor.editor; type = "goto-line", line = line)
+        end
+
+        toggle!(editor.editor; editor = true)
+    else
+        @warn "Could not find file: $filepath"
+    end
+end
+
+
+# Forward toggle! calls to the underlying EvalEditor for compatibility
+function toggle!(editor::FileEditor; kwargs...)
+    toggle!(editor.editor; kwargs...)
+end
+
+function Bonito.jsrender(session::Session, editor::FileEditor)
+    # Editor container that fills remaining height
+    meditor, _, _ = render_editor(editor.editor)
+    return Bonito.jsrender(session, meditor)
 end

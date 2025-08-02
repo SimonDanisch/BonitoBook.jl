@@ -30,15 +30,15 @@ function markdown2book(md; all_blocks_as_cell = false)
             languages = split(content.language, " ")
             language = languages[1]
             if !isempty(language) && language in ("markdown", "julia", "python")
-                # We only treat ```language bool bool bool bool as a code block (our format)
+                # We only treat ```language bool bool bool as a code block (our format)
                 # Option to force all blocks as code blocks, for markdown not written by us
-                if all_blocks_as_cell || length(languages) == 5
+                if all_blocks_as_cell || length(languages) == 4
                     append_last_md()
-                    if length(languages) == 5
+                    if length(languages) == 4
                         show_fields = parse.(Bool, languages[2:end])
                     else
                         # Default show fields for all_blocks_as_cell mode
-                        show_fields = (false, false, true, false)
+                        show_fields = (true, false, true)
                     end
                     push!(cells, Cell(language, content.code, nothing, show_fields...))
                 else
@@ -87,9 +87,9 @@ function ipynb2book(json_path::String)
                 language = json_content["metadata"]["kernelspec"]["language"]
             end
             if language == "markdown"
-                fields = (false, false, true, false)
+                fields = (false, false, true)
             else
-                fields = (true, false, true, false)
+                fields = (true, false, true)
             end
             isempty(source) || push!(cells, Cell(language, source, nothing, fields...))
         elseif cell_type == "markdown"
@@ -116,12 +116,12 @@ Vector of `Cell` objects representing the book content.
 - `.md`: Markdown files with embedded code blocks
 - `.ipynb`: Jupyter notebook files
 """
-function load_book(path)
+function load_book(path; all_blocks_as_cell=false)
     if endswith(path, ".ipynb")
         return ipynb2book(path)
     elseif endswith(path, ".md")
         md = Markdown.parse_file(path)
-        return markdown2book(md)
+        return markdown2book(md, all_blocks_as_cell=all_blocks_as_cell)
     else
         error("Unsupported file format. Only .ipynb and .md files are supported.")
     end
@@ -145,8 +145,7 @@ function cells2editors(cells, runner)
             cell.source, string(cell.language), runner;
             show_editor = cell.show_editor,
             show_logging = cell.show_logging,
-            show_output = cell.show_output,
-            show_chat = cell.show_chat
+            show_output = cell.show_output
         )
     end
 end
