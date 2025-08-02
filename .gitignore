@@ -1,2 +1,4 @@
 /Manifest.toml
 test/Sunny/01_LSWT_CoRh2O4
+**/.versions/**
+website/build

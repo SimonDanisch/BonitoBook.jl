@@ -1,0 +1,18 @@
+# Claude Agent Configuration
+# This file contains the configuration for the Claude AI agent used in BonitoBook
+
+[agent]
+model = "claude-sonnet-4-20250514"
+max_thinking_tokens = 8000
+max_turns = 20
+permission_mode = "acceptEdits"
+continue_conversation = true
+
+[tools]
+allowed_tools = ["Read", "Write", "Bash", "Glob", "Grep", "Edit", "mcp__julia-server__julia_exec"]
+mcp_tools = ["mcp__julia-server__julia_exec"]
+disallowed_tools = []
+
+[advanced]
+append_system_prompt = ""
+permission_prompt_tool_name = ""

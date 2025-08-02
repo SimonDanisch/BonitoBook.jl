@@ -1,6 +1,11 @@
 const MONACO = "https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/+esm";
 const monaco = import(MONACO);
 
+// Function to check if we're in export mode
+function is_export_mode() {
+    return window.BONITO_EXPORT_MODE === true;
+}
+
 export class MonacoEditor {
     constructor(
         editor_div,
@@ -15,6 +20,7 @@ export class MonacoEditor {
         this.initialized = false;
         this.hiding_direction = hiding_direction;
         this.theme = theme.value;
+        this.monaco = monaco;
         theme.on((new_theme) => {
             this.set_theme(new_theme);
         });
@@ -46,6 +52,33 @@ export class MonacoEditor {
             div._editor_instance = this.editor;
             this.set_theme(this.theme);
             this.initialized = true;
+
+            // Prevent scroll events from being captured by the editor
+            // This allows page scrolling to work when mouse is over the editor
+            const editorDomNode = editor.getDomNode();
+            if (editorDomNode) {
+                editorDomNode.addEventListener('wheel', (e) => {
+                    // Prevent Monaco from handling the wheel event
+                    e.stopPropagation();
+                    e.preventDefault();
+
+                    // Find the scrollable parent (could be book-cells-area or window)
+                    const scrollParent = document.querySelector(".book-cells-area");
+
+                    if (scrollParent) {
+                        // Use scrollBy for smoother scrolling with proper delta handling
+                        scrollParent.scrollBy({
+                            top: e.deltaY,
+                            left: e.deltaX,
+                            behavior: 'auto' // Use 'auto' for immediate scrolling like native
+                        });
+                    } else {
+                        // Fallback to window scrolling
+                        window.scrollBy(e.deltaX, e.deltaY);
+                    }
+                }, { passive: false });
+            }
+
             this.resolve_setup(editor);
         });
     }
@@ -82,7 +115,8 @@ export class EvalEditor {
         julia_to_js,
         source_obs,
         show_output,
-        show_logging
+        show_logging,
+        do_resize_to_lines = true
     ) {
         this.message_queue = [];
         this.editor = monaco_editor;
@@ -100,7 +134,9 @@ export class EvalEditor {
         });
         monaco.then((monaco) => {
             monaco_editor.editor.then((editor) => {
-                resize_to_lines(editor, monaco, this.editor.editor_div);
+                if (do_resize_to_lines) {
+                    resize_to_lines(editor, monaco, this.editor.editor_div);
+                }
                 editor.addCommand(
                     monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyP, // Ctrl+P or Cmd+P
                     () => {
@@ -159,6 +195,7 @@ export class EvalEditor {
         if (this.message_queue.length === 1) {
             this.js_to_julia.notify(this.message_queue[0]);
         } else {
+            console.log(this.message_queue);
             this.js_to_julia.notify({
                 type: "multi",
                 data: this.message_queue,
@@ -198,6 +235,23 @@ export class EvalEditor {
         } else if (message.type === "toggle-logging") {
             this.show_logging = message.data;
             toggle_elem(message.data, this.logging_div, this.direction);
+        } else if (message.type === "goto-line") {
+            this.editor.editor.then((editor) => {
+                const lineNumber = Math.max(1, message.line);
+                const model = editor.getModel();
+                const totalLines = model.getLineCount();
+
+                // Ensure line number is within bounds
+                const targetLine = Math.max(1, Math.min(lineNumber, totalLines));
+
+                // Set cursor position and reveal line
+                editor.setPosition({
+                    lineNumber: targetLine,
+                    column: 1
+                });
+                editor.revealLineInCenter(targetLine);
+                editor.focus();
+            });
         } else if (message.type === "multi") {
             message.data.forEach(this.process_message.bind(this));
         } else {
@@ -318,10 +372,6 @@ export function add_command(editor, label, keybinding, callback) {
 
 export function resize_to_lines(editor, monaco, editor_div, retryCount = 0) {
     // Check if editor and required methods exist
-    if (!editor || typeof editor.onDidChangeModelContent !== 'function') {
-        return;
-    }
-
     // Resize editor based on content
     function updateEditorHeight() {
         try {
@@ -330,7 +380,6 @@ export function resize_to_lines(editor, monaco, editor_div, retryCount = 0) {
                 console.warn('Editor model not available yet');
                 return;
             }
-
             const lineHeight = editor.getOption(
                 monaco.editor.EditorOption.lineHeight
             );
@@ -345,8 +394,8 @@ export function resize_to_lines(editor, monaco, editor_div, retryCount = 0) {
 
     // Update height on content change
     try {
-        editor.onDidChangeModelContent(updateEditorHeight);
         // Initial resize
+        editor.onDidChangeModelContent(updateEditorHeight);
         updateEditorHeight();
     } catch (error) {
         console.error('Error setting up resize_to_lines:', error);
@@ -377,7 +426,8 @@ export function setup_cell_editor(
     loading_obs,
     all_visible_obs,
     // Markdown unhiding behavior
-    hide_on_focus_obs
+    hide_on_focus_obs,
+    focused,
 ) {
     const buttons = document.getElementById(buttons_id);
     const container = document.getElementById(container_id);
@@ -387,16 +437,41 @@ export function setup_cell_editor(
         console.warn("No editor found for uuid:", uuid);
         console.log(BOOK.editors);
     }
+    eval_editor.focused = focused;
     const make_visible = () => {
         buttons.style.opacity = 1.0;
     };
     const hide = () => {
         buttons.style.opacity = 0.0;
     };
-    container.addEventListener("mouseover", make_visible);
-    container.addEventListener("mouseout", hide);
 
+    // Only add hover behavior if not in export mode
+    if (!is_export_mode()) {
+        container.addEventListener("mouseover", make_visible);
+        container.addEventListener("mouseout", hide);
+    }
+    // Track focus events on the Monaco editor
+    eval_editor.editor.editor.then((editor) => {
+        editor.onDidFocusEditorWidget(() => {
+            // Clear focus from all other cells first
+            Object.entries(BOOK.editors).forEach(([uuid, other]) => {
+                if (other !== editor) {
+                    other.focused.notify(false);
+                }
+            });
+            // Set this cell as focused
+            focused.notify(true);
+        });
+    });
     // Track loading state with minimum 1 second visibility
+    focused.on((x) => {
+        if (x) {
+            card_content.classList.add("focused");
+        } else {
+            card_content.classList.remove("focused");
+        }
+    });
+
     let loadingTimeout = null;
     let loadingStartTime = null;
 
@@ -431,44 +506,47 @@ export function setup_cell_editor(
     all_visible_obs.on((x) => {
         toggle_elem(x, card_content, "vertical");
     });
-    container.addEventListener("focus", (e) => {
-        if (hide_on_focus_obs.value) {
-            eval_editor.toggle_editor(true);
-            eval_editor.toggle_output(false);
-        }
-    });
-    container.addEventListener("click", (e) => {
-        if (hide_on_focus_obs.value) {
-            // Only trigger if click is on output area, not on the Monaco editor
-            const monacoEditor = container.querySelector('.monaco-editor');
-            if (!monacoEditor || !monacoEditor.contains(e.target)) {
+    // Only add markdown click-to-edit behavior if not in export mode
+    if (!is_export_mode()) {
+        container.addEventListener("focus", (e) => {
+            if (hide_on_focus_obs.value) {
                 eval_editor.toggle_editor(true);
                 eval_editor.toggle_output(false);
-                // Request current source from Julia to ensure editor has the right content
-                eval_editor.js_to_julia.notify({
-                    type: "get-source"
-                });
-                // Focus the editor once it's ready
-                eval_editor.editor.editor.then((editor) => {
-                    editor.focus();
-                });
             }
-        }
-    });
-    container.addEventListener("focusout", (e) => {
-        console.log("Focus out!")
-        if (hide_on_focus_obs.value) {
-            if (!container.contains(e.relatedTarget)) {
-                eval_editor.editor.editor.then((editor) => {
-                    eval_editor.toggle_editor(false);
-                    eval_editor.toggle_output(true);
-                    eval_editor.set_source(editor);
-                    eval_editor.run();
-                    eval_editor.send();
-                })
+        });
+        container.addEventListener("click", (e) => {
+            if (hide_on_focus_obs.value) {
+                // Only trigger if click is on output area, not on the Monaco editor
+                const monacoEditor = container.querySelector(".monaco-editor");
+                if (!monacoEditor || !monacoEditor.contains(e.target)) {
+                    eval_editor.toggle_editor(true);
+                    eval_editor.toggle_output(false);
+                    // Request current source from Julia to ensure editor has the right content
+                    eval_editor.js_to_julia.notify({
+                        type: "get-source",
+                    });
+                    // Focus the editor once it's ready
+                    eval_editor.editor.editor.then((editor) => {
+                        editor.focus();
+                    });
+                }
             }
-        }
-    });
+        });
+        container.addEventListener("focusout", (e) => {
+            console.log("Focus out!");
+            if (hide_on_focus_obs.value) {
+                if (!container.contains(e.relatedTarget)) {
+                    eval_editor.editor.editor.then((editor) => {
+                        eval_editor.toggle_editor(false);
+                        eval_editor.toggle_output(true);
+                        eval_editor.set_source(editor);
+                        eval_editor.run();
+                        eval_editor.send();
+                    });
+                }
+            }
+        });
+    }
 }
 
 
