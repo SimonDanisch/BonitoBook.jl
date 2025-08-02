@@ -1,0 +1,42 @@
+í«,jìŸ$8bca5b95-b17b-4e02-baaa-f7f530088b50Ä£subÇßpayloadñ»\kí«mjìŸ$173e8567-213c-4b56-8112-502f8b9f8647Å§2104«8eí§2104Ÿ0cell-output cell-output-markdown show-horizontal§rootÉ£obs«h§2104ßpayload«»fìÄŸmreturn value=> Bonito.update_node_attribute(document.querySelector('[data-jscall-id="632"]'), 'class', value)ŸU/home/runner/.julia/packages/Bonito/6Q24g/src/rendering/hyperscript_integration.jl:92®msg_type°1»Rkí«cjìŸ$173e8567-213c-4b56-8112-502f8b9f8647Å§2105«.eí§2105Ÿ&cell-editor-container editor-collapsed§rootÉ£obs«h§2105ßpayload«»fìÄŸmreturn value=> Bonito.update_node_attribute(document.querySelector('[data-jscall-id="617"]'), 'class', value)ŸU/home/runner/.julia/packages/Bonito/6Q24g/src/rendering/hyperscript_integration.jl:92®msg_type°1»Ñkí«<jìŸ$173e8567-213c-4b56-8112-502f8b9f8647Å§2107«eí§2107√§rootÇßpayload»,fìÅ¥11145053746088828198«h§2107⁄ (() => {
+    document.querySelector('[data-jscall-id="665"]')['onclick'] = event=> {
+    const button = event.target.closest('button');
+    const newValue = !__lookup_interpolated('11145053746088828198').value;
+    __lookup_interpolated('11145053746088828198').notify(newValue);
+
+    // Toggle the active class based on new value
+    if (newValue) {
+        button.classList.add('active');
+    } else {
+        button.classList.remove('active');
+    }
+}
+})()Ÿ>/home/runner/work/BonitoBook.jl/BonitoBook.jl/src/editor.jl:40®msg_type°2»Åkí«<jìŸ$173e8567-213c-4b56-8112-502f8b9f8647Å§2108«eí§2108¬§rootÇßpayload»)fìÅ≥4627963846817889634«h§2108⁄»(() => {
+    document.querySelector('[data-jscall-id="667"]')['onclick'] = event=> {
+    const button = event.target.closest('button');
+    const newValue = !__lookup_interpolated('4627963846817889634').value;
+    __lookup_interpolated('4627963846817889634').notify(newValue);
+
+    // Toggle the active class based on new value
+    if (newValue) {
+        button.classList.add('active');
+    } else {
+        button.classList.remove('active');
+    }
+}
+})()Ÿ>/home/runner/work/BonitoBook.jl/BonitoBook.jl/src/editor.jl:40®msg_type°2»Åkí«<jìŸ$173e8567-213c-4b56-8112-502f8b9f8647Å§2106«eí§2106√§rootÇßpayload»)fìÅ≥4366139241705810660«h§2106⁄»(() => {
+    document.querySelector('[data-jscall-id="669"]')['onclick'] = event=> {
+    const button = event.target.closest('button');
+    const newValue = !__lookup_interpolated('4366139241705810660').value;
+    __lookup_interpolated('4366139241705810660').notify(newValue);
+
+    // Toggle the active class based on new value
+    if (newValue) {
+        button.classList.add('active');
+    } else {
+        button.classList.remove('active');
+    }
+}
+})()Ÿ>/home/runner/work/BonitoBook.jl/BonitoBook.jl/src/editor.jl:40®msg_type°2»Kkí«<jìŸ$173e8567-213c-4b56-8112-502f8b9f8647Å§2109«eí§2109¬§rootÇßpayload«ÙfìÅ¥14458245331995005930«h§2109Ÿí(() => {
+    document.querySelector('[data-jscall-id="671"]')['onclick'] = event=> __lookup_interpolated('14458245331995005930').notify(true)
+})()Ÿ?/home/runner/work/BonitoBook.jl/BonitoBook.jl/src/editor.jl:415®msg_type°2®msg_type°9
