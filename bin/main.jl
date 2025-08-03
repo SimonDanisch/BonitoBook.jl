@@ -1,4 +1,4 @@
-using BonitoBook
+using BonitoBook, Bonito
 
 proxy = get(ENV, "JULIAHUB_APP_URL", "")
 if isempty(proxy)
