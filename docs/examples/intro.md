@@ -35,7 +35,7 @@ Thanks to Bonito.jl, which was build to run anywhere, BonitoBook has a wide rang
 
 Sadly, it has been hard to fully support all features of WGLMakie in Pluto or Jupyter. With BonitoBook, this is changing. As the name suggest, it's based on Bonito.jl, which is also the framework used to implement WGLMakie. With this, all features like offline export, interactivity, observables and widgets are supported.
 
-```julia false false true
+```julia true false true
 # Create sliders for different parameters
 time_slider = Components.Slider(1:360; value=1)
 spiral_factor = Components.Slider(1:50; value=20)
@@ -74,7 +74,6 @@ $(splot).then(plots=>{
     const plot = scatter_plot.plot_object;
     const pos_buff = scatter_plot.geometry.attributes.positions_transformed_f32c.array;
     const initial_pos = [...pos_buff];
-    console.log("Initial positions:", initial_pos.length);
 
     // Function to generate galaxy positions
     function generateGalaxy(timeVal, spiralVal, explosionVal) {
@@ -108,7 +107,6 @@ $(splot).then(plots=>{
 
     // Update positions based on time slider
     $(time_slider.value).on(time_val => {
-        console.log("Time:", time_val);
         const spiral = $(spiral_factor.value).value;
         const explosion = $(explosion.value).value;
         const newPos = generateGalaxy(time_val, spiral, explosion);
@@ -117,7 +115,6 @@ $(splot).then(plots=>{
 
     // Update positions based on spiral slider
     $(spiral_factor.value).on(spiral_val => {
-        console.log("Spiral:", spiral_val);
         const time = $(time_slider.value).value;
         const explosion = $(explosion.value).value;
         const newPos = generateGalaxy(time, spiral_val, explosion);
@@ -126,7 +123,6 @@ $(splot).then(plots=>{
 
     // Update positions based on explosion slider
     $(explosion.value).on(explosion_val => {
-        console.log("Explosion:", explosion_val);
         const time = $(time_slider.value).value;
         const spiral = $(spiral_factor.value).value;
         const newPos = generateGalaxy(time, spiral, explosion_val);
@@ -135,7 +131,6 @@ $(splot).then(plots=>{
 
     // Update marker size
     $(markersize.value).on(size => {
-        console.log("Size:", size);
         plot.update([['markersize', [size, size, size]]]);
     });
 

@@ -77,7 +77,6 @@ function add_example_routes!(routes)
         ext == ".md" || continue
         name == "juliacon25" && continue  # Skip the JuliaCon example for now
         route_name = "/$(name)"
-        @show name file
         routes[route_name] = App(title=name) do
             # Create a book instance for this example
             # Book needs to be the root element for proper functionality

@@ -21,6 +21,8 @@ jobs:
       actions: write # needed to allow julia-actions/cache to proactively delete old caches that it has created
       contents: write
       statuses: write
+      pages: write
+      id-token: write
     steps:
       - uses: actions/checkout@v4
       - uses: julia-actions/setup-julia@v2

@@ -453,10 +453,7 @@ function Bonito.jsrender(session::Session, slider::Slider)
         session,
         index,
         js"""(index) => {
-            console.log(index)
             const values = $(values).value
-            console.log(values)
-            console.log($(slider.value))
             $(slider.value).notify(values[index - 1])
         }
         """,

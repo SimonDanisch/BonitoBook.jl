@@ -109,7 +109,6 @@ function (server::MCPJuliaServer)(context)
         id = get(request_data, "id", nothing)
         params = get(request_data, "params", nothing)
         response = respond_to_request(server, method, params, id)
-        @show response
         # Return HTTP response
         return HTTP.Response(200,
             ["Content-Type" => "application/json"],

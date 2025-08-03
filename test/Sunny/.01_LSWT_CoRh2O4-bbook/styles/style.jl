@@ -37,7 +37,7 @@ else
 end
 
 on(@Book().theme_preference) do browser_preference
-    @show browser_preference
+
     theme = light_theme === nothing ? browser_preference : (light_theme ? "light" : "dark")
     if theme == "light"
         Makie.set_theme!(size = (650, 450))
