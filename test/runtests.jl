@@ -1,5 +1,6 @@
-using BonitoBook, Bonito
+using BonitoBook
 
-BonitoBook.book(joinpath(@__DIR__, "..", "docs", "examples", "intro.md"))
-BonitoBook.book(joinpath(@__DIR__, "..", "docs", "examples", "sunny.md"))
-BonitoBook.book(joinpath(@__DIR__, "..", "docs", "examples", "juliacon25.md"))
+path = normpath(joinpath(dirname(pathof(BonitoBook)), "..", "docs", "examples"))
+BonitoBook.book(joinpath(path, "intro.md"))
+BonitoBook.book(joinpath(path, "sunny.md"))
+BonitoBook.book(joinpath(path, "juliacon25.md"))

@@ -48,7 +48,7 @@ AlgebraOfGraphics = {path = "dev/AlgebraOfGraphics"}
 Bonito = {path = "dev/Bonito"}
 BonitoBook = {path = "dev/BonitoBook"}
 CairoMakie = {path = "dev/Makie/CairoMakie"}
-ClaudeCodeSDK = {path = "dev/ClaudeCodeSDK"}
+ClaudeCodeSDK = {url = "https://github.com/AtelierArith/ClaudeCodeSDK.jl/"}
 ComputePipeline = {path = "dev/Makie/ComputePipeline"}
 GLMakie = {path = "dev/Makie/GLMakie"}
 Makie = {path = "dev/Makie/Makie"}
