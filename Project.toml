@@ -1,7 +1,7 @@
 name = "BonitoBook"
 uuid = "b416d416-7a6e-4336-8c1a-1f8a8cd59518"
-authors = ["Simon Danisch"]
 version = "1.0.0-DEV"
+authors = ["Simon Danisch"]
 
 [deps]
 ANSIColoredPrinters = "a4c015fc-c6ff-483c-b24f-f7ea428134e9"
@@ -26,11 +26,15 @@ UUIDs = "cf7118a7-6976-5b1a-9a39-7adc72f591a4"
 WGLMakie = "276b4fcb-3e11-5398-bf8b-a0c2d153d008"
 ZipFile = "a5390f91-8eb1-5f08-bee0-b1d1ffed6cea"
 
-[extensions]
-BonitoBookAlgebraOfGraphicsExt = "AlgebraOfGraphics"
-
 [weakdeps]
 AlgebraOfGraphics = "cbdf2221-f076-402e-a563-3d30da359d67"
+
+[sources]
+Bonito = {rev = "sd/serialization-order", url = "https://github.com/SimonDanisch/Bonito.jl.git"}
+ClaudeCodeSDK = {rev = "main", url = "https://github.com/AtelierArith/ClaudeCodeSDK.jl"}
+
+[extensions]
+BonitoBookAlgebraOfGraphicsExt = "AlgebraOfGraphics"
 
 [compat]
 ANSIColoredPrinters = "0.0.1"
@@ -60,7 +64,3 @@ Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
 test = ["Test"]
-
-[sources]
-Bonito = {rev = "main"}
-ClaudeCodeSDK = {url = "https://github.com/AtelierArith/ClaudeCodeSDK.jl/"}
