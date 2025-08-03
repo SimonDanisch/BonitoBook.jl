@@ -62,6 +62,6 @@ Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 test = ["Test"]
 
 [sources]
-Bonito = {rev = "main", name = "Bonito"}
+Bonito = {rev = "main"}
 BonitoBook = {path = ".."}
 ClaudeCodeSDK = {url = "https://github.com/AtelierArith/ClaudeCodeSDK.jl/"}
