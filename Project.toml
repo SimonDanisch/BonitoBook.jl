@@ -63,5 +63,4 @@ test = ["Test"]
 
 [sources]
 Bonito = {rev = "main"}
-BonitoBook = {path = ".."}
 ClaudeCodeSDK = {url = "https://github.com/AtelierArith/ClaudeCodeSDK.jl/"}
