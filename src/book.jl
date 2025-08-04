@@ -791,5 +791,5 @@ function book(path::AbstractString;
     else
         println("Book server running at: $(Bonito.online_url(server, "/$(name)"))")
     end
-    return
+    return server
 end
