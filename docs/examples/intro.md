@@ -29,7 +29,7 @@ Thanks to Bonito.jl, which was build to run anywhere, BonitoBook has a wide rang
   * HTML displays (Documenter, Pluto)
   * Electron applications
   * JuliaHub
-  * Google Colab
+  * [Google Colab](https://colab.research.google.com/drive/1Bux_x7wIaNBgXCD9NDqD_qmo_UMmtSR4?usp=sharing)
 
 # Best Makie integration
 
@@ -59,9 +59,9 @@ end
 # Create figure and scatter plot
 fig = Figure(backgroundcolor=:black)
 ax = LScene(fig[1, 1]; show_axis=false)
-splot = meshscatter!(ax, 
-    initial_points; 
-    color=first.(initial_points), 
+splot = meshscatter!(ax,
+    initial_points;
+    color=first.(initial_points),
     markersize=markersize.value[]
 )
 
@@ -438,4 +438,3 @@ This enables you to have a Julia project, with a few notebooks that can be run a
 ## Sidebar system
 
 Collapsible sidebars for tools, file browser, chat, and custom widgets.  Configurable positioning and behavior.
-
