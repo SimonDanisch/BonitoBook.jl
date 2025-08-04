@@ -1,3 +1,8 @@
+# Log into Juliahub and navigate to `Applications` (left sidebar)
+# Click "Add an application" (right top)
+# Enter https://github.com/SimonDanisch/BonitoBook.jl as the repository and click "Add Application"
+# Then in "My Applications", click on the newly created application's "launch" button
+
 using BonitoBook, Bonito
 
 proxy = get(ENV, "JULIAHUB_APP_URL", "")

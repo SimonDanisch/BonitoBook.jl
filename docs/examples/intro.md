@@ -28,7 +28,7 @@ Thanks to Bonito.jl, which was build to run anywhere, BonitoBook has a wide rang
   * Server deployments
   * HTML displays (Documenter, Pluto)
   * Electron applications
-  * JuliaHub
+  * [JuliaHub](https://github.com/SimonDanisch/BonitoBook.jl/blob/main/bin/main.jl)
   * [Google Colab](https://colab.research.google.com/drive/1Bux_x7wIaNBgXCD9NDqD_qmo_UMmtSR4?usp=sharing)
 
 # Best Makie integration
