@@ -1,6 +1,45 @@
 const MONACO = "https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/+esm";
 const monaco = import(MONACO);
 
+// Configure Julia language support with auto-indentation
+monaco.then((m) => {
+    m.languages.setLanguageConfiguration('julia', {
+        brackets: [
+            ['(', ')'],
+            ['[', ']'],
+            ['{', '}']
+        ],
+        autoClosingPairs: [
+            { open: '(', close: ')' },
+            { open: '[', close: ']' },
+            { open: '{', close: '}' },
+            { open: '"', close: '"' },
+            { open: "'", close: "'" }
+        ],
+        surroundingPairs: [
+            { open: '(', close: ')' },
+            { open: '[', close: ']' },
+            { open: '{', close: '}' },
+            { open: '"', close: '"' },
+            { open: "'", close: "'" }
+        ],
+        indentationRules: {
+            increaseIndentPattern: /^(\s*|.*=\s*|.*@\w*\s*)[\w\s]*(?:["'`][^"'`]*["'`])*[\w\s]*\b(if|while|for|function|macro|(mutable\s+)?struct|abstract\s+type|primitive\s+type|let|quote|try|begin|.*\)\s*do|else|elseif|catch|finally)\b(?!(?:.*\bend\b(\s*|\s*#.*$)|(?:[^\[\]]*\].*)).*)$/,
+            decreaseIndentPattern: /^\s*(end|else|elseif|catch|finally)\b.*$/
+        },
+        onEnterRules: [
+            {
+                beforeText: /^\s*(begin|for|if|while|function|macro|let|try|struct|mutable\s+struct|abstract\s+type|primitive\s+type|module|baremodule|quote|do)\b.*$/,
+                action: { indentAction: m.languages.IndentAction.Indent }
+            },
+            {
+                beforeText: /^\s*(end|else|elseif|catch|finally)\b.*$/,
+                action: { indentAction: m.languages.IndentAction.Outdent }
+            }
+        ]
+    });
+});
+
 // Function to check if we're in export mode
 function is_export_mode() {
     return window.BONITO_EXPORT_MODE === true;

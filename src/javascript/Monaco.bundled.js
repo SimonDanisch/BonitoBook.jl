@@ -4,6 +4,86 @@
 
 const MONACO = "https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/+esm";
 const monaco = import(MONACO);
+monaco.then((m)=>{
+    m.languages.setLanguageConfiguration('julia', {
+        brackets: [
+            [
+                '(',
+                ')'
+            ],
+            [
+                '[',
+                ']'
+            ],
+            [
+                '{',
+                '}'
+            ]
+        ],
+        autoClosingPairs: [
+            {
+                open: '(',
+                close: ')'
+            },
+            {
+                open: '[',
+                close: ']'
+            },
+            {
+                open: '{',
+                close: '}'
+            },
+            {
+                open: '"',
+                close: '"'
+            },
+            {
+                open: "'",
+                close: "'"
+            }
+        ],
+        surroundingPairs: [
+            {
+                open: '(',
+                close: ')'
+            },
+            {
+                open: '[',
+                close: ']'
+            },
+            {
+                open: '{',
+                close: '}'
+            },
+            {
+                open: '"',
+                close: '"'
+            },
+            {
+                open: "'",
+                close: "'"
+            }
+        ],
+        indentationRules: {
+            increaseIndentPattern: /^\s*(begin|for|if|while|function|macro|let|try|catch|finally|struct|mutable\s+struct|abstract\s+type|primitive\s+type|module|baremodule|quote|do)\b/,
+            decreaseIndentPattern: /^\s*(end|else|elseif|catch|finally)\b/
+        },
+        onEnterRules: [
+            {
+                beforeText: /^\s*(begin|for|if|while|function|macro|let|try|struct|mutable\s+struct|abstract\s+type|primitive\s+type|module|baremodule|quote|do)\b.*$/,
+                action: {
+                    indentAction: m.languages.IndentAction.Indent
+                }
+            },
+            {
+                beforeText: /^\s*(end|else|elseif|catch|finally)\b.*$/,
+                action: {
+                    indentAction: m.languages.IndentAction.Outdent
+                }
+            }
+        ]
+    });
+});
 function is_export_mode() {
     return window.BONITO_EXPORT_MODE === true;
 }

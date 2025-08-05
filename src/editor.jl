@@ -92,6 +92,13 @@ function MonacoEditor(
         :fastScrollSensitivity => 0,
         :wordWrap => "wordWrapColumn",
         :wordWrapColumn => 80,
+        # Auto-indentation and formatting options
+        :autoIndent => "full",
+        :formatOnType => true,
+        :autoClosingBrackets => "always",
+        :autoClosingQuotes => "always",
+        :autoSurround => "languageDefined",
+        :bracketPairColorization => Dict(:enabled => true),
     )
     if js_init_func === nothing
         js_init_func = js"() => {}"

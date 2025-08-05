@@ -1,6 +1,6 @@
 # BonitoBook
 
-BonitoBook is a Julia-native interactive notebook system built on [Bonito.jl](https://simondanisch.github.io/Bonito.jl/stable/) that combines multi-language execution, AI integration, and modern web-based editing.
+BonitoBook is a Julia-native interactive notebook system built on [Bonito.jl](https://simondanisch.github.io/Bonito.jl/stable/) that seamlessly combines multi-language execution, AI integration, and modern web-based editing in one powerful platform.
 
 # Getting started
 
@@ -11,17 +11,25 @@ using BonitoBook
 BonitoBook.book("path-to-notebook-file")
 ```
 
-This will start a server which adds the notebook under the route "/notebook-name" and opens a browser with the url. For using the Display system, e.g. in another notebook or VSCode plotpane, one can directly display the notebook:
+This starts a server that hosts the notebook under the route "/notebook-name" and automatically opens it in your browser. You can also display the notebook directly in other environments like VSCode's plot pane:
 
 ```julia
 display(App(Book("path-to-notebook-file")))
 ```
 
-Both run in the same Julia process as the parent, and therefore can also edit and re-eval any file there.
+Both methods run in the same Julia process as the parent, allowing you to edit and re-evaluate any file seamlessly.
+
+# Motivation
+
+As the author of [Makie.jl](www.makie.org), I've faced challenges integrating its advanced features—like offline export, widgets, and interactions—across different notebook platforms in a stable and efficient way.
+
+Over the years, as Bonito.jl (the Julia framework for creating HTML/JavaScript in Julia) has matured, I decided to build a completely Julia-native notebook system with a sharp focus on plotting and dashboards.
+
+Bonito.jl brings significant advantages: all widgets are reusable, and notebooks can be easily rearranged into different formats, making the transition from notebook to polished dashboard effortless.
 
 # Runs everywhere
 
-Thanks to Bonito.jl, which was build to run anywhere, BonitoBook can be viewed in many ways:
+Thanks to Bonito.jl's universal design, BonitoBook can be viewed across multiple platforms:
 
   * VSCode Plot Pane
   * Browser
@@ -32,98 +40,72 @@ Thanks to Bonito.jl, which was build to run anywhere, BonitoBook can be viewed i
   * [JuliaHub](https://github.com/SimonDanisch/BonitoBook.jl/blob/main/bin/main.jl)
   * [Google Colab](https://colab.research.google.com/drive/1Bux_x7wIaNBgXCD9NDqD_qmo_UMmtSR4?usp=sharing)
 
-# Best Makie integration
+# Interactive Plotting Showcase
 
-It has been hard to fully support all features of WGLMakie in other notebook platforms for various reasons. With BonitoBook, this is changing. As the name suggest, it's based on Bonito.jl, which is also the framework used to implement WGLMakie. With this, all features like offline export, interactivity, observables and widgets are supported.
+BonitoBook provides seamless integration with Makie.jl, supporting all WGLMakie features including interactive widgets, observables, and JavaScript integration. Here's a live example of an interactive 3D galaxy visualization, with the animation done in Javascript so it stays interactive without running Julia. The other plots shown in this notebook are not interactive in that way, and can only be interacted with when actually running the notebook with Julia.
 
-```julia (editor=false, logging=false, output=true)
-# Create sliders for different parameters
+```julia (editor=true, logging=false, output=true)
+# Interactive 3D galaxy with real-time JavaScript integration
 time_slider = Components.Slider(1:360; value=1)
 spiral_factor = Components.Slider(1:50; value=20)
 explosion = Components.Slider(1:100; value=50)
 markersize = Components.Slider(LinRange(0.08, 2.0, 100); value=0.08)
 
-# Generate initial 3D galaxy data
+# Generate 3D galaxy data
 n_points = 1000
 radii = sqrt.(LinRange(0.1, 1, n_points)) * 8
 angles = LinRange(0, 4π, n_points) .+ radii * 0.3
-
 points = Point3f.(radii .* cos.(angles), radii .* sin.(angles), 0) .+ randn(Point3f, n_points) .* (Point3f(0.3, 0.3, 2),)
 
-# Create figure and scatter plot
 fig, ax, mplot = meshscatter(points;
-    color=first.(points),
-    markersize=markersize.value[],
-    figure=(; backgroundcolor=:black),
-    axis=(; show_axis=false)
+    color=first.(points), markersize=markersize.value[],
+    figure=(; backgroundcolor=:black), axis=(; show_axis=false)
 )
 
+# Direct JavaScript integration with Julia observables
 jss = js"""
 $(mplot).then(plots=>{
     const time = $(time_slider.value);
     const spiral = $(spiral_factor.value);
     const explosion = $(explosion.value);
     const markersize = $(markersize.value);
-
-    const scatter_plot = plots[0];
-    const plot = scatter_plot.plot_object;
+    const plot = plots[0].plot_object;
     const initial_pos = $(points);
-    console.log(initial_pos);
 
-    // Function to generate galaxy positions
     function update_galaxy() {
-        const time_val = time.value;
-        const spiral_val = spiral.value;
-        const explosion_val = explosion.value;
         const new_pos = [];
-        const num_points = initial_pos.length;
-        for (let i = 0; i < num_points; i++) {
-            const idx = i * 3;
+        for (let i = 0; i < initial_pos.length; i++) {
             const [x, y, z] = initial_pos[i];
-            // Apply time rotation
-            const angle = Math.atan2(y, x) + time_val * 0.02;
+            const angle = Math.atan2(y, x) + time.value * 0.02;
             const radius = Math.sqrt(x*x + y*y);
-            // Apply spiral effect
-            const spiralAngle = angle + radius * spiral_val * 0.05;
-            // Apply explosion
-            const scale = explosion_val / 50;
+            const spiralAngle = angle + radius * spiral.value * 0.05;
+            const scale = explosion.value / 50;
             new_pos.push(
                 radius * Math.cos(spiralAngle) * scale,
-                radius * Math.sin(spiralAngle) * scale,
-                z * scale
+                radius * Math.sin(spiralAngle) * scale, z * scale
             );
         }
         plot.update([['positions_transformed_f32c', new_pos]]);
     }
-    // Update positions based on time slider
-    time.on(update_galaxy);
-    spiral.on(update_galaxy);
-    explosion.on(update_galaxy);
-    // Update marker size
-    markersize.on(size => {
-        plot.update([['markersize', [size, size, size]]]);
-    });
 
+    [time, spiral, explosion].forEach(obs => obs.on(update_galaxy));
+    markersize.on(size => plot.update([['markersize', [size, size, size]]]));
 });
 """
 
-# Layout
 DOM.div(
-    DOM.div(
-        style="display: flex; gap: 20px; align-items: center; justify-content: center; padding: 15px; background: #1a1a2e; border-radius: 10px; margin: 10px;",
-        DOM.div([DOM.label("Time: ", style="color: white; margin-right: 5px;"), time_slider]),
-        DOM.div([DOM.label("Spiral: ", style="color: white; margin-right: 5px;"), spiral_factor]),
-        DOM.div([DOM.label("Explosion: ", style="color: white; margin-right: 5px;"), explosion]),
-        DOM.div([DOM.label("Size: ", style="color: white; margin-right: 5px;"), markersize])
-    ),
+    DOM.div([DOM.label("Time: "), time_slider], [DOM.label("Spiral: "), spiral_factor],
+            [DOM.label("Explosion: "), explosion], [DOM.label("Size: "), markersize];
+        style="display: flex; gap: 20px; align-items: center; justify-content: center; padding: 15px; background: #1a1a2e; border-radius: 10px; margin: 10px;"),
     fig, jss
 )
 ```
-## Folder structure
+## Notebook format
 
-Each book creates a structured project with a hidden folder structure:
+The format is a pretty simple markdown with more config options and data stored in a separate folder.
+This keeps the notebook format fully compatible with markdown and makes it easy to edit it with other editors.
 
-### For Markdown files (`.md`)
+The a hidden folder structure looks like this:
 
 ```
 mybook.md                # Main content file
@@ -139,23 +121,24 @@ mybook.md                # Main content file
     └── data.csv      # Any data needed for the notebook
 ```
 
-For ipynb, notebooks are first converted to a markdown file with the same name and then that notebook is used.
+Jupyter notebooks (.ipynb) are automatically converted to markdown files with the same name before setting up the notebook and creating the fodler structure.
 
-### Project structure
+### Project compatibility
 
-Each book folder can contain additional files and multiple notebooks sharing the same environment, which means you can have notebooks next to your VSCode julia project:
+The parent folder of a notebook can contain additional files like a Julia project. This allows that multiple notebooks can share the same environment, which makes it perfect for integrating with your existing VSCode Julia projects and running a notebook alongside a VSCode setup:
 
 ```
-myproject/
+MyJuliaProject/
+├── dev/                # Any Julia package checked out for development
 ├── Project.toml        # Julia dependencies
 ├── Manifest.toml       # Dependency lock file
-├── mybook.md           # Book content
+├── mybook.md           # Book file
 ├──── .mybook-bbook/    # Hidden book structure
-├── another-book.md     # Another book with same project
+├── another-book.md     # Another book using the same project
 ├──── .another-bbook/
 ```
 
-The zip export allows to zip everything into a reproducable, shareable archive, the project of the process that was used to run the notebook and with any data.
+The zip export feature packages everything into a reproducible, shareable archive including the project environment and all associated data, which can be directly loaded by using `book("path/to/zipfile")`.
 
 # Julia native
 
@@ -173,13 +156,13 @@ BonitoBook is built entirely in Julia using Bonito.jl, providing native performa
 
 # Ecosystem of Components vs Notebook
 
-## Easy to create new components in Julia
+With Bonito it's easy to [create and share components](https://simondanisch.github.io/Bonito.jl/stable/components.html).
+All BonitoBook components should be usable outside the notebook, and we hope to have a vibrant ecosystem of user created widgets.
 
 ```julia (editor=true, logging=false, output=true)
 struct MyCheckbox
     value::Observable{Bool}
 end
-
 function Bonito.jsrender(session::Session, checkbox::MyCheckbox)
     return Bonito.jsrender(
         session,
@@ -192,12 +175,14 @@ function Bonito.jsrender(session::Session, checkbox::MyCheckbox)
 end
 MyCheckbox(true)
 ```
-## All components work standalone and can be reused
+
+This is why we can e.g. use the editor widget in the notebook itself:
 
 ```julia (editor=true, logging=false, output=true)
 using BonitoBook
 BonitoBook.EvalEditor("println(\"Hello World\")\n1+1")
 ```
+
 ## Simple to create new book types with different layouts
 
 ```julia (editor=true, logging=false, output=true)
@@ -235,7 +220,7 @@ Any package defining Bonito Apps are working inside BonitoBook. This includes cu
 
 ## BonitoBook.Components
 
-BonitoBook comes with it's own Components, which are basically just the default Bonito components, but with a default style that integrates better with the book.
+BonitoBook includes its own component library—essentially the standard Bonito components with enhanced styling that integrates seamlessly with the notebook interface.
 
 ```julia (editor=true, logging=false, output=true)
 # Create one of each component type
@@ -276,33 +261,31 @@ DOM.div(
     )
 )
 ```
-### @manipulate
 
-BonitoBook brings back the beloved `@manipulate` macro from [Interact.jl](https://github.com/JuliaGizmos/Interact.jl) in a modern way. It works pretty much the same way, albeit may have missing features or differences in detail. You can also manually create it with `ManipulateWidgets(Pair{Symbol, Any}[...], callback)`.
+## @manipulate
+
+BonitoBook revives the beloved `@manipulate` macro from [Interact.jl](https://github.com/JuliaGizmos/Interact.jl) with modern enhancements:
 
 ```julia (editor=true, logging=false, output=true)
 import Makie.SpecApi as S
-funcs = (sqrt=sqrt, x_square=x->x^2, sin=sin, cos=cos)
-colormaps = ["viridis", "heat", "blues"]
-types = (scatter=S.Scatter, lines=S.Lines, linesegments=S.LineSegments)
-sizes=10:0.1:100
-checkbox = (true, false)
-@manipulate for cmap=colormaps, func=funcs, Typ=types, size=sizes, show_legend=checkbox
+@manipulate for cmap=["viridis", "heat", "blues"],
+                func=(sqrt=sqrt, square=x->x^2, sin=sin, cos=cos),
+                plot_type=(scatter=S.Scatter, lines=S.Lines, segments=S.LineSegments),
+                size=10:0.1:100, show_legend=(true, false)
     x = 0:0.3:10
-    s = Typ == S.Scatter ? (; markersize=size) : (; linewidth=size)
-    splot = Typ(x, func.(x); colormap=cmap, color=x, s...)
-    ax = S.Axis(; plots=[splot])
+    style = plot_type == S.Scatter ? (; markersize=size) : (; linewidth=size)
+    plot = plot_type(x, func.(x); colormap=cmap, color=x, style...)
     if show_legend
-        cbar = S.Colorbar(splot)
-        S.GridLayout([ax cbar])
+        S.GridLayout([S.Axis(; plots=[plot]) S.Colorbar(plot)])
     else
-        S.GridLayout([ax])
+        S.GridLayout([S.Axis(; plots=[plot])])
     end
 end
 ```
-### LaTeX support
 
-Great LaTeX support via MathTex.
+## LaTeX support
+
+Excellent LaTeX support powered by MathTeX.
 
 ```latex
 $$\int_{-\infty}^{\infty} e^{-x^2} dx = \sqrt{\pi}$$
@@ -315,7 +298,7 @@ a_{21} & a_{22}
 
 # Python integration
 
-Python support comes via PythonCall and CondaPkg, allowing to manage dependencies just like in Julia. Also, the cells share the same process and variables, allowing for seamless interaction.
+Python support is powered by PythonCall and CondaPkg, enabling Julia-like dependency management. Cells share the same process and variables, creating seamless cross-language interaction.
 
 ## Package management
 
@@ -324,21 +307,20 @@ Python support comes via PythonCall and CondaPkg, allowing to manage dependencie
 ```
 ## Shared namespace
 
-With the shared namespace, it becomes trivial to e.g. use WGLMakie for plotting python results.
+The shared namespace enables seamless cross-language workflows:
 
 ```python (editor=true, logging=false, output=true)
 import numpy as np
-data = np.random.randn(1000, 2)
+data = np.random.randn(1000, 2)  # Generate data in Python
 labels = ["x", "y"]
 ```
 ```julia (editor=true, logging=false, output=true)
-using WGLMakie
-# Access Python variables directly in Julia
+# Directly use Python variables in Julia with full Makie features
 scatter(data[:, 1], data[:, 2], axis=(xlabel=labels[1], ylabel=labels[2]))
 ```
 ## Rich MIME support
 
-PythonCall has implemented some basic MIME support. Because Bonito supports MIME's in it's rendering as well, this means e.g. matplotlib output works without any addentional work, making it possible ot use e.g. matplotlib directly to visualize Julia results. This is true for most other Julia plotting libraries.
+MIME support enables matplotlib plots to display automatically, perfect for mixed-language visualizations:
 
 ```python (editor=true, logging=false, output=true)
 import matplotlib.pyplot as plt
@@ -348,11 +330,11 @@ fig # Automatically displays in notebook
 ```
 ## Sidebar system
 
-Collapsible sidebars for tools, file browser, chat, and custom widgets.  Configurable positioning and behavior.
+Features collapsible sidebars for tools, file browser, chat, and custom widgets with configurable positioning and behavior.
 
 ## @edit and Revise.jl support
 
-You can use @bedit in the notebook, to open and edit files, which, if you have loaded Revise, should get picked up and re-evaluated.
+Use `@bedit` in the notebook to open and edit files. With Revise.jl loaded, changes are automatically detected and re-evaluated.
 
 ```julia
 BonitoBook.@bedit Book("intro.md") # Opens function source in editor
@@ -360,7 +342,7 @@ BonitoBook.@bedit Book("intro.md") # Opens function source in editor
 
 ## Style customization
 
-Edit `.name-bbook/styles/style.jl` by pressing the paintcan icon to customize the books appearance:
+Customize your book's appearance by editing `.name-bbook/styles/style.jl` (accessible via the paint can icon):
 
 ```julia (editor=true, logging=false, output=true)
 # Modify colors, fonts, layout dimensions
@@ -381,4 +363,3 @@ editor_width = "800px" # Adjust editor width;
   * Quarto export
   * IPynb
   * PDF
-
