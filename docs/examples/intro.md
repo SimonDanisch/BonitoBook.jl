@@ -102,8 +102,7 @@ DOM.div(
 ```
 ## Notebook format
 
-The format is a pretty simple markdown with more config options and data stored in a separate folder.
-This keeps the notebook format fully compatible with markdown and makes it easy to edit it with other editors.
+The format is a pretty simple markdown with more config options and data stored in a separate folder. This keeps the notebook format fully compatible with markdown and makes it easy to edit it with other editors.
 
 The a hidden folder structure looks like this:
 
@@ -156,8 +155,7 @@ BonitoBook is built entirely in Julia using Bonito.jl, providing native performa
 
 # Ecosystem of Components vs Notebook
 
-With Bonito it's easy to [create and share components](https://simondanisch.github.io/Bonito.jl/stable/components.html).
-All BonitoBook components should be usable outside the notebook, and we hope to have a vibrant ecosystem of user created widgets.
+With Bonito it's easy to [create and share components](https://simondanisch.github.io/Bonito.jl/stable/components.html). All BonitoBook components should be usable outside the notebook, and we hope to have a vibrant ecosystem of user created widgets.
 
 ```julia (editor=true, logging=false, output=true)
 struct MyCheckbox
@@ -175,14 +173,12 @@ function Bonito.jsrender(session::Session, checkbox::MyCheckbox)
 end
 MyCheckbox(true)
 ```
-
 This is why we can e.g. use the editor widget in the notebook itself:
 
 ```julia (editor=true, logging=false, output=true)
 using BonitoBook
 BonitoBook.EvalEditor("println(\"Hello World\")\n1+1")
 ```
-
 ## Simple to create new book types with different layouts
 
 ```julia (editor=true, logging=false, output=true)
@@ -261,7 +257,6 @@ DOM.div(
     )
 )
 ```
-
 ## @manipulate
 
 BonitoBook revives the beloved `@manipulate` macro from [Interact.jl](https://github.com/JuliaGizmos/Interact.jl) with modern enhancements:
@@ -282,7 +277,6 @@ import Makie.SpecApi as S
     end
 end
 ```
-
 ## LaTeX support
 
 Excellent LaTeX support powered by MathTeX.
@@ -363,3 +357,4 @@ editor_width = "800px" # Adjust editor width;
   * Quarto export
   * IPynb
   * PDF
+

@@ -65,8 +65,8 @@ monaco.then((m)=>{
             }
         ],
         indentationRules: {
-            increaseIndentPattern: /^\s*(begin|for|if|while|function|macro|let|try|catch|finally|struct|mutable\s+struct|abstract\s+type|primitive\s+type|module|baremodule|quote|do)\b/,
-            decreaseIndentPattern: /^\s*(end|else|elseif|catch|finally)\b/
+            increaseIndentPattern: /^(\s*|.*=\s*|.*@\w*\s*)[\w\s]*(?:["'`][^"'`]*["'`])*[\w\s]*\b(if|while|for|function|macro|(mutable\s+)?struct|abstract\s+type|primitive\s+type|let|quote|try|begin|.*\)\s*do|else|elseif|catch|finally)\b(?!(?:.*\bend\b(\s*|\s*#.*$)|(?:[^\[\]]*\].*)).*)$/,
+            decreaseIndentPattern: /^\s*(end|else|elseif|catch|finally)\b.*$/
         },
         onEnterRules: [
             {
