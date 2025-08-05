@@ -667,6 +667,20 @@ function get_server(url, port, proxy_url)
     return server
 end
 
+
+"""
+    book(path; replace_style=false, all_blocks_as_cell=false, url="127.0.0.1", port=8773, proxy_url="", openbrowser=true)
+
+Launch a BonitoBook server for interactive notebook editing.
+
+- `path::AbstractString`: Path to .md or .ipynb file
+- `replace_style::Bool`: Replace style.jl with template
+- `all_blocks_as_cell::Bool`: Treat all code blocks as cells (and not just ```julia (editor=true, logging=false, output=true)`)
+- `url::String`: Server URL
+- `port::Int`: Server port
+- `proxy_url::String`: Proxy URL
+- `openbrowser::Bool`: Open browser automatically
+"""
 function book(path::AbstractString;
         replace_style=false,
         all_blocks_as_cell=false,
