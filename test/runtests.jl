@@ -1,4 +1,3 @@
-using ClaudeCodeSDK
 using PromptingTools
 using BonitoBook
 
@@ -8,8 +7,3 @@ BonitoBook.book(joinpath(path, "sunny.ipynb"))
 b = BonitoBook.Book(joinpath(path, "sunny.ipynb"))
 
 BonitoBook.create_claude_agent(b)
-
-using Bonito
-server = Bonito.get_server()
-
-Bonito

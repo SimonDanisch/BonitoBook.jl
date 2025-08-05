@@ -56,7 +56,7 @@ A chat component for AI-powered conversations.
 - `book::Union{Any, Nothing}`: Optional book context for code execution via MCP server
 """
 struct ChatComponent
-    chat_agent::ChatAgent
+    chat_agent::Union{ChatAgent, Nothing}
     messages::Observable{Vector{ChatMessage}}
     input_text::Observable{String}
     is_processing::Observable{Bool}
@@ -66,11 +66,11 @@ struct ChatComponent
 end
 
 """
-    ChatComponent(chat_agent::ChatAgent; book=nothing)
+    ChatComponent(chat_agent::Union{ChatAgent, Nothing}; book=nothing)
 
-Create a new chat component with the given chat agent.
+Create a new chat component with the given chat agent (or nothing if no agent available).
 """
-function ChatComponent(chat_agent::ChatAgent; book=nothing)
+function ChatComponent(chat_agent::Union{ChatAgent, Nothing}; book=nothing)
     return ChatComponent(
         chat_agent,
         Observable(ChatMessage[]),
@@ -132,37 +132,43 @@ function send_message!(chat::ChatComponent, message::String)
     # Set processing state
     chat.is_processing[] = true
     agent_msg = try
-        # For Claude Code, we need to format the message with attachments
-        formatted_message = if !isempty(attachments)
-            attachment_text = join(["Image: $path" for path in attachments], "\n")
-            "$message\n\n$attachment_text"
+        # Check if we have an agent available
+        if chat.chat_agent === nothing
+            chat.is_processing[] = false
+            ChatMessage("No AI agent available. Please enable an AI extension (ClaudeCodeSDK or PromptingTools) to use chat functionality.", false, Dates.now())
         else
-            message
-        end
-
-        response_channel = prompt(chat.chat_agent, formatted_message)
-        dom = Observable(DOM.div())
-        task = Threads.@spawn begin
-            try
-                for msg in response_channel
-                    push!(Bonito.Hyperscript.children(dom[]), msg)
-                    notify(dom)
-                end
-            catch e
-                if isa(e, InterruptException)
-                    # Add interrupted message
-                    push!(Bonito.Hyperscript.children(dom[]), DOM.div("[Response interrupted]", style="color: orange; font-style: italic;"))
-                    notify(dom)
-                else
-                    rethrow(e)
-                end
-            finally
-                chat.is_processing[] = false
-                chat.current_task[] = nothing
+            # For Claude Code, we need to format the message with attachments
+            formatted_message = if !isempty(attachments)
+                attachment_text = join(["Image: $path" for path in attachments], "\n")
+                "$message\n\n$attachment_text"
+            else
+                message
             end
+
+            response_channel = prompt(chat.chat_agent, formatted_message)
+            dom = Observable(DOM.div())
+            task = Threads.@spawn begin
+                try
+                    for msg in response_channel
+                        push!(Bonito.Hyperscript.children(dom[]), msg)
+                        notify(dom)
+                    end
+                catch e
+                    if isa(e, InterruptException)
+                        # Add interrupted message
+                        push!(Bonito.Hyperscript.children(dom[]), DOM.div("[Response interrupted]", style="color: orange; font-style: italic;"))
+                        notify(dom)
+                    else
+                        rethrow(e)
+                    end
+                finally
+                    chat.is_processing[] = false
+                    chat.current_task[] = nothing
+                end
+            end
+            chat.current_task[] = task
+            ChatMessage(dom, false, Dates.now())
         end
-        chat.current_task[] = task
-        ChatMessage(dom, false, Dates.now())
     catch e
         chat.is_processing[] = false
         chat.current_task[] = nothing
@@ -261,7 +267,12 @@ function Bonito.jsrender(session::Session, chat::ChatComponent)
     end
 
     # Create settings popup
-    settings_popup = PopUp(settings_menu(chat.chat_agent); show = false)
+    settings_content = if chat.chat_agent === nothing
+        DOM.div("No AI agent available. Please install ClaudeCodeSDK or PromptingTools to access settings.")
+    else
+        settings_menu(chat.chat_agent)
+    end
+    settings_popup = PopUp(settings_content; show = false)
 
     # Handle settings button click
     on(settings_clicked) do _
