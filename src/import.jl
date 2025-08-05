@@ -3,13 +3,9 @@ using JSON, Markdown
 """
     parse_cell_options(options_str)
 
-Parse cell options from either named tuple format or legacy boolean format.
+Parse cell options from named tuple or legacy format.
 
-# Arguments
-- `options_str`: String containing either "(editor=true, logging=false, output=true)" or "true false true"
-
-# Returns
-Tuple of (show_editor, show_logging, show_output) booleans.
+- `options_str::String`: Options string
 """
 function parse_cell_options(options_str)
     options_str = strip(options_str)
@@ -60,17 +56,10 @@ end
 """
     markdown2book(md; all_blocks_as_cell=false)
 
-Parse a markdown document into book cells.
+Parse markdown document into book cells.
 
-# Arguments
 - `md`: Parsed markdown document
-- `all_blocks_as_cell`: If true, treat all code blocks as cells (default: false)
-
-# Returns
-Vector of `Cell` objects.
-
-Code blocks with format ```language (editor=true, logging=false, output=true) are treated as interactive cells.
-Other content becomes markdown cells. Also supports legacy format ```language bool bool bool.
+- `all_blocks_as_cell::Bool`: Treat all code blocks as cells
 """
 function markdown2book(md; all_blocks_as_cell = false)
     cells = Cell[]

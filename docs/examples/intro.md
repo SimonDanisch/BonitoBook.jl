@@ -119,8 +119,6 @@ DOM.div(
     fig, jss
 )
 ```
-
-
 ## Folder structure
 
 Each book creates a structured project with a hidden folder structure:
@@ -140,6 +138,7 @@ mybook.md                # Main content file
 └── data/             # Write out to `./data` to get included into the zip
     └── data.csv      # Any data needed for the notebook
 ```
+
 For ipynb, notebooks are first converted to a markdown file with the same name and then that notebook is used.
 
 ### Project structure
@@ -157,7 +156,6 @@ myproject/
 ```
 
 The zip export allows to zip everything into a reproducable, shareable archive, the project of the process that was used to run the notebook and with any data.
-
 
 # Julia native
 
@@ -383,3 +381,4 @@ editor_width = "800px" # Adjust editor width;
   * Quarto export
   * IPynb
   * PDF
+

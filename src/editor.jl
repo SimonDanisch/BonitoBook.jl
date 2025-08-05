@@ -18,16 +18,12 @@ function monaco_theme!(name::String)
 end
 
 """
-    ToggleButton(icon_name::String, obs_to_toggle::Observable{Bool})
+    ToggleButton(icon_name, obs_to_toggle)
 
-Create a toggle button with dark/light friendly styling that toggles a boolean observable.
+Toggle button with icon and observable.
 
-# Arguments
-- `icon_name::String`: Name of the icon to display
-- `obs_to_toggle::Observable{Bool}`: Observable boolean to toggle
-
-# Returns
-A DOM button element with toggle functionality and appropriate styling.
+- `icon_name::String`: Icon name
+- `obs_to_toggle::Observable{Bool}`: Boolean to toggle
 """
 function ToggleButton(icon_name::String, obs_to_toggle::Observable{Bool})
     button_icon = icon(icon_name)
@@ -55,15 +51,14 @@ end
 """
     MonacoEditor
 
-Wrapper for the Monaco Code Editor with customizable options and themes.
+Monaco code editor wrapper with customizable options.
 
-# Fields
-- `options::Dict{Symbol, Any}`: Monaco editor configuration options
-- `js_init_func::Base.RefValue{Bonito.JSCode}`: JavaScript initialization function
-- `editor_classes::Vector{String}`: CSS classes to apply
-- `theme::String`: Editor theme name
-- `hiding_direction::String`: Direction for show/hide animations
-- `init_visible::Bool`: Whether editor is initially visible
+- `options::Dict{Symbol, Any}`: Editor configuration
+- `js_init_func`: JavaScript initialization function
+- `editor_classes::Vector{String}`: CSS classes
+- `theme::String`: Editor theme
+- `hiding_direction::String`: Show/hide direction
+- `init_visible::Bool`: Initially visible
 """
 struct MonacoEditor
     options::Dict{Symbol, Any}

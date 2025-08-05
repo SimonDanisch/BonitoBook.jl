@@ -1,18 +1,4 @@
-"""
-    Book
-
-Represents an interactive book with code cells and execution runner.
-
-# Fields
-- `file::String`: Path to the main book file
-- `folder::String`: Directory containing the book files
-- `cells::Vector{CellEditor}`: Collection of editable code/markdown cells
-- `runner::Any`: Code execution runner (typically AsyncRunner)
-- `progress::Observable{Tuple{Bool, Float64}}`: Progress tracking for operations
-- `mcp_server::Union{MCPJuliaServer, Nothing}`: MCP server for Claude Code integration
-- `widgets::Dict{String, Any}`: Dictionary of UI widgets (file editor, chat, etc.)
-- `global_logging_widget::Any`: Global logging output widget
-"""
+"Interactive book with code cells and execution runner."
 mutable struct Book
     file::String
     folder::String
@@ -81,24 +67,11 @@ end
 """
     Book(file; replace_style=false, all_blocks_as_cell=false)
 
-Create a new Book from a file path.
+Create Book from .md or .ipynb file.
 
-# Arguments
-- `file`: Path to a markdown file (.md) or Jupyter notebook (.ipynb)
-- `replace_style`: Replace style.jl with latest template (default: false)
-- `all_blocks_as_cell`: Whether to treat all code blocks as executable cells (default: false)
-
-# Returns
-A `Book` instance ready for interactive editing and execution.
-
-# Examples
-```julia
-# Create from markdown file
-book = Book("mybook.md")
-
-# Create with style replacement
-book = Book("mybook.md"; replace_style=true)
-```
+- `file::String`: Path to .md or .ipynb file
+- `replace_style::Bool`: Replace style.jl with template
+- `all_blocks_as_cell::Bool`: Treat all code blocks as cells
 """
 function Book(file; replace_style = false, all_blocks_as_cell = false)
     # Ensure we have a file path
@@ -175,29 +148,12 @@ function Book(file; replace_style = false, all_blocks_as_cell = false)
     return book
 end
 
-"""
-    get_file_editor(book::Book)::TabbedFileEditor
-
-Get the tabbed file editor from the book's widgets dictionary.
-"""
+"Get the tabbed file editor widget."
 function get_file_editor(book::Book)::TabbedFileEditor
     return book.widgets["file_editor"]
 end
 
-"""
-    Cell
-
-Represents a single cell in a book with source code and display options.
-
-# Fields
-- `language::String`: Programming language ("julia", "markdown", "python", etc.)
-- `source::String`: Source code or markdown content
-- `output::Any`: Computed output from executing the cell
-- `show_editor::Bool`: Whether to show the code editor
-- `show_logging::Bool`: Whether to show execution logs
-- `show_output::Bool`: Whether to show execution output
-- `show_chat::Bool`: Whether to show AI chat interface
-"""
+"Book cell with source code and display options."
 struct Cell
     language::String
     source::String
@@ -389,13 +345,7 @@ function setup_editor_callbacks!(book, editor)
     return
 end
 
-"""
-    save(book::Book)
-
-Save the book to disk, creating a versioned backup and exporting to markdown.
-
-Creates a timestamped backup in the `.versions` folder and updates the main `book.md` file.
-"""
+"Save book with versioned backup."
 function WGLMakie.save(book::Book)
     if !isdir(joinpath(book.folder, ".versions"))
         mkpath(joinpath(book.folder, ".versions"))
@@ -445,33 +395,14 @@ function insert_editor_below!(book, editor, editor_above_uuid)
 end
 
 """
-    insert_cell_at!(book, source::String, lang::String, pos)
+    insert_cell_at!(book, source, lang, pos)
 
-Insert a new cell at the specified position in the book.
+Insert cell at position (:begin, :end, or index).
 
-# Arguments
-- `book::Book`: The book to modify
-- `source::String`: Initial source code or content for the cell
-- `lang::String`: Language for the cell ("julia", "markdown", "python", etc.)
-- `pos`: Position where to insert the cell
-  - `:begin` - Insert at the beginning of the book
-  - `:end` - Insert at the end of the book
-  - `Integer` - Insert at the specified index (1-based)
-
-# Returns
-The DOM element for the inserted cell.
-
-# Examples
-```julia
-# Add Julia cell at beginning
-insert_cell_at!(book, "println(\"Hello\")", "julia", :begin)
-
-# Add Markdown cell at end
-insert_cell_at!(book, "# My Title", "markdown", :end)
-
-# Add cell at specific position
-insert_cell_at!(book, "x = 42", "julia", 3)
-```
+- `book::Book`: Book to modify
+- `source::String`: Cell content
+- `lang::String`: Language (julia, markdown, python)
+- `pos`: Position (:begin, :end, or integer index)
 """
 function insert_cell_at!(book, source::String, lang::String, pos)
     # Create cell editor with appropriate settings
@@ -553,12 +484,7 @@ function new_cell_menu(book, editor_above_uuid, runner)
     return DOM.div(Centered(menu_div); class = "new-cell-menu")
 end
 
-"""
-    create_chat_agent(book::Book)
-
-Create the appropriate chat agent based on environment configuration.
-If ANTHROPIC_API_KEY is set, creates a ClaudeAgent, otherwise falls back to MockChatAgent.
-"""
+"Create chat agent for the book."
 function create_chat_agent(book::Book)
     # Use Claude agent with local CLI (no API key needed)
     @info "Using ClaudeAgent with local CLI, tools enabled: true"
@@ -710,51 +636,22 @@ function Bonito.jsrender(session::Session, book::Book)
 end
 
 """
-    current_cell(book::Book)::Union{CellEditor, Nothing}
+    current_cell(book::Book)
 
-Get the currently selected cell editor in the book.
+Get currently selected cell editor.
 
-# Arguments
-- `book::Book`: The book instance
-
-# Returns
-The currently active `CellEditor` or `nothing` if no cell is selected.
-
-# Examples
-```julia
-cell = current_cell(book)
-if cell !== nothing
-    println("Current cell language: ", cell.language)
-    println("Current cell source: ", cell.editor.source[])
-end
-```
+- `book::Book`: Book instance
 """
 function current_cell(book::Book)::Union{CellEditor, Nothing}
     return book.current_cell[]
 end
 
 """
-    theme_preference(book::Book)::String
+    theme_preference(book::Book)
 
-Get the current browser theme preference.
+Get browser theme preference (light/dark/auto).
 
-# Arguments
-- `book::Book`: The book instance
-
-# Returns
-The current theme preference: "light", "dark", or "auto" (if no preference is set).
-
-# Examples
-```julia
-theme = theme_preference(book)
-if theme == "dark"
-    println("User prefers dark mode")
-elseif theme == "light"
-    println("User prefers light mode")
-else
-    println("User has no theme preference (auto)")
-end
-```
+- `book::Book`: Book instance
 """
 function theme_preference(book::Book)::String
     return book.theme_preference[]

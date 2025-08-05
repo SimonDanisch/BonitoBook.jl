@@ -27,14 +27,10 @@ end
 """
     export_html(filename, book)
 
-Export a book to a static HTML file.
+Export book to static HTML file.
 
-# Arguments
-- `filename`: Output HTML file path
+- `filename::String`: Output file path
 - `book::Book`: Book to export
-
-# Returns
-Path to the exported HTML file.
 """
 function export_html(filename, book)
     return Bonito.export_static(filename, App(book))
@@ -92,14 +88,10 @@ end
 """
     export_html(file, book)
 
-Export a book to a Julia-specific HTML format with styling.
+Export book to HTML with styling.
 
-# Arguments
-- `file`: Output file path
+- `file::AbstractString`: Output file path
 - `book::Book`: Book to export
-
-# Returns
-Path to the exported file.
 """
 function export_html(file::AbstractString, book::Book)
     Bonito.export_static(file, App((s)-> export_dom(s, book)))
@@ -109,16 +101,10 @@ end
 """
     export_md(file, book)
 
-Export a book to markdown format, preserving cell metadata.
+Export book to markdown with cell metadata.
 
-# Arguments
-- `file`: Output markdown file path
+- `file::AbstractString`: Output file path
 - `book::Book`: Book to export
-
-# Returns
-Path to the exported markdown file.
-
-The exported markdown includes cell visibility flags in code block headers.
 """
 function export_md(file::AbstractString, book::Book)
     open(file, "w") do io
@@ -144,16 +130,10 @@ end
 """
     export_quarto(file, book)
 
-Export a book to Quarto format (.qmd), preserving cell metadata and structure.
+Export book to Quarto format.
 
-# Arguments
-- `file`: Output Quarto file path (.qmd)
+- `file::AbstractString`: Output file path
 - `book::Book`: Book to export
-
-# Returns
-Path to the exported Quarto file.
-
-The exported Quarto format uses Quarto's executable code blocks with proper metadata.
 """
 function export_quarto(file::AbstractString, book::Book)
     open(file, "w") do io
@@ -162,7 +142,7 @@ function export_quarto(file::AbstractString, book::Book)
             editor = cell_editor.editor
             content = editor.source[]
             show_editor = editor.show_editor[]
-            show_logging = editor.show_logging[]
+            _ = editor.show_logging[]  # Not used in Quarto export
             show_output = editor.show_output[]
 
             if language == "markdown"
@@ -193,16 +173,10 @@ using JSON3, ZipFile, Pkg
 """
     export_ipynb(file, book)
 
-Export a book to Jupyter notebook format (.ipynb), preserving cell structure.
+Export book to Jupyter notebook format.
 
-# Arguments
-- `file`: Output Jupyter notebook file path (.ipynb)
+- `file::AbstractString`: Output file path
 - `book::Book`: Book to export
-
-# Returns
-Path to the exported Jupyter notebook file.
-
-The exported notebook uses the standard Jupyter notebook v4.5 format.
 """
 function export_ipynb(file::AbstractString, book::Book)
 
@@ -229,7 +203,7 @@ function export_ipynb(file::AbstractString, book::Book)
             )
         else
             # Map language names to Jupyter kernel names
-            kernel_language = language == "julia" ? "julia" : language
+            _ = language == "julia" ? "julia" : language  # Not used currently
 
             cell = Dict(
                 "cell_type" => "code",
