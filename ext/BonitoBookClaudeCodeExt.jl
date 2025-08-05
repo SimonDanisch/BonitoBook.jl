@@ -1,8 +1,11 @@
+module BonitoBookClaudeCodeExt
+
+using BonitoBook
+using ClaudeCodeSDK
 using Bonito
 using Markdown
 using TOML
-
-using ClaudeCodeSDK
+using JSON
 
 """
     ClaudeAgent <: ChatAgent
@@ -14,9 +17,9 @@ Requires claude-code CLI to be installed and configured.
 - `book::Book`: The book object this agent is associated with
 - `options::ClaudeCodeOptions`: Configuration options for Claude Code CLI
 """
-mutable struct ClaudeAgent <: ChatAgent
-    book::Book
-    options::ClaudeCodeOptions
+mutable struct ClaudeAgent <: BonitoBook.ChatAgent
+    book::BonitoBook.Book
+    options::ClaudeCodeSDK.ClaudeCodeOptions
 end
 
 """
@@ -28,7 +31,7 @@ Create a new Claude agent using the local Claude Code CLI.
 - `book`: The Book object this agent is associated with
 - `config`: Optional configuration dictionary to override defaults
 """
-function ClaudeAgent(book::Book; config::Dict = Dict())
+function ClaudeAgent(book::BonitoBook.Book; config::Dict = Dict())
     folder = book.folder
 
     # Load configuration from TOML file if it exists
@@ -64,7 +67,7 @@ function ClaudeAgent(book::Book; config::Dict = Dict())
     end
 
     # Create default options
-    default_options = ClaudeCodeOptions(
+    default_options = ClaudeCodeSDK.ClaudeCodeOptions(
         allowed_tools = ["Read", "Write", "Bash", "Glob", "Grep", "Edit", "mcp__julia-server__julia_exec"],
         mcp_tools = ["mcp__julia-server__julia_exec"],
         max_thinking_tokens=8000,
@@ -96,7 +99,7 @@ function ClaudeAgent(book::Book; config::Dict = Dict())
                     run(`$cli mcp remove julia-server`)
                 catch e
                 end
-                run(`$cli mcp add --transport http julia-server $(get_server_url(mcp_server))`)
+                run(`$cli mcp add --transport http julia-server $(BonitoBook.get_server_url(mcp_server))`)
             catch e
                 @warn "Error when adding the MCP julia server" exception=(e, Base.catch_backtrace())
             end
@@ -107,14 +110,16 @@ function ClaudeAgent(book::Book; config::Dict = Dict())
     return ClaudeAgent(book, options)
 end
 
+BonitoBook.create_claude_agent(book::BonitoBook.Book) = ClaudeAgent(book)
+
 
 """
     update_options(options::ClaudeCodeOptions, config::Dict)
 
 Update ClaudeCodeOptions with values from config dict.
 """
-function update_options(options::ClaudeCodeOptions, config::Dict)
-    field_names = fieldnames(ClaudeCodeOptions)
+function update_options(options::ClaudeCodeSDK.ClaudeCodeOptions, config::Dict)
+    field_names = fieldnames(ClaudeCodeSDK.ClaudeCodeOptions)
     updated_values = Dict{Symbol, Any}()
     for field_name in field_names
         updated_values[field_name] = getfield(options, field_name)
@@ -127,7 +132,7 @@ function update_options(options::ClaudeCodeOptions, config::Dict)
         end
     end
 
-    return ClaudeCodeOptions(; updated_values...)
+    return ClaudeCodeSDK.ClaudeCodeOptions(; updated_values...)
 end
 
 """
@@ -208,15 +213,15 @@ function save_config_to_toml(agent::ClaudeAgent)
     end
 end
 
-function Bonito.jsrender(session::Session, msg::SystemMessage)
-    return Bonito.jsrender(session, Collapsible("System", string(msg), expanded=false))
+function Bonito.jsrender(session::Bonito.Session, msg::ClaudeCodeSDK.SystemMessage)
+    return Bonito.jsrender(session, BonitoBook.Collapsible("System", string(msg), expanded=false))
 end
 
-function Bonito.jsrender(session::Session, value::AssistantMessage)
-    return Bonito.jsrender(session, DOM.div(value.content...))
+function Bonito.jsrender(session::Bonito.Session, value::ClaudeCodeSDK.AssistantMessage)
+    return Bonito.jsrender(session, Bonito.DOM.div(value.content...))
 end
 
-function Bonito.jsrender(session::Session, value::ToolUseBlock)
+function Bonito.jsrender(session::Bonito.Session, value::ClaudeCodeSDK.ToolUseBlock)
     rendered = if value.name == "TodoWrite"
         render_todowrite_preview(value)
     elseif value.name == "mcp__julia-server__julia_exec"
@@ -225,10 +230,10 @@ function Bonito.jsrender(session::Session, value::ToolUseBlock)
         # Default fallback for other tools
         JSON.json(value.input)
     end
-    return Bonito.jsrender(session, Collapsible("Tool Use: $(value.name)", rendered, expanded=false))
+    return Bonito.jsrender(session, BonitoBook.Collapsible("Tool Use: $(value.name)", rendered, expanded=false))
 end
 
-function render_todowrite_preview(tool_use::ToolUseBlock)
+function render_todowrite_preview(tool_use::ClaudeCodeSDK.ToolUseBlock)
     input = tool_use.input
     todos = input["todos"]
     # Create a nice preview of the todos
@@ -257,33 +262,33 @@ function render_todowrite_preview(tool_use::ToolUseBlock)
                 "color: var(--text-primary);"
             end
 
-            todo_item = DOM.div(
-                DOM.span(status_icon, style="margin-right: 8px;"),
-                DOM.span(content, style="$priority_color font-size: 13px;"),
-                DOM.span(" ($priority)", style="font-size: 11px; color: var(--text-secondary); margin-left: 8px;"),
+            todo_item = Bonito.DOM.div(
+                Bonito.DOM.span(status_icon, style="margin-right: 8px;"),
+                Bonito.DOM.span(content, style="$priority_color font-size: 13px;"),
+                Bonito.DOM.span(" ($priority)", style="font-size: 11px; color: var(--text-secondary); margin-left: 8px;"),
                 style="margin-bottom: 6px; padding: 4px 8px; border-left: 3px solid var(--border-secondary);"
             )
             push!(todo_items, todo_item)
         end
     end
 
-    preview_content = DOM.div(
-        DOM.div("📝 Todo List Update", style="font-weight: 500; margin-bottom: 8px; color: var(--text-primary);"),
-        DOM.div(todo_items..., style="margin-left: 12px;"),
+    preview_content = Bonito.DOM.div(
+        Bonito.DOM.div("📝 Todo List Update", style="font-weight: 500; margin-bottom: 8px; color: var(--text-primary);"),
+        Bonito.DOM.div(todo_items..., style="margin-left: 12px;"),
         style="font-family: inherit;"
     )
 
     return preview_content
 end
 
-function render_julia_exec_preview(tool_use::ToolUseBlock)
+function render_julia_exec_preview(tool_use::ClaudeCodeSDK.ToolUseBlock)
     input = tool_use.input
     if haskey(input, "code")
         code = input["code"]
         # Create a nice code preview
-        code_preview = DOM.div(
-            DOM.div("💻 Julia Code Execution", style="font-weight: 500; margin-bottom: 8px; color: var(--text-primary);"),
-            DOM.pre(
+        code_preview = Bonito.DOM.div(
+            Bonito.DOM.div("💻 Julia Code Execution", style="font-weight: 500; margin-bottom: 8px; color: var(--text-primary);"),
+            Bonito.DOM.pre(
                 code,
                 style="background-color: var(--hover-bg); padding: 12px; border-radius: 6px; font-family: 'Fira Code', 'SF Mono', Consolas, monospace; font-size: 12px; line-height: 1.4; color: var(--text-primary); overflow-x: auto; border-left: 3px solid var(--accent-blue); margin: 0;"
             ),
@@ -291,16 +296,16 @@ function render_julia_exec_preview(tool_use::ToolUseBlock)
         )
         return code_preview
     end
-    return Collapsible("Julia Exec Tool Use", JSON.json(input), expanded=false)
+    return BonitoBook.Collapsible("Julia Exec Tool Use", JSON.json(input), expanded=false)
 end
 
-function Bonito.jsrender(session::Session, value::TextBlock)
+function Bonito.jsrender(session::Bonito.Session, value::ClaudeCodeSDK.TextBlock)
     text = replace(value.text, r"```markdown\s*\n(.*?)\n```"s => s"\1")
     return Bonito.jsrender(session, Markdown.parse(text))
 end
 
-function Bonito.jsrender(session::Session, value::ResultMessage)
-    return Bonito.jsrender(session, Collapsible("Result", string(value), expanded=false))
+function Bonito.jsrender(session::Bonito.Session, value::ClaudeCodeSDK.ResultMessage)
+    return Bonito.jsrender(session, BonitoBook.Collapsible("Result", string(value), expanded=false))
 end
 
 
@@ -311,11 +316,11 @@ Send a prompt to Claude and return the response.
 If stream_callback is provided, uses streaming mode and calls the callback with each text chunk.
 If mcp_server_url is provided, configures Claude to use the Julia execution MCP server.
 """
-function prompt(agent::ClaudeAgent, question::String)
+function BonitoBook.prompt(agent::ClaudeAgent, question::String)
     # Update dynamic options based on current agent state
     # Ensure cwd is set to the book's folder
     updated_options = update_options(agent.options, Dict("cwd" => agent.book.folder))
-    return query_stream(prompt=question, options=updated_options)
+    return ClaudeCodeSDK.query_stream(prompt=question, options=updated_options)
 end
 
 # MCP server integration will be configured externally via Claude Code CLI
@@ -326,7 +331,7 @@ end
 Returns a Bonito widget for configuring ClaudeAgent settings.
 Provides user-friendly controls for model selection, thinking tokens, etc.
 """
-function settings_menu(agent::ClaudeAgent)
+function BonitoBook.settings_menu(agent::ClaudeAgent)
     # Model selection mapping (user-friendly name -> actual model ID)
     model_options = ["Claude Sonnet", "Claude Opus", "Claude Haiku"]
     model_ids = Dict(
@@ -343,22 +348,22 @@ function settings_menu(agent::ClaudeAgent)
     current_index = current_index !== nothing ? current_index : 1
 
     # Create widgets using custom Components
-    model_dropdown = Components.Dropdown(model_options; index=current_index)
+    model_dropdown = BonitoBook.Components.Dropdown(model_options; index=current_index)
 
-    thinking_tokens_input = Components.NumberInput(Float64(get_option(agent, :max_thinking_tokens)))
+    thinking_tokens_input = BonitoBook.Components.NumberInput(Float64(get_option(agent, :max_thinking_tokens)))
 
-    max_turns_input = Components.NumberInput(Float64(get_option(agent, :max_turns)))
+    max_turns_input = BonitoBook.Components.NumberInput(Float64(get_option(agent, :max_turns)))
 
     permission_options = ["acceptEdits", "prompt", "deny"]
     permission_labels = ["Accept Edits", "Prompt for Permission", "Deny All"]
     current_permission = get_option(agent, :permission_mode)
     permission_index = findfirst(==(current_permission), permission_options)
     permission_index = permission_index !== nothing ? permission_index : 1
-    permission_dropdown = Components.Dropdown(permission_labels; index=permission_index)
+    permission_dropdown = BonitoBook.Components.Dropdown(permission_labels; index=permission_index)
 
     # Continue conversation toggle
-    continue_toggle = Observable(get_option(agent, :continue_conversation))
-    continue_checkbox = Components.Checkbox(continue_toggle[])
+    continue_toggle = Bonito.Observable(get_option(agent, :continue_conversation))
+    continue_checkbox = BonitoBook.Components.Checkbox(continue_toggle[])
 
     # Tools configuration
     # Define all available tools
@@ -372,85 +377,85 @@ function settings_menu(agent::ClaudeAgent)
     current_allowed_tools = get_option(agent, :allowed_tools)
 
     # Create observables and checkboxes for each tool
-    tool_states = Dict{String, Observable{Bool}}()
+    tool_states = Dict{String, Bonito.Observable{Bool}}()
     tool_checkboxes = Dict{String, Any}()
 
     for tool in all_available_tools
         is_enabled = tool in current_allowed_tools
-        tool_states[tool] = Observable(is_enabled)
-        tool_checkboxes[tool] = Components.Checkbox(is_enabled)
+        tool_states[tool] = Bonito.Observable(is_enabled)
+        tool_checkboxes[tool] = BonitoBook.Components.Checkbox(is_enabled)
     end
 
     # Create settings rows with left-aligned labels
-    model_section = DOM.div(
-        DOM.div("Model:", class="settings-label"),
-        DOM.div(model_dropdown, class="settings-input"),
+    model_section = Bonito.DOM.div(
+        Bonito.DOM.div("Model:", class="settings-label"),
+        Bonito.DOM.div(model_dropdown, class="settings-input"),
         class="settings-row"
     )
 
-    thinking_tokens_section = DOM.div(
-        DOM.div("Max Thinking Tokens:", class="settings-label"),
-        DOM.div(thinking_tokens_input, class="settings-input"),
+    thinking_tokens_section = Bonito.DOM.div(
+        Bonito.DOM.div("Max Thinking Tokens:", class="settings-label"),
+        Bonito.DOM.div(thinking_tokens_input, class="settings-input"),
         class="settings-row"
     )
 
-    max_turns_section = DOM.div(
-        DOM.div("Max Turns:", class="settings-label"),
-        DOM.div(max_turns_input, class="settings-input"),
+    max_turns_section = Bonito.DOM.div(
+        Bonito.DOM.div("Max Turns:", class="settings-label"),
+        Bonito.DOM.div(max_turns_input, class="settings-input"),
         class="settings-row"
     )
 
-    permission_section = DOM.div(
-        DOM.div("Permission Mode:", class="settings-label"),
-        DOM.div(permission_dropdown, class="settings-input"),
+    permission_section = Bonito.DOM.div(
+        Bonito.DOM.div("Permission Mode:", class="settings-label"),
+        Bonito.DOM.div(permission_dropdown, class="settings-input"),
         class="settings-row"
     )
 
-    continue_section = DOM.div(
-        DOM.div("Continue Conversation:", class="settings-label"),
-        DOM.div(continue_checkbox, class="settings-input"),
+    continue_section = Bonito.DOM.div(
+        Bonito.DOM.div("Continue Conversation:", class="settings-label"),
+        Bonito.DOM.div(continue_checkbox, class="settings-input"),
         class="settings-row"
     )
 
     # Create tools section
     tools_list = []
     for tool in all_available_tools
-        tool_row = DOM.div(
+        tool_row = Bonito.DOM.div(
             tool_checkboxes[tool],
-            DOM.span(tool, style="margin-left: 8px; font-size: 13px;"),
+            Bonito.DOM.span(tool, style="margin-left: 8px; font-size: 13px;"),
             class="tool-item"
         )
         push!(tools_list, tool_row)
     end
 
-    tools_content = DOM.div(
+    tools_content = Bonito.DOM.div(
         tools_list...,
         class="tools-list"
     )
 
-    tools_section = Collapsible("Allowed Tools", tools_content, expanded=false)
+    tools_section = BonitoBook.Collapsible("Allowed Tools", tools_content, expanded=false)
 
     # Edit system prompt button
-    edit_prompt_button, edit_prompt_clicks = SmallButton("edit")
-    edit_prompt_section = DOM.div(
-        DOM.div("System Prompt:", class="settings-label"),
-        DOM.div(edit_prompt_button, class="settings-input"),
+    edit_prompt_button, edit_prompt_clicks = BonitoBook.SmallButton("edit")
+    edit_prompt_section = Bonito.DOM.div(
+        Bonito.DOM.div("System Prompt:", class="settings-label"),
+        Bonito.DOM.div(edit_prompt_button, class="settings-input"),
         class="settings-row"
     )
 
     # Apply button
-    apply_button, apply_clicks = SmallButton("check")
-    apply_section = DOM.div(
-        DOM.span("Apply Settings"),
+    apply_button, apply_clicks = BonitoBook.SmallButton("check")
+    apply_section = Bonito.DOM.div(
+        Bonito.DOM.span("Apply Settings"),
         apply_button,
         class="settings-apply-section"
     )
 
     # Main settings card
-    settings_card = DOM.div(
+    settings_card = Bonito.DOM.div(
         SettingsStyles,
-        DOM.div(
-            DOM.h3("Claude Agent Settings", class="settings-title"),
+        Bonito.DOM.div(
+            Bonito.DOM.h3("Claude Agent Settings", class="settings-title"),
             model_section,
             thinking_tokens_section,
             max_turns_section,
@@ -464,27 +469,27 @@ function settings_menu(agent::ClaudeAgent)
     )
 
     # Set up event handlers
-    on(model_dropdown.value) do selected_friendly
+    Bonito.on(model_dropdown.value) do selected_friendly
         selected_model = model_ids[selected_friendly]
         update_option!(agent, :model, selected_model)
         save_config_to_toml(agent)
     end
 
-    on(thinking_tokens_input.value) do new_value
+    Bonito.on(thinking_tokens_input.value) do new_value
         if new_value > 0
             update_option!(agent, :max_thinking_tokens, Int(new_value))
             save_config_to_toml(agent)
         end
     end
 
-    on(max_turns_input.value) do new_value
+    Bonito.on(max_turns_input.value) do new_value
         if new_value > 0
             update_option!(agent, :max_turns, Int(new_value))
             save_config_to_toml(agent)
         end
     end
 
-    on(permission_dropdown.value) do selected_label
+    Bonito.on(permission_dropdown.value) do selected_label
         permission_index = findfirst(==(selected_label), permission_labels)
         if permission_index !== nothing
             selected_permission = permission_options[permission_index]
@@ -493,7 +498,7 @@ function settings_menu(agent::ClaudeAgent)
         end
     end
 
-    on(continue_checkbox.value) do enabled
+    Bonito.on(continue_checkbox.value) do enabled
         update_option!(agent, :continue_conversation, enabled)
         save_config_to_toml(agent)
     end
@@ -511,20 +516,20 @@ function settings_menu(agent::ClaudeAgent)
     end
 
     for tool in all_available_tools
-        on(tool_checkboxes[tool].value) do _
+        Bonito.on(tool_checkboxes[tool].value) do _
             update_allowed_tools()
         end
     end
 
-    on(apply_clicks) do _
+    Bonito.on(apply_clicks) do _
         save_config_to_toml(agent)
         @info "Claude Agent settings applied successfully!"
     end
 
     # Handle edit system prompt button
-    on(edit_prompt_clicks) do _
+    Bonito.on(edit_prompt_clicks) do _
         system_prompt_path = joinpath(agent.book.folder, "ai", "system-prompt.md")
-        open_file!(get_file_editor(agent.book), system_prompt_path)
+        BonitoBook.open_file!(BonitoBook.get_file_editor(agent.book), system_prompt_path)
         @info "Opened system prompt in file editor: $system_prompt_path"
     end
 
@@ -532,13 +537,13 @@ function settings_menu(agent::ClaudeAgent)
 end
 
 # Settings-specific styles
-const SettingsStyles = Styles(
-    CSS(
+const SettingsStyles = BonitoBook.Styles(
+    BonitoBook.CSS(
         ".settings-container",
         "max-width" => "500px",
         "margin" => "0 auto"
     ),
-    CSS(
+    BonitoBook.CSS(
         ".settings-title",
         "margin-top" => "0",
         "color" => "var(--text-primary)",
@@ -546,14 +551,14 @@ const SettingsStyles = Styles(
         "font-size" => "18px",
         "margin-bottom" => "20px"
     ),
-    CSS(
+    BonitoBook.CSS(
         ".settings-row",
         "display" => "flex",
         "align-items" => "center",
         "margin-bottom" => "16px",
         "gap" => "12px"
     ),
-    CSS(
+    BonitoBook.CSS(
         ".settings-label",
         "font-size" => "13px",
         "color" => "var(--text-secondary)",
@@ -561,12 +566,12 @@ const SettingsStyles = Styles(
         "text-align" => "left",
         "flex-shrink" => "0"
     ),
-    CSS(
+    BonitoBook.CSS(
         ".settings-input",
         "flex" => "1",
         "min-width" => "0"
     ),
-    CSS(
+    BonitoBook.CSS(
         ".settings-apply-section",
         "display" => "flex",
         "align-items" => "center",
@@ -574,7 +579,7 @@ const SettingsStyles = Styles(
         "margin-top" => "20px",
         "gap" => "8px"
     ),
-    CSS(
+    BonitoBook.CSS(
         ".tools-list",
         "display" => "flex",
         "flex-direction" => "column",
@@ -583,7 +588,7 @@ const SettingsStyles = Styles(
         "max-height" => "300px",
         "overflow-y" => "auto"
     ),
-    CSS(
+    BonitoBook.CSS(
         ".tool-item",
         "display" => "flex",
         "align-items" => "center",
@@ -591,7 +596,7 @@ const SettingsStyles = Styles(
         "border-radius" => "4px",
         "transition" => "background-color 0.2s ease"
     ),
-    CSS(
+    BonitoBook.CSS(
         ".tool-item:hover",
         "background-color" => "var(--hover-bg)"
     )
@@ -599,3 +604,5 @@ const SettingsStyles = Styles(
 
 # Export the agent and helper functions
 export ClaudeAgent, update_option!, get_option, update_options, save_config_to_toml
+
+end # module BonitoBookClaudeCodeExt

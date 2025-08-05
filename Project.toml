@@ -7,7 +7,6 @@ authors = ["Simon Danisch"]
 ANSIColoredPrinters = "a4c015fc-c6ff-483c-b24f-f7ea428134e9"
 Base64 = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
 Bonito = "824d6782-a2ef-11e9-3a09-e5662e0c26f8"
-ClaudeCodeSDK = "38ea0fac-78ee-46bd-bc10-f52e7269b833"
 CondaPkg = "992eb4ea-22a4-4c89-a5bb-47a3300528ab"
 Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
 FileWatching = "7b1f6079-737a-58dc-b8bc-7a2ca5c1b5ee"
@@ -26,15 +25,13 @@ UUIDs = "cf7118a7-6976-5b1a-9a39-7adc72f591a4"
 WGLMakie = "276b4fcb-3e11-5398-bf8b-a0c2d153d008"
 ZipFile = "a5390f91-8eb1-5f08-bee0-b1d1ffed6cea"
 
-[weakdeps]
-AlgebraOfGraphics = "cbdf2221-f076-402e-a563-3d30da359d67"
-
 [sources]
 Bonito = {rev = "sd/serialization-order", url = "https://github.com/SimonDanisch/Bonito.jl.git"}
-ClaudeCodeSDK = {rev = "main", url = "https://github.com/AtelierArith/ClaudeCodeSDK.jl"}
 
 [extensions]
 BonitoBookAlgebraOfGraphicsExt = "AlgebraOfGraphics"
+BonitoBookClaudeCodeExt = "ClaudeCodeSDK"
+BonitoBookPromptingToolsExt = "PromptingTools"
 
 [compat]
 ANSIColoredPrinters = "0.0.1"
@@ -59,8 +56,7 @@ WGLMakie = "0.11.2, 0.12, 0.13"
 ZipFile = "0.9, 0.10"
 julia = "1.10"
 
-[extras]
-Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
-
-[targets]
-test = ["Test"]
+[weakdeps]
+AlgebraOfGraphics = "cbdf2221-f076-402e-a563-3d30da359d67"
+ClaudeCodeSDK = "38ea0fac-78ee-46bd-bc10-f52e7269b833"
+PromptingTools = "670122d1-24a8-4d70-bfce-740807c42192"

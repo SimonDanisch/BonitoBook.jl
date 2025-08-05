@@ -79,10 +79,9 @@ include("import.jl")
 include("completions.jl")
 include("interact.jl")
 include("chat.jl")
-include("claude_agent.jl")
 include("mcp_julia_server.jl")
 # include("ai.jl")
 
-export Book, ChatComponent, ChatAgent, ChatMessage, ClaudeAgent, MCPJuliaServer, Collapsible, Components, LoggingWidget, export_zip, import_zip
+export Book, ChatComponent, ChatAgent, ChatMessage, MCPJuliaServer, Collapsible, Components, LoggingWidget, export_zip, import_zip
 
 end

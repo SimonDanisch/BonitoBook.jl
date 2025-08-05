@@ -484,11 +484,17 @@ function new_cell_menu(book, editor_above_uuid, runner)
     return DOM.div(Centered(menu_div); class = "new-cell-menu")
 end
 
+prompt(agent, question) = nothing
+create_claude_agent(book) = nothing
+create_prompting_tools_agent(book) = nothing
+
 "Create chat agent for the book."
 function create_chat_agent(book::Book)
     # Use Claude agent with local CLI (no API key needed)
-    @info "Using ClaudeAgent with local CLI, tools enabled: true"
-    return ClaudeAgent(book)
+    agent = create_claude_agent(book)
+    isnothing(agent) || return agent
+    # Fallback to PromtingTools agent if Claude is not available
+    return create_prompting_tools_agent(book)
 end
 
 function setup_menu(book::Book, tabbed_file_editor::TabbedFileEditor)
