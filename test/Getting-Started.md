@@ -13,7 +13,7 @@ import Makie.SpecApi as S
 end
 ```
 
-```julia true false true
+```julia (editor=true, logging=false, output=true)
 import Makie.SpecApi as S
 @manipulate for vis in (
         scatter = visual(BoxPlot),

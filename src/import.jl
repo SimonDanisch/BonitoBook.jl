@@ -1,6 +1,63 @@
 using JSON, Markdown
 
 """
+    parse_cell_options(options_str)
+
+Parse cell options from either named tuple format or legacy boolean format.
+
+# Arguments
+- `options_str`: String containing either "(editor=true, logging=false, output=true)" or "true false true"
+
+# Returns
+Tuple of (show_editor, show_logging, show_output) booleans.
+"""
+function parse_cell_options(options_str)
+    options_str = strip(options_str)
+
+    # Try to parse as named tuple format first
+    if startswith(options_str, "(") && endswith(options_str, ")")
+        try
+            # Remove parentheses and parse as NamedTuple
+            inner = strip(options_str[2:end-1])
+
+            # Parse each key=value pair
+            pairs = split(inner, ",")
+            editor = true
+            logging = false
+            output = true
+
+            for pair in pairs
+                key_val = split(strip(pair), "=")
+                if length(key_val) == 2
+                    key = strip(key_val[1])
+                    val = parse(Bool, strip(key_val[2]))
+                    if key == "editor"
+                        editor = val
+                    elseif key == "logging"
+                        logging = val
+                    elseif key == "output"
+                        output = val
+                    end
+                end
+            end
+
+            return (editor, logging, output)
+        catch
+            # Fall back to legacy format if parsing fails
+        end
+    end
+
+    # Legacy format: space-separated booleans
+    parts = split(options_str)
+    if length(parts) == 3
+        return parse.(Bool, parts)
+    end
+
+    # Default fallback
+    return (true, false, true)
+end
+
+"""
     markdown2book(md; all_blocks_as_cell=false)
 
 Parse a markdown document into book cells.
@@ -12,30 +69,34 @@ Parse a markdown document into book cells.
 # Returns
 Vector of `Cell` objects.
 
-Code blocks with format ```language bool bool bool bool are treated as interactive cells.
-Other content becomes markdown cells.
+Code blocks with format ```language (editor=true, logging=false, output=true) are treated as interactive cells.
+Other content becomes markdown cells. Also supports legacy format ```language bool bool bool.
 """
 function markdown2book(md; all_blocks_as_cell = false)
     cells = Cell[]
     last_md = nothing
     function append_last_md()
-        return if !isnothing(last_md) && !isempty(last_md)
+        if !isnothing(last_md) && !isempty(last_md)
             parsed = Markdown.MD(last_md, md.meta)
             push!(cells, Cell("markdown", string(parsed)))
             last_md = nothing
         end
+        return
     end
     for content in md.content
         if content isa Markdown.Code
-            languages = split(content.language, " ")
-            language = languages[1]
+            code_parts = split(content.language, " ", limit=2)
+            language = code_parts[1]
             if !isempty(language) && language in ("markdown", "julia", "python")
-                # We only treat ```language bool bool bool as a code block (our format)
-                # Option to force all blocks as code blocks, for markdown not written by us
-                if all_blocks_as_cell || length(languages) == 4
+                # Check if this is a code cell with options
+                has_options = length(code_parts) == 2 && !isempty(strip(code_parts[2]))
+
+                if all_blocks_as_cell || has_options
                     append_last_md()
-                    if length(languages) == 4
-                        show_fields = parse.(Bool, languages[2:end])
+
+                    if has_options
+                        options_str = strip(code_parts[2])
+                        show_fields = parse_cell_options(options_str)
                     else
                         # Default show fields for all_blocks_as_cell mode
                         show_fields = (true, false, true)

@@ -118,9 +118,6 @@ function Book(file; replace_style = false, all_blocks_as_cell = false)
         @info "Imported ZIP to: $book_file_path"
     end
 
-    # Create the book folder structure and get the folder path
-    folder = create_book_structure(file; replace_style=replace_style)
-
     # Determine the correct file paths
     original_file = normpath(abspath(file))
     name, ext = splitext(original_file)
@@ -131,12 +128,15 @@ function Book(file; replace_style = false, all_blocks_as_cell = false)
         # For .md files, book.file points to the original file
         book_file = original_file
         load_file = original_file
+        # Create folder structure based on the .md file
+        folder = create_book_structure(book_file; replace_style=replace_style)
     elseif ext == ".ipynb"
-        # For .ipynb files, book.file points to a .md file in the folder
-        book_file = joinpath(folder, "$(original_basename).md")
-        # Try to load from the .md in folder first, fallback to original .ipynb
-        md_in_folder = joinpath(folder, "$(original_basename).md")
-        load_file = isfile(md_in_folder) ? md_in_folder : original_file
+        # For .ipynb files, create/use .md file in the same directory as the .ipynb
+        book_file = "$(name).md"  # Same directory, same basename, .md extension
+        # Try to load from the converted .md first, fallback to original .ipynb
+        load_file = isfile(book_file) ? book_file : original_file
+        # Create folder structure based on the converted .md file path
+        folder = create_book_structure(book_file; replace_style=replace_style)
     else
         error("File $file is not a markdown or ipynb file: $(ext)")
     end
@@ -538,7 +538,6 @@ function new_cell_menu(book, editor_above_uuid, runner)
         new_cell = CellEditor("", "python", runner)
         insert_editor_below!(book, new_cell, editor_above_uuid)
     end
-
     on(click_jl) do click
         new_cell = CellEditor("", "julia", runner)
         insert_editor_below!(book, new_cell, editor_above_uuid)
@@ -672,7 +671,7 @@ function Bonito.jsrender(session::Session, book::Book)
     # Set up theme preference tracking
     theme_tracking = js"""
         // Function to get current theme preference
-        function getCurrentTheme() {
+        function get_current_theme() {
             if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
                 return 'dark';
             } else if (window.matchMedia('(prefers-color-scheme: light)').matches) {
@@ -682,15 +681,13 @@ function Bonito.jsrender(session::Session, book::Book)
             }
         }
         // Set initial theme
-        $(book.theme_preference).notify(getCurrentTheme());
-
+        $(book.theme_preference).notify(get_current_theme());
         // Listen for theme changes
         window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
-            $(book.theme_preference).notify(getCurrentTheme());
+            $(book.theme_preference).notify(get_current_theme());
         });
-
         window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', (e) => {
-            $(book.theme_preference).notify(getCurrentTheme());
+            $(book.theme_preference).notify(get_current_theme());
         });
     """
     evaljs(session, theme_tracking)
@@ -763,13 +760,14 @@ function theme_preference(book::Book)::String
     return book.theme_preference[]
 end
 
-const BOOK_SERVERS = Dict{String, Bonito.Server}()
+const BOOK_SERVERS = Dict{Int, Bonito.Server}()
 
 function get_server(url, port, proxy_url)
-    key = isempty(proxy_url) ? "$(url):$(port)" : proxy_url
-    return get!(BOOK_SERVERS, key) do
+    server = get!(BOOK_SERVERS, port) do
         return Bonito.Server(url, port; proxy_url=proxy_url)
     end
+    server.proxy_url = proxy_url
+    return server
 end
 
 function book(path::AbstractString;
@@ -782,7 +780,7 @@ function book(path::AbstractString;
     )
     name = splitext(basename(path))[1]
     app = App(title=name) do
-        book = Book(path; replace_style=replace_style, all_blocks_as_cell=all_blocks_as_cell)
+        return Book(path; replace_style=replace_style, all_blocks_as_cell=all_blocks_as_cell)
     end
     server = get_server(url, port, proxy_url)
     route!(server, "/$(name)" => app)

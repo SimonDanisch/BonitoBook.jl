@@ -55,11 +55,11 @@ end
 function feature_list()
     features = [
         ("📝", "Live Code Editing", "Edit Julia, Python, and Markdown cells with syntax highlighting and auto-completion"),
+        ("🔧", "Composable Ecosystem", "Add and share custom widgets using the Bonito framework"),
         ("🚀", "Easy Dashboard creation", "The notebook can be easily reconfigured to be used as a Bonito.jl Dashboard or any other format"),
         ("🤖", "AI Integration", "Built-in AI assistant powered by Claude for code help and explanations"),
         ("🎨", "Customizable Styling", "Theme your notebooks with custom CSS using live style editing"),
         ("📤", "Many Import/Export Formats", "Export to HTML, Quarto, Markdown, IPynb, or PDF for sharing and publishing"),
-        ("🔧", "Composable Ecosystem", "Add custom widgets and components using the Bonito framework")
     ]
 
     feature_items = map(features) do (icon, title, desc)

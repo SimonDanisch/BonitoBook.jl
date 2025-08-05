@@ -95,6 +95,8 @@ function MonacoEditor(
         :hideCursorInOverviewRuler => true,
         :mouseWheelScrollSensitivity => 0,
         :fastScrollSensitivity => 0,
+        :wordWrap => "wordWrapColumn",
+        :wordWrapColumn => 80,
     )
     if js_init_func === nothing
         js_init_func = js"() => {}"

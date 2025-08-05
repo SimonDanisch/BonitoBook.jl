@@ -197,7 +197,7 @@ Create a new asynchronous code runner.
 # Returns
 Configured `AsyncRunner` instance ready for code execution.
 """
-function AsyncRunner(project::String, mod::Module = Module(gensym("BonitoBook")); callback = identity, spawn = false, global_logger = Observable(""))
+function AsyncRunner(project::String, mod::Module = Module(gensym("BonitoBook")); callback = identity, global_logger = Observable(""))
     redirect_target = Base.RefValue{Observable{String}}(global_logger)
     python_runner = fetch(
         spawnat(1) do
@@ -324,7 +324,7 @@ function run!(mod::Module, python_runner::PythonRunner, task::RunnerTask)
                 if endswith(source, ";")
                     result[] = nothing
                 else
-                    result[] = book_display(res)
+                    result[] = Base.invokelatest(book_display, res)
                 end
             end
         end

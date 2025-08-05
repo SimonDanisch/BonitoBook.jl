@@ -2,7 +2,7 @@
 
 One save data to `./data/**`, which will get packaged into the Books zip format, to be fully reproducable and allow caching. In this notebook, we cache the video downloads and thumbnails into the data folder, to be able to run this notebook many times, without the many minutes of downloading and unpacking the preview thumbnails.
 
-```julia true false true
+```julia (editor=true, logging=false, output=true)
 urls = [
     "https://www.youtube.com/watch?v=yh3ZuJH3I20",
     "https://www.youtube.com/watch?v=fzrUDmM_ris",
@@ -26,7 +26,7 @@ urls = [
 ]
 
 ```
-```julia true false true
+```julia (editor=true, logging=false, output=true)
 # Simple YouTube ID extraction function
 using HTTP, JSON
 
@@ -143,7 +143,7 @@ subtitles = map(urls) do url
 end
 length(subtitles)
 ```
-```julia true false true
+```julia (editor=true, logging=false, output=true)
 using Printf, SHA, FFMPEG_jll
 function download_video(video_url)
     """Download video and return local path, downloading only once per video."""
@@ -329,9 +329,9 @@ function find_mentions_with_thumbnails(regex)
     return visualize_mentions_with_thumbnails(mentions)
 end
 ```
-```julia true false true
+```julia (editor=true, logging=false, output=true)
 find_mentions_with_thumbnails(r"\b(makia|makitech|maki|makie|macki|mackie)\b")
 ```
-```julia true false true
+```julia (editor=true, logging=false, output=true)
 find_mentions_with_thumbnails(r"\b(plotting|plots|plot|visualization)\b")
 ```

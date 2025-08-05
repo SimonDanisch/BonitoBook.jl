@@ -158,6 +158,7 @@ class EvalEditor {
         this.message_queue = [];
     }
     process_message(message) {
+        console.log(message);
         if (message.type === "get-source") {
             this.editor.editor.then((editor)=>{
                 this.js_to_julia.notify({

@@ -132,7 +132,7 @@ function export_md(file::AbstractString, book::Book)
             if language == "markdown"
                 println(io, content)
             else
-                println(io, "```$language $(show_editor) $(show_logging) $(show_output)")
+                println(io, "```$language (editor=$show_editor, logging=$show_logging, output=$show_output)")
                 println(io, content)
                 println(io, "```")
             end
