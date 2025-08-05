@@ -2,10 +2,13 @@
 Bonito = "824d6782-a2ef-11e9-3a09-e5662e0c26f8"
 BonitoBook = "b416d416-7a6e-4336-8c1a-1f8a8cd59518"
 BonitoSites = "8b3cd1a5-63d9-421b-9fde-46b64b830918"
+ClaudeCodeSDK = "38ea0fac-78ee-46bd-bc10-f52e7269b833"
 Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
 Sunny = "2b4a2ac8-8f8b-43e8-abf4-3cb0c45e8736"
 WGLMakie = "276b4fcb-3e11-5398-bf8b-a0c2d153d008"
 
 [sources]
+Bonito = {rev = "sd/serialization-order", url = "https://github.com/SimonDanisch/Bonito.jl.git"}
 BonitoBook = {path = ".."}
 BonitoSites = {rev = "main", url = "https://github.com/SimonDanisch/BonitoSites.jl"}
+ClaudeCodeSDK = {rev = "main", url = "https://github.com/AtelierArith/ClaudeCodeSDK.jl"}

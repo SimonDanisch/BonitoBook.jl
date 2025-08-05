@@ -1,6 +1,6 @@
 # BonitoBook
 
-BonitoBook is a Julia-native interactive notebook system built on Bonito.jl that combines multi-language execution, AI integration, and modern web-based editing.
+BonitoBook is a Julia-native interactive notebook system built on [Bonito.jl](https://simondanisch.github.io/Bonito.jl/stable/) that combines multi-language execution, AI integration, and modern web-based editing.
 
 # Getting started
 
@@ -25,10 +25,10 @@ Thanks to Bonito.jl, which was build to run anywhere, BonitoBook can be viewed i
 
   * VSCode Plot Pane
   * Browser
+  * Electron applications
   * Static Site (e.g. this site via Bonito.jl, or Documenter).
   * Server deployments
   * HTML displays (Pluto, Jupyter, etc...)
-  * Electron applications
   * [JuliaHub](https://github.com/SimonDanisch/BonitoBook.jl/blob/main/bin/main.jl)
   * [Google Colab](https://colab.research.google.com/drive/1Bux_x7wIaNBgXCD9NDqD_qmo_UMmtSR4?usp=sharing)
 
@@ -119,6 +119,46 @@ DOM.div(
     fig, jss
 )
 ```
+
+
+## Folder structure
+
+Each book creates a structured project with a hidden folder structure:
+
+### For Markdown files (`.md`)
+
+```
+mybook.md                # Main content file
+.mybook-bbook/           # Hidden folder structure
+├── styles/
+│   └── style.jl         # Custom styling
+├── ai/
+│   ├── config.toml      # AI configuration
+│   └── system-prompt.md # Custom AI prompt
+└── .versions/           # Automatic backups
+    └── mybook-*.md      # Timestamped backups
+└── data/             # Write out to `./data` to get included into the zip
+    └── data.csv      # Any data needed for the notebook
+```
+For ipynb, notebooks are first converted to a markdown file with the same name and then that notebook is used.
+
+### Project structure
+
+Each book folder can contain additional files and multiple notebooks sharing the same environment, which means you can have notebooks next to your VSCode julia project:
+
+```
+myproject/
+├── Project.toml        # Julia dependencies
+├── Manifest.toml       # Dependency lock file
+├── mybook.md           # Book content
+├──── .mybook-bbook/    # Hidden book structure
+├── another-book.md     # Another book with same project
+├──── .another-bbook/
+```
+
+The zip export allows to zip everything into a reproducable, shareable archive, the project of the process that was used to run the notebook and with any data.
+
+
 # Julia native
 
 ## All components written in Julia
@@ -343,53 +383,3 @@ editor_width = "800px" # Adjust editor width;
   * Quarto export
   * IPynb
   * PDF
-
-## Folder structure
-
-Each book creates a structured project with a hidden folder structure:
-
-### For Markdown files (`.md`)
-
-```
-mybook.md                # Main content file
-.mybook-bbook/          # Hidden folder structure
-├── styles/
-│   └── style.jl        # Custom styling
-├── ai/
-│   ├── config.toml     # AI configuration
-│   └── system-prompt.md # Custom AI prompt
-└── .versions/          # Automatic backups
-    └── mybook-*.md     # Timestamped backups
-```
-
-### For imported formats (e.g. `.ipynb`)
-
-```
-notebook.ipynb          # Original notebook file, not getting touched
-notebook.md             # Converted markdown content (used for editing)
-.notebook-bbook/        # Hidden folder structure
-├── styles/
-│   └── style.jl        # Custom styling
-├── ai/
-│   ├── config.toml     # AI configuration
-│   └── system-prompt.md # Custom AI prompt
-└── .versions/          # Automatic backups
-    └── notebook-*.md   # Timestamped backups
-```
-
-### Project structure
-
-Each book folder can contain additional files and multiple notebooks sharing the same environment, which means you can have notebooks next to your VSCode julia project:
-
-```
-myproject/
-├── Project.toml        # Julia dependencies
-├── Manifest.toml       # Dependency lock file
-├── mybook.md           # Book content
-├── .mybook-bbook/      # Hidden book structure
-├── another-book.md     # Another book with same project
-├── .another-book-bbook/
-```
-
-The zip export allows to zip everything into a reproducable, shareable archive, the project of the process that was used to run the notebook.
-
