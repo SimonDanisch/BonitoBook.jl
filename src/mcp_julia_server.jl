@@ -36,7 +36,6 @@ function get_server_url(server::MCPJuliaServer)
     return Bonito.online_url(server.server, "/julia-mcp/$(server.secret)")
 end
 
-
 function add_julia_mpc_route!(book::Book)
     session = book.session
     runner = book.runner
@@ -47,27 +46,12 @@ function add_julia_mpc_route!(book::Book)
     end
     mcp_server = MCPJuliaServer(runner, server)
     book.mcp_server = mcp_server
-    route!(server, "/julia-mcp/$(mcp_server.secret)" => mcp_server)
-    cli = try
-        ClaudeCodeSDK.find_cli()
-    catch e
-        @warn "Claude CLI not found, MCP server may not be fully functional" exception=(e, Base.catch_backtrace())
-        nothing
-    end
-    if !isnothing(cli)
-        cd(book.folder) do
-            try
-                try
-                    run(`$cli mcp remove julia-server`)
-                catch e
-                end
-                run(`$cli mcp add --transport http julia-server $(get_server_url(mcp_server))`)
-            catch e
-                @warn "Error when adding the MCP julia server" exception=(e, Base.catch_backtrace())
-            end
+    route = "/julia-mcp/$(mcp_server.secret)"
+    route!(server, route => mcp_server)
+    on(session.on_close) do closed
+        if closed
+            Bonito.delete_route!(server, route)
         end
-    else
-        @warn "Claude CLI not found, MCP server may not be fully functional"
     end
     return mcp_server
 end

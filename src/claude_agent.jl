@@ -82,7 +82,28 @@ function ClaudeAgent(book::Book; config::Dict = Dict())
     # Override with TOML config, then with passed config
     options = update_options(default_options, toml_config)
     options = update_options(options, config)
-
+    mcp_server = book.mcp_server
+    cli = try
+        ClaudeCodeSDK.find_cli()
+    catch e
+        @warn "Claude CLI not found, MCP server may not be fully functional" exception=(e, Base.catch_backtrace())
+        nothing
+    end
+    if !isnothing(cli)
+        cd(book.folder) do
+            try
+                try
+                    run(`$cli mcp remove julia-server`)
+                catch e
+                end
+                run(`$cli mcp add --transport http julia-server $(get_server_url(mcp_server))`)
+            catch e
+                @warn "Error when adding the MCP julia server" exception=(e, Base.catch_backtrace())
+            end
+        end
+    else
+        @warn "Claude CLI not found, MCP server may not be fully functional"
+    end
     return ClaudeAgent(book, options)
 end
 
