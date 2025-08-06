@@ -115,3 +115,5 @@ macro bedit(expr)
         BonitoBook.open_file!(fe, file; line=Int64(line))
     end
 end
+
+export @bedit
