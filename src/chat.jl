@@ -84,7 +84,7 @@ end
 
 # Utility function to ensure data/tmp directory exists
 function ensure_tmp_directory()
-    tmp_dir = joinpath("data", "tmp")
+    tmp_dir = joinpath(pwd(), "data", "attachments")
     if !isdir(tmp_dir)
         mkpath(tmp_dir)
     end

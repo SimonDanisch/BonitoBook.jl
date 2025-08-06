@@ -1,4 +1,4 @@
-# BonitoBook
+# Getting Started
 
 BonitoBook is a Julia-native interactive notebook system built on [Bonito.jl](https://simondanisch.github.io/Bonito.jl/stable/) that seamlessly combines multi-language execution, AI integration, and modern web-based editing in one powerful platform.
 
@@ -29,7 +29,7 @@ Bonito.jl brings significant advantages: all widgets are reusable, and notebooks
 
 Another big motivation was to have a simple markdown file format which is human readable and can be checked into git without problems, so one doesn't even need to edit the notebook with bonitobook.
 
-# What about Pluto
+# Comparison to Pluto
 
 I love the team behind Pluto and the attention to detail that has been put into it, but Pluto itselve has never appealed to me. The Pkg integration and reactive workflow isn't working for me and that most of Pluto is implemented in Javascript instead of Julia doesn't fit my approach of "ecosystem first, notebook second" which I imagine for BonitoBook.
 
@@ -149,6 +149,14 @@ MyJuliaProject/
 
 The zip export feature packages everything into a reproducible, shareable archive including the project environment and all associated data, which can be directly loaded by using `book("path/to/zipfile")`.
 
+## AI Integration
+
+The current implementation is based on a generic chat, which can use different chat agents to talk with. Those agents are currently installed as Package extensions on [ClaudeCodeSDK](https://github.com/AtelierArith/ClaudeCodeSDK.jl/) and on [PromptingTools](https://github.com/svilupp/PromptingTools.jl). Install those and use them, to activate them. By default, if both are loaded, Claude Code is preferred, since the integration is better and the agentic features are just more mature.
+
+```julia (editor=false, logging=false, output=true)
+DOM.video(src=Asset("./data/ai-demo.mp4"), autoplay=true, loop=true, muted=true,
+    style=Styles("width" => "100%", "height" => "auto"))
+```
 ## Supports the common commandline modes
 
 ```julia

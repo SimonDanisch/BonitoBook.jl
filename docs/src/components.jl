@@ -33,7 +33,7 @@ end
 # Card component for examples
 function ExampleCard(title::AbstractString, description::AbstractString)
     return DOM.div(
-        DOM.h3(title, class="example-title"),
+        DOM.h3(titlecase(title), class="example-title"),
         DOM.p(description, class="example-description"),
         DOM.a(
             "Open Example",

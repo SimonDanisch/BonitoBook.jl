@@ -6,7 +6,7 @@ using Markdown
 
 # Asset helpers
 function asset_path(files...)
-    path = normpath(joinpath(@__DIR__, "..", "assets", files...))
+    path = normpath(joinpath(@__DIR__, "assets", files...))
     return path
 end
 

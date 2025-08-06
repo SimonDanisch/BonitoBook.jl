@@ -1,73 +1,76 @@
 # Main index page for BonitoBook documentation
 
 function index()
-    hero = DOM.section(
-        DOM.h1("BonitoBook", class="hero-title"),
-        DOM.p(
-            "Create interactive Julia notebooks with live code execution, AI assistance, and beautiful exports.",
-            class="hero-subtitle"
-        ),
-        DOM.div(
-            DOM.a(
-                "Get Started",
-                href="/examples",
-                class="hero-button"
-            ),
-            DOM.a(
-                "View on GitHub",
-                href="https://github.com/SimonDanisch/BonitoBook.jl",
-                class="hero-button hero-button-secondary"
-            ),
-            class="hero-buttons"
-        ),
-        class="hero-section"
-    )
-
+    # Features section with Cards
     features = DOM.section(
-        DOM.h2("Features", class="section-title"),
         DOM.div(
-            feature_list(),
-            class="section-content"
+
+            DOM.h2("Why BonitoBook?", style=Styles(
+                "font-size" => "2.5rem",
+                "font-weight" => "700",
+                "text-align" => "center",
+                "margin" => "0 0 3rem 0",
+                "color" => "var(--text-primary)"
+            )),
+            feature_cards(),
+            DOM.video(
+                src=Asset(asset_path("book-demo.mp4")),
+                autoplay=true, loop=true, muted=true,
+                style=Styles("width" => "100%", "height" => "auto")
+            ),
+            style=Styles(
+                "max-width" => "1200px",
+                "margin" => "0 auto",
+                "padding" => "4rem 1rem"
+            )
         ),
-        class="section"
+        style=Styles("background" => "var(--bg-primary)")
     )
 
-    # Create interactive getting started section using InlineBook
     getting_started_path = joinpath(@__DIR__, "..", "examples", "intro.md")
     getting_started = DOM.section(
-        DOM.h2("Getting Started", class="section-title"),
             BonitoBook.InlineBook(getting_started_path),
         class="section"
     )
-
-    content = DOM.div(
-        hero,
-        features,
-        getting_started
-    )
-
+    content = DOM.div(features, getting_started)
     return Page(content, "BonitoBook - Interactive Julia Notebooks")
 end
 
-function feature_list()
+function feature_cards()
     features = [
-        ("📝", "Live Code Editing", "Edit Julia, Python, and Markdown cells with syntax highlighting and auto-completion and rich display"),
-        ("🔧", "Composable Ecosystem", "Add and share custom widgets using the Bonito framework, or reconfigure the book to be a dashboard or a completely different layout"),
-        ("📁", "File Editor integration", "Being build on Monaco editor, BonitoBook comes with an almost vscode like file editor to jump into any Julia code for editing."),
-        ("✨", "AI Integration", "Built-in AI assistant powered by Claude for code help and explanations"),
-        ("🎨", "Customizable Styling", "Theme your notebooks with custom CSS using live style editing"),
-        ("📤", "Many Import/Export Formats", "Export to HTML, Quarto, Markdown, IPynb, or PDF for sharing and publishing"),
+        ("📝", "Live Code Editing", "Edit Julia, Python, and Markdown cells with syntax highlighting, auto-completion, and rich display"),
+        ("⚡", "Fast & Interactive", "Built on Bonito framework for real-time reactivity and smooth user experience"),
+        ("✨", "AI-Powered", "Built-in AI assistant plugin system, supports Claude Code, but also any model via PromptingTools.jl"),
+        ("🎨", "Customizable", "Theme your notebooks with custom CSS and create your own widgets and layouts"),
+        ("📤", "Universal Export", "Export to HTML, Quarto, Markdown, IPynb, or PDF for sharing and publishing"),
+        ("🔧", "Extensible", "Add custom widgets, create dashboards, or build completely different layouts using the composable ecosystem")
     ]
 
     feature_items = map(features) do (icon, title, desc)
-        DOM.div(
-            DOM.span(icon, style=Styles("font-size" => "2rem", "margin-bottom" => "10px", "display" => "block")),
-            DOM.h3(title, style=Styles("margin" => "10px 0", "font-weight" => "600")),
-            DOM.p(desc, style=Styles("margin" => "0", "color" => "var(--text-secondary)")),
+        Components.Card(
+            DOM.div(
+                DOM.div(icon, style=Styles(
+                    "font-size" => "2.5rem",
+                    "margin-bottom" => "1rem",
+                    "display" => "block"
+                )),
+                DOM.h3(title, style=Styles(
+                    "margin" => "0 0 0.75rem 0",
+                    "font-weight" => "600",
+                    "font-size" => "1.25rem",
+                    "color" => "var(--text-primary)"
+                )),
+                DOM.p(desc, style=Styles(
+                    "margin" => "0",
+                    "color" => "var(--text-secondary)",
+                    "line-height" => "1.6"
+                )),
+                style=Styles("text-align" => "center")
+            ),
             style=Styles(
-                "text-align" => "center",
-                "padding" => "20px",
-                "flex" => "1 1 300px"
+                "flex" => "1 1 300px",
+                "margin" => "0",
+                "transition" => "transform 0.2s ease, box-shadow 0.2s ease"
             )
         )
     end
@@ -77,8 +80,8 @@ function feature_list()
         style=Styles(
             "display" => "flex",
             "flex-wrap" => "wrap",
-            "gap" => "30px",
-            "margin-top" => "30px"
+            "gap" => "1.5rem",
+            "justify-content" => "center"
         )
     )
 end

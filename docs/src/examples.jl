@@ -44,7 +44,6 @@ function examples()
         # Use a default description if none found
         if isempty(description)
             descriptions = Dict(
-                "juliacon25" => "Interactive exploration of JuliaCon 2025 talk submissions and data visualization.",
                 "intro" => "A gentle introduction to BonitoBook's features and capabilities.",
             )
             description = get(descriptions, name, "An example BonitoBook notebook.")

@@ -234,18 +234,37 @@ const CARD_STYLES = Styles(
         "background-color" => "var(--bg-primary)",
         "color" => "var(--text-primary)",
         "border" => "1px solid var(--border-secondary)",
-        "border-radius" => "8px",
-        "padding" => "16px",
+        "border-radius" => "12px",
+        "padding" => "2rem",
         "margin" => "8px",
-        "box-shadow" => "0 2px 8px rgba(0, 0, 0, 0.1)",
-        "transition" => "all 0.2s ease",
+        "box-shadow" => "0 1px 3px rgba(0, 0, 0, 0.05)",
+        "transition" => "all 0.3s ease",
         "display" => "block",
-        "box-sizing" => "border-box"
+        "box-sizing" => "border-box",
+        "position" => "relative",
+        "overflow" => "hidden"
     ),
     CSS(
         ".bonitobook-card:hover",
-        "box-shadow" => "0 4px 12px rgba(0, 0, 0, 0.15)",
-        "border-color" => "var(--border-primary)"
+        "box-shadow" => "0 8px 25px rgba(0, 0, 0, 0.1)",
+        "border-color" => "var(--accent-blue)",
+        "transform" => "translateY(-2px)"
+    ),
+    CSS(
+        ".bonitobook-card::before",
+        "content" => "''",
+        "position" => "absolute",
+        "top" => "0",
+        "left" => "0",
+        "right" => "0",
+        "height" => "3px",
+        "background" => "linear-gradient(90deg, var(--accent-blue), var(--accent-purple))",
+        "opacity" => "0",
+        "transition" => "opacity 0.3s ease"
+    ),
+    CSS(
+        ".bonitobook-card:hover::before",
+        "opacity" => "1"
     )
 )
 
