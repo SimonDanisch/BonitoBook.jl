@@ -8,7 +8,6 @@ Sunny = "2b4a2ac8-8f8b-43e8-abf4-3cb0c45e8736"
 WGLMakie = "276b4fcb-3e11-5398-bf8b-a0c2d153d008"
 
 [sources]
-Bonito = {rev = "sd/serialization-order", url = "https://github.com/SimonDanisch/Bonito.jl.git"}
 BonitoBook = {path = ".."}
 BonitoSites = {rev = "main", url = "https://github.com/SimonDanisch/BonitoSites.jl"}
 ClaudeCodeSDK = {rev = "main", url = "https://github.com/AtelierArith/ClaudeCodeSDK.jl"}

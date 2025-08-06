@@ -34,7 +34,6 @@ jobs:
           julia --color=yes --project=docs -e '
             using Pkg
             Pkg.add(url="https://github.com/AtelierArith/ClaudeCodeSDK.jl")
-            pkg"add Bonito#sd/serialization-order"
             Pkg.instantiate()
           '
       - name: Build Documentation Website
