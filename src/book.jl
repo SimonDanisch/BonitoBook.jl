@@ -29,33 +29,41 @@ function create_book_structure(bookfile; replace_style=false)
     folder = joinpath(book_dir, ".$(book_basename)-bbook")
 
     # Create the folder structure if it doesn't exist
+    template_folder = joinpath(@__DIR__, "templates")
     if !isdir(folder)
         mkpath(folder)
-
+        # Create default data dir
+        mkpath(joinpath(folder, "data"))
         # Create styles folder and copy template
         mkpath(joinpath(folder, "styles"))
-        style_path_template = joinpath(@__DIR__, "templates/style.jl")
+        style_path_template = joinpath(template_folder, "style.jl")
         style_path = joinpath(folder, "styles", "style.jl")
         cp(style_path_template, style_path)
 
-        # Create AI folder with configuration and system prompt
+        # Create AI folder with prefixed configuration files for each agent
         ai_folder = joinpath(folder, "ai")
         mkpath(ai_folder)
+        # Copy prefixed configuration templates if they exist
+        claude_config_template = joinpath(template_folder, "claude-config.toml")
+        claude_config_path = joinpath(ai_folder, "claude-config.toml")
+        cp(claude_config_template, claude_config_path)
 
-        # Copy AI configuration template
-        ai_config_template = joinpath(@__DIR__, "templates/ai/config.toml")
-        ai_config_path = joinpath(ai_folder, "config.toml")
-        cp(ai_config_template, ai_config_path)
+        pt_config_template = joinpath(template_folder, "promptingtools-config.toml")
+        pt_config_path = joinpath(ai_folder, "promptingtools-config.toml")
+        cp(pt_config_template, pt_config_path)
 
-        # Copy system prompt template
-        system_prompt_template = joinpath(@__DIR__, "templates/ai/system-prompt.md")
-        system_prompt_path = joinpath(ai_folder, "system-prompt.md")
-        cp(system_prompt_template, system_prompt_path)
+        claude_prompt_template = joinpath(template_folder, "claude-system-prompt.md")
+        claude_prompt_path = joinpath(ai_folder, "claude-system-prompt.md")
+        cp(claude_prompt_template, claude_prompt_path)
+
+        pt_prompt_template = joinpath(template_folder, "promptingtools-system-prompt.md")
+        pt_prompt_path = joinpath(ai_folder, "promptingtools-system-prompt.md")
+        cp(pt_prompt_template, pt_prompt_path)
     else
         # Handle style file replacement for existing folders
         style_path = joinpath(folder, "styles", "style.jl")
         if replace_style || !isfile(style_path)
-            style_path_template = joinpath(@__DIR__, "templates", "style.jl")
+            style_path_template = joinpath(template_folder, "style.jl")
             mkpath(joinpath(folder, "styles"))
             cp(style_path_template, style_path; force=true)
         end
@@ -76,7 +84,11 @@ Create Book from .md or .ipynb file.
 function Book(file; replace_style = false, all_blocks_as_cell = false)
     # Ensure we have a file path
     if !isfile(file)
-        error("File $file not found")
+        write(file, """
+        # New Book
+        ```julia (editor=true, logging=false, output=true)
+        ```
+        """)
     end
 
     # Handle ZIP files by importing them first

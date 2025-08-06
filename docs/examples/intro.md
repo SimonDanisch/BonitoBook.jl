@@ -2,7 +2,7 @@
 
 BonitoBook is a Julia-native interactive notebook system built on [Bonito.jl](https://simondanisch.github.io/Bonito.jl/stable/) that seamlessly combines multi-language execution, AI integration, and modern web-based editing in one powerful platform.
 
-# Getting started
+# Installation
 
 ```julia
 using Pkg
@@ -14,7 +14,7 @@ BonitoBook.book("path-to-notebook-file")
 This starts a server that hosts the notebook under the route "/notebook-name" and automatically opens it in your browser. You can also display the notebook directly in other environments like VSCode's plot pane:
 
 ```julia
-display(App(Book("path-to-notebook-file")))
+display(App(()-> Book("path-to-notebook-file")))
 ```
 
 Both methods run in the same Julia process as the parent, allowing you to edit and re-evaluate any file seamlessly.
@@ -23,9 +23,19 @@ Both methods run in the same Julia process as the parent, allowing you to edit a
 
 As the author of [Makie.jl](www.makie.org), I've faced challenges integrating its advanced features—like offline export, widgets, and interactions—across different notebook platforms in a stable and efficient way.
 
-Over the years, as Bonito.jl (the Julia framework for creating HTML/JavaScript in Julia) has matured, I decided to build a completely Julia-native notebook system with a sharp focus on plotting and dashboards.
+Over the years, as [Bonito.jl](https://simondanisch.github.io/Bonito.jl/stable/) (the Julia framework for creating HTML/JavaScript in Julia) has matured, I decided to build a completely Julia-native notebook system with a sharp focus on plotting and dashboards.
 
 Bonito.jl brings significant advantages: all widgets are reusable, and notebooks can be easily rearranged into different formats, making the transition from notebook to polished dashboard effortless.
+
+Another big motivation was to have a simple markdown file format which is human readable and can be checked into git without problems, so one doesn't even need to edit the notebook with bonitobook.
+
+# What about Pluto
+
+I love the team behind Pluto and the attention to detail that has been put into it, but Pluto itselve has never appealed to me. The Pkg integration and reactive workflow isn't working for me and that most of Pluto is implemented in Javascript instead of Julia doesn't fit my approach of "ecosystem first, notebook second" which I imagine for BonitoBook.
+
+The final issue is, that the Makie integration has stalled - you can use Makie in Pluto, but WGLMakie isn't working as well as it could due to several reasons.
+
+On the positive side, I think there's lots to share, we've been wanting to create a shared websocket serialization implementation and it should actually be easy to bring Pluto's reactive execution model to BonitoBook thanks to Pluto's modular approach in that regard.
 
 # Runs everywhere
 
@@ -40,9 +50,9 @@ Thanks to Bonito.jl's universal design, BonitoBook can be viewed across multiple
   * [JuliaHub](https://github.com/SimonDanisch/BonitoBook.jl/blob/main/bin/main.jl)
   * [Google Colab](https://colab.research.google.com/drive/1Bux_x7wIaNBgXCD9NDqD_qmo_UMmtSR4?usp=sharing)
 
-# Interactive Plotting Showcase
+# Plotting with Makie
 
-BonitoBook provides seamless integration with Makie.jl, supporting all WGLMakie features including interactive widgets, observables, and JavaScript integration. Here's a live example of an interactive 3D galaxy visualization, with the animation done in Javascript so it stays interactive without running Julia. The other plots shown in this notebook are not interactive in that way, and can only be interacted with when actually running the notebook with Julia.
+Since WGLMakie is also based on Bonito.jl, the Makie integration is seamless and supports all WGLMakie features including interactive widgets, observables and JavaScript integration. Here's a live example of an interactive 3D galaxy visualization, with the animation done in Javascript so it stays interactive without running Julia. The other plots shown in this notebook are not interactive in that way, and can only be interacted with when actually running the notebook with Julia.
 
 ```julia (editor=true, logging=false, output=true)
 # Interactive 3D galaxy with real-time JavaScript integration
@@ -102,7 +112,7 @@ DOM.div(
 ```
 ## Notebook format
 
-The format is a pretty simple markdown with more config options and data stored in a separate folder. This keeps the notebook format fully compatible with markdown and makes it easy to edit it with other editors.
+The format is a simple markdown file with more config options and data stored in a separate folder. This keeps the notebook format fully compatible with markdown and makes it easy to edit it with other editors.
 
 The a hidden folder structure looks like this:
 
@@ -139,13 +149,7 @@ MyJuliaProject/
 
 The zip export feature packages everything into a reproducible, shareable archive including the project environment and all associated data, which can be directly loaded by using `book("path/to/zipfile")`.
 
-# Julia native
-
-## All components written in Julia
-
-BonitoBook is built entirely in Julia using Bonito.jl, providing native performance and seamless integration with the Julia ecosystem.
-
-## Supports Julia commands
+## Supports the common commandline modes
 
 ```julia
 ]add DataFrames CSV # Package management
@@ -153,9 +157,11 @@ BonitoBook is built entirely in Julia using Bonito.jl, providing native performa
 ;ls -la # Shell commands
 ```
 
-# Ecosystem of Components vs Notebook
+# Julia native ecosystem
 
-With Bonito it's easy to [create and share components](https://simondanisch.github.io/Bonito.jl/stable/components.html). All BonitoBook components should be usable outside the notebook, and we hope to have a vibrant ecosystem of user created widgets.
+BonitoBook is built entirely in Julia using Bonito.jl, providing native performance and seamless integration with the Julia ecosystem.
+
+With Bonito it's easy to [create and share components](https://simondanisch.github.io/Bonito.jl/stable/components.html).  All BonitoBook components can be used outside the notebook, which will further extend the Bonito ecosystem for building interactive web applications Here is a quick example how one can make a simple (existing) widget in Bonito:
 
 ```julia (editor=true, logging=false, output=true)
 struct MyCheckbox
@@ -179,7 +185,7 @@ This is why we can e.g. use the editor widget in the notebook itself:
 using BonitoBook
 BonitoBook.EvalEditor("println(\"Hello World\")\n1+1")
 ```
-## Simple to create new book types with different layouts
+And why we can easily re-arrange any notebook into a completely different layout/form:
 
 ```julia (editor=true, logging=false, output=true)
 # Properly Centered Row Example
@@ -197,13 +203,14 @@ style = Styles(
         "margin-bottom" => "20px",
     )
 )
-
-# Create the properly centered Row
+# Load notebook we shipped in the data folder
+cells = Book("./data/test.md"; all_blocks_as_cell=true).cells
+# Execute code in the cell
+foreach(x-> BonitoBook.run_sync!(x.editor), cells)
 DOM.div(
     style,
     Centered(Row(
-        BonitoBook.CellEditor("1+1", "julia", nothing),
-        BonitoBook.CellEditor("1+2", "julia", nothing),
+        cells...,
         width="fit-content",
         gap="50px"
     ));
@@ -259,14 +266,15 @@ DOM.div(
 ```
 ## @manipulate
 
-BonitoBook revives the beloved `@manipulate` macro from [Interact.jl](https://github.com/JuliaGizmos/Interact.jl) with modern enhancements:
+BonitoBook revives the beloved `@manipulate` macro from [Interact.jl](https://github.com/JuliaGizmos/Interact.jl) with modern enhancements. It works great together with Makie's SpecApi, which is the [new declarative API](https://docs.makie.org/stable/explanations/specapi#SpecApi) for Makie.
 
 ```julia (editor=true, logging=false, output=true)
 import Makie.SpecApi as S
 @manipulate for cmap=["viridis", "heat", "blues"],
                 func=(sqrt=sqrt, square=x->x^2, sin=sin, cos=cos),
                 plot_type=(scatter=S.Scatter, lines=S.Lines, segments=S.LineSegments),
-                size=10:0.1:100, show_legend=(true, false)
+                size=10:0.1:100,
+                show_legend=(true, false)
     x = 0:0.3:10
     style = plot_type == S.Scatter ? (; markersize=size) : (; linewidth=size)
     plot = plot_type(x, func.(x); colormap=cmap, color=x, style...)
@@ -355,6 +363,21 @@ editor_width = "800px" # Adjust editor width;
   * export to standalone HTML file
   * Markdown export
   * Quarto export
-  * IPynb
+  * Ipynb
   * PDF
 
+## Future
+
+There are lots of plans for whhat can be done in the future.
+
+  * While I've been working quite a bit with BonitoBook to make sure everything works well, it's obviously still not battle tested and it will take a while to become rock solid.
+  * Rich markdown export for e.g. readme's (inlining output as image/svg)
+  * drag & dropping cells and changing their language
+  * Overview function for navigation
+  * Notebook store, where one can easily share their research
+  * Run notebook in another process for stability and interrupt.
+  * fixes for mobile CSS
+  * More config options for export
+  * Exe building of a notebook
+  * Better model agnostic agent tools implementation, so one isn't locked into an AI provider, while not loosing any features.
+  * Support `display(...)` inside for loop and have more examples on how to customize display behavior

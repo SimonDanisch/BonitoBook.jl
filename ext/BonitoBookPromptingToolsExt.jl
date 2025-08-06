@@ -6,6 +6,7 @@ using Bonito
 using Markdown
 using TOML
 using JSON
+using Bonito.HTTP
 
 """
     PromptingToolsAgent <: ChatAgent
@@ -24,6 +25,7 @@ mutable struct PromptingToolsAgent <: BonitoBook.ChatAgent
     model::String
     system_prompt::String
     mcp_server_url::String
+    conversation_history::Vector{PromptingTools.AbstractMessage}
 end
 
 """
@@ -39,8 +41,8 @@ function PromptingToolsAgent(book::BonitoBook.Book; config::Dict = Dict())
     folder = book.folder
 
     # Load configuration from TOML file if it exists
-    config_path = joinpath(folder, "ai", "config.toml")
-    system_prompt_path = joinpath(folder, "ai", "system-prompt.md")
+    config_path = joinpath(folder, "ai", "promptingtools-config.toml")
+    system_prompt_path = joinpath(folder, "ai", "promptingtools-system-prompt.md")
 
     # Load TOML config if it exists
     toml_config = Dict()
@@ -73,34 +75,86 @@ function PromptingToolsAgent(book::BonitoBook.Book; config::Dict = Dict())
     # Get MCP server URL
     mcp_server_url = BonitoBook.get_server_url(book.mcp_server)
 
-    # Add MCP server instructions to system prompt
+    # Add MCP server and tool instructions to system prompt
     mcp_instructions = """
+    You are an agent which can loop over multiple messages.
+    You have to answer an empy string if you want to exit the loop.
+    If you dont respont with an empty message, the loop will continue.
 
-# Julia Code Execution via MCP Server
+    # Julia Code Execution Tool
 
-You have access to a Julia MCP server at $(mcp_server_url) that allows you to execute Julia code directly in the book's environment. Use this for:
-- Running calculations and data analysis
-- Creating visualizations with Makie.jl
-- Testing code snippets
-- Accessing variables and functions defined in the book
+    ## Tool Usage Guidelines:
+    1. Use the julia_exec tool whenever you need to execute Julia code
+    2. Break complex tasks into smaller code blocks
+    4. Handle errors gracefully and suggest fixes when code fails
+    5. You can call the tool multiple times in a conversation to build up complex solutions
+    6. Always look up functions and docs before using them.
 
-When executing Julia code, the results will be displayed directly in the chat.
-"""
+    ## How to Use the Tool:
+    When you need to execute Julia code, respond with ONLY a valid JSON object (no other text or formatting):
 
-    enhanced_system_prompt = isempty(system_prompt) ? mcp_instructions : system_prompt * mcp_instructions
+    {"method": "julia_exec", "params": {"code": "your_julia_code_here"}}
 
+    For example, to calculate 2 + 2, respond with exactly:
+    {"method": "julia_exec", "params": {"code": "2 + 2"}}
+
+    The system will execute the Julia code and provide you with the results.
+    """
+
+    enhanced_system_prompt = isempty(system_prompt) ? mcp_instructions : system_prompt * "\n\n" * mcp_instructions
     # Set default model
     default_model = get(toml_config, "model", get(config, "model", "gpt-4o"))
+
+    # Initialize conversation history with system prompt
+    conversation_history = PromptingTools.AbstractMessage[
+        PromptingTools.SystemMessage(enhanced_system_prompt)
+    ]
 
     return PromptingToolsAgent(
         book,
         default_model,
         enhanced_system_prompt,
-        mcp_server_url
+        mcp_server_url,
+        conversation_history
     )
 end
 
 BonitoBook.create_prompting_tools_agent(book::BonitoBook.Book) = PromptingToolsAgent(book)
+
+"""
+    julia_exec_tool(agent::PromptingToolsAgent, code::String)
+
+Execute Julia code via the MCP server and return the result.
+"""
+function julia_exec_tool(agent::PromptingToolsAgent, code::String)
+    try
+        # Create MCP request payload
+        mcp_request = Dict(
+            "jsonrpc" => "2.0",
+            "id" => string(hash(code)),  # Simple ID based on code hash
+            "method" => "tools/call",
+            "params" => Dict(
+                "name" => "julia_exec",
+                "arguments" => Dict("code" => code)
+            )
+        )
+
+        # Make HTTP POST request to MCP server
+        response = HTTP.post(
+            agent.mcp_server_url,
+            ["Content-Type" => "application/json"],
+            JSON.json(mcp_request)
+        )
+
+        if response.status == 200
+            return String(copy(response.body))
+        else
+            return "Error executing Julia code: HTTP $(response.status)"
+        end
+    catch e
+        return "Error executing Julia code: $(string(e))"
+    end
+end
 
 """
     update_model!(agent::PromptingToolsAgent, model::String)
@@ -118,7 +172,7 @@ end
 Save current agent configuration to TOML file.
 """
 function save_config_to_toml(agent::PromptingToolsAgent)
-    config_path = joinpath(agent.book.folder, "ai", "config.toml")
+    config_path = joinpath(agent.book.folder, "ai", "promptingtools-config.toml")
 
     # Create directory if it doesn't exist
     mkpath(dirname(config_path))
@@ -156,6 +210,7 @@ function Bonito.jsrender(session::Bonito.Session, msg::PromptingTools.UserMessag
     return Bonito.jsrender(session, Bonito.DOM.div(msg.content))
 end
 
+
 """
     prompt(agent::PromptingToolsAgent, question::String)
 
@@ -164,55 +219,60 @@ Send a prompt to the PromptingTools agent and return a streaming response.
 function BonitoBook.prompt(agent::PromptingToolsAgent, question::String)
     # Create a channel for streaming responses
     response_channel = Channel{Any}(100)
-
     # Start async task to generate response
-    Threads.@spawn begin
-        try
-            # Use PromptingTools.aigenerate with streaming-like behavior
-            # Note: PromptingTools doesn't have native streaming, so we'll simulate it
-
-            # Create conversation with system prompt and user message
-            conversation = [
-                PromptingTools.SystemMessage(agent.system_prompt),
-                PromptingTools.UserMessage(question)
-            ]
-
-            # Generate response
+    Threads.@spawn try
+        # Add user message to conversation history
+        user_message = PromptingTools.UserMessage(question)
+        push!(agent.conversation_history, user_message)
+        # Conversation loop with tool support
+        iteration = 0
+        while iteration < 10
+            @show iteration
+            iteration += 1
+            # Generate response using full conversation history
             response = PromptingTools.aigenerate(
-                conversation;
+                agent.conversation_history;
                 model = agent.model,
                 return_all = false,
-                api_key = ENV["OPENAI_API_KEY"],  # Use environment variable for API key
             )
+            @show response
+            # Add AI response to conversation history
+            push!(agent.conversation_history, response)
+            put!(response_channel, response)
 
-            # Send the response as markdown
             if isa(response, PromptingTools.AIMessage)
-                # Parse and send content in chunks to simulate streaming
-                content = response.content
-                lines = split(content, '\n')
-
-                for (i, line) in enumerate(lines)
-                    if !isempty(strip(line)) || i < length(lines)  # Include empty lines except the last one
-                        put!(response_channel, Bonito.DOM.div(line))
-                        if i < length(lines)
-                            put!(response_channel, Bonito.DOM.br())
-                        end
-                        sleep(0.01)  # Small delay to simulate streaming
-                    end
+                # Check if the response is a pure JSON MCP call
+                if isempty(strip(response.content))
+                    println("Breaking loop")
+                    break
                 end
-            else
-                put!(response_channel, Bonito.DOM.div("Error: Unexpected response type"))
+                try
+                    mcp_call = JSON.parse(strip(response.content))
+                    if haskey(mcp_call, "method") && mcp_call["method"] == "julia_exec" &&
+                        haskey(mcp_call, "params") && haskey(mcp_call["params"], "code")
+                        # This is an MCP call, execute it
+                        code = mcp_call["params"]["code"]
+                        result = julia_exec_tool(agent, code)
+                        # Add the result as a user message
+                        result_message = PromptingTools.UserMessage(result)
+                        push!(agent.conversation_history, result_message)
+                    end
+                catch e
+                    result_message = PromptingTools.UserMessage("Not JSON: $(e)")
+                    push!(agent.conversation_history, result_message)
+                end
             end
-
-        catch e
-            # Send error message
-            error_msg = "Error: $(string(e))"
-            put!(response_channel, Bonito.DOM.div(error_msg, style="color: red;"))
-        finally
-            close(response_channel)
         end
+        if iteration >= 10
+            put!(response_channel, Bonito.DOM.div("Conversation loop reached maximum iterations", style="color: orange;"))
+        end
+    catch e
+        # Send error message
+        error_msg = "Error: $(string(e))"
+        put!(response_channel, Bonito.DOM.div(error_msg, style="color: red;"))
+    finally
+        close(response_channel)
     end
-
     return response_channel
 end
 
@@ -295,7 +355,7 @@ function BonitoBook.settings_menu(agent::PromptingToolsAgent)
 
     # Handle edit system prompt button
     Bonito.on(edit_prompt_clicks) do _
-        system_prompt_path = joinpath(agent.book.folder, "ai", "system-prompt.md")
+        system_prompt_path = joinpath(agent.book.folder, "ai", "promptingtools-system-prompt.md")
         BonitoBook.open_file!(BonitoBook.get_file_editor(agent.book), system_prompt_path)
         @info "Opened system prompt in file editor: $system_prompt_path"
     end

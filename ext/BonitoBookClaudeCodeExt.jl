@@ -35,8 +35,8 @@ function ClaudeAgent(book::BonitoBook.Book; config::Dict = Dict())
     folder = book.folder
 
     # Load configuration from TOML file if it exists
-    config_path = joinpath(folder, "ai", "config.toml")
-    system_prompt_path = joinpath(folder, "ai", "system-prompt.md")
+    config_path = joinpath(folder, "ai", "claude-config.toml")
+    system_prompt_path = joinpath(folder, "ai", "claude-system-prompt.md")
 
     # Load TOML config if it exists
     toml_config = Dict()
@@ -159,7 +159,7 @@ end
 Save current agent configuration to TOML file.
 """
 function save_config_to_toml(agent::ClaudeAgent)
-    config_path = joinpath(agent.book.folder, "ai", "config.toml")
+    config_path = joinpath(agent.book.folder, "ai", "claude-config.toml")
 
     # Create directory if it doesn't exist
     mkpath(dirname(config_path))
@@ -528,7 +528,7 @@ function BonitoBook.settings_menu(agent::ClaudeAgent)
 
     # Handle edit system prompt button
     Bonito.on(edit_prompt_clicks) do _
-        system_prompt_path = joinpath(agent.book.folder, "ai", "system-prompt.md")
+        system_prompt_path = joinpath(agent.book.folder, "ai", "claude-system-prompt.md")
         BonitoBook.open_file!(BonitoBook.get_file_editor(agent.book), system_prompt_path)
         @info "Opened system prompt in file editor: $system_prompt_path"
     end
