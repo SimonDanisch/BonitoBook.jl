@@ -1,2 +1,0 @@
-BonitoBook.jl is also available under a commercial license for commercial use.
-Contact info@makie.org for details and pricing.
