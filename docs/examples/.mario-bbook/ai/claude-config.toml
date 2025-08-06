@@ -1,0 +1,11 @@
+[tools]
+mcp_tools = ["mcp__julia-server__julia_exec"]
+disallowed_tools = []
+allowed_tools = ["Read", "Write", "Bash", "Glob", "Grep", "Edit", "mcp__julia-server__julia_exec"]
+
+[agent]
+max_thinking_tokens = 100015
+model = "claude-opus-4-20250514"
+max_turns = 20
+permission_mode = "acceptEdits"
+continue_conversation = true
