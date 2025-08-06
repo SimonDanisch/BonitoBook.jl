@@ -25,6 +25,15 @@ UUIDs = "cf7118a7-6976-5b1a-9a39-7adc72f591a4"
 WGLMakie = "276b4fcb-3e11-5398-bf8b-a0c2d153d008"
 ZipFile = "a5390f91-8eb1-5f08-bee0-b1d1ffed6cea"
 
+[weakdeps]
+AlgebraOfGraphics = "cbdf2221-f076-402e-a563-3d30da359d67"
+ClaudeCodeSDK = "38ea0fac-78ee-46bd-bc10-f52e7269b833"
+PromptingTools = "670122d1-24a8-4d70-bfce-740807c42192"
+
+[sources]
+Makie = {rev = "master", subdir = "Makie", url = "https://github.com/MakieOrg/Makie.jl.git"}
+WGLMakie = {rev = "master", subdir = "WGLMakie", url = "https://github.com/MakieOrg/Makie.jl.git"}
+
 [extensions]
 BonitoBookAlgebraOfGraphicsExt = "AlgebraOfGraphics"
 BonitoBookClaudeCodeExt = "ClaudeCodeSDK"
@@ -53,7 +62,8 @@ WGLMakie = "0.11.2, 0.12, 0.13"
 ZipFile = "0.9, 0.10"
 julia = "1.10"
 
-[weakdeps]
-AlgebraOfGraphics = "cbdf2221-f076-402e-a563-3d30da359d67"
-ClaudeCodeSDK = "38ea0fac-78ee-46bd-bc10-f52e7269b833"
-PromptingTools = "670122d1-24a8-4d70-bfce-740807c42192"
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]

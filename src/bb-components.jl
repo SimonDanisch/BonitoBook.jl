@@ -8,7 +8,7 @@ module Components
 
 using Bonito
 
-export Button, Checkbox, Dropdown, NumberInput, Slider
+export Button, Card, Checkbox, Dropdown, NumberInput, Slider
 
 # Define global widget styles that use CSS variables
 const WIDGET_STYLES = Styles(
@@ -228,6 +228,27 @@ const SLIDER_STYLES = Styles(
     )
 )
 
+const CARD_STYLES = Styles(
+    CSS(
+        ".bonitobook-card",
+        "background-color" => "var(--bg-primary)",
+        "color" => "var(--text-primary)",
+        "border" => "1px solid var(--border-secondary)",
+        "border-radius" => "8px",
+        "padding" => "16px",
+        "margin" => "8px",
+        "box-shadow" => "0 2px 8px rgba(0, 0, 0, 0.1)",
+        "transition" => "all 0.2s ease",
+        "display" => "block",
+        "box-sizing" => "border-box"
+    ),
+    CSS(
+        ".bonitobook-card:hover",
+        "box-shadow" => "0 4px 12px rgba(0, 0, 0, 0.15)",
+        "border-color" => "var(--border-primary)"
+    )
+)
+
 """
     Button(content; style=Styles(), attributes...)
 
@@ -263,6 +284,34 @@ function Bonito.jsrender(session::Session, button::Button)
     )
     onjs(session, button.content, js"x=> $(button_dom).innerText = x")
     return Bonito.jsrender(session, button_dom)
+end
+
+"""
+    Card(content; style=Styles(), attributes...)
+
+A themed card container widget compatible with Bonito's interface.
+Uses BonitoBook's CSS variables for consistent styling.
+"""
+struct Card
+    content::Any
+    attributes::Dict{Symbol,Any}
+end
+
+function Card(content; style=Styles(), attributes...)
+    attrs = Dict{Symbol,Any}(attributes)
+    attrs[:style] = style
+    return Card(content, attrs)
+end
+
+function Bonito.jsrender(session::Session, card::Card)
+    css = Styles(get(card.attributes, :style, Styles()), CARD_STYLES)
+    card_dom = DOM.div(
+        card.content;
+        class="bonitobook-card",
+        card.attributes...,
+        style=css
+    )
+    return Bonito.jsrender(session, card_dom)
 end
 
 """
