@@ -34,5 +34,5 @@ BonitoSites.deploy(
     "github.com/SimonDanisch/BonitoBook.jl.git";
     push_preview=true,
     devbranch="main",
-    devurl="docs"
+    devurl="website"
 )
