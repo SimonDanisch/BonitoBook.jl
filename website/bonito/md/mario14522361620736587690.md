@@ -1,2 +1,0 @@
-# Mario Example with Claude
-
