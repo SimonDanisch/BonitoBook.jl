@@ -354,7 +354,7 @@ Styles(
         ".cell-output",
         "width" => "100%",
         "margin" => "5px",
-        "max-height" => "700px",
+        "max-height" => "1000px",
         "overflow-y" => "auto",
         "overflow-x" => "visible",
         "background-color" => "var(--bg-primary)",

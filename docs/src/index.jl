@@ -2,20 +2,23 @@
 
 function index()
     # Features section with Cards
+    h2s = Styles(
+        "font-size" => "2.5rem",
+        "font-weight" => "700",
+        "text-align" => "center",
+        "margin" => "0 0 3rem 0",
+        "color" => "var(--text-primary)"
+    )
     features = DOM.section(
         DOM.div(
-
-            DOM.h2("Why BonitoBook?", style=Styles(
-                "font-size" => "2.5rem",
-                "font-weight" => "700",
-                "text-align" => "center",
-                "margin" => "0 0 3rem 0",
-                "color" => "var(--text-primary)"
-            )),
+            DOM.h2("The new Julia native Notebook", style=h2s),
+            DOM.p("BonitoBook excells in plotting, customizability, ai integration and language interoperability,
+                making it perfect for exploring data, building dashboards and any other interactive application."),
+            DOM.h2("Why BonitoBook?", style=h2s),
             feature_cards(),
             DOM.video(
                 src=Asset(asset_path("book-demo.mp4")),
-                autoplay=true, loop=true, muted=true,
+                autoplay=true, loop=true, muted=true, preload="none",
                 style=Styles("width" => "100%", "height" => "auto")
             ),
             style=Styles(
@@ -29,7 +32,7 @@ function index()
 
     getting_started_path = joinpath(@__DIR__, "..", "examples", "intro.md")
     getting_started = DOM.section(
-            BonitoBook.InlineBook(getting_started_path),
+            BonitoBook.InlineBook(getting_started_path; replace_style=true),
         class="section"
     )
     content = DOM.div(features, getting_started)

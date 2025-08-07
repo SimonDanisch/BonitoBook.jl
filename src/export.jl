@@ -40,15 +40,15 @@ struct InlineBook
     book::Book
 end
 
-function InlineBook(path::String)
-    book = Book(path)
-    for cell in book.cells
-        run_sync!(cell.editor)
-    end
+function InlineBook(path::String; replace_style::Bool = true)
+    book = Book(path; replace_style=replace_style)
     return InlineBook(book)
 end
 
 function Bonito.jsrender(session::Session, inline_book::InlineBook)
+    for cell in inline_book.book.cells
+        run_sync!(cell.editor)
+    end
     return Bonito.jsrender(session, export_dom(session, inline_book.book))
 end
 
@@ -293,55 +293,55 @@ function export_zip(book::Book, zip_path::String)
     # Get project information
     project_path = Pkg.project().path
     project_dir = dirname(project_path)
-    
+
     # Determine book file and its directory
     book_file = book.file
     book_dir = dirname(book_file)
     book_name = splitext(basename(book_file))[1]
-    
+
     # Create temporary directory for staging
     temp_dir = mktempdir()
-    
+
     try
         # Create the main project structure in temp directory
         zip_content_dir = joinpath(temp_dir, book_name)
         mkpath(zip_content_dir)
-        
+
         # Copy Project.toml and Manifest.toml if they exist
         project_toml = joinpath(project_dir, "Project.toml")
         manifest_toml = joinpath(project_dir, "Manifest.toml")
-        
+
         if isfile(project_toml)
             cp(project_toml, joinpath(zip_content_dir, "Project.toml"))
         end
-        
+
         if isfile(manifest_toml)
             cp(manifest_toml, joinpath(zip_content_dir, "Manifest.toml"))
         end
-        
+
         # Copy the book file
         book_basename = basename(book_file)
         cp(book_file, joinpath(zip_content_dir, book_basename))
-        
+
         # Copy the book's hidden folder structure
         if isdir(book.folder)
             hidden_folder_name = basename(book.folder)
             cp(book.folder, joinpath(zip_content_dir, hidden_folder_name))
         end
-        
+
         # Copy additional data files/folders in the book directory (but not other books)
         for item in readdir(book_dir)
             item_path = joinpath(book_dir, item)
-            
+
             # Skip the book file itself and other book files, and hidden book folders
-            if item == book_basename || 
-               endswith(item, ".md") || 
+            if item == book_basename ||
+               endswith(item, ".md") ||
                endswith(item, ".ipynb") ||
                startswith(item, ".") ||
                item in ["Project.toml", "Manifest.toml"]
                 continue
             end
-            
+
             # Copy data directories and files
             if isdir(item_path)
                 cp(item_path, joinpath(zip_content_dir, item))
@@ -349,7 +349,7 @@ function export_zip(book::Book, zip_path::String)
                 cp(item_path, joinpath(zip_content_dir, item))
             end
         end
-        
+
         # Create ZIP file
         w = ZipFile.Writer(zip_path)
         try
@@ -359,7 +359,7 @@ function export_zip(book::Book, zip_path::String)
                     file_path = joinpath(root, file)
                     # Calculate relative path within zip
                     rel_path = relpath(file_path, temp_dir)
-                    
+
                     # Add file to zip
                     zip_file = ZipFile.addfile(w, rel_path)
                     write(zip_file, read(file_path))
@@ -368,12 +368,12 @@ function export_zip(book::Book, zip_path::String)
         finally
             close(w)
         end
-        
+
     finally
         # Clean up temporary directory
         rm(temp_dir; recursive=true, force=true)
     end
-    
+
     @info "Exported book to ZIP: $zip_path"
     return zip_path
 end
@@ -395,7 +395,7 @@ Path to the extracted book file.
 # Extract to directory named after zip file
 book_path = import_zip("mybook.zip")
 
-# Extract to specific directory  
+# Extract to specific directory
 book_path = import_zip("mybook.zip", "/path/to/extract")
 ```
 """
@@ -403,22 +403,22 @@ function import_zip(zip_path::String, target_dir::String="")
     if !isfile(zip_path)
         error("ZIP file not found: $zip_path")
     end
-    
+
     # Determine extraction directory
     if isempty(target_dir)
         zip_name = splitext(basename(zip_path))[1]
         target_dir = joinpath(dirname(zip_path), zip_name)
     end
-    
+
     # Create target directory if it doesn't exist
     if !isdir(target_dir)
         mkpath(target_dir)
     elseif !isempty(readdir(target_dir))
         @warn "Target directory is not empty: $target_dir"
     end
-    
+
     book_file = nothing
-    
+
     # Extract ZIP file
     r = ZipFile.Reader(zip_path)
     try
@@ -427,21 +427,21 @@ function import_zip(zip_path::String, target_dir::String="")
                 # Skip directories
                 continue
             end
-            
+
             # Determine output path
             output_path = joinpath(target_dir, file.name)
             output_dir = dirname(output_path)
-            
+
             # Create directory structure
             if !isdir(output_dir)
                 mkpath(output_dir)
             end
-            
+
             # Extract file
             open(output_path, "w") do io
                 write(io, read(file, String))
             end
-            
+
             # Track the main book file
             if endswith(file.name, ".md") || endswith(file.name, ".ipynb")
                 # Look for book files in the root of the extracted content
@@ -453,7 +453,7 @@ function import_zip(zip_path::String, target_dir::String="")
     finally
         close(r)
     end
-    
+
     if book_file === nothing
         # Fallback: look for any .md or .ipynb file in the extracted directory
         for (root, dirs, files) in walkdir(target_dir)
@@ -466,11 +466,11 @@ function import_zip(zip_path::String, target_dir::String="")
             book_file !== nothing && break
         end
     end
-    
+
     if book_file === nothing
         error("No book file (.md or .ipynb) found in ZIP archive")
     end
-    
+
     @info "Imported book from ZIP to: $book_file"
     return book_file
 end

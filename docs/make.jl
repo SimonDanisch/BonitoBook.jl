@@ -18,7 +18,6 @@ function create_routes()
     )
     # Add individual example pages
     Website.add_example_routes!(routes)
-
     return routes
 end
 

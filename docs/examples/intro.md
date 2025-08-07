@@ -155,7 +155,7 @@ The current implementation is based on a generic chat, which can use different c
 
 ```julia (editor=false, logging=false, output=true)
 DOM.video(src=Asset("./data/ai-demo.mp4"), autoplay=true, loop=true, muted=true,
-    style=Styles("width" => "100%", "height" => "auto"))
+    style=Styles("width" => "100%"))
 ```
 ## Supports the common commandline modes
 
@@ -169,7 +169,7 @@ DOM.video(src=Asset("./data/ai-demo.mp4"), autoplay=true, loop=true, muted=true,
 
 BonitoBook is built entirely in Julia using Bonito.jl, providing native performance and seamless integration with the Julia ecosystem.
 
-With Bonito it's easy to [create and share components](https://simondanisch.github.io/Bonito.jl/stable/components.html).  All BonitoBook components can be used outside the notebook, which will further extend the Bonito ecosystem for building interactive web applications Here is a quick example how one can make a simple (existing) widget in Bonito:
+With Bonito it's easy to [create and share components](https://simondanisch.github.io/Bonito.jl/stable/components.html).  All BonitoBook components can be used outside the notebook, which will further extend the Bonito ecosystem for building interactive web applications Here is a quick example how one can make a simple checkbox widget in Bonito:
 
 ```julia (editor=true, logging=false, output=true)
 struct MyCheckbox
@@ -185,8 +185,9 @@ function Bonito.jsrender(session::Session, checkbox::MyCheckbox)
         ),
     )
 end
-MyCheckbox(true)
 ```
+Note, you can include any css or javascript dependency in your widgets and Bonito will make sure they'll get included only once.
+
 This is why we can e.g. use the editor widget in the notebook itself:
 
 ```julia (editor=true, logging=false, output=true)
