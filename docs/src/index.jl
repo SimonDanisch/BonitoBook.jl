@@ -42,7 +42,7 @@ end
 function feature_cards()
     features = [
         ("📝", "Live Code Editing", "Edit Julia, Python, and Markdown cells with syntax highlighting, auto-completion, and rich display"),
-        ("⚡", "Fast & Interactive", "Built on Bonito framework for real-time reactivity and smooth user experience"),
+        ("⚡", "Fast & Interactive", "Built on Bonito for real-time interactions thanks to an optimized serialization protocol"),
         ("✨", "AI-Powered", "Built-in AI assistant plugin system, supports Claude Code, but also any model via PromptingTools.jl"),
         ("🎨", "Customizable", "Theme your notebooks with custom CSS and create your own widgets and layouts"),
         ("📤", "Universal Export", "Export to HTML, Quarto, Markdown, IPynb, or PDF for sharing and publishing"),
