@@ -79,7 +79,7 @@ function add_example_routes!(routes)
         routes[route_name] = App(title=name) do
             # Create a book instance for this example
             # Book needs to be the root element for proper functionality
-            return Page(BonitoBook.InlineBook(file; replace_style=true), title=name)
+            return Page(BonitoBook.InlineBook(file; replace_style=true), name)
         end
     end
     return routes
