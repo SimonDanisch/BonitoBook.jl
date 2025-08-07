@@ -636,8 +636,8 @@ function Bonito.jsrender(session::Session, book::Book)
     """
     evaljs(session, theme_tracking)
 
-    on(session.on_close) do close
-        runner.open[] = false
+    on(session.on_close) do closed
+        closed && close(runner)
         return
     end
     codicon = Styles(

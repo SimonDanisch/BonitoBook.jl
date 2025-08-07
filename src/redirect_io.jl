@@ -1,10 +1,34 @@
-const REDIRECT_CHANNEL = Base.RefValue{Channel{Vector{UInt8}}}()
+
+mutable struct RedirectTarget
+    lock::ReentrantLock
+    observable::Observable{String}
+end
+
+RedirectTarget() = RedirectTarget(ReentrantLock(), Observable(""))
+
+const REDIRECT_TARGET = Base.RefValue{RedirectTarget}()
+
+function Base.write(target::RedirectTarget, bytes::AbstractVector{UInt8})
+    lock(target.lock) do
+        if !isempty(bytes)
+            printer = HTMLPrinter(IOBuffer(bytes); root_tag = "span")
+            str = sprint(io -> show(io, MIME"text/html"(), printer))
+            target.observable[] = str
+        end
+    end
+end
+
+function Base.setindex!(target::RedirectTarget, obs::Observable{String})
+    lock(target.lock) do
+        target.observable = obs
+    end
+end
 
 # Taken from IOCapture.jl, adpated to our needs!
 function redirect_all_to_channel()
     # Needs to be singleton, since we can only redirect one time
-    if isassigned(REDIRECT_CHANNEL) && isopen(REDIRECT_CHANNEL[])
-        return REDIRECT_CHANNEL[]
+    if isassigned(REDIRECT_TARGET)
+        return REDIRECT_TARGET[]
     end
     # Original implementation from Documenter.jl (MIT license)
     # Save the default output streams.
@@ -24,16 +48,18 @@ function redirect_all_to_channel()
     # `String`. We need to use an asynchronous task to continously tranfer bytes from the
     # pipe to `output` in order to avoid the buffer filling up and stalling write() calls in
     # user code.
-    capture_channel = Channel{Vector{UInt8}}(Inf; spawn = true) do chan
-        while !eof(pipe) && isopen(chan)
-            data = readavailable(pipe)
-            put!(chan, copy(data))
+    redirect_target = RedirectTarget()
+
+    Threads.@spawn begin
+        while !eof(pipe)
+            data = copy(readavailable(pipe))
             write(default_stdout, data)
+            write(redirect_target, data)
         end
         # Clean up after channel is closed
         redirect_stdout(default_stdout)
         redirect_stderr(default_stderr)
     end
-    REDIRECT_CHANNEL[] = capture_channel
-    return capture_channel
+    REDIRECT_TARGET[] = redirect_target
+    return redirect_target
 end

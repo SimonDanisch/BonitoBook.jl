@@ -165,10 +165,10 @@ struct AsyncRunner
     task_queue::Channel{RunnerTask}
     thread::Task
     callback::Base.RefValue{Function}
-    iochannel::Channel{Vector{UInt8}}
-    redirect_target::Base.RefValue{Observable{String}}
-    open::Threads.Atomic{Bool}
-    global_logging_widget::Base.RefValue{Any}
+end
+
+function Base.close(runner::AsyncRunner)
+    close(runner.task_queue)
 end
 
 function set_task_tid!(task::Task, tid::Integer)
@@ -198,48 +198,27 @@ Create a new asynchronous code runner.
 Configured `AsyncRunner` instance ready for code execution.
 """
 function AsyncRunner(project::String, mod::Module = Module(gensym("BonitoBook")); callback = identity, global_logger = Observable(""))
-    redirect_target = Base.RefValue{Observable{String}}(global_logger)
-    python_runner = fetch(
-        spawnat(1) do
-            PythonRunner()
-        end
-    )
-    loki = ReentrantLock()
+    python_runner = fetch(spawnat(()-> PythonRunner(), 1))
     task_queue = Channel{RunnerTask}(Inf)
+    redirect_target = redirect_all_to_channel()
+    redirect_target[] = global_logger
     taskref = spawnat(1) do
         for task in task_queue
-            @lock loki redirect_target[] = task.logging
-            yield() # yield to allow e.g. the logging task to run
             try
                 cd(project) do
+                    redirect_target[] = task.logging
                     run!(mod, python_runner, task)
+                    println()
                 end
             catch e
                 @error "Error running code: $(task.source)" exception = (e, catch_backtrace())
             finally
-                @async begin
-                    sleep(0.5)
-                    @lock loki redirect_target[] = global_logger
-                end
+                sleep(0.5)
+                redirect_target[] = global_logger
             end
         end
     end
-    io_chan = redirect_all_to_channel()
-    open = Threads.Atomic{Bool}(true)
-    task = Threads.@spawn begin
-        while open[] && isopen(io_chan)
-            # take obs first, to print to the correct logging target
-            bytes = copy(take!(io_chan))
-            obs = @lock loki isassigned(redirect_target) ? redirect_target[] : nothing
-            if !isempty(bytes) && !isnothing(obs)
-                printer = HTMLPrinter(IOBuffer(bytes); root_tag = "span")
-                str = sprint(io -> show(io, MIME"text/html"(), printer))
-                @lock loki obs[] = str
-            end
-        end
-    end
-    Base.errormonitor(task)
-    return AsyncRunner(mod, project, python_runner, task_queue, taskref, Base.RefValue{Function}(callback), io_chan, redirect_target, open, Base.RefValue{Any}())
+    return AsyncRunner(mod, project, python_runner, task_queue, taskref, Base.RefValue{Function}(callback))
 end
 
 function interrupt!(runner::AsyncRunner)
