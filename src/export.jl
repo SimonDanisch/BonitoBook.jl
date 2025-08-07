@@ -42,13 +42,13 @@ end
 
 function InlineBook(path::String; replace_style::Bool = true)
     book = Book(path; replace_style=replace_style)
+    for cell in book.cells
+        run_sync!(cell.editor)
+    end
     return InlineBook(book)
 end
 
 function Bonito.jsrender(session::Session, inline_book::InlineBook)
-    for cell in inline_book.book.cells
-        run_sync!(cell.editor)
-    end
     return Bonito.jsrender(session, export_dom(session, inline_book.book))
 end
 
