@@ -7,6 +7,12 @@ BonitoBook.book(joinpath(path, "sunny.ipynb"); openbrowser=false)
 # test new creation
 BonitoBook.book(joinpath(path, "test.md"); openbrowser=false)
 
+# Actually run all cells!
+InlineBook(joinpath(path, "intro.md"), replace_style=true)
+InlineBook(joinpath(path, "sunny.ipynb"), replace_style=true)
+InlineBook(joinpath(path, "test.md"), replace_style=true)
+
+
 @test isfile(joinpath(path, "test.md"))
 @test isdir(joinpath(path, ".test-bbook"))
 @test isdir(joinpath(path, ".test-bbook", "data"))

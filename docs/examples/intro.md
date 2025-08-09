@@ -390,3 +390,4 @@ There are lots of plans for whhat can be done in the future.
   * Exe building of a notebook
   * Better model agnostic agent tools implementation, so one isn't locked into an AI provider, while not loosing any features.
   * Support `display(...)` inside for loop and have more examples on how to customize display behavior
+
