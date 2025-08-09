@@ -168,7 +168,7 @@ function export_quarto(file::AbstractString, book::Book)
     end
     return file
 end
-using JSON3, ZipFile, Pkg
+using JSON3, ZipFile, Pkg, p7zip_jll
 
 """
     export_ipynb(file, book)
@@ -420,51 +420,17 @@ function import_zip(zip_path::String, target_dir::String="")
     book_file = nothing
 
     # Extract ZIP file
-    r = ZipFile.Reader(zip_path)
-    try
-        for file in r.files
-            if file.uncompressedsize == 0
-                # Skip directories
-                continue
-            end
+    run(`$(p7zip_jll.p7zip()) x -tzip -y -o$(target_dir) $(zip_path)`)
 
-            # Determine output path
-            output_path = joinpath(target_dir, file.name)
-            output_dir = dirname(output_path)
-
-            # Create directory structure
-            if !isdir(output_dir)
-                mkpath(output_dir)
-            end
-
-            # Extract file
-            open(output_path, "w") do io
-                write(io, read(file, String))
-            end
-
-            # Track the main book file
-            if endswith(file.name, ".md") || endswith(file.name, ".ipynb")
-                # Look for book files in the root of the extracted content
-                if count('/', file.name) == 1  # One level deep (project/book.md)
-                    book_file = output_path
-                end
+    # Look for any .md or .ipynb file in the extracted directory
+    for (root, dirs, files) in walkdir(target_dir)
+        for file in files
+            if endswith(file, ".md") || endswith(file, ".ipynb")
+                book_file = joinpath(root, file)
+                break
             end
         end
-    finally
-        close(r)
-    end
-
-    if book_file === nothing
-        # Fallback: look for any .md or .ipynb file in the extracted directory
-        for (root, dirs, files) in walkdir(target_dir)
-            for file in files
-                if endswith(file, ".md") || endswith(file, ".ipynb")
-                    book_file = joinpath(root, file)
-                    break
-                end
-            end
-            book_file !== nothing && break
-        end
+        book_file !== nothing && break
     end
 
     if book_file === nothing
