@@ -22,5 +22,9 @@ BonitoBook.book(joinpath(path, "juliacon25.md"))
 
 BonitoBook.jl is dual-licensed:
 
-- **Non-commercial use:** Licensed under the PolyForm Noncommercial License 1.0.0. See [LICENSE](LICENSE).
-- **Commercial use:** Requires a commercial license. Contact info@makie.org for pricing and details.
+- **Non-commercial use:** Licensed under the PolyForm Noncommercial open source License 1.0.0. See [LICENSE](LICENSE).
+* **Commercial use:** Requires a commercial license. Contact [info@makie.org](mailto:info@makie.org) for pricing and terms.
+  Limited commercial use is permitted without a commercial license, including:
+  * internal testing and evaluation purposes
+
+All other commercial use requires a license.

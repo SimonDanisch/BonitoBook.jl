@@ -12,7 +12,7 @@ function index()
     features = DOM.section(
         DOM.div(
             DOM.h2("The new Julia native Notebook", style=h2s),
-            DOM.p("BonitoBook excells in plotting, customizability, ai integration and language interoperability,
+            DOM.p("BonitoBook excels in plotting, customizability, ai integration and language interoperability,
                 making it perfect for exploring data, building dashboards and any other interactive application."),
             DOM.h2("Why BonitoBook?", style=h2s),
             feature_cards(),
