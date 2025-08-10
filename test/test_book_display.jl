@@ -78,7 +78,8 @@ using BonitoBook
         @test haskey(result.attributes, :style)
         style = result.attributes[:style]
         @test occursin("white-space: pre", style)
-        @test occursin("font-family: inherit", style)
+        @test occursin("font-family: JuliaMono", style)
+        @test occursin("monospace", style)
         @test occursin("margin: 0", style)
     end
     
@@ -92,5 +93,22 @@ using BonitoBook
         arr_result = BonitoBook.book_display([1, 2, 3])
         arr_content = string(arr_result.children[1])
         @test endswith(arr_content, "\n")
+    end
+    
+    @testset "Large Array Truncation" begin
+        # Test that large arrays get truncated with Julia's built-in limit
+        large_array = collect(1:1000)
+        result = BonitoBook.book_display(large_array)
+        content = string(result.children[1])
+        
+        # Should contain the ellipsis for truncation
+        @test occursin("⋮", content)
+        
+        # Should still show type information
+        @test occursin("1000-element Vector{Int64}:", content)
+        
+        # Should be much shorter than full display
+        lines = split(content, "\n")
+        @test length(lines) < 50  # Much less than 1000+ lines
     end
 end
