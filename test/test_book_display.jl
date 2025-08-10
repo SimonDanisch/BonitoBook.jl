@@ -73,13 +73,14 @@ using BonitoBook
     end
     
     @testset "CSS Styling" begin
-        # Check that the DOM.pre element has proper styling
+        # Check that the DOM.pre element has proper styling for non-LaTeX output
         result = BonitoBook.book_display([1, 2, 3])
+        @test result isa BonitoBook.Bonito.DOM.Node
+        @test result.tag == "pre"
         @test haskey(result.attributes, :style)
         style = result.attributes[:style]
         @test occursin("white-space: pre", style)
-        @test occursin("font-family: JuliaMono", style)
-        @test occursin("monospace", style)
+        @test occursin("font-family: inherit", style)
         @test occursin("margin: 0", style)
     end
     
@@ -110,5 +111,26 @@ using BonitoBook
         # Should be much shorter than full display
         lines = split(content, "\n")
         @test length(lines) < 50  # Much less than 1000+ lines
+    end
+    
+    @testset "LaTeX Output Support" begin
+        # Create a mock type that supports LaTeX output
+        struct MockLatexType
+            value::String
+        end
+        
+        # Define show method for LaTeX MIME type
+        function Base.show(io::IO, ::MIME"text/latex", obj::MockLatexType)
+            print(io, "\\frac{1}{", obj.value, "}")
+        end
+        
+        # Test that LaTeX output is detected and rendered
+        latex_obj = MockLatexType("x")
+        result = BonitoBook.book_display(latex_obj)
+        
+        # Should return a MathJax object, not a DOM.pre
+        @test !isa(result, BonitoBook.Bonito.DOM.Node)
+        # Note: We can't easily test the exact MathJax type without more complex setup
+        # but we can verify it's not the fallback DOM.pre element
     end
 end

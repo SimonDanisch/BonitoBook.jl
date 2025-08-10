@@ -231,16 +231,34 @@ function book_display(value)
         return nothing
     end
     
-    # For other values, format them like Julia REPL using text/plain MIME
+    # Check for LaTeX output support first (for mathematical expressions)
+    # This enables beautiful rendering for packages like QuantumAlgebra
+    if showable(MIME"text/latex"(), value)
+        latex_content = sprint() do io
+            show(io, MIME"text/latex"(), value)
+        end
+        
+        # Configure MathJax with similar settings as markdown cells
+        mathjax_config = Dict(
+            "chtml" => Dict(
+                "displayAlign" => "left"
+            ),
+            "options" => Dict(
+                "enableMenu" => false
+            )
+        )
+        
+        return Bonito.MathJax(latex_content, mathjax_config)
+    end
+    
+    # Fallback to text/plain for regular Julia output
     # This provides proper array formatting with delimiters and type information
     # Use IOContext with :limit => true for notebook-friendly truncation of large outputs
-    # This enables Julia's built-in truncation with ⋮ for very large arrays/matrices
     formatted = sprint() do io
         show(IOContext(io, :limit => true), MIME"text/plain"(), value)
     end
     
     # Wrap in DOM.pre to preserve whitespace and newlines in web display
-    # This ensures the formatted output displays appropriately in the notebook interface
     # Use inherit to match the notebook's font system
     return DOM.pre(
         formatted * "\n", 
