@@ -226,7 +226,23 @@ function interrupt!(runner::AsyncRunner)
 end
 
 function book_display(value)
-    return value
+    # Return nothing for void results (like assignments ending with semicolon)
+    if value === nothing
+        return nothing
+    end
+    
+    # For other values, format them like Julia REPL using text/plain MIME
+    # This provides proper array formatting with delimiters and type information
+    # Add trailing newline to match REPL behavior exactly
+    formatted = sprint(show, MIME"text/plain"(), value)
+    
+    # Wrap in DOM.pre to preserve whitespace and newlines in web display
+    # This ensures the formatted output displays exactly like in Julia REPL
+    # Use inherit to match the notebook's font system
+    return DOM.pre(
+        formatted * "\n", 
+        style = "margin: 0; font-family: inherit; white-space: pre;"
+    )
 end
 
 function run!(editor::EvalEditor)
