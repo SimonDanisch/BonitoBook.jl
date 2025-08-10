@@ -233,11 +233,14 @@ function book_display(value)
     
     # For other values, format them like Julia REPL using text/plain MIME
     # This provides proper array formatting with delimiters and type information
-    # Add trailing newline to match REPL behavior exactly
-    formatted = sprint(show, MIME"text/plain"(), value)
+    # Use IOContext with :limit => true for notebook-friendly truncation of large outputs
+    # This enables Julia's built-in truncation with ⋮ for very large arrays/matrices
+    formatted = sprint() do io
+        show(IOContext(io, :limit => true), MIME"text/plain"(), value)
+    end
     
     # Wrap in DOM.pre to preserve whitespace and newlines in web display
-    # This ensures the formatted output displays exactly like in Julia REPL
+    # This ensures the formatted output displays appropriately in the notebook interface
     # Use inherit to match the notebook's font system
     return DOM.pre(
         formatted * "\n", 
