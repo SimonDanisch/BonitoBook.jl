@@ -101,15 +101,7 @@ function parse_source(::MarkdownRunner, source)
         replacements = Dict(
             Markdown.Code => (node) -> begin
                 if node.language == "latex"
-                    mathjax_config = Dict(
-                        "chtml" => Dict(
-                            "displayAlign" => "left"  # Left-align block equations
-                        ),
-                        "options" => Dict(
-                            "enableMenu" => false  # Disable the right-click MathJax menu
-                        )
-                    )
-                    return [Bonito.MathJax(node.code, mathjax_config)]
+                    return [Bonito.KaTeX(node.code)]
                 elseif node.language == ""
                     return node
                 else
@@ -225,8 +217,28 @@ function interrupt!(runner::AsyncRunner)
     return Threads.@spawn Base.throwto(runner.thread, InterruptException())
 end
 
+# Hyperscript.jl flattens and splats any vector/iterable recursively
+# So DOM.div([1, 2, 3]) becomes DOM.div(1, 2, 3) and DOM.div([1, 2, [3, 4]]) becomes DOM.div(1, 2, 3, 4)
+# Which is really bad for displaying objects as part of the DOM.
+# It seems very breaking to change the behavior of Hyperscript.jl, so we just define a NoSplat type
+# to prevent this behavior and wrap values we want to display in it.
+
+"""
+    NoSplat(value)
+
+DOM.div(NoSplat(value)) will not splat the value, but render it just as DOM.div(value).
+This is useful for displaying iterables/arrays in the DOM without flattening them.
+"""
+struct NoSplat
+    value::Any
+end
+
+function Bonito.jsrender(session::Session, value::NoSplat)
+    return Bonito.jsrender(session, value.value)
+end
+
 function book_display(value)
-    return value
+    return NoSplat(value)
 end
 
 function run!(editor::EvalEditor)
@@ -310,7 +322,7 @@ function run!(mod::Module, python_runner::PythonRunner, task::RunnerTask)
             end
         end
     catch e
-        result[] = Bonito.HTTPServer.err_to_html(e, Base.catch_backtrace())
+        result[] = InteractiveError(e, Base.catch_backtrace())
     end
     return
 end

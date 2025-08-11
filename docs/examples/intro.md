@@ -296,15 +296,15 @@ end
 ```
 ## LaTeX support
 
-Excellent LaTeX support powered by MathTeX.
+Excellent LaTeX support powered by KaTeX.
 
 ```latex
-$$\int_{-\infty}^{\infty} e^{-x^2} dx = \sqrt{\pi}$$
+\int_{-\infty}^{\infty} e^{-x^2} dx = \sqrt{\pi}
 
-$$\mathbf{A} = \begin{pmatrix}
+\mathbf{A} = \begin{pmatrix}
 a_{11} & a_{12} \\
 a_{21} & a_{22}
-\end{pmatrix}$$
+\end{pmatrix}
 ```
 
 # Python integration
