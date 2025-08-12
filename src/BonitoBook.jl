@@ -72,6 +72,7 @@ include("sidebar.jl")
 include("tabbed_editor.jl")
 include("eval_file_on_change.jl")
 include("logging.jl")
+include("error-display.jl")
 include("book.jl")
 include("runners.jl")
 include("export.jl")
@@ -82,7 +83,7 @@ include("chat.jl")
 include("mcp_julia_server.jl")
 # include("ai.jl")
 
-export Book, ChatComponent, ChatAgent, ChatMessage, MCPJuliaServer, Collapsible, Components, LoggingWidget, export_zip, import_zip
+export Book, ChatComponent, ChatAgent, ChatMessage, MCPJuliaServer, Collapsible, Components, LoggingWidget, export_zip, import_zip, InteractiveError
 export InlineBook
 
 end

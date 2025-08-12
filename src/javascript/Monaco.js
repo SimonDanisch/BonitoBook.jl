@@ -243,7 +243,6 @@ export class EvalEditor {
         this.message_queue = [];
     }
     process_message(message) {
-        console.log(message);
         if (message.type === "get-source") {
             this.editor.editor.then((editor) => {
                 this.js_to_julia.notify({
@@ -573,7 +572,6 @@ export function setup_cell_editor(
             }
         });
         container.addEventListener("focusout", (e) => {
-            console.log("Focus out!");
             if (hide_on_focus_obs.value) {
                 if (!container.contains(e.relatedTarget)) {
                     eval_editor.editor.editor.then((editor) => {

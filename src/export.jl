@@ -291,89 +291,21 @@ export_zip(book, "mybook.zip")
 """
 function export_zip(book::Book, zip_path::String)
     # Get project information
-    project_path = Pkg.project().path
-    project_dir = dirname(project_path)
+    project_path = dirname(Pkg.project().path)
 
     # Determine book file and its directory
     book_file = book.file
-    book_dir = dirname(book_file)
-    book_name = splitext(basename(book_file))[1]
-
+    book_dir = book.folder
     # Create temporary directory for staging
-    temp_dir = mktempdir()
-
-    try
-        # Create the main project structure in temp directory
-        zip_content_dir = joinpath(temp_dir, book_name)
-        mkpath(zip_content_dir)
-
-        # Copy Project.toml and Manifest.toml if they exist
-        project_toml = joinpath(project_dir, "Project.toml")
-        manifest_toml = joinpath(project_dir, "Manifest.toml")
-
-        if isfile(project_toml)
-            cp(project_toml, joinpath(zip_content_dir, "Project.toml"))
-        end
-
-        if isfile(manifest_toml)
-            cp(manifest_toml, joinpath(zip_content_dir, "Manifest.toml"))
-        end
-
-        # Copy the book file
-        book_basename = basename(book_file)
-        cp(book_file, joinpath(zip_content_dir, book_basename))
-
-        # Copy the book's hidden folder structure
-        if isdir(book.folder)
-            hidden_folder_name = basename(book.folder)
-            cp(book.folder, joinpath(zip_content_dir, hidden_folder_name))
-        end
-
-        # Copy additional data files/folders in the book directory (but not other books)
-        for item in readdir(book_dir)
-            item_path = joinpath(book_dir, item)
-
-            # Skip the book file itself and other book files, and hidden book folders
-            if item == book_basename ||
-               endswith(item, ".md") ||
-               endswith(item, ".ipynb") ||
-               startswith(item, ".") ||
-               item in ["Project.toml", "Manifest.toml"]
-                continue
-            end
-
-            # Copy data directories and files
-            if isdir(item_path)
-                cp(item_path, joinpath(zip_content_dir, item))
-            elseif isfile(item_path)
-                cp(item_path, joinpath(zip_content_dir, item))
-            end
-        end
-
-        # Create ZIP file
-        w = ZipFile.Writer(zip_path)
-        try
-            # Add all files recursively
-            for (root, dirs, files) in walkdir(zip_content_dir)
-                for file in files
-                    file_path = joinpath(root, file)
-                    # Calculate relative path within zip
-                    rel_path = relpath(file_path, temp_dir)
-
-                    # Add file to zip
-                    zip_file = ZipFile.addfile(w, rel_path)
-                    write(zip_file, read(file_path))
-                end
-            end
-        finally
-            close(w)
-        end
-
-    finally
-        # Clean up temporary directory
-        rm(temp_dir; recursive=true, force=true)
+    temp_dir = mktempdir() do temp_dir
+        cp(book_file, joinpath(temp_dir, basename(book_file)))
+        cp(book_dir, joinpath(temp_dir, basename(book_dir)))
+        project_toml = joinpath(project_path, "Project.toml")
+        manifest_toml = joinpath(project_path, "Manifest.toml")
+        cp(project_toml, joinpath(temp_dir, "Project.toml"))
+        cp(manifest_toml, joinpath(temp_dir, "Manifest.toml"))
+        run(`$(p7zip_jll.p7zip()) a -tzip $(zip_path) $(temp_dir)/\*`)
     end
-
     @info "Exported book to ZIP: $zip_path"
     return zip_path
 end
@@ -417,26 +349,9 @@ function import_zip(zip_path::String, target_dir::String="")
         @warn "Target directory is not empty: $target_dir"
     end
 
-    book_file = nothing
-
     # Extract ZIP file
     run(`$(p7zip_jll.p7zip()) x -tzip -y -o$(target_dir) $(zip_path)`)
-
-    # Look for any .md or .ipynb file in the extracted directory
-    for (root, dirs, files) in walkdir(target_dir)
-        for file in files
-            if endswith(file, ".md") || endswith(file, ".ipynb")
-                book_file = joinpath(root, file)
-                break
-            end
-        end
-        book_file !== nothing && break
-    end
-
-    if book_file === nothing
-        error("No book file (.md or .ipynb) found in ZIP archive")
-    end
-
+    book_file = joinpath(target_dir, basename(splitext(zip_path)[1]) * ".md")
     @info "Imported book from ZIP to: $book_file"
     return book_file
 end

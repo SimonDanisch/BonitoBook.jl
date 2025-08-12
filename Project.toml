@@ -43,7 +43,7 @@ BonitoBookPromptingToolsExt = "PromptingTools"
 [compat]
 ANSIColoredPrinters = "0.0.1"
 Base64 = "1"
-Bonito = "4.1"
+Bonito = "4.1.2"
 ClaudeCodeSDK = "0.1.0"
 CondaPkg = "0.2.29"
 Dates = "1"

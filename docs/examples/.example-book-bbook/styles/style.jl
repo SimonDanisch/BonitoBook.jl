@@ -245,6 +245,7 @@ Styles(
         "width" => editor_width,
         "max-width" => "95vw",
         "position" => "relative",
+        "display" => "inline-block",
         "padding" => "5px 5px 10px 10px",
         "border-radius" => border_radius_large,
         "box-shadow" => "var(--shadow-soft)",
@@ -258,6 +259,7 @@ Styles(
         "margin" => "0px",
         "color" => "var(--text-primary)"
     ),
+
 
     # Logging output
     CSS(
@@ -1412,7 +1414,7 @@ Styles(
         "background-color" => "var(--bg-primary)",
         "box-shadow" => "0 2px 8px rgba(220, 53, 69, 0.15)"
     ),
-
+    
     # Error message styling
     CSS(
         ".interactive-error-widget h4",
@@ -1421,7 +1423,7 @@ Styles(
         "font-size" => "1.1em",
         "font-weight" => "600"
     ),
-
+    
     CSS(
         ".interactive-error-widget pre",
         "font-family" => "SFMono-Regular, Consolas, Liberation Mono, Menlo, Courier, monospace",
@@ -1434,7 +1436,7 @@ Styles(
         "border-radius" => "6px",
         "border" => "1px solid rgba(220, 53, 69, 0.2)"
     ),
-
+    
     # Light theme error styling
     CSS(
         light_media_query,
@@ -1444,8 +1446,8 @@ Styles(
             "color" => "#721c24"
         )
     ),
-
-    # Dark theme error styling
+    
+    # Dark theme error styling  
     CSS(
         dark_media_query,
         CSS(
@@ -1454,7 +1456,7 @@ Styles(
             "color" => "#ffccd5"
         )
     ),
-
+    
     # Stacktrace frame styling
     CSS(
         ".interactive-error-widget .collapsible-content > div > div",
@@ -1467,7 +1469,7 @@ Styles(
         "border-radius" => "0 4px 4px 0",
         "transition" => "background-color 0.2s ease"
     ),
-
+    
     # Light theme stacktrace frame
     CSS(
         light_media_query,
@@ -1480,7 +1482,7 @@ Styles(
             "background-color" => "rgba(0, 0, 0, 0.08)"
         )
     ),
-
+    
     # Dark theme stacktrace frame
     CSS(
         dark_media_query,
@@ -1493,7 +1495,7 @@ Styles(
             "background-color" => "rgba(255, 255, 255, 0.08)"
         )
     ),
-
+    
     # Clickable file link styling
     CSS(
         ".error-file-link",
@@ -1505,13 +1507,13 @@ Styles(
         "border-radius" => "3px",
         "padding" => "1px 3px"
     ),
-
+    
     CSS(
         ".error-file-link:hover",
         "text-decoration" => "underline",
         "background-color" => "rgba(3, 102, 214, 0.1)"
     ),
-
+    
     # Function name styling in stacktrace
     CSS(
         ".interactive-error-widget span[style*='font-weight: bold']",

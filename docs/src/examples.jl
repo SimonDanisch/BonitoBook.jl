@@ -11,47 +11,13 @@ function examples()
 
     # Get all example folders
     examples_dir = normpath(joinpath(@__DIR__, "..", "examples"))
-    example_books = filter(isfile, readdir(examples_dir; join=true))
 
     # Create example cards
-    example_cards = map(example_books) do file
-        name, ext = splitext(basename(file))
-        ext == ".md" || return nothing  # Skip non-markdown files
-        name == "juliacon25" && return nothing  # Skip the JuliaCon example for now
-        # Read the first few lines to get a description
-        lines = readlines(file)
-
-        # Try to extract title from first heading
-        for line in lines
-            if startswith(line, "# ")
-                title = strip(line, '#')
-                break
-            end
-        end
-
-        # Get description from first paragraph
-        description = ""
-        in_code_block = false
-        for line in lines
-            if startswith(line, "```")
-                in_code_block = !in_code_block
-            elseif !in_code_block && !isempty(strip(line)) && !startswith(line, "#")
-                description = strip(line)
-                break
-            end
-        end
-
-        # Use a default description if none found
-        if isempty(description)
-            descriptions = Dict(
-                "intro" => "A gentle introduction to BonitoBook's features and capabilities.",
-            )
-            description = get(descriptions, name, "An example BonitoBook notebook.")
-        end
-
-        return ExampleCard(name, description)
-    end
-
+    example_cards = [
+        ExampleCard("intro", "A quick intro to BonitoBook, giving a rough overview of the features and how to use them."),
+        ExampleCard("sunny", "Sunny.jl uses Makie a lot and they have some wonderful notebooks, which we can import directly from ipynb."),
+        ExampleCard("book-example", "An AI generated Book format for BonitoBook, showing how easy it is to completely change the layout."),
+    ]
     # Filter out nothing values
     example_cards = filter(!isnothing, example_cards)
 
@@ -59,27 +25,28 @@ function examples()
         example_cards...,
         class="examples-grid"
     )
-
     content = DOM.div(
         intro,
         examples_grid
     )
-
     return Page(content, "BonitoBook Examples")
 end
+
+include("../examples/.book-example-bbook/book.jl")
+
 # Add routes for individual example pages
 function add_example_routes!(routes)
     examples_dir = normpath(joinpath(@__DIR__, "..", "examples"))
-    examples = filter(isfile, readdir(examples_dir; join=true))
-    for file in examples
-        name, ext = splitext(basename(file))
-        ext == ".md" || continue
-        name == "juliacon25" && continue  # Skip the JuliaCon example for now
+    examples = ["intro", "sunny", "book-example"]
+    constructor = Dict("book-example" => RealBook)
+    for name in examples
+        file = joinpath(examples_dir, "$(name).md")
         route_name = "/$(name)"
         routes[route_name] = App(title=name) do
             # Create a book instance for this example
             # Book needs to be the root element for proper functionality
-            return Page(BonitoBook.InlineBook(file; replace_style=true), name)
+            B = get(constructor, name, BonitoBook.InlineBook)
+            return Page(B(file), name)
         end
     end
     return routes
