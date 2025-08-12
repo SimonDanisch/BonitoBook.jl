@@ -619,3 +619,4 @@ Dr. Example Author is a Professor of Computational Mathematics at the Institute 
 **Keywords:** computational mathematics, numerical methods, scientific computing, optimization, data analysis
 
 **Subject Classification:** 65-XX (Numerical analysis), 68W25 (Approximation algorithms), 90C06 (Large-scale problems)
+

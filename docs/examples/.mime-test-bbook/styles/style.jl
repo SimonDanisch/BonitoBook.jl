@@ -245,7 +245,6 @@ Styles(
         "width" => editor_width,
         "max-width" => "95vw",
         "position" => "relative",
-        "display" => "inline-block",
         "padding" => "5px 5px 10px 10px",
         "border-radius" => border_radius_large,
         "box-shadow" => "var(--shadow-soft)",
@@ -259,7 +258,6 @@ Styles(
         "margin" => "0px",
         "color" => "var(--text-primary)"
     ),
-
 
     # Logging output
     CSS(
@@ -1402,6 +1400,123 @@ Styles(
     CSS(
         ".cell-editor.focused",
         "box-shadow" => "0 4px 8px rgba(3, 102, 214, 0.4)",
+    ),
+
+    # Interactive Error Display Styling
+    CSS(
+        ".interactive-error-widget",
+        "border" => "1px solid #dc3545",
+        "border-radius" => "8px",
+        "padding" => "16px",
+        "margin" => "8px 0",
+        "background-color" => "var(--bg-primary)",
+        "box-shadow" => "0 2px 8px rgba(220, 53, 69, 0.15)"
+    ),
+
+    # Error message styling
+    CSS(
+        ".interactive-error-widget h4",
+        "color" => "#dc3545",
+        "margin" => "0 0 8px 0",
+        "font-size" => "1.1em",
+        "font-weight" => "600"
+    ),
+
+    CSS(
+        ".interactive-error-widget pre",
+        "font-family" => "SFMono-Regular, Consolas, Liberation Mono, Menlo, Courier, monospace",
+        "font-size" => "13px",
+        "line-height" => "1.4",
+        "white-space" => "pre-wrap",
+        "word-wrap" => "break-word",
+        "margin" => "8px 0",
+        "padding" => "12px",
+        "border-radius" => "6px",
+        "border" => "1px solid rgba(220, 53, 69, 0.2)"
+    ),
+
+    # Light theme error styling
+    CSS(
+        light_media_query,
+        CSS(
+            ".interactive-error-widget pre",
+            "background-color" => "#f8d7da",
+            "color" => "#721c24"
+        )
+    ),
+
+    # Dark theme error styling
+    CSS(
+        dark_media_query,
+        CSS(
+            ".interactive-error-widget pre",
+            "background-color" => "rgba(220, 53, 69, 0.1)",
+            "color" => "#ffccd5"
+        )
+    ),
+
+    # Stacktrace frame styling
+    CSS(
+        ".interactive-error-widget .collapsible-content > div > div",
+        "margin" => "2px 0",
+        "padding" => "4px 8px",
+        "border-left" => "3px solid var(--border-primary)",
+        "font-family" => "SFMono-Regular, Consolas, Liberation Mono, Menlo, Courier, monospace",
+        "font-size" => "12px",
+        "line-height" => "1.4",
+        "border-radius" => "0 4px 4px 0",
+        "transition" => "background-color 0.2s ease"
+    ),
+
+    # Light theme stacktrace frame
+    CSS(
+        light_media_query,
+        CSS(
+            ".interactive-error-widget .collapsible-content > div > div",
+            "background-color" => "rgba(0, 0, 0, 0.05)"
+        ),
+        CSS(
+            ".interactive-error-widget .collapsible-content > div > div:hover",
+            "background-color" => "rgba(0, 0, 0, 0.08)"
+        )
+    ),
+
+    # Dark theme stacktrace frame
+    CSS(
+        dark_media_query,
+        CSS(
+            ".interactive-error-widget .collapsible-content > div > div",
+            "background-color" => "rgba(255, 255, 255, 0.05)"
+        ),
+        CSS(
+            ".interactive-error-widget .collapsible-content > div > div:hover",
+            "background-color" => "rgba(255, 255, 255, 0.08)"
+        )
+    ),
+
+    # Clickable file link styling
+    CSS(
+        ".error-file-link",
+        "color" => "var(--accent-blue)",
+        "text-decoration" => "none",
+        "cursor" => "pointer",
+        "font-family" => "SFMono-Regular, Consolas, Liberation Mono, Menlo, Courier, monospace",
+        "transition" => "all 0.2s ease",
+        "border-radius" => "3px",
+        "padding" => "1px 3px"
+    ),
+
+    CSS(
+        ".error-file-link:hover",
+        "text-decoration" => "underline",
+        "background-color" => "rgba(3, 102, 214, 0.1)"
+    ),
+
+    # Function name styling in stacktrace
+    CSS(
+        ".interactive-error-widget span[style*='font-weight: bold']",
+        "color" => "var(--text-primary)",
+        "font-weight" => "600"
     ),
 
 )

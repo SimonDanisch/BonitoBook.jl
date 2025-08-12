@@ -2,15 +2,27 @@ using Test
 using BonitoBook
 
 path = normpath(joinpath(dirname(pathof(BonitoBook)), "..", "docs", "examples"))
-server = BonitoBook.book(joinpath(path, "intro.md"); replace_style=true, openbrowser=false)
-BonitoBook.book(joinpath(path, "sunny.ipynb"); openbrowser=false)
-# test new creation
-BonitoBook.book(joinpath(path, "test.md"); openbrowser=false)
 
-# Actually run all cells!
-InlineBook(joinpath(path, "intro.md"), replace_style=true)
-InlineBook(joinpath(path, "sunny.ipynb"), replace_style=true)
-InlineBook(joinpath(path, "test.md"), replace_style=true)
+
+for f in readdir(path; join=true)
+    if endswith(f, ".md")
+        # First replace all styles
+        name = basename(splitext(f)[1])
+        b = BonitoBook.Book(f; replace_style=name != "book-example")
+        zip_path = joinpath(path, "$(name).zip")
+        BonitoBook.export_zip(b, zip_path)
+        b2 = BonitoBook.Book(zip_path)
+        @test b2 isa Book
+        rm(zip_path, force=true)
+        rm(joinpath(path, name); force=true, recursive=true)
+    end
+end
+
+
+# Actually run all cells in the book!
+InlineBook(joinpath(path, "intro.md"))
+InlineBook(joinpath(path, "sunny.ipynb"))
+InlineBook(joinpath(path, "test.md"))
 
 
 @test isfile(joinpath(path, "test.md"))
