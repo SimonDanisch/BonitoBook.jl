@@ -50,6 +50,7 @@ However, direct matrix inversion is computationally expensive and numerically un
 **Theorem 2.1** (LU Decomposition): *Any nonsingular matrix $\mathbf{A}$ can be factored as $\mathbf{A} = \mathbf{L}\mathbf{U}$, where $\mathbf{L}$ is lower triangular and $\mathbf{U}$ is upper triangular.*
 
 ```julia (editor=true, logging=false, output=true)
+using LinearAlgebra
 # Simple matrix operations example (no external dependencies)
 A = [4.0 3.0 2.0; 3.0 4.0 -1.0; 2.0 -1.0 4.0]
 b = [1.0, 2.0, 3.0]
@@ -619,4 +620,3 @@ Dr. Example Author is a Professor of Computational Mathematics at the Institute 
 **Keywords:** computational mathematics, numerical methods, scientific computing, optimization, data analysis
 
 **Subject Classification:** 65-XX (Numerical analysis), 68W25 (Approximation algorithms), 90C06 (Large-scale problems)
-
