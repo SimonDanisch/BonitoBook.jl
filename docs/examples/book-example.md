@@ -50,27 +50,20 @@ However, direct matrix inversion is computationally expensive and numerically un
 **Theorem 2.1** (LU Decomposition): *Any nonsingular matrix $\mathbf{A}$ can be factored as $\mathbf{A} = \mathbf{L}\mathbf{U}$, where $\mathbf{L}$ is lower triangular and $\mathbf{U}$ is upper triangular.*
 
 ```julia (editor=true, logging=false, output=true)
-using LinearAlgebra
-
-# Demonstrate LU decomposition
+# Simple matrix operations example (no external dependencies)
 A = [4.0 3.0 2.0; 3.0 4.0 -1.0; 2.0 -1.0 4.0]
 b = [1.0, 2.0, 3.0]
 
-# Perform LU decomposition
-F = lu(A)
-L, U, p = F.L, F.U, F.p
-
-# Solve the system
-x = A \ b
+# Basic matrix operations
+det_A = det(A)  # Built-in determinant function
+x = A \ b       # Built-in linear solver
 
 DOM.div(
     DOM.div("Original matrix A:", style="font-weight: bold; color: #2c3e50; margin-bottom: 8px;"),
     DOM.pre(string(A), style="background-color: #f8f9fa; padding: 8px; border-radius: 4px; margin-bottom: 12px;"),
-    DOM.div("Lower triangular L:", style="font-weight: bold; color: #2c3e50; margin-bottom: 8px;"),
-    DOM.pre(string(L), style="background-color: #f8f9fa; padding: 8px; border-radius: 4px; margin-bottom: 12px;"),
-    DOM.div("Upper triangular U:", style="font-weight: bold; color: #2c3e50; margin-bottom: 8px;"),
-    DOM.pre(string(U), style="background-color: #f8f9fa; padding: 8px; border-radius: 4px; margin-bottom: 12px;"),
-    DOM.div("Solution x:", style="font-weight: bold; color: #2c3e50; margin-bottom: 8px;"),
+    DOM.div("Determinant of A:", style="font-weight: bold; color: #2c3e50; margin-bottom: 8px;"),
+    DOM.pre(string(det_A), style="background-color: #f8f9fa; padding: 8px; border-radius: 4px; margin-bottom: 12px;"),
+    DOM.div("Solution x = A\\b:", style="font-weight: bold; color: #2c3e50; margin-bottom: 8px;"),
     DOM.pre(string(x), style="background-color: #f0f8ff; padding: 8px; border-radius: 4px; border-left: 4px solid #3498db;"),
     style="font-family: monospace;"
 )
@@ -94,8 +87,6 @@ where $h$ is the step size and $t_n = t_{0} + n \cdot h$.
 **Example 2.1**: Consider the exponential growth equation $\frac{dy}{dt} = ky$ with initial condition $y(0) = y_{0}$.
 
 ```julia (editor=true, logging=false, output=true)
-using WGLMakie
-
 function euler_method(f, y0, t_span, h)
     t_start, t_end = t_span
     t = t_start:h:t_end
@@ -106,33 +97,58 @@ function euler_method(f, y0, t_span, h)
         y[i] = y[i-1] + h * f(t[i-1], y[i-1])
     end
 
-    return t, y
+    return collect(t), y
 end
 
 # Define the differential equation dy/dt = 0.5*y
 f(t, y) = 0.5 * y
 
 # Solve numerically
-t, y_numerical = euler_method(f, 1.0, (0.0, 4.0), 0.1)
+t, y_numerical = euler_method(f, 1.0, (0.0, 4.0), 0.4)
 
 # Analytical solution for comparison
-y_analytical = exp.(0.5 .* collect(t))
+y_analytical = exp.(0.5 .* t)
 
 # Create visualization
-fig = Figure(size = (600, 400))
+using WGLMakie
+fig = Figure(resolution = (600, 400))
 ax = Axis(fig[1, 1],
     xlabel = "Time t",
     ylabel = "y(t)",
-    title = "Comparison of Numerical and Analytical Solutions"
+    title = "Euler Method vs Analytical Solution"
 )
 
-lines!(ax, collect(t), y_numerical, label = "Numerical (Euler)",
+lines!(ax, t, y_numerical, label = "Numerical (Euler)",
        linestyle = :dash, linewidth = 2, color = :red)
-lines!(ax, collect(t), y_analytical, label = "Analytical",
+lines!(ax, t, y_analytical, label = "Analytical",
        linewidth = 2, color = :blue)
 
 axislegend(ax, position = :lt)
-fig
+
+# Also show numerical comparison
+DOM.div(
+    fig,
+    DOM.h4("Numerical Comparison", style="color: #2c3e50; margin: 20px 0 12px 0;"),
+    DOM.table(
+        DOM.thead(
+            DOM.tr(
+                DOM.th("Time t", style="padding: 8px; background-color: #2c3e50; color: white;"),
+                DOM.th("Numerical", style="padding: 8px; background-color: #2c3e50; color: white;"),
+                DOM.th("Analytical", style="padding: 8px; background-color: #2c3e50; color: white;"),
+                DOM.th("Error", style="padding: 8px; background-color: #2c3e50; color: white;")
+            )
+        ),
+        DOM.tbody([
+            DOM.tr(
+                DOM.td(string(round(t[i], digits=2)), style="padding: 8px; border: 1px solid #ddd;"),
+                DOM.td(string(round(y_numerical[i], digits=4)), style="padding: 8px; border: 1px solid #ddd;"),
+                DOM.td(string(round(y_analytical[i], digits=4)), style="padding: 8px; border: 1px solid #ddd;"),
+                DOM.td(string(round(abs(y_numerical[i] - y_analytical[i]), digits=4)), style="padding: 8px; border: 1px solid #ddd;")
+            ) for i in 1:2:min(length(t), 8)  # Show every 2nd point, first 8
+        ]...),
+        style="border-collapse: collapse; margin: 16px 0;"
+    )
+)
 ```
 ---
 
@@ -225,8 +241,6 @@ Numerical integration is essential when analytical integration is impossible or 
 | Gaussian Quadrature |       $O(h^{2n})$ |                       Depends on nodes |               High |
 
 ```julia (editor=true, logging=false, output=true)
-using QuadGK
-
 """
     trapezoidal_rule(f, a, b, n)
 
@@ -244,39 +258,37 @@ end
 # Example: Integrate sin(x) from 0 to π
 f_sin(x) = sin(x)
 
-# Numerical integration
-numerical_result = trapezoidal_rule(f_sin, 0, π, 1000)
-
-# Exact result for comparison
+# Test different numbers of subdivisions
+subdivisions = [10, 50, 100, 500, 1000]
 exact_result = 2.0
 
-# High-precision numerical integration
-precise_result, _ = quadgk(f_sin, 0, π)
+results = []
+for n in subdivisions
+    numerical_result = trapezoidal_rule(f_sin, 0, π, n)
+    error = abs(numerical_result - exact_result)
+    push!(results, (n, numerical_result, error))
+end
 
 DOM.div(
-    DOM.h4("Integration Results", style="color: #2c3e50; margin-bottom: 12px;"),
-    DOM.div(
-        DOM.span("Method", style="font-weight: bold; width: 200px; display: inline-block;"),
-        DOM.span("Result", style="font-weight: bold;")
+    DOM.h4("Trapezoidal Rule Convergence", style="color: #2c3e50; margin-bottom: 12px;"),
+    DOM.table(
+        DOM.thead(
+            DOM.tr(
+                DOM.th("Subdivisions (n)", style="padding: 8px; background-color: #2c3e50; color: white;"),
+                DOM.th("Numerical Result", style="padding: 8px; background-color: #2c3e50; color: white;"),
+                DOM.th("Absolute Error", style="padding: 8px; background-color: #2c3e50; color: white;")
+            )
+        ),
+        DOM.tbody([
+            DOM.tr(
+                DOM.td(string(result[1]), style="padding: 8px; border: 1px solid #ddd;"),
+                DOM.td(string(round(result[2], digits=6)), style="padding: 8px; border: 1px solid #ddd; font-family: monospace;"),
+                DOM.td(string(round(result[3], sigdigits=3)), style="padding: 8px; border: 1px solid #ddd; font-family: monospace;")
+            ) for result in results
+        ]...),
+        style="border-collapse: collapse; margin: 16px 0;"
     ),
-    DOM.hr(),
-    DOM.div(
-        DOM.span("Trapezoidal rule (n=1000):", style="width: 200px; display: inline-block;"),
-        DOM.code("$numerical_result", style="background-color: #f0f8ff; padding: 2px 4px; border-radius: 3px;")
-    ),
-    DOM.div(
-        DOM.span("Exact result:", style="width: 200px; display: inline-block;"),
-        DOM.code("$exact_result", style="background-color: #f0f8ff; padding: 2px 4px; border-radius: 3px;")
-    ),
-    DOM.div(
-        DOM.span("High-precision result:", style="width: 200px; display: inline-block;"),
-        DOM.code("$precise_result", style="background-color: #f0f8ff; padding: 2px 4px; border-radius: 3px;")
-    ),
-    DOM.div(
-        DOM.span("Absolute error:", style="width: 200px; display: inline-block;"),
-        DOM.code("$(abs(numerical_result - exact_result))", style="background-color: #ffe6e6; padding: 2px 4px; border-radius: 3px; color: #d32f2f;")
-    ),
-    style="background-color: #f8f9fa; padding: 12px; border-radius: 6px; border-left: 4px solid #2196f3;"
+    DOM.p("Exact result: ∫₀^π sin(x) dx = 2", style="margin-top: 12px; font-style: italic; color: #666;")
 )
 ```
 ---
@@ -302,105 +314,107 @@ s^2 = \frac{1}{n-1}\sum_{i=1}^{n} (x_i - \bar{x})^2
 ```
 
 ```julia (editor=true, logging=false, output=true)
-using Statistics, StatsBase, Distributions, WGLMakie
+# Generate simple sample data using built-in functions
+n_samples = 100
 
-# Generate sample data from different distributions
-n_samples = 1000
-normal_data = rand(Normal(0, 1), n_samples)
-exponential_data = rand(Exponential(1), n_samples)
-uniform_data = rand(Uniform(-2, 2), n_samples)
+# Simple normal-like data (sum of uniform random variables)
+normal_data = [sum(rand(12)) - 6 for _ in 1:n_samples]
 
-# Create comprehensive statistical summary
-function statistical_summary(data, name)
+# Exponential-like data using inverse transform
+exponential_data = [-log(rand()) for _ in 1:n_samples]
+
+# Uniform data
+uniform_data = 4 * rand(n_samples) .- 2  # Uniform[-2, 2]
+
+# Simple statistical functions (built-in Julia functions)
+function simple_stats(data, name)
+    n = length(data)
+    mean_val = sum(data) / n
+    sorted_data = sort(data)
+    median_val = n % 2 == 1 ? sorted_data[div(n+1, 2)] : (sorted_data[div(n, 2)] + sorted_data[div(n, 2) + 1]) / 2
+    variance_val = sum((x - mean_val)^2 for x in data) / (n - 1)
+    std_val = sqrt(variance_val)
+
     DOM.div(
         DOM.h5("$name Distribution", style="color: #2c3e50; margin-bottom: 8px;"),
         DOM.table(
-            DOM.tr(DOM.td("Mean:", style="font-weight: bold; padding: 4px;"), DOM.td("$(mean(data))", style="padding: 4px;")),
-            DOM.tr(DOM.td("Median:", style="font-weight: bold; padding: 4px;"), DOM.td("$(median(data))", style="padding: 4px;")),
-            DOM.tr(DOM.td("Standard Deviation:", style="font-weight: bold; padding: 4px;"), DOM.td("$(std(data))", style="padding: 4px;")),
-            DOM.tr(DOM.td("Variance:", style="font-weight: bold; padding: 4px;"), DOM.td("$(var(data))", style="padding: 4px;")),
-            DOM.tr(DOM.td("Skewness:", style="font-weight: bold; padding: 4px;"), DOM.td("$(StatsBase.skewness(data))", style="padding: 4px;")),
-            DOM.tr(DOM.td("Kurtosis:", style="font-weight: bold; padding: 4px;"), DOM.td("$(StatsBase.kurtosis(data))", style="padding: 4px;")),
+            DOM.tr(DOM.td("Sample Size:", style="font-weight: bold; padding: 4px;"), DOM.td("$n", style="padding: 4px;")),
+            DOM.tr(DOM.td("Mean:", style="font-weight: bold; padding: 4px;"), DOM.td("$(round(mean_val, digits=3))", style="padding: 4px;")),
+            DOM.tr(DOM.td("Median:", style="font-weight: bold; padding: 4px;"), DOM.td("$(round(median_val, digits=3))", style="padding: 4px;")),
+            DOM.tr(DOM.td("Standard Deviation:", style="font-weight: bold; padding: 4px;"), DOM.td("$(round(std_val, digits=3))", style="padding: 4px;")),
+            DOM.tr(DOM.td("Variance:", style="font-weight: bold; padding: 4px;"), DOM.td("$(round(variance_val, digits=3))", style="padding: 4px;")),
+            DOM.tr(DOM.td("Min:", style="font-weight: bold; padding: 4px;"), DOM.td("$(round(minimum(data), digits=3))", style="padding: 4px;")),
+            DOM.tr(DOM.td("Max:", style="font-weight: bold; padding: 4px;"), DOM.td("$(round(maximum(data), digits=3))", style="padding: 4px;")),
             style="border-collapse: collapse; width: 100%;"
         ),
         style="background-color: #f8f9fa; padding: 12px; border-radius: 6px; margin-bottom: 16px; border-left: 4px solid #17a2b8;"
     )
 end
 
-# Display statistical summaries
-summary_normal = statistical_summary(normal_data, "Normal")
-summary_exponential = statistical_summary(exponential_data, "Exponential")
-summary_uniform = statistical_summary(uniform_data, "Uniform")
+# Create simple histogram visualization
+using WGLMakie
+fig = Figure(resolution = (800, 300))
 
-# Create visualization comparing distributions
-fig = Figure(size = (900, 300))
+ax1 = Axis(fig[1, 1], title = "Normal-like Distribution", xlabel = "Value", ylabel = "Frequency")
+hist!(ax1, normal_data, bins = 15, color = (:blue, 0.7))
 
-ax1 = Axis(fig[1, 1], title = "Normal Distribution", xlabel = "Value", ylabel = "Density")
-hist!(ax1, normal_data, bins = 50, normalization = :pdf, color = (:blue, 0.7))
+ax2 = Axis(fig[1, 2], title = "Exponential-like Distribution", xlabel = "Value", ylabel = "Frequency")
+hist!(ax2, exponential_data, bins = 15, color = (:red, 0.7))
 
-ax2 = Axis(fig[1, 2], title = "Exponential Distribution", xlabel = "Value", ylabel = "Density")
-hist!(ax2, exponential_data, bins = 50, normalization = :pdf, color = (:red, 0.7))
+ax3 = Axis(fig[1, 3], title = "Uniform Distribution", xlabel = "Value", ylabel = "Frequency")
+hist!(ax3, uniform_data, bins = 15, color = (:green, 0.7))
 
-ax3 = Axis(fig[1, 3], title = "Uniform Distribution", xlabel = "Value", ylabel = "Density")
-hist!(ax3, uniform_data, bins = 50, normalization = :pdf, color = (:green, 0.7))
-
+# Display statistical summaries with visualization
 DOM.div(
-    DOM.h4("Statistical Summaries", style="color: #2c3e50; margin-bottom: 16px;"),
-    summary_normal,
-    summary_exponential,
-    summary_uniform,
-    DOM.h4("Distribution Comparison", style="color: #2c3e50; margin: 20px 0 16px 0;"),
-    fig
+    DOM.h4("Statistical Analysis Example", style="color: #2c3e50; margin-bottom: 16px;"),
+    fig,
+    DOM.h4("Statistical Summaries", style="color: #2c3e50; margin: 20px 0 16px 0;"),
+    simple_stats(normal_data, "Normal-like"),
+    simple_stats(exponential_data, "Exponential-like"),
+    simple_stats(uniform_data, "Uniform"),
+    DOM.p("This example demonstrates basic statistical calculations using only built-in Julia functions.",
+          style="margin-top: 20px; font-style: italic; color: #666;")
 )
 ```
-### Advanced Visualization Techniques
+### Data Visualization Example
 
-Effective visualization is crucial for communicating computational results. We demonstrate several advanced plotting techniques.
-
-**Figure 4.1**: Multi-dimensional data visualization using various plot types.
+Effective visualization is crucial for communicating computational results. Here's a simple example using text-based representation.
 
 ```julia (editor=true, logging=false, output=true)
+# Generate simple dataset
+n_points = 20
+x_data = collect(1:n_points)
+y_data = x_data .+ 2 * randn(n_points)
+
+# Simple correlation analysis
+mean_x = sum(x_data) / n_points
+mean_y = sum(y_data) / n_points
+correlation = sum((x_data .- mean_x) .* (y_data .- mean_y)) /
+              sqrt(sum((x_data .- mean_x).^2) * sum((y_data .- mean_y).^2))
+
+# Create scatter plot
 using WGLMakie
-
-# Generate multi-dimensional dataset
-n_points = 100
-x = randn(n_points)
-y = 2*x + randn(n_points) * 0.5
-z = x.^2 + y.^2 + randn(n_points) * 0.3
-
-# Create 3D scatter plot with surface plot
-fig = Figure(size = (900, 400))
-
-# 3D scatter plot
-ax1 = Axis3(fig[1, 1],
+fig = Figure(resolution = (500, 400))
+ax = Axis(fig[1, 1],
     xlabel = "X",
     ylabel = "Y",
-    zlabel = "Z",
-    title = "3D Scatter Plot with Color Mapping"
+    title = "Simple Linear Relationship with Noise"
 )
 
-scatter!(ax1, x, y, z, color = z, colormap = :viridis, markersize = 8)
-Colorbar(fig[1, 2], limits = (minimum(z), maximum(z)), colormap = :viridis, label = "Z Values")
+scatter!(ax, x_data, y_data, color = :blue, markersize = 8, alpha = 0.7)
 
-# Create surface plot demonstrating a mathematical function
-ax2 = Axis3(fig[1, 3],
-    xlabel = "X",
-    ylabel = "Y",
-    zlabel = "Z",
-    title = "Mathematical Surface"
-)
-
-x_surf = range(-2, 2, length=50)
-y_surf = range(-2, 2, length=50)
-z_surf = [exp(-(x^2 + y^2)) * cos(2*sqrt(x^2 + y^2)) for x in x_surf, y in y_surf]
-
-surface!(ax2, x_surf, y_surf, z_surf, colormap = :RdYlBu)
+# Add trend line
+x_line = [minimum(x_data), maximum(x_data)]
+y_line = [mean_y + correlation * sqrt(sum((y_data .- mean_y).^2) / sum((x_data .- mean_x).^2)) * (x - mean_x) for x in x_line]
+lines!(ax, x_line, y_line, color = :red, linewidth = 2, linestyle = :dash)
 
 DOM.div(
-    DOM.h4("Advanced 3D Visualizations", style="color: #2c3e50; margin-bottom: 16px;"),
-    DOM.p("Interactive 3D plots demonstrating multi-dimensional data visualization and mathematical surfaces.",
-          style="color: #666; margin-bottom: 16px;"),
-    fig
+    DOM.h4("Simple Data Visualization", style="color: #2c3e50; margin-bottom: 16px;"),
+    fig,
+    DOM.p("Correlation coefficient: $(round(correlation, digits=3))",
+          style="margin-top: 12px; font-weight: bold; color: #2c3e50;"),
+    DOM.p("Data shows relationship y ≈ x + noise with correlation analysis.",
+          style="margin-top: 8px; font-style: italic; color: #666;")
 )
 ```
 ---
@@ -409,72 +423,68 @@ DOM.div(
 
 This chapter demonstrates the application of computational methods to real-world problems across various scientific domains.
 
-### Optimization Problems
+### Simple Optimization Example
 
-Optimization is central to many computational applications. We examine both constrained and unconstrained optimization problems.
+Optimization is central to many computational applications. Here's a simple gradient descent example.
 
-**Problem 5.1**: Minimize the Rosenbrock function:
-
-```latex
-f(x, y) = (a - x)^2 + b(y - x^2)^2
-```
-
-where $a = 1$ and $b = 100$.
+**Problem 5.1**: Minimize the function $f(x) = x^2 - 4x + 5$ using gradient descent.
 
 ```julia (editor=true, logging=false, output=true)
-using Optim, LineSearches
+# Simple gradient descent implementation
+function gradient_descent(f, df, x0, α=0.1, max_iter=100, tol=1e-6)
+    x = x0
+    history = [x]
 
-# Define the Rosenbrock function
-rosenbrock(x) = (1.0 - x[1])^2 + 100.0 * (x[2] - x[1]^2)^2
+    for i in 1:max_iter
+        grad = df(x)
+        x_new = x - α * grad
 
-# Define the gradient
-function rosenbrock_gradient!(g, x)
-    g[1] = -2.0 * (1.0 - x[1]) - 400.0 * (x[2] - x[1]^2) * x[1]
-    g[2] = 200.0 * (x[2] - x[1]^2)
-    return g
+        if abs(x_new - x) < tol
+            return x_new, i, history
+        end
+
+        x = x_new
+        push!(history, x)
+    end
+
+    return x, max_iter, history
 end
 
-# Define the Hessian
-function rosenbrock_hessian!(h, x)
-    h[1, 1] = 2.0 - 400.0 * x[2] + 1200.0 * x[1]^2
-    h[1, 2] = h[2, 1] = -400.0 * x[1]
-    h[2, 2] = 200.0
-    return h
+# Define function and derivative: f(x) = x² - 4x + 5, f'(x) = 2x - 4
+f(x) = x^2 - 4*x + 5
+df(x) = 2*x - 4
+
+# Find minimum starting from different points
+starting_points = [0.0, 5.0, -2.0]
+results = []
+
+for x0 in starting_points
+    x_min, iters, hist = gradient_descent(f, df, x0)
+    push!(results, (x0, x_min, f(x_min), iters))
 end
-
-# Solve using different algorithms
-x0 = [0.0, 0.0]  # Starting point
-
-# Newton's method
-result_newton = optimize(rosenbrock, rosenbrock_gradient!, rosenbrock_hessian!,
-                        x0, Newton(), Optim.Options(iterations=1000))
-
-# BFGS method
-result_bfgs = optimize(rosenbrock, rosenbrock_gradient!,
-                      x0, BFGS(), Optim.Options(iterations=1000))
 
 DOM.div(
-    DOM.h4("Optimization Results", style="color: #2c3e50; margin-bottom: 16px;"),
-    DOM.div(
-        DOM.h5("Newton's Method", style="color: #e74c3c; margin-bottom: 8px;"),
-        DOM.table(
-            DOM.tr(DOM.td("Solution:", style="font-weight: bold; padding: 4px;"), DOM.td("$(Optim.minimizer(result_newton))", style="padding: 4px; font-family: monospace;")),
-            DOM.tr(DOM.td("Minimum value:", style="font-weight: bold; padding: 4px;"), DOM.td("$(Optim.minimum(result_newton))", style="padding: 4px; font-family: monospace;")),
-            DOM.tr(DOM.td("Iterations:", style="font-weight: bold; padding: 4px;"), DOM.td("$(Optim.iterations(result_newton))", style="padding: 4px; font-family: monospace;")),
-            style="border-collapse: collapse; width: 100%;"
+    DOM.h4("Gradient Descent Results", style="color: #2c3e50; margin-bottom: 16px;"),
+    DOM.table(
+        DOM.thead(
+            DOM.tr(
+                DOM.th("Starting Point", style="padding: 8px; background-color: #2c3e50; color: white;"),
+                DOM.th("Minimum x", style="padding: 8px; background-color: #2c3e50; color: white;"),
+                DOM.th("f(x_min)", style="padding: 8px; background-color: #2c3e50; color: white;"),
+                DOM.th("Iterations", style="padding: 8px; background-color: #2c3e50; color: white;")
+            )
         ),
-        style="background-color: #fff5f5; padding: 12px; border-radius: 6px; margin-bottom: 12px; border-left: 4px solid #e74c3c;"
+        DOM.tbody([
+            DOM.tr(
+                DOM.td(string(result[1]), style="padding: 8px; border: 1px solid #ddd;"),
+                DOM.td(string(round(result[2], digits=4)), style="padding: 8px; border: 1px solid #ddd; font-family: monospace;"),
+                DOM.td(string(round(result[3], digits=4)), style="padding: 8px; border: 1px solid #ddd; font-family: monospace;"),
+                DOM.td(string(result[4]), style="padding: 8px; border: 1px solid #ddd;")
+            ) for result in results
+        ]...),
+        style="border-collapse: collapse; margin: 16px 0;"
     ),
-    DOM.div(
-        DOM.h5("BFGS Method", style="color: #3498db; margin-bottom: 8px;"),
-        DOM.table(
-            DOM.tr(DOM.td("Solution:", style="font-weight: bold; padding: 4px;"), DOM.td("$(Optim.minimizer(result_bfgs))", style="padding: 4px; font-family: monospace;")),
-            DOM.tr(DOM.td("Minimum value:", style="font-weight: bold; padding: 4px;"), DOM.td("$(Optim.minimum(result_bfgs))", style="padding: 4px; font-family: monospace;")),
-            DOM.tr(DOM.td("Iterations:", style="font-weight: bold; padding: 4px;"), DOM.td("$(Optim.iterations(result_bfgs))", style="padding: 4px; font-family: monospace;")),
-            style="border-collapse: collapse; width: 100%;"
-        ),
-        style="background-color: #f0f8ff; padding: 12px; border-radius: 6px; border-left: 4px solid #3498db;"
-    )
+    DOM.p("Analytical minimum: x = 2, f(2) = 1", style="margin-top: 12px; font-style: italic; color: #666;")
 )
 ```
 ### Monte Carlo Methods
@@ -492,21 +502,23 @@ I \approx \frac{b-a}{n} \sum_{i=1}^{n} f(x_i)
 where $x_i$ are uniformly distributed random points in $[a,b]$.
 
 ```julia (editor=true, logging=false, output=true)
-using Random
-Random.seed!(42)  # For reproducibility
-
 """
     monte_carlo_integrate(f, a, b, n)
 
 Estimate integral of f from a to b using n random samples.
 """
 function monte_carlo_integrate(f, a, b, n)
+    # Generate random points in [a,b]
     x_samples = a .+ (b - a) .* rand(n)
     f_values = f.(x_samples)
-    integral_estimate = (b - a) * mean(f_values)
 
-    # Estimate error using standard error
-    error_estimate = (b - a) * std(f_values) / sqrt(n)
+    # Monte Carlo estimate
+    mean_f = sum(f_values) / n
+    integral_estimate = (b - a) * mean_f
+
+    # Simple error estimate
+    variance_f = sum((f_val - mean_f)^2 for f_val in f_values) / (n - 1)
+    error_estimate = (b - a) * sqrt(variance_f / n)
 
     return integral_estimate, error_estimate
 end
@@ -514,60 +526,39 @@ end
 # Test with a known integral: ∫₀^π sin(x) dx = 2
 f_test(x) = sin(x)
 
-sample_sizes = [100, 1000, 10000, 100000]
+sample_sizes = [100, 500, 1000, 5000]
 results = []
 
 for n in sample_sizes
     estimate, error = monte_carlo_integrate(f_test, 0, π, n)
-    push!(results, (n, estimate, error, abs(estimate - 2.0)))
+    true_error = abs(estimate - 2.0)
+    push!(results, (n, estimate, error, true_error))
 end
 
-# Create table of results
-results_table = DOM.table(
-    DOM.thead(
-        DOM.tr(
-            DOM.th("Sample Size", style="padding: 8px; text-align: left; font-weight: bold; background-color: #2c3e50; color: white;"),
-            DOM.th("Estimate", style="padding: 8px; text-align: left; font-weight: bold; background-color: #2c3e50; color: white;"),
-            DOM.th("Error Estimate", style="padding: 8px; text-align: left; font-weight: bold; background-color: #2c3e50; color: white;"),
-            DOM.th("True Error", style="padding: 8px; text-align: left; font-weight: bold; background-color: #2c3e50; color: white;")
-        )
-    ),
-    DOM.tbody([
-        DOM.tr(
-            DOM.td("$(r[1])", style="padding: 8px; border: 1px solid #ddd;"),
-            DOM.td("$(round(r[2], digits=6))", style="padding: 8px; border: 1px solid #ddd; font-family: monospace;"),
-            DOM.td("±$(round(r[3], digits=6))", style="padding: 8px; border: 1px solid #ddd; font-family: monospace;"),
-            DOM.td("$(round(r[4], digits=6))", style="padding: 8px; border: 1px solid #ddd; font-family: monospace;")
-        ) for r in results
-    ]...),
-    style="border-collapse: collapse; width: 100%; margin: 16px 0;"
-)
-
-# Demonstrate convergence
-errors = [r[4] for r in results]
-
-fig = Figure(size = (600, 400))
-ax = Axis(fig[1, 1],
-    xlabel = "Number of Samples",
-    ylabel = "Absolute Error",
-    title = "Monte Carlo Integration Convergence",
-    xscale = log10,
-    yscale = log10
-)
-
-scatterlines!(ax, sample_sizes, errors, label = "Monte Carlo Error",
-              color = :red, markersize = 8, linewidth = 2)
-lines!(ax, sample_sizes, 1.0 ./ sqrt.(sample_sizes),
-       label = "1/√n theoretical", linestyle = :dash,
-       color = :blue, linewidth = 2)
-
-axislegend(ax, position = :rb)
-
+# Display results
 DOM.div(
-    DOM.h4("Monte Carlo Integration Results", style="color: #2c3e50; margin-bottom: 16px;"),
-    results_table,
-    DOM.h5("Convergence Analysis", style="color: #2c3e50; margin: 20px 0 12px 0;"),
-    fig
+    DOM.h4("Monte Carlo Integration: ∫₀^π sin(x) dx", style="color: #2c3e50; margin-bottom: 16px;"),
+    DOM.table(
+        DOM.thead(
+            DOM.tr(
+                DOM.th("Sample Size", style="padding: 8px; background-color: #2c3e50; color: white;"),
+                DOM.th("Estimate", style="padding: 8px; background-color: #2c3e50; color: white;"),
+                DOM.th("Error Est.", style="padding: 8px; background-color: #2c3e50; color: white;"),
+                DOM.th("True Error", style="padding: 8px; background-color: #2c3e50; color: white;")
+            )
+        ),
+        DOM.tbody([
+            DOM.tr(
+                DOM.td(string(r[1]), style="padding: 8px; border: 1px solid #ddd;"),
+                DOM.td(string(round(r[2], digits=4)), style="padding: 8px; border: 1px solid #ddd; font-family: monospace;"),
+                DOM.td(string(round(r[3], digits=4)), style="padding: 8px; border: 1px solid #ddd; font-family: monospace;"),
+                DOM.td(string(round(r[4], digits=4)), style="padding: 8px; border: 1px solid #ddd; font-family: monospace;")
+            ) for r in results
+        ]...),
+        style="border-collapse: collapse; margin: 16px 0;"
+    ),
+    DOM.p("Exact value: 2.0", style="margin-top: 12px; font-style: italic; color: #666;"),
+    DOM.p("Note: Error generally decreases as 1/√n with sample size n.", style="margin-top: 8px; font-style: italic; color: #666;")
 )
 ```
 ---
@@ -628,4 +619,3 @@ Dr. Example Author is a Professor of Computational Mathematics at the Institute 
 **Keywords:** computational mathematics, numerical methods, scientific computing, optimization, data analysis
 
 **Subject Classification:** 65-XX (Numerical analysis), 68W25 (Approximation algorithms), 90C06 (Large-scale problems)
-
