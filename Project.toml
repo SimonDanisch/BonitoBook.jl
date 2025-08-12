@@ -24,6 +24,7 @@ TOML = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
 UUIDs = "cf7118a7-6976-5b1a-9a39-7adc72f591a4"
 WGLMakie = "276b4fcb-3e11-5398-bf8b-a0c2d153d008"
 ZipFile = "a5390f91-8eb1-5f08-bee0-b1d1ffed6cea"
+p7zip_jll = "3f19e933-33d8-53b3-aaab-bd5110c3b7a0"
 
 [weakdeps]
 AlgebraOfGraphics = "cbdf2221-f076-402e-a563-3d30da359d67"
@@ -61,6 +62,7 @@ UUIDs = "1"
 WGLMakie = "0.11.2, 0.12, 0.13"
 ZipFile = "0.9, 0.10"
 julia = "1.10"
+p7zip_jll = "17"
 
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
