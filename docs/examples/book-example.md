@@ -111,7 +111,7 @@ y_analytical = exp.(0.5 .* t)
 
 # Create visualization
 using WGLMakie
-fig = Figure(resolution = (600, 400))
+fig = Figure(size = (600, 400))
 ax = Axis(fig[1, 1],
     xlabel = "Time t",
     ylabel = "y(t)",
@@ -353,7 +353,7 @@ end
 
 # Create simple histogram visualization
 using WGLMakie
-fig = Figure(resolution = (800, 300))
+fig = Figure(size = (800, 300))
 
 ax1 = Axis(fig[1, 1], title = "Normal-like Distribution", xlabel = "Value", ylabel = "Frequency")
 hist!(ax1, normal_data, bins = 15, color = (:blue, 0.7))
@@ -394,7 +394,7 @@ correlation = sum((x_data .- mean_x) .* (y_data .- mean_y)) /
 
 # Create scatter plot
 using WGLMakie
-fig = Figure(resolution = (500, 400))
+fig = Figure(size = (500, 400))
 ax = Axis(fig[1, 1],
     xlabel = "X",
     ylabel = "Y",
