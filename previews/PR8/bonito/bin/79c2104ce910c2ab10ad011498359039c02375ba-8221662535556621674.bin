@@ -1,0 +1,30 @@
+’Ç,j“Ù$a9ef256d-43ab-4b29-957d-a1ebe52e02fd€£subšÈ„k’ÇMj“Ù$a53667b0-b043-4ac1-b77d-e3ae647d76b4‚¥20419×e’¥20419Ã¥20430×e’¥20430Â¤root‚§payloadÈf“‚´11430239771711326923Çh¥20430´13517277447306752807Çh¥20419Ú–    const elem = document.querySelector('[data-jscall-id="4462846960363559332"]');
+    __lookup_interpolated('13517277447306752807').on((x) => {
+        if (!x) {
+            elem.classList.add("toggled");
+        } else {
+            elem.classList.remove("toggled");
+        }
+    })
+    elem.addEventListener("click", event=> {
+        __lookup_interpolated('11430239771711326923').notify(true);
+    })
+ÙB/home/runner/work/BonitoBook.jl/BonitoBook.jl/src/components.jl:32¨msg_type¡2È!k’ÇRj“Ù$a53667b0-b043-4ac1-b77d-e3ae647d76b4¥20435Çe’¥20435´Show Full Stacktrace¤rootƒ£obsÇh¥20435§payloadÇ§f“€ÙWreturn (val)=> {
+    document.querySelector('[data-jscall-id="187"]').innerText = val
+}ÙJ/home/runner/.julia/packages/Bonito/Xtz2t/src/rendering/observables.jl:104¨msg_type¡1Èpk’Ç<j“Ù$a9ef256d-43ab-4b29-957d-a1ebe52e02fd¥20420×e’¥20420Â£sub‚§payloadÈf“´17550008571903704866Çh¥20420Ù®(() => {
+    document.querySelector('[data-jscall-id="201"]')['onclick'] = event => {event.preventDefault(); __lookup_interpolated('17550008571903704866').notify(true);}
+})()ÙF/home/runner/work/BonitoBook.jl/BonitoBook.jl/src/error-display.jl:111¨msg_type¡2Ènk’Ç<j“Ù$a9ef256d-43ab-4b29-957d-a1ebe52e02fd¥20421×e’¥20421Â£sub‚§payloadÈf“³4329161273540753210Çh¥20421Ù­(() => {
+    document.querySelector('[data-jscall-id="206"]')['onclick'] = event => {event.preventDefault(); __lookup_interpolated('4329161273540753210').notify(true);}
+})()ÙF/home/runner/work/BonitoBook.jl/BonitoBook.jl/src/error-display.jl:111¨msg_type¡2Ènk’Ç<j“Ù$a9ef256d-43ab-4b29-957d-a1ebe52e02fd¥20422×e’¥20422Â£sub‚§payloadÈf“³1014095290311341981Çh¥20422Ù­(() => {
+    document.querySelector('[data-jscall-id="211"]')['onclick'] = event => {event.preventDefault(); __lookup_interpolated('1014095290311341981').notify(true);}
+})()ÙF/home/runner/work/BonitoBook.jl/BonitoBook.jl/src/error-display.jl:111¨msg_type¡2Èpk’Ç<j“Ù$a9ef256d-43ab-4b29-957d-a1ebe52e02fd¥20423×e’¥20423Â£sub‚§payloadÈf“´11568018544670915437Çh¥20423Ù®(() => {
+    document.querySelector('[data-jscall-id="216"]')['onclick'] = event => {event.preventDefault(); __lookup_interpolated('11568018544670915437').notify(true);}
+})()ÙF/home/runner/work/BonitoBook.jl/BonitoBook.jl/src/error-display.jl:111¨msg_type¡2Ènk’Ç<j“Ù$a9ef256d-43ab-4b29-957d-a1ebe52e02fd¥20424×e’¥20424Â£sub‚§payloadÈf“³2060552969776307965Çh¥20424Ù­(() => {
+    document.querySelector('[data-jscall-id="221"]')['onclick'] = event => {event.preventDefault(); __lookup_interpolated('2060552969776307965').notify(true);}
+})()ÙF/home/runner/work/BonitoBook.jl/BonitoBook.jl/src/error-display.jl:111¨msg_type¡2Èpk’Ç<j“Ù$a9ef256d-43ab-4b29-957d-a1ebe52e02fd¥20425×e’¥20425Â£sub‚§payloadÈf“´18095795393225444982Çh¥20425Ù®(() => {
+    document.querySelector('[data-jscall-id="226"]')['onclick'] = event => {event.preventDefault(); __lookup_interpolated('18095795393225444982').notify(true);}
+})()ÙF/home/runner/work/BonitoBook.jl/BonitoBook.jl/src/error-display.jl:111¨msg_type¡2Ènk’Ç<j“Ù$a9ef256d-43ab-4b29-957d-a1ebe52e02fd¥20426×e’¥20426Â£sub‚§payloadÈf“³9564955420061741604Çh¥20426Ù­(() => {
+    document.querySelector('[data-jscall-id="231"]')['onclick'] = event => {event.preventDefault(); __lookup_interpolated('9564955420061741604').notify(true);}
+})()ÙF/home/runner/work/BonitoBook.jl/BonitoBook.jl/src/error-display.jl:111¨msg_type¡2Èpk’Ç<j“Ù$a9ef256d-43ab-4b29-957d-a1ebe52e02fd¥20427×e’¥20427Â£sub‚§payloadÈf“´16059123556022161028Çh¥20427Ù®(() => {
+    document.querySelector('[data-jscall-id="236"]')['onclick'] = event => {event.preventDefault(); __lookup_interpolated('16059123556022161028').notify(true);}
+})()ÙF/home/runner/work/BonitoBook.jl/BonitoBook.jl/src/error-display.jl:111¨msg_type¡2
