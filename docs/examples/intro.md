@@ -379,7 +379,7 @@ editor_width = "800px" # Adjust editor width;
 
 ## Future
 
-There are lots of plans for whhat can be done in the future.
+There are lots of plans for what can be done in the future.
 
   * While I've been working quite a bit with BonitoBook to make sure everything works well, it's obviously still not battle tested and it will take a while to become rock solid.
   * Rich markdown export for e.g. readme's (inlining output as image/svg)
