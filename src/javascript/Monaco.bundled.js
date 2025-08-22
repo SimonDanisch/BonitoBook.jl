@@ -381,28 +381,23 @@ function add_command(editor, label, keybinding, callback) {
     });
 }
 function resize_to_lines(editor, monaco, editor_div, retryCount = 0) {
-    function updateEditorHeight() {
+    const update_height = ()=>{
+        const contentHeight = editor.getContentHeight();
+        editor_div.style.height = `${contentHeight}px`;
+        console.log("Resizing editor to content height:", contentHeight);
         try {
-            const model = editor.getModel();
-            if (!model) {
-                console.warn('Editor model not available yet');
-                return;
-            }
-            const lineHeight = editor.getOption(monaco.editor.EditorOption.lineHeight);
-            const lineCount = model.getLineCount();
-            const height = lineHeight * lineCount;
-            editor_div.style.height = height + "px";
-            editor.layout();
-        } catch (error) {
-            console.error('Error updating editor height:', error);
+            true;
+            const currentWidth = editor_div.offsetWidth;
+            editor.layout({
+                width: currentWidth,
+                height: contentHeight
+            });
+        } finally{
+            false;
         }
-    }
-    try {
-        editor.onDidChangeModelContent(updateEditorHeight);
-        updateEditorHeight();
-    } catch (error) {
-        console.error('Error setting up resize_to_lines:', error);
-    }
+    };
+    editor.onDidContentSizeChange(update_height);
+    update_height();
 }
 function toggle_elem(show, elem, direction) {
     const hide_class = `hide-${direction}`;

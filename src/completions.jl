@@ -35,9 +35,14 @@ end
 function get_completions(text::String, position::Int, mod::Module)
     completions_list, range_start = REPL.completions(text, position, mod)
     return map(completions_list) do c
+        if c isa REPL.REPLCompletions.BslashCompletion
+            x = c.name
+        else
+            x = REPL.REPLCompletions.completion_text(c)
+        end
         return Dict(
             "kind" => julia_to_monaco_kind(c),
-            "insertText" => REPL.completion_text(c),
+            "insertText" => x,
         )
     end
 end

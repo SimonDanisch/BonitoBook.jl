@@ -129,26 +129,15 @@ axislegend(ax, position = :lt)
 # Also show numerical comparison
 DOM.div(
     fig,
-    DOM.h4("Numerical Comparison", style="color: #2c3e50; margin: 20px 0 12px 0;"),
-    DOM.table(
-        DOM.thead(
-            DOM.tr(
-                DOM.th("Time t", style="padding: 8px; background-color: #2c3e50; color: white;"),
-                DOM.th("Numerical", style="padding: 8px; background-color: #2c3e50; color: white;"),
-                DOM.th("Analytical", style="padding: 8px; background-color: #2c3e50; color: white;"),
-                DOM.th("Error", style="padding: 8px; background-color: #2c3e50; color: white;")
-            )
-        ),
-        DOM.tbody([
-            DOM.tr(
-                DOM.td(string(round(t[i], digits=2)), style="padding: 8px; border: 1px solid #ddd;"),
-                DOM.td(string(round(y_numerical[i], digits=4)), style="padding: 8px; border: 1px solid #ddd;"),
-                DOM.td(string(round(y_analytical[i], digits=4)), style="padding: 8px; border: 1px solid #ddd;"),
-                DOM.td(string(round(abs(y_numerical[i] - y_analytical[i]), digits=4)), style="padding: 8px; border: 1px solid #ddd;")
-            ) for i in 1:2:min(length(t), 8)  # Show every 2nd point, first 8
-        ]...),
-        style="border-collapse: collapse; margin: 16px 0;"
-    )
+    DOM.h4("Numerical Comparison", Styles(
+        "color" => "#2c3e50",
+        "margin" => "20px 0 12px 0"
+    )),
+    Markdown.md"""
+    | Time t | Numerical | Analytical | Error |
+    |--------|-----------|------------|-------|
+    $(join(["| $(round(t[i], digits=2)) | $(round(y_numerical[i], digits=4)) | $(round(y_analytical[i], digits=4)) | $(round(abs(y_numerical[i] - y_analytical[i]), digits=4)) |" for i in 1:2:min(length(t), 8)], "\n    "))
+    """
 )
 ```
 ---
@@ -620,3 +609,4 @@ Dr. Example Author is a Professor of Computational Mathematics at the Institute 
 **Keywords:** computational mathematics, numerical methods, scientific computing, optimization, data analysis
 
 **Subject Classification:** 65-XX (Numerical analysis), 68W25 (Approximation algorithms), 90C06 (Large-scale problems)
+

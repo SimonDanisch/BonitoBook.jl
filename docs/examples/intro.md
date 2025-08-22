@@ -32,8 +32,7 @@ Another big motivation was to have a simple markdown file format which is human 
 
 # Comparison to Pluto
 
-I love the team behind Pluto and the attention to detail that has been put into it, but Pluto itselve has never appealed to me. 
-The Pkg integration and reactive workflow isn't working for me and that most of Pluto is implemented in Javascript instead of Julia doesn't fit my approach of "ecosystem first, notebook second" which I imagine for BonitoBook.
+I love the team behind Pluto and the attention to detail that has been put into it, but Pluto itselve has never appealed to me.  The Pkg integration and reactive workflow isn't working for me and that most of Pluto is implemented in Javascript instead of Julia doesn't fit my approach of "ecosystem first, notebook second" which I imagine for BonitoBook.
 
 The final issue is, that the Makie integration has stalled - you can use Makie in Pluto, but WGLMakie isn't working as well as it could due to several reasons.
 

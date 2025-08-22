@@ -412,33 +412,21 @@ export function add_command(editor, label, keybinding, callback) {
 export function resize_to_lines(editor, monaco, editor_div, retryCount = 0) {
     // Check if editor and required methods exist
     // Resize editor based on content
-    function updateEditorHeight() {
+    let ignoreEvent = false;
+    const update_height = () => {
+        const contentHeight = editor.getContentHeight();
+        editor_div.style.height = `${contentHeight}px`;
         try {
-            const model = editor.getModel();
-            if (!model) {
-                console.warn('Editor model not available yet');
-                return;
-            }
-            const lineHeight = editor.getOption(
-                monaco.editor.EditorOption.lineHeight
-            );
-            const lineCount = model.getLineCount();
-            const height = lineHeight * lineCount;
-            editor_div.style.height = height + "px";
-            editor.layout();
-        } catch (error) {
-            console.error('Error updating editor height:', error);
+            ignoreEvent = true;
+            // Get the current width of the editor div to maintain it
+            const currentWidth = editor_div.offsetWidth;
+            editor.layout({ width: currentWidth, height: contentHeight });
+        } finally {
+            ignoreEvent = false;
         }
-    }
-
-    // Update height on content change
-    try {
-        // Initial resize
-        editor.onDidChangeModelContent(updateEditorHeight);
-        updateEditorHeight();
-    } catch (error) {
-        console.error('Error setting up resize_to_lines:', error);
-    }
+    };
+    editor.onDidContentSizeChange(update_height);
+    update_height();
 }
 
 export function toggle_elem(show, elem, direction) {

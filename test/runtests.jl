@@ -3,7 +3,6 @@ using BonitoBook
 
 path = normpath(joinpath(dirname(pathof(BonitoBook)), "..", "docs", "examples"))
 
-
 for f in readdir(path; join=true)
     if endswith(f, ".md")
         # First replace all styles

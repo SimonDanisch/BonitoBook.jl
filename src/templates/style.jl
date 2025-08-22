@@ -6,7 +6,7 @@ editor_width = "90ch"
 max_height_large = "80vh"
 max_height_medium = "60vh"
 border_radius_small = "3px"
-border_radius_large = "10px"
+border_radius_large = "5px"
 transition_fast = "0.1s ease-out"
 transition_slow = "0.2s ease-in"
 font_family_clean = "'Inter', 'Roboto', 'Arial', sans-serif"
@@ -61,9 +61,9 @@ Styles(
             "--text-secondary" => "#555555",
             "--border-primary" => "rgba(0, 0, 0, 0.1)",
             "--border-secondary" => "#ccc",
-            "--shadow-soft" => "0 4px 8px rgba(0, 0, 51, 0.2)",
-            "--shadow-button" => "0 2px 4px rgba(0, 0, 0, 0.2)",
-            "--shadow-inset" => "inset 2px 2px 5px rgba(0, 0, 0, 0.5)",
+            "--shadow-soft" => "0 0 4px rgba(0, 0, 51, 0.2)",
+            "--shadow-button" => "0 1px 3px rgba(0, 0, 0, 0.2)",
+            "--shadow-inset" => "inset 1px 1px 3px rgba(0, 0, 0, 0.2)",
             "--hover-bg" => "#ddd",
             "--menu-hover-bg" => "rgba(0, 0, 0, 0.05)",
             "--accent-blue" => "#0366d6",
@@ -88,9 +88,9 @@ Styles(
             "--text-secondary" => "rgb(212, 212, 212)",
             "--border-primary" => "rgba(255, 255, 255, 0.1)",
             "--border-secondary" => "rgba(255, 255, 255, 0.1)",
-            "--shadow-soft" => "0 4px 8px rgba(255, 255, 255, 0.2)",
-            "--shadow-button" => "0 2px 4px rgba(255, 255, 255, 0.2)",
-            "--shadow-inset" => "inset 2px 2px 3px rgba(0, 0, 0, 0.5)",
+            "--shadow-soft" => "0 0 4px rgba(255, 255, 255, 0.2)",
+            "--shadow-button" => "0 1px 3px rgba(255, 255, 255, 0.2)",
+            "--shadow-inset" => "inset 1px 1px 2px rgba(0, 0, 0, 0.5)",
             "--hover-bg" => "rgba(255, 255, 255, 0.1)",
             "--menu-hover-bg" => "rgba(255, 255, 255, 0.05)",
             "--accent-blue" => "#0366d6",
@@ -1399,7 +1399,7 @@ Styles(
     # Cell editor focus highlight - target elements that have both classes
     CSS(
         ".cell-editor.focused",
-        "box-shadow" => "0 4px 8px rgba(3, 102, 214, 0.4)",
+        "box-shadow" => "0 0 4px var(--accent-blue)",
     ),
 
     # Interactive Error Display Styling
@@ -1518,5 +1518,4 @@ Styles(
         "color" => "var(--text-primary)",
         "font-weight" => "600"
     ),
-
 )
