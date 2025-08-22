@@ -6,7 +6,7 @@
 
 ```julia
 using Pkg
-Pkg.add("https://github.com/SimonDanisch/BonitoBook.jl/")
+Pkg.add(url = "https://github.com/SimonDanisch/BonitoBook.jl/")
 using BonitoBook
 # Usage:
 BonitoBook.book("path-to-notebook-file")
