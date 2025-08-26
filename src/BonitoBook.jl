@@ -6,11 +6,11 @@ using UUIDs
 using Pkg
 using ANSIColoredPrinters
 using Logging
-using WGLMakie
 using Markdown
 using Bonito.HTTP
 using JSON3
 using CondaPkg
+using Makie
 
 
 function asset_path(paths...)

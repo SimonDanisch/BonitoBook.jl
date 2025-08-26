@@ -32,17 +32,29 @@ function julia_to_monaco_kind(completion)
     end
 end
 
+
+function insert_text(completion, mod)
+    text = REPL.REPLCompletions.completion_text(completion)
+    if completion isa REPL.REPLCompletions.BslashCompletion
+        completions_list, _, _ = REPL.completions(text, length(text), mod)
+        return REPL.REPLCompletions.completion_text(completions_list[1])
+    else
+        return REPL.REPLCompletions.completion_text(completion)
+    end
+end
+
+function display_text(completion)
+    return REPL.REPLCompletions.completion_text(completion)
+end
+
 function get_completions(text::String, position::Int, mod::Module)
+    @show text position
     completions_list, range_start = REPL.completions(text, position, mod)
     return map(completions_list) do c
-        if c isa REPL.REPLCompletions.BslashCompletion
-            x = c.name
-        else
-            x = REPL.REPLCompletions.completion_text(c)
-        end
         return Dict(
             "kind" => julia_to_monaco_kind(c),
-            "insertText" => x,
+            "insertText" => insert_text(c, mod),
+            "label" => display_text(c),
         )
     end
 end

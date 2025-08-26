@@ -612,7 +612,7 @@ export function register_completions(inbox, outbox) {
     return monaco.then((monaco) => {
         // Register the completion provider
         monaco.languages.registerCompletionItemProvider("julia", {
-            triggerCharacters: [".", "/", ":", "@", "(", "[", '"'],
+            triggerCharacters: [".", "/", ":", "@", "(", "[", '"', "\\"],
             provideCompletionItems: (model, position) => {
                 return new Promise((resolve) => {
                     const line = position.lineNumber;
@@ -631,10 +631,19 @@ export function register_completions(inbox, outbox) {
                     };
                     comm.send(request).then((response) => {
                         const suggestions = response.map((item) => {
+                            // Find the start of the current word/token (typically where backslash starts)
+                            const wordMatch = text.match(/\\[^\\]*$/);
+                            const startColumn = wordMatch ? column - wordMatch[0].length : column;
                             return {
                                 kind: item.kind,
                                 insertText: item.insertText,
-                                label: item.insertText,
+                                label: item.label || item.insertText,
+                                range: {
+                                    startLineNumber: line,
+                                    endLineNumber: line,
+                                    startColumn: startColumn,
+                                    endColumn: column,
+                                }
                             };
                         });
                         resolve({ suggestions: suggestions });

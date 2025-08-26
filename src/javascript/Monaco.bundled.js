@@ -384,7 +384,6 @@ function resize_to_lines(editor, monaco, editor_div, retryCount = 0) {
     const update_height = ()=>{
         const contentHeight = editor.getContentHeight();
         editor_div.style.height = `${contentHeight}px`;
-        console.log("Resizing editor to content height:", contentHeight);
         try {
             true;
             const currentWidth = editor_div.offsetWidth;
@@ -555,10 +554,12 @@ function register_completions(inbox, outbox) {
                 "@",
                 "(",
                 "[",
-                '"'
+                '"',
+                "\\"
             ],
             provideCompletionItems: (model, position)=>{
                 return new Promise((resolve)=>{
+                    console.log("Completion provider called at:", position.lineNumber, position.column);
                     const line = position.lineNumber;
                     const column = position.column;
                     const text = model.getValueInRange({
@@ -574,12 +575,21 @@ function register_completions(inbox, outbox) {
                     };
                     comm.send(request).then((response)=>{
                         const suggestions = response.map((item)=>{
+                            const wordMatch = text.match(/\\[^\\]*$/);
+                            const startColumn = wordMatch ? column - wordMatch[0].length : column;
                             return {
                                 kind: item.kind,
                                 insertText: item.insertText,
-                                label: item.insertText
+                                label: item.label || item.insertText,
+                                range: {
+                                    startLineNumber: line,
+                                    endLineNumber: line,
+                                    startColumn: startColumn,
+                                    endColumn: column
+                                }
                             };
                         });
+                        console.log("Suggestions received:", response);
                         resolve({
                             suggestions: suggestions
                         });
