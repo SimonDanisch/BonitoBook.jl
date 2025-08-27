@@ -559,7 +559,6 @@ function register_completions(inbox, outbox) {
             ],
             provideCompletionItems: (model, position)=>{
                 return new Promise((resolve)=>{
-                    console.log("Completion provider called at:", position.lineNumber, position.column);
                     const line = position.lineNumber;
                     const column = position.column;
                     const text = model.getValueInRange({
@@ -589,7 +588,6 @@ function register_completions(inbox, outbox) {
                                 }
                             };
                         });
-                        console.log("Suggestions received:", response);
                         resolve({
                             suggestions: suggestions
                         });
