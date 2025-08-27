@@ -141,7 +141,7 @@ function Book(file; replace_style = false, all_blocks_as_cell = false)
 
     # Activate the project in the parent directory (where Project.toml is)
     # Load required packages
-    Core.eval(runner.mod, :(using BonitoBook, BonitoBook.Bonito, BonitoBook.Markdown, BonitoBook.Makie))
+    Core.eval(runner.mod, :(using BonitoBook, BonitoBook.Bonito, BonitoBook.Markdown, BonitoBook.WGLMakie))
 
     # Set up style evaluation with single style path
     style_path = joinpath(folder, "styles", "style.jl")
@@ -358,7 +358,7 @@ function setup_editor_callbacks!(book, editor)
 end
 
 "Save book with versioned backup."
-function save(book::Book)
+function WGLMakie.save(book::Book)
     if !isdir(joinpath(book.folder, ".versions"))
         mkpath(joinpath(book.folder, ".versions"))
     end
