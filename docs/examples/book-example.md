@@ -127,17 +127,20 @@ lines!(ax, t, y_analytical, label = "Analytical",
 axislegend(ax, position = :lt)
 
 # Also show numerical comparison
+# Also show numerical comparison
+rows = ["| $(round(t[i], digits=2)) | $(round(y_numerical[i], digits=4)) | $(round(y_analytical[i], digits=4)) | $(round(abs(y_numerical[i] - y_analytical[i]), digits=4)) |" for i in 1:2:min(length(t), 8)]
+rowstr = join(rows, "\n")
 DOM.div(
     fig,
     DOM.h4("Numerical Comparison", Styles(
         "color" => "#2c3e50",
         "margin" => "20px 0 12px 0"
     )),
-    Markdown.md"""
+    Markdown.parse("""
     | Time t | Numerical | Analytical | Error |
     |--------|-----------|------------|-------|
-    $(join(["| $(round(t[i], digits=2)) | $(round(y_numerical[i], digits=4)) | $(round(y_analytical[i], digits=4)) | $(round(abs(y_numerical[i] - y_analytical[i]), digits=4)) |" for i in 1:2:min(length(t), 8)], "\n    "))
-    """
+    $rowstr
+    """)
 )
 ```
 ---
