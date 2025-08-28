@@ -126,7 +126,6 @@ end
 
 parse_source(runner::Nothing, source) = nothing
 
-
 struct RunnerTask
     source::String
     result::Observable{Any}

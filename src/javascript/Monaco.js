@@ -438,10 +438,8 @@ export function toggle_elem(show, elem, direction) {
     }
     if (show) {
         elem.classList.remove(hide_class);
-        elem.classList.add(show_class);
     } else {
         elem.classList.add(hide_class);
-        elem.classList.remove(show_class);
     }
 }
 
@@ -610,10 +608,9 @@ class Connection {
 export function register_completions(inbox, outbox) {
     const comm = new Connection(inbox, outbox);
     return monaco.then((monaco) => {
-        // Register the completion provider
         monaco.languages.registerCompletionItemProvider("julia", {
-            triggerCharacters: [".", "/", ":", "@", "(", "[", '"'],
-            provideCompletionItems: (model, position) => {
+            triggerCharacters: [".", "/", ":", "@", "(", "[", '"', "\\"],
+            provideCompletionItems: (model, position, context, token) => {
                 return new Promise((resolve) => {
                     const line = position.lineNumber;
                     const column = position.column;
@@ -623,21 +620,39 @@ export function register_completions(inbox, outbox) {
                         endLineNumber: line,
                         endColumn: column,
                     });
-                    // Send request to Julia backend
-                    const request = {
-                        text: text,
-                        line: line,
-                        column: column,
-                    };
+                    const request = { text };
+                    const word = model.getWordUntilPosition(position);
+                    // Determine if this is a backslash completion
+                    let need_to_remove_trigger = false;
+                    let prev_char = null;
+                    if (word.startColumn > 1) {
+                        prev_char = model.getValueInRange({
+                            startLineNumber: line,
+                            startColumn: word.startColumn - 1,
+                            endLineNumber: line,
+                            endColumn: word.startColumn,
+                        });
+                        need_to_remove_trigger = prev_char === "\\";
+                    }
                     comm.send(request).then((response) => {
                         const suggestions = response.map((item) => {
+                            let offset = need_to_remove_trigger ? 1 : 0;
+                            if (prev_char === "." && item.insertText.startsWith(".") && item.kind == 16) {
+                                offset = 1;
+                            }
                             return {
                                 kind: item.kind,
                                 insertText: item.insertText,
-                                label: item.insertText,
+                                label: item.label || item.insertText,
+                                range: {
+                                    startLineNumber: line,
+                                    endLineNumber: line,
+                                    startColumn: word.startColumn - offset,
+                                    endColumn: word.endColumn,
+                                },
                             };
                         });
-                        resolve({ suggestions: suggestions });
+                        resolve({ suggestions });
                     });
                 });
             },

@@ -164,13 +164,7 @@ Styles(
         ".bonito-book-embedded pre, .real-book-container pre",
         "font-family" => font_family_mono,
         "font-size" => font_size_small,
-        "background-color" => color_code_bg,
-        "padding" => "1em",
-        "border-radius" => "8px",
-        "border" => "1px solid #e9ecef",
         "overflow-x" => "auto",
-        "margin" => "1.5em 0",
-        "line-height" => "1.4"
     ),
 
     # Academic table styling (scoped)

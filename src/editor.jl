@@ -302,20 +302,18 @@ end
 function render_editor(editor::EvalEditor)
     direction = editor.editor.hiding_direction
     hiding = "hide-$direction"
-    showing = "show-$direction"
     output_class = map(editor.show_output) do show
-        show ? showing : hiding
+        show ? "" : hiding
     end
     logging_class = map(editor.show_logging) do show
-        show ? showing : hiding
+        show ? "" : hiding
     end
     output_div = DOM.div(editor.output, class = map(c -> "cell-output cell-output-$(editor.language) $(c)", output_class))
     logging_html = Observable(HTML(""))
     on(editor.logging_html) do str
-        # Don't wrap in <pre> since ANSIColoredPrinters already provides formatted HTML
         logging_html[] = HTML(str)
     end
-    logging_div = DOM.div(ANSI_CSS, logging_html, class = map(c -> "cell-logging $(c)", logging_class))
+    logging_div = DOM.div(ANSI_CSS, DOM.div(logging_html, class = logging_class))
     # Set the init func, which we can only do here where we have all divs
     editor.editor.js_init_func[] = js"""((editor) => {
         const output_div = $(output_div);
@@ -454,7 +452,7 @@ function Bonito.jsrender(session::Session, editor::CellEditor)
     small_language_indicator = icon(name, size = "10px", class = "small-language-icon")
 
     jleditor_div, logging_div, output_div = render_editor(jleditor)
-    class = any_visible[] ? "show-vertical" : "hide-vertical"
+    class = any_visible[] ? "" : "hide-vertical"
     card_content = DOM.div(
         jleditor_div, logging_div, small_language_indicator;
         class = "cell-editor $class", id = card_content_id, style = "position: relative;"

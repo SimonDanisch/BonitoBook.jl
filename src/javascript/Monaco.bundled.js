@@ -384,7 +384,6 @@ function resize_to_lines(editor, monaco, editor_div, retryCount = 0) {
     const update_height = ()=>{
         const contentHeight = editor.getContentHeight();
         editor_div.style.height = `${contentHeight}px`;
-        console.log("Resizing editor to content height:", contentHeight);
         try {
             true;
             const currentWidth = editor_div.offsetWidth;
@@ -401,17 +400,15 @@ function resize_to_lines(editor, monaco, editor_div, retryCount = 0) {
 }
 function toggle_elem(show, elem, direction) {
     const hide_class = `hide-${direction}`;
-    const show_class = `show-${direction}`;
+    `show-${direction}`;
     if (!elem) {
         console.warn("No element to toggle");
         return;
     }
     if (show) {
         elem.classList.remove(hide_class);
-        elem.classList.add(show_class);
     } else {
         elem.classList.add(hide_class);
-        elem.classList.remove(show_class);
     }
 }
 function setup_cell_editor(eval_editor, buttons_id, container_id, card_content_id, loading_obs, all_visible_obs, hide_on_focus_obs, focused) {
@@ -555,9 +552,10 @@ function register_completions(inbox, outbox) {
                 "@",
                 "(",
                 "[",
-                '"'
+                '"',
+                "\\"
             ],
-            provideCompletionItems: (model, position)=>{
+            provideCompletionItems: (model, position, context, token)=>{
                 return new Promise((resolve)=>{
                     const line = position.lineNumber;
                     const column = position.column;
@@ -568,20 +566,40 @@ function register_completions(inbox, outbox) {
                         endColumn: column
                     });
                     const request = {
-                        text: text,
-                        line: line,
-                        column: column
+                        text
                     };
+                    const word = model.getWordUntilPosition(position);
+                    let need_to_remove_trigger = false;
+                    let prev_char = null;
+                    if (word.startColumn > 1) {
+                        prev_char = model.getValueInRange({
+                            startLineNumber: line,
+                            startColumn: word.startColumn - 1,
+                            endLineNumber: line,
+                            endColumn: word.startColumn
+                        });
+                        need_to_remove_trigger = prev_char === "\\";
+                    }
                     comm.send(request).then((response)=>{
                         const suggestions = response.map((item)=>{
+                            let offset = need_to_remove_trigger ? 1 : 0;
+                            if (prev_char === "." && item.insertText.startsWith(".") && item.kind == 16) {
+                                offset = 1;
+                            }
                             return {
                                 kind: item.kind,
                                 insertText: item.insertText,
-                                label: item.insertText
+                                label: item.label || item.insertText,
+                                range: {
+                                    startLineNumber: line,
+                                    endLineNumber: line,
+                                    startColumn: word.startColumn - offset,
+                                    endColumn: word.endColumn
+                                }
                             };
                         });
                         resolve({
-                            suggestions: suggestions
+                            suggestions
                         });
                     });
                 });

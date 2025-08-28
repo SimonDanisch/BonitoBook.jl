@@ -51,10 +51,6 @@ Styles(
         "body",
         "margin" => "0px",
     ),
-    CSS("pre",
-        "margin-block" => "5px 0px",
-        "font-family" => "'Consolas', 'Monaco', 'Courier New', monospace"
-    ),
     # Light theme colors
     CSS(
         light_media_query,
@@ -266,21 +262,52 @@ Styles(
     # Logging output
     CSS(
         ".cell-logging",
-        "min-height" => "0px",
         "max-height" => "500px",
         "max-width" => editor_width,
         "overflow-y" => "auto",
-        "height" => "fit-content",
         "margin" => "0",
         "padding" => "0",
         "background-color" => "var(--bg-primary)",
         "color" => "var(--text-primary)",
         "white-space" => "pre-wrap",
-        "word-wrap" => "break-word",
-        "height" => "auto",
-        "flex" => "0 0 auto"
+        "word-wrap" => "break-word"
     ),
-
+    # When cell-logging is hidden, it should take no space
+    CSS(
+        ".cell-logging.hide-horizontal, .cell-logging.hide-vertical",
+        "height" => "0",
+        "min-height" => "0",
+        "padding" => "0",
+        "margin" => "0",
+        "overflow" => "hidden"
+    ),
+    # When cell-logging is empty (no content), minimize space
+    CSS(
+        ".cell-logging:empty",
+        "height" => "0",
+        "min-height" => "0",
+        "padding" => "0",
+        "margin" => "0"
+    ),
+    # Make cell-logging a flex container that shrinks when empty
+    CSS(
+        ".cell-logging",
+        "display" => "flex",
+        "flex-direction" => "column",
+        "min-height" => "0"
+    ),
+    # The direct child div should not take space when empty
+    CSS(
+        ".cell-logging > div",
+        "flex" => "0 1 auto",
+        "min-height" => "0",
+        "overflow" => "hidden"
+    ),
+    # When we have actual log content, it should be visible
+    CSS(
+        ".cell-logging pre, .cell-logging .ansi",
+        "margin" => "8px 0"
+    ),
     CSS(
         ".logging-widget",
         "height" => "100%",
