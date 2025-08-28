@@ -536,8 +536,14 @@ function setup_completions(session, cell_module)
     inbox = Observable{Any}([])
     outbox = Observable{Any}([])
     on(session, outbox) do (id, data)
-        completions = get_completions(data["text"], Int(data["column"]) - 1, cell_module)
-        inbox[] = [id, completions]
+        try
+            text = data["text"]
+            completions = get_completions(text, lastindex(text), cell_module)
+            inbox[] = [id, completions]
+        catch e
+            @error "Error getting completions: $e"
+            inbox[] = [id, []]
+        end
         return
     end
     return js"""
