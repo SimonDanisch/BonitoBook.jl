@@ -304,10 +304,10 @@ function render_editor(editor::EvalEditor)
     hiding = "hide-$direction"
     showing = "show-$direction"
     output_class = map(editor.show_output) do show
-        show ? showing : hiding
+        show ? "" : hiding
     end
     logging_class = map(editor.show_logging) do show
-        show ? showing : hiding
+        show ? "" : hiding
     end
     output_div = DOM.div(editor.output, class = map(c -> "cell-output cell-output-$(editor.language) $(c)", output_class))
     logging_html = Observable(HTML(""))

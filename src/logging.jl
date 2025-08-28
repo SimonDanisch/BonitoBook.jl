@@ -106,7 +106,7 @@ const ANSI_CSS = Styles(
     CSS("span.sgr105", "background-color" => "var(--ansi-bright-magenta)"),
     CSS("span.sgr106", "background-color" => "var(--ansi-bright-cyan)"),
     CSS("span.sgr107", "background-color" => "var(--ansi-bright-white)"),
-    
+
     # Whitespace handling for logging widgets
     CSS(".logging-widget", "white-space" => "pre-wrap")
 )
@@ -167,9 +167,6 @@ Render the logging widget as a DOM element.
 - `direction::String`: Direction for show/hide animations ("horizontal" or "vertical")
 """
 function Bonito.jsrender(session::Session, widget::LoggingWidget)
-    direction = widget.direction
-    hiding = "hide-$direction"
-    showing = "show-$direction"
     # Create the HTML observable for rendering
     logging_html = Observable(HTML(""))
     on(widget.logging_html) do str
