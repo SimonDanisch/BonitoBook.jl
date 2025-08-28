@@ -400,17 +400,15 @@ function resize_to_lines(editor, monaco, editor_div, retryCount = 0) {
 }
 function toggle_elem(show, elem, direction) {
     const hide_class = `hide-${direction}`;
-    const show_class = `show-${direction}`;
+    `show-${direction}`;
     if (!elem) {
         console.warn("No element to toggle");
         return;
     }
     if (show) {
         elem.classList.remove(hide_class);
-        elem.classList.add(show_class);
     } else {
         elem.classList.add(hide_class);
-        elem.classList.remove(show_class);
     }
 }
 function setup_cell_editor(eval_editor, buttons_id, container_id, card_content_id, loading_obs, all_visible_obs, hide_on_focus_obs, focused) {

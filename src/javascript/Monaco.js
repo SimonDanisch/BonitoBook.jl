@@ -438,10 +438,8 @@ export function toggle_elem(show, elem, direction) {
     }
     if (show) {
         elem.classList.remove(hide_class);
-        elem.classList.add(show_class);
     } else {
         elem.classList.add(hide_class);
-        elem.classList.remove(show_class);
     }
 }
 
