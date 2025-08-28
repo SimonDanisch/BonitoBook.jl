@@ -127,20 +127,22 @@ lines!(ax, t, y_analytical, label = "Analytical",
 axislegend(ax, position = :lt)
 
 # Also show numerical comparison
-# Also show numerical comparison
-rows = ["| $(round(t[i], digits=2)) | $(round(y_numerical[i], digits=4)) | $(round(y_analytical[i], digits=4)) | $(round(abs(y_numerical[i] - y_analytical[i]), digits=4)) |" for i in 1:2:min(length(t), 8)]
-rowstr = join(rows, "\n")
+tab = map(1:2:min(length(t), 8)) do i
+    (
+        Time_t = round(t[i], digits=2),
+        Numerical = round(y_numerical[i], digits=4),
+        Analytical = round(y_analytical[i], digits=4),
+        Error = round(abs(y_numerical[i] - y_analytical[i]), digits=4)
+    )
+end
+
 DOM.div(
     fig,
     DOM.h4("Numerical Comparison", Styles(
         "color" => "#2c3e50",
         "margin" => "20px 0 12px 0"
     )),
-    Markdown.parse("""
-    | Time t | Numerical | Analytical | Error |
-    |--------|-----------|------------|-------|
-    $rowstr
-    """)
+    Bonito.Table(tab)
 )
 ```
 ---
@@ -612,3 +614,4 @@ Dr. Example Author is a Professor of Computational Mathematics at the Institute 
 **Keywords:** computational mathematics, numerical methods, scientific computing, optimization, data analysis
 
 **Subject Classification:** 65-XX (Numerical analysis), 68W25 (Approximation algorithms), 90C06 (Large-scale problems)
+
