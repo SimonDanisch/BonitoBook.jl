@@ -557,7 +557,7 @@ function register_completions(inbox, outbox) {
                 '"',
                 "\\"
             ],
-            provideCompletionItems: (model, position)=>{
+            provideCompletionItems: (model, position, context, token)=>{
                 return new Promise((resolve)=>{
                     const line = position.lineNumber;
                     const column = position.column;
@@ -568,14 +568,26 @@ function register_completions(inbox, outbox) {
                         endColumn: column
                     });
                     const request = {
-                        text: text,
-                        line: line,
-                        column: column
+                        text
                     };
+                    const word = model.getWordUntilPosition(position);
+                    let need_to_remove_trigger = false;
+                    let prev_char = null;
+                    if (word.startColumn > 1) {
+                        prev_char = model.getValueInRange({
+                            startLineNumber: line,
+                            startColumn: word.startColumn - 1,
+                            endLineNumber: line,
+                            endColumn: word.startColumn
+                        });
+                        need_to_remove_trigger = prev_char === "\\";
+                    }
                     comm.send(request).then((response)=>{
                         const suggestions = response.map((item)=>{
-                            const wordMatch = text.match(/\\[^\\]*$/);
-                            const startColumn = wordMatch ? column - wordMatch[0].length : column;
+                            let offset = need_to_remove_trigger ? 1 : 0;
+                            if (prev_char === "." && item.insertText.startsWith(".") && item.kind == 16) {
+                                offset = 1;
+                            }
                             return {
                                 kind: item.kind,
                                 insertText: item.insertText,
@@ -583,13 +595,13 @@ function register_completions(inbox, outbox) {
                                 range: {
                                     startLineNumber: line,
                                     endLineNumber: line,
-                                    startColumn: startColumn,
-                                    endColumn: column
+                                    startColumn: word.startColumn - offset,
+                                    endColumn: word.endColumn
                                 }
                             };
                         });
                         resolve({
-                            suggestions: suggestions
+                            suggestions
                         });
                     });
                 });
