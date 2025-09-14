@@ -373,7 +373,7 @@ function insert_editor_below!(book, editor, editor_above_uuid)
     # Handle special case for inserting at beginning
     if editor_above_uuid == "beginning"
         pushfirst!(book.cells, editor)
-        add_cell_div = new_cell_menu(book, editor.uuid, book.runner)
+        add_cell_div = new_cell_menu(book, editor.uuid, book.runner, editor.language)
         setup_editor_callbacks!(book, editor)
         elem = DOM.div(editor, add_cell_div)
         save(book)  # Save the notebook after cell insertion
@@ -429,7 +429,7 @@ function insert_cell_at!(book, source::String, lang::String, pos)
         if isempty(book.cells)
             # If no cells exist, add directly and handle manually
             push!(book.cells, editor)
-            add_cell_div = new_cell_menu(book, editor.uuid, book.runner)
+            add_cell_div = new_cell_menu(book, editor.uuid, book.runner, editor.language)
             setup_editor_callbacks!(book, editor)
             elem = DOM.div(editor, add_cell_div)
             return Bonito.dom_in_js(
@@ -473,7 +473,7 @@ function insert_cell_at!(book, source::String, lang::String, pos)
     end
 end
 
-function new_cell_menu(book, editor_above_uuid, runner)
+function new_cell_menu(book, editor_above_uuid, runner, above_cell_language = "julia")
     buttons = []
 
     for lang in ALL_LANGUAGES
@@ -503,11 +503,37 @@ function new_cell_menu(book, editor_above_uuid, runner)
         end
     end
 
-    menu_div = DOM.div(
-        icon("add"), buttons...;
-        class = "saving small-menu-bar",
+    # Create the plus icon (just the icon, no button wrapper)
+    plus_value = Observable(false)
+    plus_tooltip = Tooltip(
+        DOM.div("+"),
+        "Add new $(above_cell_language) cell (same as above)";
+        position="top"
     )
-    return DOM.div(Centered(menu_div); class = "new-cell-menu")
+    plus_icon = DOM.div(
+        plus_tooltip;
+        class = "new-cell-plus",
+        onclick = js"event => $(plus_value).notify(true)"
+    )
+
+    # Add click handler to plus icon
+    on(plus_value) do _
+        if above_cell_language == "markdown"
+            new_cell = CellEditor("", above_cell_language, runner; show_editor = true, show_output = false)
+        else
+            new_cell = CellEditor("", above_cell_language, runner)
+        end
+        insert_editor_below!(book, new_cell, editor_above_uuid)
+    end
+
+    # Create the language buttons container
+    buttons_container = DOM.div(buttons...; class = "new-cell-buttons")
+
+    return DOM.div(
+        plus_icon,
+        buttons_container;
+        class = "new-cell-menu"
+    )
 end
 
 prompt(agent, question) = nothing
@@ -572,7 +598,7 @@ function Bonito.jsrender(session::Session, book::Book)
     runner = book.runner
     add_julia_mpc_route!(book)
     cells = map(book.cells) do editor
-        add_cell_div = new_cell_menu(book, editor.uuid, runner)
+        add_cell_div = new_cell_menu(book, editor.uuid, runner, editor.language)
         DOM.div(editor, add_cell_div)
     end
     register_book = js"""

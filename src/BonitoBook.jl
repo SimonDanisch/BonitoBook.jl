@@ -16,7 +16,7 @@ using CondaPkg
 const ALL_LANGUAGES = [
     (name = "julia", icon = "julia-logo", always_available = true, activation_help = "", extension_module = nothing),
     (name = "markdown", icon = "markdown", always_available = true, activation_help = "", extension_module = nothing),
-    (name = "python", icon = "python-logo", always_available = false, activation_help = "Install PythonCall.jl and CondaPkg.jl packages to enable Python support", extension_module = :BonitoBookPythonCallExt)
+    (name = "python", icon = "python-logo", always_available = false, activation_help = "Install and import PythonCall.jl and CondaPkg.jl packages to enable Python support", extension_module = :BonitoBookPythonCallExt)
 ]
 
 

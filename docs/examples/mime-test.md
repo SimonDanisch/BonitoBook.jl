@@ -1,7 +1,18 @@
 # New Book
 
+1 + 1
+
+```julia (editor=true, logging=false, output=true)
+
+```
 ```julia (editor=true, logging=false, output=true)
 ]add DataFrames
+```
+```julia (editor=true, logging=false, output=true)
+
+```
+```julia (editor=true, logging=false, output=true)
+
 ```
 ```python (editor=true, logging=false, output=true)
 1 + 1

@@ -692,30 +692,52 @@ Styles(
     CSS(".markdown-body input", "font" => "inherit", "overflow" => "visible"),
     CSS(".markdown-body *", "box-sizing" => "border-box"),
 
-    # New Cell Menu
+    # New Cell Menu - Redesigned
     CSS(
         ".new-cell-menu",
+        "position" => "relative",
         "width" => "100%",
-        "overflow" => "hidden",
-        "height" => "1.3rem",
-        "background-color" => "transparent",
-        "transition" => "height 0.2s",
+        "height" => "0.5rem", # Reduced space between cells
+        "display" => "flex",
+        "align-items" => "center",
+        "justify-content" => "center", # Center content to help with alignment
+        "padding-left" => "0", # Remove padding to position plus further left
     ),
     CSS(
-        ".new-cell-menu:hover",
-        "height" => "2.5rem",
-        "transition-delay" => "0.1s",
-        "background-color" => "var(--menu-hover-bg)",
+        ".new-cell-plus",
+        "position" => "absolute",
+        "left" => "-1rem",
+        "top" => "-0.5rem",
+        "display" => "flex",
+        "align-items" => "center",
+        "justify-content" => "center",
+        "opacity" => "0.6",
+        "transition" => "opacity 0.2s",
+        "cursor" => "pointer",
+        "font-size" => "0.8em",
+        "font-weight" => "1000",
     ),
     CSS(
-        ".new-cell-menu > *",
-        "opacity" => "0",
-        "transition" => "opacity 0.15s",
-    ),
-    CSS(
-        ".new-cell-menu:hover > *",
+        ".new-cell-menu:hover .new-cell-plus",
         "opacity" => "1",
-        "transition-delay" => "0.1s",
+    ),
+    CSS(
+        ".new-cell-buttons",
+        "position" => "absolute",
+        "left" => "0px",
+        "top" => "0px",
+        "transform" => "translate(0, -50%)", # Center vertically
+        "display" => "flex",
+        "opacity" => "0",
+        "visibility" => "hidden",
+        "transition" => "opacity 0.2s, visibility 0.2s",
+        "z-index" => "1000", # Above other content
+        "padding" => "4px 4px",
+    ),
+    CSS(
+        ".new-cell-menu:hover .new-cell-buttons",
+        "opacity" => "1",
+        "visibility" => "visible",
     ),
 
     # Popup styling for file dialogs
