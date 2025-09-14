@@ -443,7 +443,7 @@ function Bonito.jsrender(session::Session, editor::CellEditor)
     hover_buttons = DOM.div(show_editor, show_logging, out, delete_editor; class = "hover-buttons", id = hover_id)
 
     # Create small always-visible language indicator positioned in bottom right
-    names = Dict(lang.name => lang.icon for lang in ALL_LANGUAGES)
+    names = Dict(lang_name => lang.icon for (lang_name, lang) in ALL_LANGUAGES)
     name = get(names, editor.language, "file-code")
     small_language_indicator = icon(name, size = "10px", class = "small-language-icon")
 

@@ -1,3 +1,5 @@
+using Pkg
+
 """
 Abstract base type for language evaluators.
 Implementations should define eval_code method.
@@ -44,13 +46,11 @@ function eval_code(::JuliaEval, mod::Module, file::String, line::Int, source::St
         if endswith(source, ";")
             return nothing
         else
-            return Base.invokelatest(book_display, res)
+            return res
         end
     end
 end
 
-# PythonCall is now optional and will be loaded via extension
-using Pkg
 
 
 """
@@ -161,11 +161,11 @@ Base implementation includes Julia, extensions are loaded via Base.get_extension
 function get_language_evaluators()
     evaluators = Dict{String, LanguageEval}()
 
-    for lang in ALL_LANGUAGES
+    for (lang_name, lang) in ALL_LANGUAGES
         if lang.always_available
             # Add always available languages
-            if lang.name == "julia"
-                evaluators[lang.name] = JuliaEval()
+            if lang_name == "julia"
+                evaluators[lang_name] = JuliaEval()
             # Markdown doesn't need an evaluator (handled by MarkdownRunner)
             end
         else
@@ -175,15 +175,14 @@ function get_language_evaluators()
                 if ext !== nothing
                     try
                         evaluator = ext.get_language_evaluator()
-                        evaluators[lang.name] = evaluator
+                        evaluators[lang_name] = evaluator
                     catch e
-                        @warn "Failed to get language evaluator for $(lang.name) from extension $(lang.extension_module): $e"
+                        @warn "Failed to get language evaluator for $(lang_name) from extension $(lang.extension_module): $e"
                     end
                 end
             end
         end
     end
-
     return evaluators
 end
 
@@ -302,21 +301,14 @@ function run!(mod::Module, language_evaluators::Dict{String, LanguageEval}, task
     source = task.source
     language = task.language
     try
-        if language == "python" && startswith(source, "]add ")
-            # Special handling for conda package installation
-            @warn "CondaPkg functionality not available without PythonCall extension"
-            result[] = nothing
-        elseif haskey(language_evaluators, language)
-            # Use language-specific evaluator
-            evaluator = language_evaluators[language]
-            eval_result = eval_code(evaluator, mod, "", 1, source)
-            result[] = eval_result
-        else
-            # Default to Julia for unknown languages
-            evaluator = language_evaluators["julia"]
-            eval_result = eval_code(evaluator, mod, "", 1, source)
-            result[] = eval_result
+        # Use language-specific evaluator
+        evaluator = get(language_evaluators, language, nothing)
+        if evaluator === nothing
+            help = get(ALL_LANGUAGES, language, (; activation_help="Language $(language) is not currently implemented. Check out docs to see how to add support for a new language."))
+            throw(ErrorException("No evaluator for language '$language' found. $(help.activation_help)"))
         end
+        eval_result = eval_code(evaluator, mod, "", 1, source)
+        result[] =  Base.invokelatest(book_display, eval_result)
     catch e
         result[] = InteractiveError(e, Base.catch_backtrace())
     end

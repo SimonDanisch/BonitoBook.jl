@@ -476,9 +476,9 @@ end
 function new_cell_menu(book, editor_above_uuid, runner, above_cell_language = "julia")
     buttons = []
 
-    for lang in ALL_LANGUAGES
+    for (lang_name, lang) in ALL_LANGUAGES
         # Check if language has evaluator (always true for always_available languages)
-        is_available = lang.always_available || (isa(runner, AsyncRunner) && haskey(runner.language_evaluators, lang.name))
+        is_available = lang.always_available || (isa(runner, AsyncRunner) && haskey(runner.language_evaluators, lang_name))
 
         # Create button
         button, click = SmallButton(lang.icon; inactive = !is_available)
@@ -487,17 +487,17 @@ function new_cell_menu(book, editor_above_uuid, runner, above_cell_language = "j
         if !is_available && !isempty(lang.activation_help)
             button_tooltip = Tooltip(button, lang.activation_help; position="top")
         else
-            button_tooltip = Tooltip(button, "Add new $(lang.name) cell"; position="top")
+            button_tooltip = Tooltip(button, "Add new $(lang_name) cell"; position="top")
         end
 
         push!(buttons, button_tooltip)
 
         # Always attach handler - inactive buttons won't trigger them
         on(click) do _
-            if lang.name == "markdown"
-                new_cell = CellEditor("", lang.name, runner; show_editor = true, show_output = false)
+            if lang_name == "markdown"
+                new_cell = CellEditor("", lang_name, runner; show_editor = true, show_output = false)
             else
-                new_cell = CellEditor("", lang.name, runner)
+                new_cell = CellEditor("", lang_name, runner)
             end
             insert_editor_below!(book, new_cell, editor_above_uuid)
         end

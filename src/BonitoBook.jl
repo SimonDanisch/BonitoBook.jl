@@ -13,11 +13,11 @@ using JSON3
 using CondaPkg
 
 # Global constant defining all supported languages
-const ALL_LANGUAGES = [
-    (name = "julia", icon = "julia-logo", always_available = true, activation_help = "", extension_module = nothing),
-    (name = "markdown", icon = "markdown", always_available = true, activation_help = "", extension_module = nothing),
-    (name = "python", icon = "python-logo", always_available = false, activation_help = "Install and import PythonCall.jl and CondaPkg.jl packages to enable Python support", extension_module = :BonitoBookPythonCallExt)
-]
+const ALL_LANGUAGES = Dict(
+    "julia" => (icon = "julia-logo", always_available = true, activation_help = "", extension_module = nothing),
+    "markdown" => (icon = "markdown", always_available = true, activation_help = "", extension_module = nothing),
+    "python" => (icon = "python-logo", always_available = false, activation_help = "Install and import PythonCall.jl and CondaPkg.jl packages to enable Python support", extension_module = :BonitoBookPythonCallExt)
+)
 
 
 function asset_path(paths...)
