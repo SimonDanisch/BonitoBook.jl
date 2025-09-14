@@ -1522,4 +1522,33 @@ Styles(
         "color" => "var(--text-primary)",
         "font-weight" => "600"
     ),
+
+    # Minimal DataFrame styling
+    CSS(
+        ".data-frame",
+        "margin" => "1rem 0"
+    ),
+    CSS(
+        ".data-frame table",
+        "border-collapse" => "collapse",
+        "font-size" => "13px"
+    ),
+    CSS(
+        ".data-frame th",
+        "padding" => "8px 12px",
+        "background-color" => "var(--hover-bg)",
+        "font-weight" => "500",
+        "border-bottom" => "1px solid var(--border-primary)"
+    ),
+    CSS(
+        ".data-frame td",
+        "padding" => "6px 12px",
+        "border-bottom" => "1px solid var(--border-primary)"
+    ),
+    CSS(
+        ".data-frame .rowLabel",
+        "background-color" => "var(--hover-bg)",
+        "font-family" => "monospace",
+        "text-align" => "right"
+    ),
 )

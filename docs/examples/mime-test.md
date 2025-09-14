@@ -6,16 +6,22 @@
 using DataFrames
 DataFrame(A=1:3, B=5:7, fixed=1)
 ```
-```julia (editor=true, logging=false, output=true)
-?pretty_table
+```julia (editor=true, logging=true, output=true)
+Bonito.Table(DataFrame(A=1:3, B=5:7, fixed=1))
 ```
 ```julia (editor=true, logging=false, output=true)
-]add Tables 
-```
-```julia (editor=true, logging=false, output=true)
-using Tables
-table = Tables.columntable(collect(i == 5 ? (a = missing, b = "string", c = nothing) :
-                                   (a = i, b = Float64(i), c = 'a'-1+i) for i in 1:10))
+table = [
+    (Name="Alice", Age=28, City="New York", Salary=75000),
+    (Name="Bob", Age=34, City="San Francisco", Salary=95000),
+    (Name="Charlie", Age=29, City="Chicago", Salary=68000),
+    (Name="Diana", Age=31, City="Boston", Salary=82000),
+    (Name="Eve", Age=26, City="Seattle", Salary=78000)
+]
+Bonito.Table(table, class_callback=(t, ir, ic, val) -> begin
+    ic == 4 || return "cell-default"
+    val < 78000 && return "cell-bad"
+    return "cell-good"
+end)
 ```
 ```julia (editor=true, logging=false, output=true)
 ?subsup
@@ -57,6 +63,9 @@ rand(1000, 1000)
 ```
 ```julia (editor=true, logging=false, output=true)
 "hello world"
+```
+```julia (editor=true, logging=false, output=true)
+view("adasd", 1:2)
 ```
 Latex inline
 
