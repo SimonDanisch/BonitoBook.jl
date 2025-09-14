@@ -3,6 +3,12 @@
 ```julia (editor=true, logging=false, output=true)
 ]add DataFrames
 ```
+```python (editor=true, logging=false, output=true)
+1 + 1
+```
+```julia (editor=true, logging=false, output=true)
+
+```
 ```julia (editor=true, logging=false, output=true)
 using DataFrames
 DataFrame(A=1:3, B=5:7, fixed=1)
@@ -60,7 +66,6 @@ rand(1000, 1000)
 "hello world"
 ```
 Latex inline
-
 
 ```latex
 \int_{-\infty}^{\infty} e^{-x^2} dx = \sqrt{\pi} \mathbf{A} = \begin{pmatrix} a_{11} & a_{12} \\ a_{21} & a_{22} \end{pmatrix}

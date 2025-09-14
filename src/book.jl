@@ -474,23 +474,37 @@ function insert_cell_at!(book, source::String, lang::String, pos)
 end
 
 function new_cell_menu(book, editor_above_uuid, runner)
-    new_jl, click_jl = SmallButton("julia-logo")
-    new_md, click_md = SmallButton("markdown")
-    new_py, click_py = SmallButton("python-logo")
-    on(click_py) do click
-        new_cell = CellEditor("", "python", runner)
-        insert_editor_below!(book, new_cell, editor_above_uuid)
+    buttons = []
+
+    for lang in ALL_LANGUAGES
+        # Check if language has evaluator (always true for always_available languages)
+        is_available = lang.always_available || (isa(runner, AsyncRunner) && haskey(runner.language_evaluators, lang.name))
+
+        # Create button
+        button, click = SmallButton(lang.icon; inactive = !is_available)
+
+        # Add tooltip for inactive buttons with activation instructions
+        if !is_available && !isempty(lang.activation_help)
+            button_tooltip = Tooltip(button, lang.activation_help; position="top")
+        else
+            button_tooltip = Tooltip(button, "Add new $(lang.name) cell"; position="top")
+        end
+
+        push!(buttons, button_tooltip)
+
+        # Always attach handler - inactive buttons won't trigger them
+        on(click) do _
+            if lang.name == "markdown"
+                new_cell = CellEditor("", lang.name, runner; show_editor = true, show_output = false)
+            else
+                new_cell = CellEditor("", lang.name, runner)
+            end
+            insert_editor_below!(book, new_cell, editor_above_uuid)
+        end
     end
-    on(click_jl) do click
-        new_cell = CellEditor("", "julia", runner)
-        insert_editor_below!(book, new_cell, editor_above_uuid)
-    end
-    on(click_md) do click
-        new_cell = CellEditor("", "markdown", runner; show_editor = true, show_output = false)
-        insert_editor_below!(book, new_cell, editor_above_uuid)
-    end
+
     menu_div = DOM.div(
-        icon("add"), new_jl, new_md, new_py;
+        icon("add"), buttons...;
         class = "saving small-menu-bar",
     )
     return DOM.div(Centered(menu_div); class = "new-cell-menu")

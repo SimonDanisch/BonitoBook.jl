@@ -1,11 +1,13 @@
 
-function SmallButton(icon_name::String; class = "", kw...)
+function SmallButton(icon_name::String; class = "", inactive = false, kw...)
     value = Observable(false)
     ic = icon(icon_name)
+    final_class = inactive ? "small-button inactive $(class)" : "small-button $(class)"
+    onclick_action = inactive ? js"event=> {}" : js"event=> $(value).notify(true);"
     button_dom = DOM.button(
         ic;
-        onclick = js"event=> $(value).notify(true);",
-        class = "small-button $(class)",
+        onclick = onclick_action,
+        class = final_class,
         kw...,
     )
     return button_dom, value
@@ -804,7 +806,7 @@ const TooltipStyles = Styles(
         "visibility" => "hidden",
         "opacity" => "0",
         "position" => "absolute",
-        "z-index" => "1000",
+        "z-index" => "3000",
         "background-color" => "var(--bg-primary)",
         "color" => "var(--text-primary)",
         "border" => "1px solid var(--border-primary)",

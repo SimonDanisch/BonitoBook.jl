@@ -12,6 +12,13 @@ using Bonito.HTTP
 using JSON3
 using CondaPkg
 
+# Global constant defining all supported languages
+const ALL_LANGUAGES = [
+    (name = "julia", icon = "julia-logo", always_available = true, activation_help = "", extension_module = nothing),
+    (name = "markdown", icon = "markdown", always_available = true, activation_help = "", extension_module = nothing),
+    (name = "python", icon = "python-logo", always_available = false, activation_help = "Install PythonCall.jl and CondaPkg.jl packages to enable Python support", extension_module = :BonitoBookPythonCallExt)
+]
+
 
 function asset_path(paths...)
     return joinpath(@__DIR__, "assets", paths...)
@@ -85,5 +92,7 @@ include("mcp_julia_server.jl")
 
 export Book, ChatComponent, ChatAgent, ChatMessage, MCPJuliaServer, Collapsible, Components, LoggingWidget, export_zip, import_zip, InteractiveError
 export InlineBook
+export LanguageEval, JuliaEval, eval_code, get_language_evaluators
+export ALL_LANGUAGES
 
 end

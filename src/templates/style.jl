@@ -498,6 +498,15 @@ Styles(
         ".small-button:hover",
         "background-color" => "var(--hover-bg)",
     ),
+    CSS(
+        ".small-button.inactive",
+        "opacity" => "0.4",
+        "cursor" => "not-allowed",
+    ),
+    CSS(
+        ".small-button.inactive:hover",
+        "background-color" => "var(--bg-primary)",
+    ),
 
     CSS(
         ".file-tabs-container",

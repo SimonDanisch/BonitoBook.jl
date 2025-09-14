@@ -6,7 +6,7 @@ editor_width = "90ch"
 max_height_large = "80vh"
 max_height_medium = "60vh"
 border_radius_small = "3px"
-border_radius_large = "10px"
+border_radius_large = "5px"
 transition_fast = "0.1s ease-out"
 transition_slow = "0.2s ease-in"
 font_family_clean = "'Inter', 'Roboto', 'Arial', sans-serif"
@@ -51,6 +51,10 @@ Styles(
         "body",
         "margin" => "0px",
     ),
+    CSS("pre",
+        "margin-block" => "5px 0px",
+        "font-family" => "'Consolas', 'Monaco', 'Courier New', monospace"
+    ),
     # Light theme colors
     CSS(
         light_media_query,
@@ -61,9 +65,9 @@ Styles(
             "--text-secondary" => "#555555",
             "--border-primary" => "rgba(0, 0, 0, 0.1)",
             "--border-secondary" => "#ccc",
-            "--shadow-soft" => "0 4px 8px rgba(0, 0, 51, 0.2)",
-            "--shadow-button" => "0 2px 4px rgba(0, 0, 0, 0.2)",
-            "--shadow-inset" => "inset 2px 2px 5px rgba(0, 0, 0, 0.5)",
+            "--shadow-soft" => "0 0 4px rgba(0, 0, 51, 0.2)",
+            "--shadow-button" => "0 1px 3px rgba(0, 0, 0, 0.2)",
+            "--shadow-inset" => "inset 1px 1px 3px rgba(0, 0, 0, 0.2)",
             "--hover-bg" => "#ddd",
             "--menu-hover-bg" => "rgba(0, 0, 0, 0.05)",
             "--accent-blue" => "#0366d6",
@@ -88,9 +92,9 @@ Styles(
             "--text-secondary" => "rgb(212, 212, 212)",
             "--border-primary" => "rgba(255, 255, 255, 0.1)",
             "--border-secondary" => "rgba(255, 255, 255, 0.1)",
-            "--shadow-soft" => "0 4px 8px rgba(255, 255, 255, 0.2)",
-            "--shadow-button" => "0 2px 4px rgba(255, 255, 255, 0.2)",
-            "--shadow-inset" => "inset 2px 2px 3px rgba(0, 0, 0, 0.5)",
+            "--shadow-soft" => "0 0 4px rgba(255, 255, 255, 0.2)",
+            "--shadow-button" => "0 1px 3px rgba(255, 255, 255, 0.2)",
+            "--shadow-inset" => "inset 1px 1px 2px rgba(0, 0, 0, 0.5)",
             "--hover-bg" => "rgba(255, 255, 255, 0.1)",
             "--menu-hover-bg" => "rgba(255, 255, 255, 0.05)",
             "--accent-blue" => "#0366d6",
@@ -262,52 +266,21 @@ Styles(
     # Logging output
     CSS(
         ".cell-logging",
+        "min-height" => "0px",
         "max-height" => "500px",
         "max-width" => editor_width,
         "overflow-y" => "auto",
+        "height" => "fit-content",
         "margin" => "0",
         "padding" => "0",
         "background-color" => "var(--bg-primary)",
         "color" => "var(--text-primary)",
         "white-space" => "pre-wrap",
-        "word-wrap" => "break-word"
+        "word-wrap" => "break-word",
+        "height" => "auto",
+        "flex" => "0 0 auto"
     ),
-    # When cell-logging is hidden, it should take no space
-    CSS(
-        ".cell-logging.hide-horizontal, .cell-logging.hide-vertical",
-        "height" => "0",
-        "min-height" => "0",
-        "padding" => "0",
-        "margin" => "0",
-        "overflow" => "hidden"
-    ),
-    # When cell-logging is empty (no content), minimize space
-    CSS(
-        ".cell-logging:empty",
-        "height" => "0",
-        "min-height" => "0",
-        "padding" => "0",
-        "margin" => "0"
-    ),
-    # Make cell-logging a flex container that shrinks when empty
-    CSS(
-        ".cell-logging",
-        "display" => "flex",
-        "flex-direction" => "column",
-        "min-height" => "0"
-    ),
-    # The direct child div should not take space when empty
-    CSS(
-        ".cell-logging > div",
-        "flex" => "0 1 auto",
-        "min-height" => "0",
-        "overflow" => "hidden"
-    ),
-    # When we have actual log content, it should be visible
-    CSS(
-        ".cell-logging pre, .cell-logging .ansi",
-        "margin" => "8px 0"
-    ),
+
     CSS(
         ".logging-widget",
         "height" => "100%",
@@ -524,6 +497,15 @@ Styles(
     CSS(
         ".small-button:hover",
         "background-color" => "var(--hover-bg)",
+    ),
+    CSS(
+        ".small-button.inactive",
+        "opacity" => "0.4",
+        "cursor" => "not-allowed",
+    ),
+    CSS(
+        ".small-button.inactive:hover",
+        "background-color" => "var(--bg-primary)",
     ),
 
     CSS(
@@ -1399,7 +1381,7 @@ Styles(
     # Cell editor focus highlight - target elements that have both classes
     CSS(
         ".cell-editor.focused",
-        "box-shadow" => "0 4px 8px rgba(3, 102, 214, 0.4)",
+        "box-shadow" => "0 0 4px var(--accent-blue)",
     ),
 
     # Interactive Error Display Styling
@@ -1518,5 +1500,4 @@ Styles(
         "color" => "var(--text-primary)",
         "font-weight" => "600"
     ),
-
 )

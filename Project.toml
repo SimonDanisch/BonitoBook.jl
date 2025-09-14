@@ -17,7 +17,6 @@ Logging = "56ddb016-857b-54e1-b83d-db4d58db5568"
 Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
 Markdown = "d6f4376e-aef5-505a-96c1-9c027394607a"
 Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
-PythonCall = "6099a3de-0909-46bc-b1f4-468b9a2dfc0d"
 REPL = "3fa0cd96-eef1-5676-8a61-b3b8758bbffb"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 TOML = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
@@ -30,15 +29,13 @@ p7zip_jll = "3f19e933-33d8-53b3-aaab-bd5110c3b7a0"
 AlgebraOfGraphics = "cbdf2221-f076-402e-a563-3d30da359d67"
 ClaudeCodeSDK = "38ea0fac-78ee-46bd-bc10-f52e7269b833"
 PromptingTools = "670122d1-24a8-4d70-bfce-740807c42192"
-
-[sources]
-Makie = {rev = "master", subdir = "Makie", url = "https://github.com/MakieOrg/Makie.jl.git"}
-WGLMakie = {rev = "master", subdir = "WGLMakie", url = "https://github.com/MakieOrg/Makie.jl.git"}
+PythonCall = "6099a3de-0909-46bc-b1f4-468b9a2dfc0d"
 
 [extensions]
 BonitoBookAlgebraOfGraphicsExt = "AlgebraOfGraphics"
 BonitoBookClaudeCodeExt = "ClaudeCodeSDK"
 BonitoBookPromptingToolsExt = "PromptingTools"
+BonitoBookPythonCallExt = ["PythonCall", "CondaPkg"]
 
 [compat]
 ANSIColoredPrinters = "0.0.1"
