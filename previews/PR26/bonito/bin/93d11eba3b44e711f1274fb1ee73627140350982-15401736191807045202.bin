@@ -1,0 +1,32 @@
+’Ç,j“Ù$5ee9ee74-460e-4ae7-ac57-5afcfa04fa5a€£sub›È~k’ÇKj“Ù$a93b35ae-6480-443a-95c5-d65594d194af‚¤3632Çe’¤3632Ã¤3644Çe’¤3644Â¤root‚§payloadÈf“‚´17279471110669805309Çh¤3644³7050051620847113367Çh¤3632Ú•    const elem = document.querySelector('[data-jscall-id="4478810633392003827"]');
+    __lookup_interpolated('7050051620847113367').on((x) => {
+        if (!x) {
+            elem.classList.add("toggled");
+        } else {
+            elem.classList.remove("toggled");
+        }
+    })
+    elem.addEventListener("click", event=> {
+        __lookup_interpolated('17279471110669805309').notify(true);
+    })
+ÙB/home/runner/work/BonitoBook.jl/BonitoBook.jl/src/components.jl:34¨msg_type¡2Èk’ÇPj“Ù$a93b35ae-6480-443a-95c5-d65594d194af¤3649Çe’¤3649´Show Full Stacktrace¤rootƒ£obsÇh¤3649§payloadÇ§f“€ÙWreturn (val)=> {
+    document.querySelector('[data-jscall-id="971"]').innerText = val
+}ÙJ/home/runner/.julia/packages/Bonito/Xtz2t/src/rendering/observables.jl:104¨msg_type¡1Èlk’Ç;j“Ù$5ee9ee74-460e-4ae7-ac57-5afcfa04fa5a¤3633Çe’¤3633Â£sub‚§payloadÈf“³4423149626833430351Çh¤3633Ù­(() => {
+    document.querySelector('[data-jscall-id="985"]')['onclick'] = event => {event.preventDefault(); __lookup_interpolated('4423149626833430351').notify(true);}
+})()ÙF/home/runner/work/BonitoBook.jl/BonitoBook.jl/src/error-display.jl:111¨msg_type¡2Èlk’Ç;j“Ù$5ee9ee74-460e-4ae7-ac57-5afcfa04fa5a¤3634Çe’¤3634Â£sub‚§payloadÈf“³4087916867919816727Çh¤3634Ù­(() => {
+    document.querySelector('[data-jscall-id="990"]')['onclick'] = event => {event.preventDefault(); __lookup_interpolated('4087916867919816727').notify(true);}
+})()ÙF/home/runner/work/BonitoBook.jl/BonitoBook.jl/src/error-display.jl:111¨msg_type¡2Ènk’Ç;j“Ù$5ee9ee74-460e-4ae7-ac57-5afcfa04fa5a¤3635Çe’¤3635Â£sub‚§payloadÈf“´15852896469297766989Çh¤3635Ù®(() => {
+    document.querySelector('[data-jscall-id="995"]')['onclick'] = event => {event.preventDefault(); __lookup_interpolated('15852896469297766989').notify(true);}
+})()ÙF/home/runner/work/BonitoBook.jl/BonitoBook.jl/src/error-display.jl:111¨msg_type¡2Èkk’Ç;j“Ù$5ee9ee74-460e-4ae7-ac57-5afcfa04fa5a¤3636Çe’¤3636Â£sub‚§payloadÈf“²910986600451850373Çh¤3636Ù­(() => {
+    document.querySelector('[data-jscall-id="1000"]')['onclick'] = event => {event.preventDefault(); __lookup_interpolated('910986600451850373').notify(true);}
+})()ÙF/home/runner/work/BonitoBook.jl/BonitoBook.jl/src/error-display.jl:111¨msg_type¡2Èmk’Ç;j“Ù$5ee9ee74-460e-4ae7-ac57-5afcfa04fa5a¤3637Çe’¤3637Â£sub‚§payloadÈf“³1366897779302435466Çh¤3637Ù®(() => {
+    document.querySelector('[data-jscall-id="1005"]')['onclick'] = event => {event.preventDefault(); __lookup_interpolated('1366897779302435466').notify(true);}
+})()ÙF/home/runner/work/BonitoBook.jl/BonitoBook.jl/src/error-display.jl:111¨msg_type¡2Èok’Ç;j“Ù$5ee9ee74-460e-4ae7-ac57-5afcfa04fa5a¤3638Çe’¤3638Â£sub‚§payloadÈf“´15649418979704734565Çh¤3638Ù¯(() => {
+    document.querySelector('[data-jscall-id="1010"]')['onclick'] = event => {event.preventDefault(); __lookup_interpolated('15649418979704734565').notify(true);}
+})()ÙF/home/runner/work/BonitoBook.jl/BonitoBook.jl/src/error-display.jl:111¨msg_type¡2Èok’Ç;j“Ù$5ee9ee74-460e-4ae7-ac57-5afcfa04fa5a¤3639Çe’¤3639Â£sub‚§payloadÈf“´15936350741193729608Çh¤3639Ù¯(() => {
+    document.querySelector('[data-jscall-id="1015"]')['onclick'] = event => {event.preventDefault(); __lookup_interpolated('15936350741193729608').notify(true);}
+})()ÙF/home/runner/work/BonitoBook.jl/BonitoBook.jl/src/error-display.jl:111¨msg_type¡2Èok’Ç;j“Ù$5ee9ee74-460e-4ae7-ac57-5afcfa04fa5a¤3640Çe’¤3640Â£sub‚§payloadÈf“´16067517661142562537Çh¤3640Ù¯(() => {
+    document.querySelector('[data-jscall-id="1020"]')['onclick'] = event => {event.preventDefault(); __lookup_interpolated('16067517661142562537').notify(true);}
+})()ÙF/home/runner/work/BonitoBook.jl/BonitoBook.jl/src/error-display.jl:111¨msg_type¡2Èok’Ç;j“Ù$5ee9ee74-460e-4ae7-ac57-5afcfa04fa5a¤3641Çe’¤3641Â£sub‚§payloadÈf“´15558078720057158681Çh¤3641Ù¯(() => {
+    document.querySelector('[data-jscall-id="1025"]')['onclick'] = event => {event.preventDefault(); __lookup_interpolated('15558078720057158681').notify(true);}
+})()ÙF/home/runner/work/BonitoBook.jl/BonitoBook.jl/src/error-display.jl:111¨msg_type¡2
