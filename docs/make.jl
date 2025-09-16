@@ -3,6 +3,9 @@ link = "https://bonitobook.org"
 description = "Interactive notebooks powered by Julia and Bonito"
 
 # Load packages
+using PythonCall # Enable Python integration
+using CondaPkg
+
 using BonitoBook
 using BonitoBook.Bonito
 using Markdown

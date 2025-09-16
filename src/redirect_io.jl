@@ -11,7 +11,7 @@ const REDIRECT_TARGET = Base.RefValue{RedirectTarget}()
 function Base.write(target::RedirectTarget, bytes::AbstractVector{UInt8})
     lock(target.lock) do
         if !isempty(bytes)
-            printer = HTMLPrinter(IOBuffer(bytes); root_tag = "span", root_class="logging-output")
+            printer = HTMLPrinter(IOBuffer(bytes); root_tag = "span")
             str = sprint(io -> show(io, MIME"text/html"(), printer))
             target.observable[] = str
         end

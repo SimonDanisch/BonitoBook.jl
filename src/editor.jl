@@ -311,7 +311,7 @@ function render_editor(editor::EvalEditor)
     output_div = DOM.div(editor.output, class = map(c -> "cell-output cell-output-$(editor.language) $(c)", output_class))
     logging_html = Observable(HTML(""))
     on(editor.logging_html) do str
-        logging_html[] = HTML(str)
+        logging_html[] = HTML("<pre>" * str * "</pre>")
     end
     logging_div = DOM.div(ANSI_CSS, DOM.div(logging_html, class = logging_class))
     # Set the init func, which we can only do here where we have all divs
