@@ -1,5 +1,8 @@
+
+abstract type AbstractBook end
+
 "Interactive book with code cells and execution runner."
-mutable struct Book
+mutable struct Book <: AbstractBook
     file::String
     folder::String
     cells::Vector{CellEditor}
@@ -141,6 +144,29 @@ function Book(user_file::String; folder=nothing, replace_style = false, all_bloc
     Core.eval(runner.mod, :(macro Book(); $(book); end))
     notify(style_eval.file_watcher)
     export_md(markdown_file, book)
+    extension = joinpath(folder, "book.jl")
+    if isfile(extension)
+        @info "Loading book extension: $extension"
+        mod = Base._include(identity, runner.mod, extension)
+        if !(mod isa Module)
+            error("book.jl did not define a module")
+        end
+        variables = map(x-> getfield(mod, x), names(mod, all=true))
+        booktypes = filter(x-> x isa DataType && x <: AbstractBook, variables)
+        if length(booktypes) == 0
+            error("book.jl did not define a subtype of AbstractBook")
+        end
+        if length(booktypes) > 1
+            @warn "book.jl defined multiple subtypes of AbstractBook, using the first one: $(booktypes[1])"
+        end
+        BookType = booktypes[1]
+        return Base.invokelatest() do
+            if !hasmethod(BookType, (BonitoBook.Book,))
+                error("The AbstractBook subtype defined in book.jl must be constructible from a BonitoBook.Book")
+            end
+            return BookType(book)
+        end
+    end
     return book
 end
 
@@ -574,6 +600,7 @@ function setup_completions(session, cell_module)
 end
 
 function standard_setup!(session::Session, book::Book)
+    book.session = session
     for editor in book.cells
         setup_editor_callbacks!(book, editor)
     end

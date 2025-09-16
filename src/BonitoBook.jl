@@ -19,7 +19,6 @@ const ALL_LANGUAGES = Dict(
     "python" => (icon = "python-logo", always_available = false, activation_help = "Install and import PythonCall.jl and CondaPkg.jl packages to enable Python support", extension_module = :BonitoBookPythonCallExt)
 )
 
-
 function asset_path(paths...)
     return joinpath(@__DIR__, "assets", paths...)
 end

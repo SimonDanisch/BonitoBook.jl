@@ -2,7 +2,7 @@
 light_theme = nothing
 
 # Define reusable variables for dimensions and transitions
-editor_width = "90ch"
+editor_width = "60ch"
 max_height_large = "80vh"
 max_height_medium = "60vh"
 border_radius_small = "3px"

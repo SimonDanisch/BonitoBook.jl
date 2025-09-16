@@ -17,6 +17,7 @@ function examples()
         ExampleCard("intro", "A quick intro to BonitoBook, giving a rough overview of the features and how to use them."),
         ExampleCard("sunny", "Sunny.jl uses Makie a lot and they have some wonderful notebooks, which we can import directly from ipynb."),
         ExampleCard("book-example", "An AI generated Book format for BonitoBook, showing how easy it is to completely change the layout."),
+        ExampleCard("draggable_example", "Shows of a completely different layout with draggable cells."),
     ]
     # Filter out nothing values
     example_cards = filter(!isnothing, example_cards)
@@ -37,16 +38,14 @@ include("../examples/.book-example-bbook/book.jl")
 # Add routes for individual example pages
 function add_example_routes!(routes)
     examples_dir = normpath(joinpath(@__DIR__, "..", "examples"))
-    examples = ["intro", "sunny", "book-example"]
-    constructor = Dict("book-example" => RealBook)
+    examples = ["intro", "sunny", "book-example", "draggable_example"]
     for name in examples
+        @show name
         file = joinpath(examples_dir, "$(name).md")
         route_name = "/$(name)"
         routes[route_name] = App(title=name) do
             # Create a book instance for this example
-            # Book needs to be the root element for proper functionality
-            B = get(constructor, name, BonitoBook.InlineBook)
-            return Page(B(file), name)
+            return Page(BonitoBook.InlineBook(file), name)
         end
     end
     return routes

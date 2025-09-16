@@ -1,12 +1,13 @@
-using BonitoBook, Bonito, Dates, Markdown
+module RealBooks
 
+using BonitoBook, Bonito, Dates, Markdown
 
 """
     RealBook
 
 A specialized Book wrapper that provides enhanced academic book features including:
 - Chapter and section numbering
-- Academic layout and typography  
+- Academic layout and typography
 - Enhanced figure and table management
 - Bibliography integration
 - Print-optimized styling
@@ -15,7 +16,7 @@ A specialized Book wrapper that provides enhanced academic book features includi
 This struct wraps the standard BonitoBook.Book and adds academic publishing features
 optimized for web embedding with relative positioning and flexible layout.
 """
-struct RealBook
+struct RealBook <: BonitoBook.AbstractBook
     book::BonitoBook.Book
     title::String
     author::String
@@ -29,7 +30,7 @@ end
 
 
 function RealBook(
-    filename::String;
+    book::BonitoBook.Book;
     title::String = "",
     author::String = "",
     institution::String = "",
@@ -38,10 +39,7 @@ function RealBook(
     toc_enabled::Bool = true,
     chapter_numbering::Bool = true,
     print_optimized::Bool = true,
-    book_kwargs...
 )
-    # Create the underlying Book from the markdown file
-    book = BonitoBook.Book(filename; all_blocks_as_cell=true, book_kwargs...)
     for cell in book.cells
         BonitoBook.run_sync!(cell.editor)
     end
@@ -64,14 +62,14 @@ Custom jsrender for RealBook that adds academic book layout and features.
 function Bonito.jsrender(session::Session, real_book::RealBook)
     # Get the base book rendering
     book = real_book.book
-
+    elements = BonitoBook.standard_setup!(session, book)
 
     # Create table of contents if enabled
     toc_sidebar = real_book.toc_enabled ? create_toc_sidebar_widget(real_book) : DOM.div()
 
     # Wrap the book content with academic structure - optimized for embedding
     academic_book = DOM.div(
-        book.style_eval.last_valid_output,
+        elements,
         # Add custom CSS class for academic styling
         class = "real-book-container",
         style = "display: flex; position: relative; width: auto; max-width: 1200px; margin: 20px auto; overflow: visible; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 12px rgba(0,0,0,0.1);",
@@ -229,4 +227,6 @@ function create_footer(real_book::RealBook)
             style = "font-style: italic;"
         )
     )
+end
+
 end
