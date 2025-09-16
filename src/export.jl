@@ -353,5 +353,5 @@ function import_zip(zip_path::String, target_dir::String="")
     run(`$(p7zip_jll.p7zip()) x -tzip -y -o$(target_dir) $(zip_path)`)
     book_file = joinpath(target_dir, basename(splitext(zip_path)[1]) * ".md")
     @info "Imported book from ZIP to: $book_file"
-    return book_file
+    return book_file, target_dir
 end

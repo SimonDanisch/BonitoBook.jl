@@ -72,6 +72,36 @@ function create_book_structure(bookfile; replace_style=false)
     return folder
 end
 
+function import_bookfile(book_file, folder, replace_style)
+    if !isfile(book_file)
+        write(book_file, """
+        # New Book
+        ```julia (editor=true, logging=false, output=true)
+        ```
+        """)
+    end
+    name, ext = splitext(book_file)
+    if ext == ".zip"
+        @info "Detected ZIP file, importing..."
+        # Import the ZIP file and get the extracted book file path
+        return import_zip(book_file)
+    end
+
+    # Set book.file to point to the .md file where content should be saved
+    if ext == ".md" || ext == ".ipynb"
+        # For .md files, book.file points to the original file
+        # Create folder structure based on the .md file
+        if isnothing(folder)
+            folder = create_book_structure(book_file; replace_style=replace_style)
+        elseif !isdir(folder)
+            error("Provided folder $folder does not exist")
+        end
+        return book_file, folder
+    else
+        error("File $book_file is not a markdown, zip or ipynb file: $(ext)")
+    end
+end
+
 """
     Book(file; replace_style=false, all_blocks_as_cell=false)
 
@@ -81,61 +111,15 @@ Create Book from .md or .ipynb file.
 - `replace_style::Bool`: Replace style.jl with template
 - `all_blocks_as_cell::Bool`: Treat all code blocks as cells
 """
-function Book(file; replace_style = false, all_blocks_as_cell = false)
+function Book(user_file::String; folder=nothing, replace_style = false, all_blocks_as_cell = false)
     # Ensure we have a file path
-    if !isfile(file)
-        write(file, """
-        # New Book
-        ```julia (editor=true, logging=false, output=true)
-        ```
-        """)
-    end
-
-    # Handle ZIP files by importing them first
-    original_file = normpath(abspath(file))
-    name, ext = splitext(original_file)
-
-    if ext == ".zip"
-        @info "Detected ZIP file, importing..."
-        # Import the ZIP file and get the extracted book file path
-        book_file_path = import_zip(original_file)
-        file = book_file_path
-        @info "Imported ZIP to: $book_file_path"
-    end
-
-    # Determine the correct file paths
-    original_file = normpath(abspath(file))
-    name, ext = splitext(original_file)
-    original_basename = basename(name)
-
-    # Set book.file to point to the .md file where content should be saved
-    if ext == ".md"
-        # For .md files, book.file points to the original file
-        book_file = original_file
-        load_file = original_file
-        # Create folder structure based on the .md file
-        folder = create_book_structure(book_file; replace_style=replace_style)
-    elseif ext == ".ipynb"
-        # For .ipynb files, create/use .md file in the same directory as the .ipynb
-        book_file = "$(name).md"  # Same directory, same basename, .md extension
-        # Try to load from the converted .md first, fallback to original .ipynb
-        load_file = isfile(book_file) ? book_file : original_file
-        # Create folder structure based on the converted .md file path
-        folder = create_book_structure(book_file; replace_style=replace_style)
-    else
-        error("File $file is not a markdown or ipynb file: $(ext)")
-    end
-
+    markdown_file, folder = import_bookfile(user_file, folder, replace_style)
     # Load the book content
-    cells = load_book(load_file; all_blocks_as_cell=all_blocks_as_cell)
+    cells = load_book(markdown_file; all_blocks_as_cell=all_blocks_as_cell)
     global_logging_widget = LoggingWidget()
 
-    # Set up directories
-    project_dir = dirname(file)  # Directory containing the .md file and Project.toml
-    execution_dir = folder       # The .book-name-bbook folder for execution
-
-    # The runner will cd into execution_dir for code execution
-    runner = AsyncRunner(execution_dir; global_logger=global_logging_widget.logging)
+    # The runner will cd into folder for code execution
+    runner = AsyncRunner(folder; global_logger=global_logging_widget.logging)
     editors = cells2editors(cells, runner)
     progress = Observable((false, 0.0))
 
@@ -151,12 +135,12 @@ function Book(file; replace_style = false, all_blocks_as_cell = false)
     theme_preference = Observable{String}("auto")
 
     book = Book(
-        book_file, folder, editors, runner, progress, nothing, nothing, Dict{String, Any}(),
+        markdown_file, folder, editors, runner, progress, nothing, nothing, Dict{String, Any}(),
         global_logging_widget, style_eval, spinner, current_cell, theme_preference
     )
     Core.eval(runner.mod, :(macro Book(); $(book); end))
     notify(style_eval.file_watcher)
-    export_md(book_file, book)
+    export_md(markdown_file, book)
     return book
 end
 
@@ -733,11 +717,12 @@ end
 
 
 """
-    book(path; replace_style=false, all_blocks_as_cell=false, url="127.0.0.1", port=8773, proxy_url="", openbrowser=true)
+    book(path; replace_style=false, all_blocks_as_cell=false, url="127.0.0.1", port=8773, proxy_url="", openbrowser=true, folder=nothing)
 
 Launch a BonitoBook server for interactive notebook editing.
 
 - `path::AbstractString`: Path to .md or .ipynb file
+- `folder::Union{Nothing, AbstractString}`: Folder for .book-name-bbook structure (default: auto-create next to .md file)
 - `replace_style::Bool`: Replace style.jl with template
 - `all_blocks_as_cell::Bool`: Treat all code blocks as cells (and not just ```julia (editor=true, logging=false, output=true)`)
 - `url::String`: Server URL
@@ -749,13 +734,14 @@ function book(path::AbstractString;
         replace_style=false,
         all_blocks_as_cell=false,
         url="127.0.0.1",
+        folder=nothing,
         port=8773,
         proxy_url="",
         openbrowser=true
     )
     name = splitext(basename(path))[1]
     app = App(title=name) do
-        return Book(path; replace_style=replace_style, all_blocks_as_cell=all_blocks_as_cell)
+        return Book(path; replace_style=replace_style, all_blocks_as_cell=all_blocks_as_cell, folder=folder)
     end
     server = get_server(url, port, proxy_url)
     route!(server, "/$(name)" => app)
