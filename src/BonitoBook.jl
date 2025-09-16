@@ -87,6 +87,7 @@ include("import.jl")
 include("completions.jl")
 include("interact.jl")
 include("chat.jl")
+include("ai_dashboard.jl")
 include("mcp_julia_server.jl")
 # include("ai.jl")
 
@@ -94,5 +95,6 @@ export Book, ChatComponent, ChatAgent, ChatMessage, MCPJuliaServer, Collapsible,
 export InlineBook
 export LanguageEval, JuliaEval, eval_code, get_language_evaluators
 export ALL_LANGUAGES
+export AIDashboard, TaskData, TaskStatus
 
 end

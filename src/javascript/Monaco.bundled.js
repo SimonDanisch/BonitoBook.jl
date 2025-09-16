@@ -649,6 +649,95 @@ function move_down(editor) {
         }
     }
 }
+class MonacoDiffEditor {
+    constructor(container, options){
+        this.container = container;
+        this.options = options;
+        this.diffEditor = null;
+        this.initialized = false;
+        this.initialize();
+    }
+    initialize() {
+        monaco.then((monaco)=>{
+            const defaultOptions = {
+                readOnly: true,
+                minimap: {
+                    enabled: true
+                },
+                scrollBeyondLastLine: false,
+                renderSideBySide: true,
+                enableSplitViewResizing: false,
+                automaticLayout: true,
+                theme: 'vs'
+            };
+            const finalOptions = {
+                ...defaultOptions,
+                ...this.options
+            };
+            this.diffEditor = monaco.editor.createDiffEditor(this.container, finalOptions);
+            if (this.options.original !== undefined || this.options.modified !== undefined) {
+                this.setContent(this.options.original || '', this.options.modified || '');
+            }
+            this.initialized = true;
+        });
+    }
+    setContent(original, modified) {
+        monaco.then((monaco)=>{
+            if (this.diffEditor) {
+                const originalModel = monaco.editor.createModel(original, this.options.language || 'julia');
+                const modifiedModel = monaco.editor.createModel(modified, this.options.language || 'julia');
+                this.diffEditor.setModel({
+                    original: originalModel,
+                    modified: modifiedModel
+                });
+            }
+        });
+    }
+    setOriginalContent(content) {
+        monaco.then((monaco)=>{
+            if (this.diffEditor) {
+                const model = this.diffEditor.getModel();
+                if (model && model.original) {
+                    model.original.setValue(content);
+                } else {
+                    const originalModel = monaco.editor.createModel(content, this.options.language || 'julia');
+                    const modifiedModel = model?.modified || monaco.editor.createModel('', this.options.language || 'julia');
+                    this.diffEditor.setModel({
+                        original: originalModel,
+                        modified: modifiedModel
+                    });
+                }
+            }
+        });
+    }
+    setModifiedContent(content) {
+        monaco.then((monaco)=>{
+            if (this.diffEditor) {
+                const model = this.diffEditor.getModel();
+                if (model && model.modified) {
+                    model.modified.setValue(content);
+                } else {
+                    const originalModel = model?.original || monaco.editor.createModel('', this.options.language || 'julia');
+                    const modifiedModel = monaco.editor.createModel(content, this.options.language || 'julia');
+                    this.diffEditor.setModel({
+                        original: originalModel,
+                        modified: modifiedModel
+                    });
+                }
+            }
+        });
+    }
+    layout(dimension) {
+        if (this.diffEditor) {
+            this.diffEditor.layout(dimension);
+        }
+    }
+    dispose() {
+        if (this.diffEditor) {
+            this.diffEditor.dispose();
+        }
+    }
+}
 function register_cell_editor(eval_editor, uuid1) {
     monaco.then((monaco)=>{
         eval_editor.editor.editor.then((editor)=>{
@@ -696,5 +785,6 @@ export { resize_to_lines as resize_to_lines };
 export { toggle_elem as toggle_elem };
 export { setup_cell_editor as setup_cell_editor };
 export { register_completions as register_completions };
+export { MonacoDiffEditor as MonacoDiffEditor };
 export { register_cell_editor as register_cell_editor };
 

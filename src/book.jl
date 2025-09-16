@@ -106,7 +106,6 @@ function Book(file; replace_style = false, all_blocks_as_cell = false)
     # Determine the correct file paths
     original_file = normpath(abspath(file))
     name, ext = splitext(original_file)
-    original_basename = basename(name)
 
     # Set book.file to point to the .md file where content should be saved
     if ext == ".md"
@@ -130,12 +129,8 @@ function Book(file; replace_style = false, all_blocks_as_cell = false)
     cells = load_book(load_file; all_blocks_as_cell=all_blocks_as_cell)
     global_logging_widget = LoggingWidget()
 
-    # Set up directories
-    project_dir = dirname(file)  # Directory containing the .md file and Project.toml
-    execution_dir = folder       # The .book-name-bbook folder for execution
-
     # The runner will cd into execution_dir for code execution
-    runner = AsyncRunner(execution_dir; global_logger=global_logging_widget.logging)
+    runner = AsyncRunner(folder; global_logger=global_logging_widget.logging)
     editors = cells2editors(cells, runner)
     progress = Observable((false, 0.0))
 
