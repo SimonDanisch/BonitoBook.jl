@@ -6,6 +6,9 @@
 ]st
 ```
 ```julia (editor=true, logging=false, output=true)
+sleep(1)
+```
+```julia (editor=true, logging=false, output=true)
 using DataFrames
 DataFrame(A=1:3, B=5:7, fixed=1)
 ```

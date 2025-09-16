@@ -535,9 +535,6 @@ end
 
 function setup_menu(book::Book, tabbed_file_editor::TabbedFileEditor)
     style_path = joinpath(book.folder, "styles", "style.jl")
-
-    # Create EvalFileOnChange component for the style file
-    style_eval = book.style_eval
     style_setting_button, click = SmallButton("paintcan")
     on(click) do _click
         # Toggle style editor visibility
@@ -552,8 +549,7 @@ function setup_menu(book::Book, tabbed_file_editor::TabbedFileEditor)
         icon("settings"), style_button_tooltip;
         class = "settings small-menu-bar"
     )
-
-    return menu, style_eval, style_eval.last_valid_output
+    return menu
 end
 
 function setup_completions(session, cell_module)
@@ -577,6 +573,58 @@ function setup_completions(session, cell_module)
     """
 end
 
+function standard_setup!(session::Session, book::Book)
+    for editor in book.cells
+        setup_editor_callbacks!(book, editor)
+    end
+
+    register_book = js"""
+        $(Monaco).then(Monaco => {
+            Monaco.BOOK.update_order($(map(c-> c.uuid, book.cells)));
+        })
+    """
+
+    completions = setup_completions(session, book.runner.mod)
+
+    # Set up theme preference tracking
+    theme_tracking = js"""
+        // Function to get current theme preference
+        function get_current_theme() {
+            if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                return 'dark';
+            } else if (window.matchMedia('(prefers-color-scheme: light)').matches) {
+                return 'light';
+            } else {
+                return 'auto';
+            }
+        }
+        // Set initial theme
+        $(book.theme_preference).notify(get_current_theme());
+        // Listen for theme changes
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+            $(book.theme_preference).notify(get_current_theme());
+        });
+        window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', (e) => {
+            $(book.theme_preference).notify(get_current_theme());
+        });
+    """
+    on(session.on_close) do closed
+        closed && close(book.runner)
+        return
+    end
+    style = book.style_eval.last_valid_output
+    codicon = Styles(
+        CSS(
+            "@font-face",
+            "font-family" => "codicon",
+            "src" => assets("codicon.ttf"),
+            "font-weight" => "normal",
+            "font-style" => "normal"
+        )
+    )
+    return [codicon, style, completions, register_book, theme_tracking]
+end
+
 function Bonito.jsrender(session::Session, book::Book)
     book.session = session
     runner = book.runner
@@ -585,26 +633,17 @@ function Bonito.jsrender(session::Session, book::Book)
         add_cell_div = new_cell_menu(book, editor.uuid, runner, editor.language)
         DOM.div(editor, add_cell_div)
     end
-    register_book = js"""
-        $(Monaco).then(Monaco => {
-            Monaco.BOOK.update_order($(map(c-> c.uuid, book.cells)));
-        })
-    """
-    for editor in book.cells
-        setup_editor_callbacks!(book, editor)
-    end
 
     # Create tabbed editor instead of separate file tabs
     tabbed_editor = TabbedFileEditor(String[])
     book.widgets["file_editor"] = tabbed_editor
-    _setup_menu, style_eval, style_output = setup_menu(book, tabbed_editor)
+    _setup_menu = setup_menu(book, tabbed_editor)
     save = saving_menu(session, book)
     player = play_menu(book)
 
-
     menu = DOM.div(save, player, _setup_menu; class = "book-main-menu")
 
-    cell_obs = DOM.div(cells...; class = "inline-block fit-content")
+    cell_obs = DOM.div(cells; class = "inline-block fit-content")
 
     # Wrap cells in scrollable area
     cells_area = DOM.div(cell_obs; class = "book-cells-area")
@@ -639,48 +678,8 @@ function Bonito.jsrender(session::Session, book::Book)
         DOM.div(global_logging_sidebar; class = "book-bottom-panel");
         class = "book-document"
     )
-
-    completions = setup_completions(session, runner.mod)
-
-    # Set up theme preference tracking
-    theme_tracking = js"""
-        // Function to get current theme preference
-        function get_current_theme() {
-            if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-                return 'dark';
-            } else if (window.matchMedia('(prefers-color-scheme: light)').matches) {
-                return 'light';
-            } else {
-                return 'auto';
-            }
-        }
-        // Set initial theme
-        $(book.theme_preference).notify(get_current_theme());
-        // Listen for theme changes
-        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
-            $(book.theme_preference).notify(get_current_theme());
-        });
-        window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', (e) => {
-            $(book.theme_preference).notify(get_current_theme());
-        });
-    """
-    evaljs(session, theme_tracking)
-
-    on(session.on_close) do closed
-        closed && close(runner)
-        return
-    end
-    codicon = Styles(
-        CSS(
-            "@font-face",
-            "font-family" => "codicon",
-            "src" => assets("codicon.ttf"),
-            "font-weight" => "normal",
-            "font-style" => "normal"
-        )
-    )
-
-    return Bonito.jsrender(session, DOM.div(codicon, style_eval, style_output, completions, register_book, document; class = "book-wrapper"))
+    elements = standard_setup!(session, book)
+    return Bonito.jsrender(session, DOM.div(elements, document; class = "book-wrapper"))
 end
 
 """
