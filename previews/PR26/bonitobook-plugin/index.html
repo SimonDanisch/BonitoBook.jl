@@ -1,0 +1,2020 @@
+<!doctype html>
+<html class="bonito-fragment">
+  <head>
+    <script src="../bonito/js/Bonito.bundled13389133706764782584.js" type="module"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta charset="UTF-8" />
+    <title>bonitobook-plugin</title>
+    <style>.style_3 {
+  justify-items: center;
+  align-items: center;
+  height: 100%;
+  display: grid;
+  align-content: center;
+  grid-gap: 10px;
+  grid-template-rows: none;
+  justify-content: center;
+  grid-template-columns: 1fr;
+  width: 100%;
+  grid-template-areas: none;
+}
+.style_4 {
+  width: 1.2em;
+}
+.style_5 {
+  position: relative;
+}
+.style_6 {
+  width: 10px;
+}
+.style_7 {
+  color: red;
+  width: 1.2em;
+}
+.style_8 {
+  width: 100%;
+}
+</style>
+  </head>
+  <body>
+    <script type="module">Bonito.init_session("776d9af8-da97-4655-a5fc-c6b29ebe7e13", Bonito.fetch_binary('../bonito/bin/762ff463b60a86b80e90d79126e159ae9357d4e8-8411504050869520113.bin'), "root", false);
+</script>
+    <div id="776d9af8-da97-4655-a5fc-c6b29ebe7e13" data-jscall-id="root">
+      <div class="bonitobook-page" data-jscall-id="1">
+        <style>.nav-item:hover {
+  background-color: var(--hover-bg);
+  color: var(--accent-blue);
+}
+.example-description {
+  color: var(--text-secondary);
+  margin: 0 0 20px 0;
+  line-height: 1.6;
+}
+.getting-started-inline .hover-buttons {
+  display: none !important;
+}
+.section-content {
+  font-size: 1.1rem;
+  color: var(--text-secondary);
+  line-height: 1.8;
+}
+.getting-started-inline .cell-output {
+  border: 1px solid var(--border-primary);
+  background-color: var(--menu-hover-bg);
+  border-radius: 6px;
+}
+.hero-subtitle {
+  max-width: 600px;
+  font-size: 1.25rem;
+  color: var(--text-secondary);
+  margin: 0 auto 40px;
+}
+@media (prefers-color-scheme: light), (prefers-color-scheme: no-preference) {
+  :root {
+    --scrollbar-thumb-hover: #a8a8a8;
+    --menu-hover-bg: rgba(0, 0, 0, 0.05);
+    --text-secondary: #555555;
+    --icon-filter: none;
+    --icon-hover-filter: brightness(0.7);
+    --border-secondary: #ccc;
+    --shadow-inset: inset 2px 2px 5px rgba(0, 0, 0, 0.5);
+    --accent-blue: #0366d6;
+    --text-primary: #24292e;
+    --shadow-soft: 0 4px 8px rgba(0, 0, 51, 0.2);
+    --hover-bg: #ddd;
+    --scrollbar-thumb: #c1c1c1;
+    --icon-color: #666666;
+    --bg-primary: #ffffff;
+    --animation-glow: 0 0 20px rgba(0, 150, 51, 0.8);
+    --icon-hover-color: #333333;
+    --scrollbar-track: #f1f1f1;
+    --shadow-button: 0 2px 4px rgba(0, 0, 0, 0.2);
+    --border-primary: rgba(0, 0, 0, 0.1);
+  }
+}
+* {
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+  color: inherit;
+  box-sizing: border-box;
+  scrollbar-width: thin;
+}
+.hero-buttons {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+}
+.hero-title {
+  font-size: 3rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 20px;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --scrollbar-thumb-hover: #777777;
+    --menu-hover-bg: rgba(255, 255, 255, 0.05);
+    --text-secondary: rgb(212, 212, 212);
+    --icon-filter: invert(1);
+    --icon-hover-filter: invert(1) brightness(1.2);
+    --border-secondary: rgba(255, 255, 255, 0.1);
+    --shadow-inset: inset 2px 2px 3px rgba(0, 0, 0, 0.5);
+    --accent-blue: #0366d6;
+    --text-primary: rgb(212, 212, 212);
+    --shadow-soft: 0 4px 8px rgba(255, 255, 255, 0.2);
+    --hover-bg: rgba(255, 255, 255, 0.1);
+    --scrollbar-thumb: #555555;
+    --icon-color: #cccccc;
+    --bg-primary: #1e1e1e;
+    --animation-glow: 0 0 20px rgba(10, 155, 55, 0.5);
+    --icon-hover-color: #ffffff;
+    --scrollbar-track: #2d2d2d;
+    --shadow-button: 0 2px 4px rgba(255, 255, 255, 0.2);
+    --border-primary: rgba(255, 255, 255, 0.1);
+  }
+  code {
+    background-color: var(--menu-hover-bg);
+    color: var(--text-primary);
+  }
+}
+.hero-button:active {
+  box-shadow: var(--shadow-inset);
+  transform: translateY(0px);
+}
+pre code {
+  border: none;
+  background-color: transparent;
+  padding: 0;
+}
+.bonitobook-header {
+  justify-content: center;
+  align-items: center;
+  height: var(--header-height);
+  display: flex;
+  backdrop-filter: blur(10px);
+  box-shadow: var(--shadow-soft);
+  border-bottom: 1px solid var(--border-primary);
+  position: relative;
+  background: linear-gradient(135deg, var(--bg-primary) 0%, var(--menu-hover-bg) 100%);
+}
+.example-content {
+  margin: var(--content-padding);
+}
+@media (max-width: 768px) {
+  .hero-title {
+    font-size: 2rem !important;
+  }
+  :root {
+    --content-padding: 20px;
+  }
+  .getting-started-inline {
+    padding: 20px;
+  }
+  .hero-buttons {
+    align-items: center;
+    flex-direction: column;
+  }
+  .examples-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .hero-subtitle {
+    font-size: 1rem !important;
+  }
+}
+.section {
+  margin: 60px 0;
+}
+::-webkit-scrollbar-thumb {
+  border: 2px solid var(--scrollbar-track);
+  background-color: var(--scrollbar-thumb);
+  border-radius: 6px;
+}
+::-webkit-scrollbar {
+  width: 12px;
+}
+.header-content {
+  max-width: var(--max-content-width);
+  padding: 0 var(--content-padding);
+  width: 100%;
+}
+.example-card {
+  border: 1px solid var(--border-primary);
+  background-color: var(--bg-primary);
+  box-shadow: var(--shadow-soft);
+  padding: 24px;
+  position: relative;
+  border-radius: 10px;
+  transition: all 0.2s ease-out;
+  overflow: hidden;
+}
+.bonitobook-header::before {
+  left: 0;
+  bottom: 0;
+  content: '';
+  right: 0;
+  top: 0;
+  pointer-events: none;
+  position: absolute;
+  opacity: 0.03;
+  background: var(--animation-glow);
+}
+.bonitobook-navbar {
+  align-items: center;
+  height: var(--navbar-height);
+  display: flex;
+  background-color: var(--bg-primary);
+  border-bottom: 1px solid var(--border-primary);
+  top: 0;
+  position: sticky;
+  z-index: 100;
+  justify-content: center;
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--scrollbar-thumb-hover);
+}
+html {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+}
+pre {
+  border: 1px solid var(--border-primary);
+  background-color: var(--bg-primary);
+  box-shadow: var(--shadow-soft);
+  padding: 16px;
+  position: relative;
+  border-radius: 10px;
+  margin: 16px 0;
+  overflow-x: auto;
+}
+.example-link:hover {
+  background-color: var(--accent-blue);
+  box-shadow: 0 4px 12px rgba(3, 102, 214, 0.3);
+  color: white;
+  transform: translateY(-1px);
+}
+.getting-started-inline {
+  margin-top: 20px;
+  border: 1px solid var(--border-primary);
+  background-color: var(--bg-primary);
+  box-shadow: var(--shadow-soft);
+  padding: 30px;
+  border-radius: 10px;
+}
+::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+}
+.example-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 12px 0;
+}
+.main-content {
+  margin: 0 auto;
+}
+.example-card:hover {
+  border-color: var(--accent-blue);
+  box-shadow: var(--animation-glow);
+  transform: translateY(-2px);
+}
+body {
+  padding: 0;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: 'Inter', 'Roboto', 'Arial', sans-serif;
+  margin: 0;
+  line-height: 1.6;
+}
+.hero-button-secondary:hover {
+  border-color: var(--accent-blue);
+  background-color: var(--hover-bg);
+  color: var(--accent-blue);
+  transform: translateY(-1px);
+}
+.example-link:active {
+  box-shadow: var(--shadow-inset);
+  transform: translateY(0px);
+}
+.example-link {
+  min-width: 100px;
+  font-weight: 500;
+  align-items: center;
+  display: inline-flex;
+  padding: 8px 16px;
+  box-shadow: var(--shadow-button);
+  border-radius: 8px;
+  justify-content: center;
+  border: 1px solid var(--accent-blue);
+  background-color: var(--bg-primary);
+  font-size: 14px;
+  transition: all 0.2s ease;
+  text-decoration: none;
+  color: var(--accent-blue);
+}
+.header-title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+}
+.hero-section {
+  padding: 60px 0;
+  border-bottom: 1px solid var(--border-primary);
+  text-align: center;
+}
+code {
+  border: 1px solid var(--border-primary);
+  background-color: var(--menu-hover-bg);
+  font-size: 0.9em;
+  padding: 2px 6px;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', monospace;
+  border-radius: 4px;
+}
+.example-card::before {
+  left: -100%;
+  height: 2px;
+  content: '';
+  top: 0;
+  position: absolute;
+  width: 100%;
+  transition: left 0.5s ease;
+  background: linear-gradient(90deg, transparent, var(--accent-blue), transparent);
+}
+a {
+  text-decoration: none;
+  color: inherit;
+}
+.hero-button-secondary {
+  border: 1px solid var(--border-secondary);
+  background-color: var(--bg-primary);
+  box-shadow: var(--shadow-button);
+  color: var(--text-primary);
+}
+:root {
+  --card-gap: 20px;
+  --max-content-width: 1200px;
+  --navbar-height: 50px;
+  --header-height: 80px;
+  --content-padding: 40px;
+}
+.example-card:hover::before {
+  left: 100%;
+}
+.hero-button:hover {
+  background-color: var(--hover-bg);
+  box-shadow: 0 4px 12px rgba(3, 102, 214, 0.3);
+  color: var(--accent-blue);
+  transform: translateY(-1px);
+}
+.getting-started-inline .new-cell-menu {
+  display: none !important;
+}
+.bonitobook-page {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  min-height: 100vh;
+}
+.section-title {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 20px;
+}
+.hero-button {
+  min-width: 120px;
+  font-weight: 500;
+  align-items: center;
+  display: inline-flex;
+  padding: 12px 24px;
+  box-shadow: var(--shadow-button);
+  border-radius: 8px;
+  justify-content: center;
+  border: none;
+  background-color: var(--accent-blue);
+  font-size: 16px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  text-decoration: none;
+  color: white;
+  font-family: inherit;
+}
+.nav-item {
+  font-weight: 500;
+  padding: 8px 16px;
+  text-decoration: none;
+  color: var(--text-primary);
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+.getting-started-inline .cell-editor-container {
+  max-width: 100%;
+  margin-bottom: 20px;
+}
+.examples-grid {
+  margin-top: 40px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: var(--card-gap);
+}
+.nav-items {
+  max-width: var(--max-content-width);
+  display: flex;
+  padding: 0 var(--content-padding);
+  gap: 30px;
+  width: 100%;
+}
+</style>
+        <header class="bonitobook-header" data-jscall-id="2">
+          <div class="header-content" data-jscall-id="3">
+            <h1 class="header-title" data-jscall-id="4">BonitoBook</h1>
+          </div>
+        </header>
+        <nav class="bonitobook-navbar" data-jscall-id="5">
+          <div class="nav-items" data-jscall-id="6">
+            <a class="nav-item" href="../" data-jscall-id="7">Home</a>
+            <a class="nav-item" href="../examples" data-jscall-id="8">Examples</a>
+            <a class="nav-item" href="../howto" data-jscall-id="9">How-To</a>
+          </div>
+        </nav>
+        <main class="main-content" data-jscall-id="10">
+          <div data-jscall-id="11">
+            <div data-jscall-id="13">
+              <div class="bonito-fragment" id="986137e4-790a-4cde-a31e-afaeb97d097c" data-jscall-id="subsession-application-dom">
+                <div data-jscall-id="14">
+                  <style data-jscall-id="15"></style>
+                </div>
+                <div data-jscall-id="16">
+                  <script data-jscall-id="17" type="module">Bonito.init_session("986137e4-790a-4cde-a31e-afaeb97d097c", null, "sub", false);
+</script>
+                  <span data-jscall-id="12">
+                    <style data-jscall-id="18">.file-tab.active {
+  font-weight: 500;
+  background-color: var(--bg-primary);
+  border-bottom-color: var(--accent-blue);
+  color: var(--text-primary);
+}
+@keyframes shadow-pulse {
+  0% {
+    box-shadow: var(--shadow-soft);
+  }
+  50% {
+    box-shadow: var(--animation-glow);
+  }
+  100% {
+    box-shadow: var(--shadow-soft);
+  }
+}
+.markdown-body h6 {
+  font-size: 12px;
+  font-weight: 600;
+}
+.inline-block {
+  display: inline-block;
+}
+.bonitobook-dropdown {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 36px;
+  background-repeat: no-repeat;
+  padding: 8px 12px;
+  outline: none;
+  box-sizing: border-box;
+  border-radius: 6px;
+  background-position: right 12px center;
+  border: 1px solid var(--border-secondary);
+  background-color: var(--bg-primary);
+  font-size: 14px;
+  width: 100%;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  background-size: 12px;
+  color: var(--text-primary);
+  font-family: inherit;
+}
+.markdown-body h5 {
+  font-size: 14px;
+  font-weight: 600;
+}
+* {
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+  color: inherit;
+  scrollbar-width: thin;
+}
+.interactive-error-widget span[style*='font-weight: bold'] {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.new-cell-menu {
+  align-items: center;
+  height: 0.5rem;
+  display: flex;
+  position: relative;
+  width: 100%;
+  padding-left: 0;
+  justify-content: center;
+}
+.markdown-body a:hover {
+  text-decoration: underline;
+}
+.book-wrapper {
+  height: 100vh;
+  overflow: hidden;
+}
+.sidebar-content-container.vertical .sidebar-content {
+  height: fit-content;
+  min-height: 200px;
+  overflow-y: visible;
+}
+.cell-logging {
+  max-height: 500px;
+  height: auto;
+  padding: 0;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  overflow-y: auto;
+  background-color: var(--bg-primary);
+  min-height: 0px;
+  flex: 0 0 auto;
+  max-width: 90ch;
+  color: var(--text-primary);
+  margin: 0;
+}
+html {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+}
+.bonitobook-input:disabled {
+  background-color: var(--hover-bg);
+  color: var(--text-secondary);
+  cursor: not-allowed;
+}
+.file-tab:hover {
+  background-color: var(--hover-bg);
+  color: var(--text-primary);
+}
+.markdown-body .octicon {
+  display: inline-block;
+  vertical-align: text-bottom;
+  fill: currentColor;
+}
+.manipulate-controls {
+  display: flex;
+  padding: 12px;
+  background-color: var(--hover-bg);
+  gap: 12px;
+  border-radius: 6px;
+  flex-direction: column;
+}
+.cell-output {
+  background-color: var(--bg-primary);
+  max-height: 1000px;
+  color: var(--text-primary);
+  overflow-y: auto;
+  margin: 5px;
+  overflow-x: visible;
+  width: 100%;
+}
+.sidebar-resize-handle.vertical {
+  left: 0;
+  bottom: 0;
+  top: 0;
+  width: 4px;
+  cursor: ew-resize;
+}
+.markdown-body input {
+  font: inherit;
+  overflow: visible;
+}
+.error-file-link {
+  padding: 1px 3px;
+  text-decoration: none;
+  color: var(--accent-blue);
+  font-family: SFMono-Regular, Consolas, Liberation Mono, Menlo, Courier, monospace;
+  border-radius: 3px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+.small-button {
+  align-items: center;
+  display: inline-flex;
+  padding: 8px;
+  box-shadow: var(--shadow-button);
+  border-radius: 8px;
+  justify-content: center;
+  margin-right: 5px;
+  border: none;
+  background-color: var(--bg-primary);
+  transition: background-color 0.2s;
+  cursor: pointer;
+  color: var(--text-secondary);
+}
+.bonitobook-checkbox:checked::after {
+  left: 50%;
+  content: "✓";
+  font-size: 12px;
+  top: 50%;
+  color: white;
+  position: absolute;
+  line-height: 1;
+  transform: translate(-50%, -50%);
+}
+.cell-editor.focused {
+  box-shadow: 0 0 4px var(--accent-blue);
+}
+.markdown-body h1 {
+  font-size: 32px;
+  font-weight: 600;
+}
+.popup-close-button:hover {
+  background-color: var(--hover-bg);
+  color: var(--text-primary);
+}
+.popup-close-button {
+  z-index: 2001;
+  align-items: center;
+  height: 20px;
+  display: flex;
+  padding: 2px;
+  position: absolute;
+  border-radius: 50%;
+  justify-content: center;
+  border: none;
+  font-size: 18px;
+  right: 4px;
+  top: 4px;
+  width: 20px;
+  line-height: 1;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  color: var(--text-secondary);
+  background: none;
+}
+.file-tab-close:hover {
+  background-color: var(--hover-bg);
+  color: var(--text-primary);
+}
+.data-frame th {
+  font-weight: 500;
+  background-color: var(--hover-bg);
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-primary);
+}
+.bonitobook-input:focus {
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 2px rgba(3, 102, 214, 0.2);
+}
+.sidebar-main-container.horizontal {
+  left: 0;
+  align-items: flex-end;
+  bottom: 0;
+  display: flex;
+  height: auto;
+  right: 0;
+  position: relative;
+  width: 100%;
+  flex-direction: column-reverse;
+}
+.manipulate-label {
+  min-width: 120px;
+  font-size: 13px;
+  font-weight: 500;
+  flex-shrink: 0;
+  color: var(--text-secondary);
+  text-align: left;
+}
+body.bonito-export-mode .hover-buttons, body.bonito-export-mode .cell-menu-proximity-area {
+  display: none !important;
+}
+.interactive-error-widget {
+  border: 1px solid #dc3545;
+  background-color: var(--bg-primary);
+  box-shadow: 0 2px 8px rgba(220, 53, 69, 0.15);
+  padding: 16px;
+  border-radius: 8px;
+  margin: 8px 0;
+}
+.sidebar-content-container.horizontal.collapsed {
+  visibility: hidden;
+  height: 0px;
+  opacity: 0;
+}
+.sidebar-content-container.horizontal.expanded {
+  visibility: visible;
+  height: var(--sidebar-height, 300px);
+  opacity: 1;
+}
+.sidebar-main-container.vertical {
+  align-items: center;
+  height: fit-content;
+  max-height: 90vh;
+  top: 50%;
+  transform: translateY(-50%);
+  flex-direction: row-reverse;
+}
+.book-document {
+  height: 100vh;
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  overflow: hidden;
+}
+.sidebar-toggle-button.hidden {
+  display: none;
+}
+.book-spinner {
+  height: 8px;
+  display: block;
+  box-shadow: 0 0 8px rgba(3, 102, 214, 0.2);
+  position: relative;
+  border-radius: 4px;
+  animation: spinner-stripes 1.5s linear infinite;
+  width: 100%;
+  overflow: hidden;
+  background-size: 40px 100%;
+  pointer-events: none;
+  background: repeating-linear-gradient(45deg, var(--accent-blue) 0px, var(--accent-blue) 10px, var(--border-primary) 10px, var(--border-primary) 20px);
+}
+.markdown-body pre {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+.codicon svg {
+  display: block;
+  fill: currentColor;
+}
+@keyframes spinner-stripes {
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: 40px 0;
+  }
+}
+.small-menu-bar {
+  align-items: center;
+  display: flex;
+  border: 1px solid var(--border-primary);
+  background-color: var(--bg-primary);
+  box-shadow: var(--shadow-soft);
+  gap: 4px;
+  padding: 6px;
+  z-index: 1001;
+  border-radius: 8px;
+}
+.bonitobook-slider::-moz-range-track {
+  height: 6px;
+  border: none;
+  width: 100%;
+  border-radius: 3px;
+  background: var(--border-secondary);
+}
+.interactive-error-widget h4 {
+  font-size: 1.1em;
+  font-weight: 600;
+  color: #dc3545;
+  margin: 0 0 8px 0;
+}
+.sidebar-widget-content .monaco-editor-div.hide-horizontal {
+  display: block !important;
+}
+.bonitobook-checkbox:focus {
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 2px rgba(3, 102, 214, 0.2);
+  outline: none;
+}
+.find-widget {
+  background-color: var(--bg-primary);
+  top: 10px !important;
+  color: var(--text-primary);
+  position: fixed !important;
+}
+.data-frame table {
+  font-size: 13px;
+  border-collapse: collapse;
+}
+.markdown-body h2 {
+  font-size: 24px;
+  font-weight: 600;
+}
+.markdown-body code, .markdown-body pre {
+  font-size: 12px;
+  font-family: SFMono-Regular,Consolas,Liberation Mono,Menlo,Courier,monospace;
+}
+.full-width {
+  width: 100%;
+}
+@media (prefers-color-scheme: dark) {
+  .bonitobook-dropdown {
+    background-image: url('data:image/svg+xml;charset=US-ASCII,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 4 5"><path fill="%23ccc" d="M2 0L0 2h4zm0 5L0 3h4z"/></svg>');
+  }
+  .interactive-error-widget .collapsible-content > div > div:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+  }
+  .interactive-error-widget pre {
+    background-color: rgba(220, 53, 69, 0.1);
+    color: #ffccd5;
+  }
+  :root {
+    --scrollbar-thumb-hover: #777777;
+    --menu-hover-bg: rgba(255, 255, 255, 0.05);
+    --text-secondary: rgb(212, 212, 212);
+    --icon-filter: invert(1);
+    --icon-hover-filter: invert(1) brightness(1.2);
+    --border-secondary: rgba(255, 255, 255, 0.1);
+    --shadow-inset: inset 1px 1px 2px rgba(0, 0, 0, 0.5);
+    --accent-blue: #0366d6;
+    --text-primary: rgb(212, 212, 212);
+    --shadow-soft: 0 0 4px rgba(255, 255, 255, 0.2);
+    --hover-bg: rgba(255, 255, 255, 0.1);
+    --scrollbar-thumb: #555555;
+    --icon-color: #cccccc;
+    --bg-primary: #1e1e1e;
+    --animation-glow: 0 0 20px rgba(10, 155, 55, 0.5);
+    --icon-hover-color: #ffffff;
+    --scrollbar-track: #2d2d2d;
+    --shadow-button: 0 1px 3px rgba(255, 255, 255, 0.2);
+    --border-primary: rgba(255, 255, 255, 0.1);
+  }
+  img[src*='python-logo'], img[src*='julia-logo'] {
+    filter: brightness(1.3) contrast(1.1);
+  }
+  .interactive-error-widget .collapsible-content > div > div {
+    background-color: rgba(255, 255, 255, 0.05);
+  }
+}
+.markdown-body td, .markdown-body th {
+  padding: 0;
+}
+.markdown-body .anchor:focus {
+  outline: none;
+}
+.file-tabs-container {
+  display: flex;
+  background-color: var(--bg-primary);
+  border-bottom: 1px solid var(--border-primary);
+  flex-shrink: 0;
+  overflow-x: auto;
+}
+.sidebar-content-container.horizontal {
+  transition: height 0.3s ease, opacity 0.3s ease;
+  visibility: visible;
+  background-color: var(--bg-primary);
+  border-top: 1px solid var(--border-primary);
+  width: 100%;
+  opacity: 1;
+  overflow: hidden;
+}
+.flex-row {
+  display: flex;
+  flex-direction: row;
+}
+.sidebar-tab.active::before {
+  left: 0;
+  height: 18px;
+  content: '';
+  background-color: var(--accent-blue);
+  top: 50%;
+  position: absolute;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  transform: translateY(-50%);
+}
+.logging-widget {
+  height: 100%;
+  padding: 8px;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  overflow-y: auto;
+  font-size: 12px;
+  background-color: var(--bg-primary);
+  width: 100%;
+  line-height: 1.4;
+  color: var(--text-primary);
+  font-family: monospace;
+  margin: 0;
+}
+.toggle-button.active {
+  box-shadow: var(--shadow-inset);
+  color: var(--text-primary);
+}
+.markdown-body strong {
+  font-weight: 600;
+}
+.bonitobook-dropdown:focus {
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 2px rgba(3, 102, 214, 0.2);
+}
+.markdown-body * {
+  box-sizing: border-box;
+}
+.new-cell-plus {
+  left: -1rem;
+  font-weight: 1000;
+  opacity: 0.3;
+  align-items: center;
+  display: flex;
+  position: absolute;
+  justify-content: center;
+  font-size: 1.2em;
+  top: 0;
+  transition: opacity 0.2s;
+  cursor: pointer;
+  transform: translate(0, -50%);
+}
+.bonitobook-button:hover {
+  border-color: var(--accent-blue);
+  background-color: var(--hover-bg);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+.sidebar-content-container.vertical {
+  height: fit-content;
+  display: flex;
+  box-shadow: -4px 0 8px rgba(0, 0, 0, 0.1);
+  max-height: 80vh;
+  border-left: 1px solid var(--border-primary);
+  border-radius: 8px 0 0 8px;
+  flex-direction: column;
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--scrollbar-thumb-hover);
+}
+pre {
+  margin-block: 5px 0px;
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+.manipulate-container {
+  display: flex;
+  border: 1px solid var(--border-primary);
+  background-color: var(--bg-primary);
+  padding: 16px;
+  gap: 16px;
+  border-radius: 8px;
+  margin: 16px 0;
+  flex-direction: column;
+}
+.manipulate-output {
+  align-items: center;
+  display: flex;
+  padding: 12px;
+  background-color: var(--bg-primary);
+  min-height: 100px;
+  border-radius: 6px;
+  justify-content: center;
+}
+.new-cell-menu:hover .new-cell-buttons {
+  visibility: visible;
+  opacity: 1;
+}
+.sidebar-widget-content.hide {
+  display: none;
+}
+.small-button.toggled {
+  border: none;
+  box-shadow: var(--shadow-inset);
+  filter: grayscale(100%);
+  color: var(--text-primary);
+  opacity: 0.5;
+}
+.book-bottom-panel {
+  left: 0;
+  bottom: 0;
+  background-color: var(--bg-primary);
+  right: 0;
+  position: fixed;
+  z-index: 1000;
+}
+.file-tab-add {
+  align-items: center;
+  display: flex;
+  padding: 8px 12px;
+  border-radius: 6px;
+  justify-content: center;
+  border: none;
+  background-color: transparent;
+  font-size: 16px;
+  line-height: 1;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  color: var(--text-secondary);
+}
+.bonitobook-input:hover {
+  border-color: var(--accent-blue);
+}
+.markdown-body img {
+  border-style: none;
+}
+.codicon {
+  filter: var(--icon-filter);
+  -webkit-user-select: none;
+  display: inline-block;
+  text-align: center;
+  text-transform: none;
+  flex-shrink: 0;
+  -moz-osx-font-smoothing: grayscale;
+  text-decoration: none;
+  text-rendering: auto;
+  user-select: none;
+  -webkit-font-smoothing: antialiased;
+  color: var(--icon-color);
+}
+.bonitobook-slider::-moz-range-thumb {
+  cursor: pointer;
+  height: 20px;
+  border: 2px solid var(--bg-primary);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  width: 20px;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+  background: var(--accent-blue);
+}
+.bonitobook-button {
+  min-width: 80px;
+  font-weight: 500;
+  align-items: center;
+  display: inline-flex;
+  padding: 8px 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border-radius: 6px;
+  justify-content: center;
+  border: 1px solid var(--border-secondary);
+  background-color: var(--bg-primary);
+  font-size: 14px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  color: var(--text-primary);
+  font-family: inherit;
+}
+.monaco-list {
+  background-color: var(--bg-primary);
+  max-height: 60vh;
+  color: var(--text-primary);
+  overflow-y: auto !important;
+}
+.bonitobook-slider {
+  cursor: pointer;
+  height: 6px;
+  appearance: none;
+  -webkit-appearance: none;
+  outline: none;
+  width: 100%;
+  border-radius: 3px;
+  transition: all 0.2s ease;
+  background: var(--border-secondary);
+}
+.bonitobook-slider::-webkit-slider-thumb:hover {
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
+  transform: scale(1.1);
+}
+.file-tab-close {
+  align-items: center;
+  height: 16px;
+  display: flex;
+  border-radius: 50%;
+  justify-content: center;
+  border: none;
+  background-color: transparent;
+  font-size: 12px;
+  width: 16px;
+  line-height: 1;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  color: var(--text-secondary);
+}
+.gap-10 {
+  gap: 10px;
+}
+.markdown-body h4 {
+  font-size: 16px;
+  font-weight: 600;
+}
+.bonitobook-checkbox:hover {
+  border-color: var(--accent-blue);
+}
+.data-frame .rowLabel {
+  background-color: var(--hover-bg);
+  font-family: monospace;
+  text-align: right;
+}
+.error-file-link:hover {
+  background-color: rgba(3, 102, 214, 0.1);
+  text-decoration: underline;
+}
+.file-tab-content {
+  align-items: center;
+  display: flex;
+  gap: 6px;
+}
+.sidebar-tab {
+  position: relative;
+}
+.max-width-90ch {
+  max-width: 90ch;
+}
+.interactive-error-widget .collapsible-content > div > div {
+  transition: background-color 0.2s ease;
+  font-size: 12px;
+  padding: 4px 8px;
+  font-family: SFMono-Regular, Consolas, Liberation Mono, Menlo, Courier, monospace;
+  border-left: 3px solid var(--border-primary);
+  border-radius: 0 4px 4px 0;
+  line-height: 1.4;
+  margin: 2px 0;
+}
+.sidebar-resize-handle {
+  background-color: transparent;
+  position: absolute;
+  z-index: 10;
+  transition: background-color 0.2s ease;
+}
+.cell-menu-proximity-area {
+  left: 0px;
+  height: 20px;
+  background-color: transparent;
+  top: -20px;
+  pointer-events: auto;
+  position: absolute;
+  width: 100%;
+  z-index: -1;
+}
+.loading-cell {
+  animation: shadow-pulse 1.5s ease-in-out infinite;
+  box-shadow: var(--shadow-soft);
+}
+.book-main-content {
+  display: flex;
+  padding-bottom: 50px;
+  flex: 1;
+  flex-direction: column;
+  overflow: hidden;
+}
+.quick-input-widget {
+  background-color: var(--bg-primary);
+  top: 10px !important;
+  color: var(--text-primary);
+  position: fixed !important;
+}
+.markdown-body .anchor {
+  padding-right: 4px;
+  float: left;
+  line-height: 1;
+  margin-left: -20px;
+}
+.sidebar-toggle-button:hover {
+  background-color: var(--hover-bg);
+  color: var(--icon-hover-color);
+}
+.bonitobook-checkbox {
+  appearance: none;
+  -webkit-appearance: none;
+  height: 16px;
+  position: relative;
+  border-radius: 3px;
+  border: 1px solid var(--border-secondary);
+  background-color: var(--bg-primary);
+  flex-shrink: 0;
+  width: 16px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  margin: 0 8px 0 0;
+}
+@media (prefers-color-scheme: light), (prefers-color-scheme: no-preference) {
+  .bonitobook-dropdown {
+    background-image: url('data:image/svg+xml;charset=US-ASCII,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 4 5"><path fill="%23666" d="M2 0L0 2h4zm0 5L0 3h4z"/></svg>');
+  }
+  .interactive-error-widget .collapsible-content > div > div:hover {
+    background-color: rgba(0, 0, 0, 0.08);
+  }
+  .interactive-error-widget pre {
+    background-color: #f8d7da;
+    color: #721c24;
+  }
+  :root {
+    --scrollbar-thumb-hover: #a8a8a8;
+    --menu-hover-bg: rgba(0, 0, 0, 0.05);
+    --text-secondary: #555555;
+    --icon-filter: none;
+    --icon-hover-filter: brightness(0.7);
+    --border-secondary: #ccc;
+    --shadow-inset: inset 1px 1px 3px rgba(0, 0, 0, 0.2);
+    --accent-blue: #0366d6;
+    --text-primary: #24292e;
+    --shadow-soft: 0 0 4px rgba(0, 0, 51, 0.2);
+    --hover-bg: #ddd;
+    --scrollbar-thumb: #c1c1c1;
+    --icon-color: #666666;
+    --bg-primary: #ffffff;
+    --animation-glow: 0 0 10px rgba(0, 150, 51, 0.8);
+    --icon-hover-color: #333333;
+    --scrollbar-track: #f1f1f1;
+    --shadow-button: 0 1px 3px rgba(0, 0, 0, 0.2);
+    --border-primary: rgba(0, 0, 0, 0.1);
+  }
+  .interactive-error-widget .collapsible-content > div > div {
+    background-color: rgba(0, 0, 0, 0.05);
+  }
+}
+.data-frame td {
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--border-primary);
+}
+.sidebar-resize-handle:hover {
+  background-color: var(--accent-blue);
+  opacity: 0.5;
+}
+.data-frame {
+  margin: 1rem 0;
+}
+.sidebar-tabs.horizontal {
+  height: auto;
+  display: flex;
+  padding: 4px;
+  background-color: var(--bg-primary);
+  border-top: 1px solid var(--border-primary);
+  width: 100%;
+  flex-direction: row;
+  justify-content: center;
+}
+.interactive-error-widget pre {
+  border: 1px solid rgba(220, 53, 69, 0.2);
+  font-size: 13px;
+  padding: 12px;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  font-family: SFMono-Regular, Consolas, Liberation Mono, Menlo, Courier, monospace;
+  border-radius: 6px;
+  line-height: 1.4;
+  margin: 8px 0;
+}
+.bonitobook-dropdown option {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+}
+.markdown-body blockquote {
+  padding: 0 1em;
+  color: #6a737d;
+  border-left: .25em solid #dfe2e5;
+}
+.file-tab-name {
+  max-width: 150px;
+  font-size: 13px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+.bonitobook-input {
+  padding: 8px 12px;
+  outline: none;
+  box-sizing: border-box;
+  border-radius: 6px;
+  border: 1px solid var(--border-secondary);
+  background-color: var(--bg-primary);
+  font-size: 14px;
+  width: 100%;
+  transition: all 0.2s ease;
+  color: var(--text-primary);
+  font-family: inherit;
+}
+li p {
+  display: inline;
+}
+.monaco-editor-div {
+  padding: 0px;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  margin: 0px;
+}
+.center-content {
+  align-items: center;
+  justify-content: center;
+}
+.book-content {
+  height: 100%;
+  display: flex;
+  position: relative;
+  width: 100%;
+  padding-top: 20px;
+  flex: 1;
+  flex-direction: row;
+  overflow: hidden;
+}
+.sidebar-widget-content.show {
+  display: block;
+}
+.small-button:hover img:not([src*='python-logo']):not([src*='julia-logo']), .small-button:hover svg {
+  filter: var(--icon-hover-filter);
+}
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  margin: 0px;
+}
+.small-button.inactive:hover {
+  background-color: var(--bg-primary);
+}
+.sidebar-toggle-button {
+  align-items: center;
+  height: 36px;
+  display: flex;
+  border-radius: 6px;
+  justify-content: center;
+  margin-top: auto;
+  border: none;
+  background-color: transparent;
+  width: 36px;
+  transition: all 0.2s ease;
+  margin-bottom: 10px;
+  cursor: pointer;
+  color: var(--icon-color);
+}
+.sidebar-widget-content {
+  height: fit-content;
+  width: 100%;
+}
+.bonitobook-button:focus {
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 2px rgba(3, 102, 214, 0.2);
+  outline: none;
+}
+.sidebar-content {
+  height: 100%;
+  padding: 0;
+  background-color: var(--bg-primary);
+  position: relative;
+  overflow-y: auto;
+  width: 100%;
+  overflow-x: hidden;
+}
+.markdown-body hr {
+  overflow: hidden;
+  height: 0;
+  border: 0;
+  border-bottom: 1px solid #dfe2e5;
+  margin: 15px 0;
+  background: transparent;
+}
+.hide-vertical {
+  display: none;
+}
+.bonitobook-checkbox:checked {
+  border-color: var(--accent-blue);
+  background-color: var(--accent-blue);
+}
+.markdown-body {
+  font-size: 16px;
+  -ms-text-size-adjust: 100%;
+  -webkit-text-size-adjust: 100%;
+  color: var(--text-primary);
+  font-family: -apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif,Apple Color Emoji,Segoe UI Emoji,Segoe UI Symbol;
+  word-wrap: break-word;
+  line-height: 1.5;
+}
+.fit-content {
+  width: fit-content;
+}
+.cell-editor-container.editor-collapsed .cell-menu-proximity-area {
+  left: 0px;
+  z-index: 1;
+  opacity: 0;
+  height: 6px;
+  position: absolute;
+  border-radius: 2px;
+  border: none;
+  background-color: transparent;
+  top: 0px;
+  width: 100%;
+  transition: all 0.2s ease;
+  pointer-events: auto;
+}
+.small-button.inactive {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.markdown-body h1, .markdown-body h2, .markdown-body h3, .markdown-body h4, .markdown-body h5, .markdown-body h6 {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+.new-cell-menu:hover .new-cell-plus {
+  opacity: 1;
+}
+.hover-buttons {
+  right: -10px;
+  top: -23px;
+  pointer-events: auto;
+  position: absolute;
+  z-index: 50;
+  opacity: 0.0;
+}
+.cell-output-markdown.cell-output {
+  max-height: none;
+  overflow-y: visible;
+}
+mjx-container[jax='CHTML'][display='true'] {
+  display: inline;
+}
+.sidebar-content-container {
+  background-color: var(--bg-primary);
+  pointer-events: auto;
+  transition: width 0.3s ease, opacity 0.3s ease;
+  overflow: hidden;
+}
+.new-cell-buttons {
+  left: 0px;
+  visibility: hidden;
+  display: flex;
+  padding: 4px 4px;
+  top: 0px;
+  position: absolute;
+  z-index: 1000;
+  transform: translate(0, -50%);
+  opacity: 0;
+  transition: opacity 0.2s, visibility 0.2s;
+}
+.logging-widget pre {
+  font-size: inherit;
+  background-color: transparent;
+  padding: 0;
+  white-space: pre-wrap;
+  color: inherit;
+  font-family: inherit;
+  word-wrap: break-word;
+  margin: 0;
+  line-height: inherit;
+}
+.sidebar-content-container.vertical.expanded {
+  width: var(--sidebar-width, 400px);
+}
+.cell-editor-container.editor-collapsed .cell-menu-proximity-area:hover {
+  background-color: var(--hover-bg);
+  border-style: solid;
+  transform: scaleY(1.2);
+  opacity: 1;
+}
+.markdown-body table {
+  border-collapse: collapse;
+  border-spacing: 0;
+}
+.codicon:hover {
+  filter: var(--icon-hover-filter);
+  color: var(--icon-hover-color);
+}
+.cell-editor {
+  max-width: 95vw;
+  padding: 5px 5px 10px 10px;
+  background-color: var(--bg-primary);
+  box-shadow: var(--shadow-soft);
+  color: var(--text-primary);
+  position: relative;
+  width: 90ch;
+  border-radius: 5px;
+}
+.bonitobook-slider:focus {
+  outline: none;
+}
+.bonitobook-slider:focus::-webkit-slider-thumb {
+  box-shadow: 0 0 0 2px rgba(3, 102, 214, 0.2), 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+.book-main-menu {
+  display: flex;
+  background-color: var(--bg-primary);
+  position: relative;
+  width: 100%;
+  flex-direction: row;
+  justify-content: center;
+}
+.show-horizontal {
+  display: block;
+}
+.sidebar-content-container.collapsed {
+  visibility: hidden;
+  width: 0;
+  opacity: 0;
+}
+.small-button img:not([src*='python-logo']):not([src*='julia-logo']), .small-button svg {
+  filter: var(--icon-filter);
+}
+.small-language-icon {
+  bottom: 4px;
+  right: 8px;
+  filter: var(--icon-filter);
+  color: var(--icon-color);
+  pointer-events: none;
+  position: absolute;
+  opacity: 0.8;
+}
+::-webkit-scrollbar-thumb {
+  border: 2px solid var(--scrollbar-track);
+  background-color: var(--scrollbar-thumb);
+  border-radius: 6px;
+}
+::-webkit-scrollbar {
+  width: 12px;
+}
+.sidebar-main-container {
+  display: flex;
+  right: 0;
+  pointer-events: none;
+  position: fixed;
+  z-index: 100;
+}
+.manipulate-widget {
+  min-width: 0;
+  flex: 1;
+}
+.small-button:hover {
+  background-color: var(--hover-bg);
+}
+.sidebar-resize-handle.horizontal {
+  left: 0;
+  height: 4px;
+  right: 0;
+  top: 0;
+  cursor: ns-resize;
+}
+.bonitobook-button:active {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  transform: translateY(1px);
+}
+.markdown-body h3 {
+  font-size: 20px;
+  font-weight: 600;
+}
+@media print {
+  .book-wrapper, .book-document, .book-main-content, .book-content {
+    height: auto !important;
+    display: block !important;
+    padding: 0 !important;
+    max-height: none !important;
+    position: static !important;
+    margin: 0 !important;
+    flex: none !important;
+    overflow: visible !important;
+  }
+  @page {
+    size: A4;
+    margin: 0.5in;
+  }
+  * {
+    -webkit-print-color-adjust: exact !important;
+    filter: none !important;
+    color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  .book-main-menu, .cell-logging, .sidebar-main-container, .sidebar-tabs, .sidebar-content-container, .book-bottom-panel, .new-cell-menu, .hover-buttons {
+    display: none !important;
+  }
+  @page :first {
+    margin-top: 0.3in;
+  }
+}
+.bonitobook-dropdown:hover {
+  border-color: var(--accent-blue);
+}
+::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+}
+.file-tab-add:hover {
+  background-color: var(--hover-bg);
+  color: var(--text-primary);
+}
+.codicon svg, .small-language-icon svg, .codicon img {
+  filter: var(--icon-filter);
+}
+.sidebar-content-container.expanded {
+  visibility: visible;
+  opacity: 1;
+}
+.show-vertical {
+  display: block;
+}
+.file-editor {
+  min-width: 90ch;
+  height: calc(100vh - 20px);
+  padding: 0px;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  width: 100%;
+  margin: 0px;
+}
+.markdown-body a {
+  text-decoration: none;
+  color: var(--accent-blue);
+}
+.sidebar-tabs {
+  align-items: center;
+  height: fit-content;
+  display: flex;
+  border-radius: 0 8px 8px 0;
+  flex-direction: column;
+  background-color: var(--bg-primary);
+  flex-shrink: 0;
+  width: 48px;
+  padding-top: 10px;
+  gap: 4px;
+  pointer-events: auto;
+  border-left: 1px solid var(--border-primary);
+}
+.flex-column {
+  display: flex;
+  flex-direction: column;
+}
+.book-main-menu .file-tabs-container {
+  border-bottom: none;
+  justify-content: center;
+}
+.bonitobook-slider::-webkit-slider-thumb {
+  cursor: pointer;
+  height: 20px;
+  appearance: none;
+  border: 2px solid var(--bg-primary);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  -webkit-appearance: none;
+  width: 20px;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+  background: var(--accent-blue);
+}
+.cell-editor-container {
+  min-width: 400px;
+  max-width: 95vw;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  position: relative;
+  width: 90ch;
+}
+.popup-content {
+  max-height: 90vh;
+  height: fit-content;
+  padding: 16px;
+  box-shadow: var(--shadow-soft);
+  position: relative;
+  border-radius: 5px;
+  border: 1px solid var(--border-primary);
+  background-color: var(--bg-primary);
+  width: fit-content;
+  overflow: auto;
+  max-width: 90vw;
+  color: var(--text-primary);
+  margin: 20px;
+}
+.popup-overlay {
+  left: 0;
+  align-items: center;
+  height: 100vh;
+  display: flex;
+  background-color: rgba(0, 0, 0, 0.5);
+  top: 0;
+  position: fixed;
+  width: 100vw;
+  z-index: 2000;
+  justify-content: center;
+}
+.hide-horizontal {
+  height: 6px;
+  position: relative;
+  overflow: hidden;
+}
+.file-tab {
+  align-items: center;
+  display: flex;
+  padding: 8px 4px;
+  border-radius: 6px 6px 0 0;
+  margin-right: 2px;
+  background-color: var(--bg-primary);
+  transition: all 0.2s ease;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  user-select: none;
+  color: var(--text-secondary);
+}
+.book-spinner.hidden {
+  opacity: 0;
+}
+.book-cells-area {
+  align-items: center;
+  min-width: 0;
+  display: flex;
+  padding: 15px 10px;
+  overflow-y: auto;
+  flex: 1 1 auto;
+  flex-direction: column;
+  overflow-x: hidden;
+}
+.manipulate-control-row {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+}
+</style>
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div data-jscall-id="19">
+              <div class=" style_8" style="" data-jscall-id="20">
+                <div class=" style_3" style="" data-jscall-id="21">
+                  <div data-jscall-id="22">
+                    <div class="book-main-menu" data-jscall-id="23">
+                      <div class="saving small-menu-bar" data-jscall-id="24">
+                        <img class="codicon  style_4" style="" data-jscall-id="25" src="../bonito/svg/save10542206391802304284.svg" />
+                        <div onclick="" class="small-button" data-jscall-id="26">
+                          <img class="codicon  style_4" style="" data-jscall-id="27" src="../bonito/svg/markdown5122053856860942473.svg" />
+                        </div>
+                        <div onclick="" class="small-button" data-jscall-id="28">
+                          <img class="codicon  style_4" style="" data-jscall-id="29" src="../bonito/svg/file-pdf10350221278639379597.svg" />
+                        </div>
+                      </div>
+                    </div>
+                    <div class="cell-editor-container editor-collapsed" id="c02f0301-e477-4a4f-b762-b1afd1255f62" data-jscall-id="30">
+                      <div class=" style_5" style="" data-jscall-id="31" id="c02f0301-e477-4a4f-b762-b1afd1255f62-container" tabindex="0">
+                        <div class=" style_5" style="" data-jscall-id="32">
+                          <div class="hover-buttons" id="c02f0301-e477-4a4f-b762-b1afd1255f62-hover" data-jscall-id="33">
+                            <button onclick="" class="small-button toggle-button" data-jscall-id="34">
+                              <img class="codicon  style_4" style="" data-jscall-id="35" src="../bonito/svg/code18139302498156533340.svg" />
+                            </button>
+                            <button onclick="" class="small-button toggle-button" data-jscall-id="36">
+                              <img class="codicon  style_4" style="" data-jscall-id="37" src="../bonito/svg/terminal3126302118537120484.svg" />
+                            </button>
+                            <button onclick="" class="small-button toggle-button active" data-jscall-id="38">
+                              <img class="codicon  style_4" style="" data-jscall-id="39" src="../bonito/svg/graph187889671474048740.svg" />
+                            </button>
+                            <button onclick="" class="small-button" data-jscall-id="40">
+                              <img class="codicon  style_7" style="" data-jscall-id="41" src="../bonito/svg/close17235711529866555203.svg" />
+                            </button>
+                          </div>
+                          <div class="cell-editor hide-vertical" id="c02f0301-e477-4a4f-b762-b1afd1255f62-card-content" data-jscall-id="42" style="position: relative;">
+                            <div data-jscall-id="43">
+                              <div class="monaco-editor-div language-markdown hide-horizontal" data-jscall-id="44"></div>
+                            </div>
+                            <div data-jscall-id="46">
+                              <style>@media (prefers-color-scheme: dark) {
+  :root {
+    --ansi-bright-cyan: #8cffff;
+    --ansi-bright-white: #ffffff;
+    --ansi-green: #4ec9b0;
+    --ansi-red: #f44747;
+    --ansi-bright-blue: #7cc3ff;
+    --ansi-bright-green: #6bffb8;
+    --ansi-yellow: #dcdcaa;
+    --ansi-magenta: #c678dd;
+    --ansi-bright-black: #808080;
+    --ansi-white: #d4d4d4;
+    --ansi-black: #000000;
+    --ansi-bright-yellow: #ffffa0;
+    --ansi-bright-magenta: #ff8cff;
+    --ansi-cyan: #56b6c2;
+    --ansi-bright-red: #ff6b6b;
+    --ansi-blue: #569cd6;
+  }
+}
+span.sgr36 {
+  color: var(--ansi-cyan);
+}
+span.sgr35 {
+  color: var(--ansi-magenta);
+}
+span.sgr107 {
+  background-color: var(--ansi-bright-white);
+}
+span.sgr101 {
+  background-color: var(--ansi-bright-red);
+}
+span.sgr34 {
+  color: var(--ansi-blue);
+}
+span.sgr9 {
+  text-decoration: line-through;
+}
+span.sgr33 {
+  color: var(--ansi-yellow);
+}
+span.sgr104 {
+  background-color: var(--ansi-bright-blue);
+}
+span.sgr92 {
+  color: var(--ansi-bright-green);
+}
+span.sgr90 {
+  color: var(--ansi-bright-black);
+}
+span.sgr30 {
+  color: var(--ansi-black);
+}
+span.sgr3 {
+  font-style: italic;
+}
+span.sgr45 {
+  background-color: var(--ansi-magenta);
+}
+span.sgr91 {
+  color: var(--ansi-bright-red);
+}
+.logging-widget {
+  white-space: pre-wrap;
+}
+span.sgr2 {
+  font-weight: lighter;
+}
+span.sgr96 {
+  color: var(--ansi-bright-cyan);
+}
+span.sgr40 {
+  background-color: var(--ansi-black);
+}
+span.sgr97 {
+  color: var(--ansi-bright-white);
+}
+span.sgr1 {
+  font-weight: bolder;
+}
+span.sgr47 {
+  background-color: var(--ansi-white);
+}
+span.sgr103 {
+  background-color: var(--ansi-bright-yellow);
+}
+span.sgr41 {
+  background-color: var(--ansi-red);
+}
+span.sgr7 {
+  background-color: var(--text-primary);
+  color: var(--bg-primary);
+}
+span.sgr42 {
+  background-color: var(--ansi-green);
+}
+span.sgr44 {
+  background-color: var(--ansi-blue);
+}
+span.sgr37 {
+  color: var(--ansi-white);
+}
+span.sgr93 {
+  color: var(--ansi-bright-yellow);
+}
+span.sgr105 {
+  background-color: var(--ansi-bright-magenta);
+}
+span.sgr102 {
+  background-color: var(--ansi-bright-green);
+}
+span.sgr106 {
+  background-color: var(--ansi-bright-cyan);
+}
+span.sgr100 {
+  background-color: var(--ansi-bright-black);
+}
+span.sgr32 {
+  color: var(--ansi-green);
+}
+span.sgr95 {
+  color: var(--ansi-bright-magenta);
+}
+span.sgr8, span.sgr8 span, span span.sgr8 {
+  color: transparent;
+}
+@media (prefers-color-scheme: light), (prefers-color-scheme: no-preference) {
+  :root {
+    --ansi-bright-cyan: #55ffff;
+    --ansi-bright-white: #ffffff;
+    --ansi-green: #00bc00;
+    --ansi-red: #cd3131;
+    --ansi-bright-blue: #5555ff;
+    --ansi-bright-green: #55ff55;
+    --ansi-yellow: #949800;
+    --ansi-magenta: #bc05bc;
+    --ansi-bright-black: #686868;
+    --ansi-white: #555555;
+    --ansi-black: #000000;
+    --ansi-bright-yellow: #ffff55;
+    --ansi-bright-magenta: #ff55ff;
+    --ansi-cyan: #0598bc;
+    --ansi-bright-red: #ff5555;
+    --ansi-blue: #0451a5;
+  }
+}
+span.sgr94 {
+  color: var(--ansi-bright-blue);
+}
+span.sgr4 {
+  text-decoration: underline;
+}
+span.sgr31 {
+  color: var(--ansi-red);
+}
+span.sgr46 {
+  background-color: var(--ansi-cyan);
+}
+span.sgr43 {
+  background-color: var(--ansi-yellow);
+}
+</style>
+                              <div class="hide-horizontal" data-jscall-id="47">
+                                <span data-jscall-id="48"></span>
+                              </div>
+                            </div>
+                            <img class="codicon small-language-icon style_6" style="" data-jscall-id="49" src="../bonito/svg/markdown5122053856860942473.svg" />
+                          </div>
+                          <div data-jscall-id="50" tabindex="0">
+                            <div class="cell-output cell-output-markdown " data-jscall-id="45">
+                              <div data-jscall-id="98">
+                                <div class="bonito-fragment" id="8c25b5ee-a339-488b-8870-959db88a9a20" data-jscall-id="subsession-application-dom">
+                                  <div data-jscall-id="99">
+                                    <style data-jscall-id="100">.style_2 {
+  list-style-type: disc;
+}
+</style>
+                                  </div>
+                                  <div data-jscall-id="101">
+                                    <script data-jscall-id="102" type="module">Bonito.init_session("8c25b5ee-a339-488b-8870-959db88a9a20", Bonito.fetch_binary('../bonito/bin/45aab8b30b9c87a5f1736672e1f68853e9f785fa-8499264781674870906.bin'), "sub", false);
+</script>
+                                    <span data-jscall-id="51">
+                                      <div class="markdown-body" data-jscall-id="52">
+                                        <h1 id="How to Create a BonitoBook Plugin" data-jscall-id="53">How to Create a BonitoBook Plugin</h1>
+                                        <p data-jscall-id="54">Create custom book formats that transform how your markdown notebooks are rendered and behave.</p>
+                                        <h2 id="Basic Structure" data-jscall-id="55">Basic Structure</h2>
+                                        <p data-jscall-id="56">BonitoBook plugins are directories with the pattern 
+                                          <code data-jscall-id="57">.name-bbook/</code> containing a 
+                                          <code data-jscall-id="58">book.jl</code> file that returns a module:
+                                        </p>
+                                        <pre data-jscall-id="59">
+                                          <code data-jscall-id="60">.my-plugin-bbook/
+├── book.jl              # Must return a module
+└── styles/              # Optional styling
+    └── style.jl</code>
+                                        </pre>
+                                        <h2 id="Minimal Example" data-jscall-id="61">Minimal Example</h2>
+                                        <p data-jscall-id="62">
+                                          <code data-jscall-id="63">book.jl</code> - return a module with a custom book type:
+                                        </p>
+                                        <div data-jscall-id="64">
+                                          <div class="monaco-editor-div markdown-inline-code language-julia" data-jscall-id="65"></div>
+                                        </div>
+                                        <p data-jscall-id="66">Alternatively, just use an existing module:</p>
+                                        <div data-jscall-id="67">
+                                          <div class="monaco-editor-div markdown-inline-code language-julia" data-jscall-id="68"></div>
+                                        </div>
+                                        <h2 id="Adding Styles" data-jscall-id="69">Adding Styles</h2>
+                                        <p data-jscall-id="70">Copy the main BonitoBook template for 
+                                          <code data-jscall-id="71">styles/style.jl</code> &#40;this gets done automatically if you start from a standard bonitobook&#41;, then add custom styles on top:
+                                        </p>
+                                        <div data-jscall-id="72">
+                                          <div class="monaco-editor-div markdown-inline-code language-julia" data-jscall-id="73"></div>
+                                        </div>
+                                        <p data-jscall-id="74">
+                                          <code data-jscall-id="75">styles/custom-style.jl</code>:
+                                        </p>
+                                        <div data-jscall-id="76">
+                                          <div class="monaco-editor-div markdown-inline-code language-julia" data-jscall-id="77"></div>
+                                        </div>
+                                        <p data-jscall-id="78">The best plugin to look at for this is the slideshow_example&#33;</p>
+                                        <h2 id="Examples" data-jscall-id="79">Examples</h2>
+                                        <p data-jscall-id="80">See existing plugins for reference:</p>
+                                        <ul class=" style_2" style="" data-jscall-id="81">
+                                          <li data-jscall-id="82">
+                                            <p data-jscall-id="83">
+                                              <a href="/examples/slideshow_example" data-jscall-id="84">slideshow_example</a> - Presentation mode with navigation
+                                            </p>
+                                          </li>
+                                          <li data-jscall-id="85">
+                                            <p data-jscall-id="86">
+                                              <a href="/examples/draggable_example" data-jscall-id="87">draggable_example</a> - Rearrangeable cells
+                                            </p>
+                                          </li>
+                                          <li data-jscall-id="88">
+                                            <p data-jscall-id="89">
+                                              <a href="/examples/book-example" data-jscall-id="90">book-example</a> - Alternative book layout
+                                            </p>
+                                          </li>
+                                        </ul>
+                                        <h2 id="Usage" data-jscall-id="91">Usage</h2>
+                                        <p data-jscall-id="92">Place your notebook next to the plugin directory:</p>
+                                        <pre data-jscall-id="93">
+                                          <code data-jscall-id="94">my-project/
+├── my-plugin.md              # Your content
+└── .my-plugin-bbook/        # Your plugin
+    └── book.jl</code>
+                                        </pre>
+                                        <p data-jscall-id="95">BonitoBook automatically detects and uses the plugin. You can use 
+                                          <code data-jscall-id="96">Book</code>/
+                                          <code data-jscall-id="97">book&#40;file; folder&#61;plugin_folder&#41;</code>, to use a different bonitobook folder for a notebook file. This will likely get more streamlined in the feature, making it easier to share plugins with the community.
+                                        </p>
+                                      </div>
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        <div class="cell-menu-proximity-area" data-jscall-id="103"></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+  </body>
+</html>
