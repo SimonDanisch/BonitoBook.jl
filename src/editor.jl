@@ -183,6 +183,7 @@ struct EvalEditor
     loading::Observable{Bool}
     language::String
     resize_to_lines::Bool
+    markdown_focus_edit::Observable{Bool}  # Controls click-to-edit for markdown cells
 end
 
 function process_message(editor::EvalEditor, message::Dict)
@@ -252,6 +253,7 @@ function EvalEditor(
         editor_classes = String[],
         container_classes = String[],
         resize_to_lines = true,
+        markdown_focus_edit = nothing,  # Auto-detect if nothing provided
         options...
     )
     js_init_func = isnothing(js_init_func) ? js"() => {}" : js_init_func
@@ -272,6 +274,13 @@ function EvalEditor(
             logging_html[] = logging_html[] * str
         end
     end
+    # Initialize markdown_focus_edit based on parameter or auto-detect
+    markdown_focus_edit_obs = if isnothing(markdown_focus_edit)
+        Observable(language == "markdown")
+    else
+        Observable(markdown_focus_edit)
+    end
+
     editor = EvalEditor(
         editor,
         Base.RefValue(js_init_func),
@@ -290,7 +299,8 @@ function EvalEditor(
         show_editor_obs,
         loading,
         language,
-        resize_to_lines
+        resize_to_lines,
+        markdown_focus_edit_obs
     )
     on(js_to_julia) do message
         process_message(editor, message)
@@ -423,7 +433,7 @@ function Bonito.jsrender(session::Session, editor::CellEditor)
     container_id = "$(editor.uuid)-container"
     card_content_id = "$(editor.uuid)-card-content"
     any_loading = jleditor.loading
-    hide_on_focus_obs = Observable(editor.language == "markdown")
+    hide_on_focus_obs = editor.editor.markdown_focus_edit
     any_visible = map(|, jleditor.show_editor, jleditor.show_logging)
 
     editor.editor.js_init_func[] = js"""

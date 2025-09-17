@@ -9,15 +9,13 @@ function examples()
         )
     )
 
-    # Get all example folders
-    examples_dir = normpath(joinpath(@__DIR__, "..", "examples"))
-
     # Create example cards
     example_cards = [
         ExampleCard("intro", "A quick intro to BonitoBook, giving a rough overview of the features and how to use them."),
         ExampleCard("sunny", "Sunny.jl uses Makie a lot and they have some wonderful notebooks, which we can import directly from ipynb."),
         ExampleCard("book-example", "An AI generated Book format for BonitoBook, showing how easy it is to completely change the layout."),
         ExampleCard("draggable_example", "Shows of a completely different layout with draggable cells."),
+        ExampleCard("slideshow_example", "A slideshow plugin for BonitoBook."),
     ]
     # Filter out nothing values
     example_cards = filter(!isnothing, example_cards)
@@ -38,7 +36,7 @@ include("../examples/.book-example-bbook/book.jl")
 # Add routes for individual example pages
 function add_example_routes!(routes)
     examples_dir = normpath(joinpath(@__DIR__, "..", "examples"))
-    examples = ["intro", "sunny", "book-example", "draggable_example"]
+    examples = ["intro", "sunny", "book-example", "draggable_example", "slideshow_example"]
     for name in examples
         @show name
         file = joinpath(examples_dir, "$(name).md")
