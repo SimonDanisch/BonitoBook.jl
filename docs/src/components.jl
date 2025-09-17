@@ -49,7 +49,8 @@ function Page(content, title::String="BonitoBook")
     header = Header("BonitoBook")
     navbar = NavBar([
         "Home" => "/",
-        "Examples" => "/examples"
+        "Examples" => "/examples",
+        "How-To" => "/howto"
     ])
 
     return DOM.div(

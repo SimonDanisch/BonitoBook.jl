@@ -18,9 +18,12 @@ function create_routes()
     routes = Routes(
         "/" => App(Website.index, title="BonitoBook"),
         "/examples" => App(Website.examples, title="Examples"),
+        "/howto" => App(Website.howto, title="How-To Guides"),
     )
     # Add individual example pages
     Website.add_example_routes!(routes)
+    # Add individual how-to pages
+    Website.add_howto_routes!(routes)
     return routes
 end
 
