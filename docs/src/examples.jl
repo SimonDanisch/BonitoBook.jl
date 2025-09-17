@@ -26,7 +26,8 @@ function examples()
     )
     content = DOM.div(
         intro,
-        examples_grid
+        examples_grid;
+        class="example-content"
     )
     return Page(content, "BonitoBook Examples")
 end

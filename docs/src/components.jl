@@ -268,9 +268,7 @@ const PageStyles = Styles(
     ),
     CSS(
         ".main-content",
-        "max-width" => "var(--max-content-width)",
         "margin" => "0 auto",
-        "padding" => "var(--content-padding)"
     ),
 
     # Hero section styles
@@ -355,6 +353,9 @@ const PageStyles = Styles(
         "gap" => "var(--card-gap)",
         "margin-top" => "40px"
     ),
+    CSS(".example-content",
+        "margin" => "var(--content-padding)"
+    ),
     CSS(
         ".example-card",
         "background-color" => "var(--bg-primary)",
@@ -364,7 +365,7 @@ const PageStyles = Styles(
         "transition" => "all 0.2s ease-out",
         "box-shadow" => "var(--shadow-soft)",
         "position" => "relative",
-        "overflow" => "hidden"
+        "overflow" => "hidden",
     ),
     CSS(
         ".example-card:hover",

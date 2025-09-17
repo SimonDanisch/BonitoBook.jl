@@ -4,7 +4,7 @@
 
 ```julia (editor=true, logging=false, output=true)
 using WGLMakie
-set_theme!(size=(1000, 400))
+set_theme!(size=(800, 400))
 
 x = range(0, 2π, length=50)
 lines(x, sin.(x),
@@ -74,7 +74,7 @@ surface(x, y, z, colormap=:plasma)
 Apply themes and customize styling:
 
 ```julia (editor=true, logging=false, output=true)
-set_theme!(theme_dark())
+set_theme!(theme_dark();size=(800,400))
 
 x = 0:0.1:4π
 f, ax, l1 = lines(x, sin.(x), label="sin(x)",
