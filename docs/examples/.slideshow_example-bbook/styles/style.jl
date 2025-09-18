@@ -47,6 +47,151 @@ on(@Book().theme_preference) do browser_preference
 end
 
 Styles(
+        # Main slideshow container
+    CSS(
+        ":where(.slideshow-container)",
+        "position" => "relative",
+        "width" => "100%",
+        "min-height" => "100vh",
+        "overflow" => "visible"
+    ),
+
+    # Content container - optimized for presentation (only apply within slideshow-container)
+    CSS(
+        ":where(.slideshow-container .slideshow-content)",
+        "padding" => "80px 120px", # More side padding for centering
+        "scroll-behavior" => "smooth",
+        "line-height" => "1.6",
+        "display" => "flex",
+        "flex-direction" => "column",
+        "align-items" => "center", # Center content horizontally
+    ),
+
+    # HR elements create large gaps to separate slides
+    CSS(
+        ".slideshow-container .slideshow-content hr",
+        "margin" => "100vh 0", # Full viewport height margins
+        "border" => "none",
+        "height" => "2px",
+        "opacity" => "0.3"
+    ),
+
+
+    # Progress bar with hover area
+    CSS(
+        ":where(.progress-bar)",
+        "position" => "fixed",
+        "bottom" => "0",
+        "left" => "0",
+        "height" => "6px",
+        "background-color" => "var(--accent-blue)",
+        "transition" => "width 0.5s ease, height 0.2s ease",
+        "z-index" => "1000",
+        "cursor" => "pointer"
+    ),
+
+    # Progress bar container for tooltip
+    CSS(
+        ".progress-container",
+        "position" => "fixed",
+        "bottom" => "0",
+        "left" => "0",
+        "right" => "0",
+        "height" => "20px",
+        "background-color" => "rgba(0,0,0,0.1)",
+        "z-index" => "999",
+        "cursor" => "pointer"
+    ),
+
+    CSS(
+        ".progress-container:hover .progress-bar",
+        "height" => "10px"
+    ),
+
+    # Presentation-optimized content styling
+    CSS(
+        ":where(.slideshow-content :is(h1, h2, h3, h4, h5, h6))",
+        "color" => "var(--text-primary)",
+        "font-weight" => "600",
+        "text-align" => "center",
+        "width" => "100%"
+    ),
+
+    CSS(
+        ":where(.slideshow-content h1)",
+        "font-size" => "3.5rem",
+        "font-weight" => "700",
+        "margin" => "1rem 0 2rem 0",
+        "line-height" => "1.2"
+    ),
+
+    CSS(
+        ":where(.slideshow-content h2)",
+        "font-size" => "2.8rem",
+        "margin" => "1rem 0",
+        "line-height" => "1.3"
+    ),
+
+    CSS(
+        ":where(.slideshow-content h3)",
+        "font-size" => "2.2rem",
+        "margin" => "0.8rem 0",
+        "line-height" => "1.3"
+    ),
+
+    CSS(
+        ":where(.slideshow-content :is(h4, h5, h6))",
+        "font-size" => "1.6rem",
+        "margin" => "0.8rem 0 1rem 0"
+    ),
+
+    CSS(
+        ".slideshow-content :is(p, li)",
+        "color" => "var(--text-primary)",
+        "font-size" => "1.3rem",
+        "line-height" => "1.6"
+    ),
+
+
+    # Code blocks - optimized for presentation, override base width constraints
+    CSS(
+        ":where(.slideshow-content .cell-editor-container)",
+        "width" => "95%",
+        "max-width" => "1000px",
+    ),
+
+    # Markdown headings - apply to any markdown content
+    CSS(
+        ".slideshow-content h1",
+        "font-size" => "3.5rem"
+    ),
+
+    CSS(
+        ".slideshow-content h2",
+        "font-size" => "2.8rem"
+    ),
+
+    CSS(
+        ".slideshow-content h3",
+        "font-size" => "2.2rem"
+    ),
+
+    CSS(
+        ".slideshow-content p",
+        "font-size" => "1.3rem",
+        "margin-bottom" => "1.5rem"
+    ),
+
+    # Images and figures - exclude button icons
+    CSS(
+        ".slideshow-content :is(img, svg):not(.small-button *):not(.codicon svg)",
+        "max-width" => "100%",
+        "height" => "auto",
+        "margin" => "1rem 0",
+        "border-radius" => "8px",
+        "box-shadow" => "0 2px 8px rgba(0, 0, 0, 0.1)"
+    ),
+
     CSS(
         "body",
         "margin" => "0px",
@@ -328,7 +473,6 @@ Styles(
         "max-height" => "1000px",
         "overflow-y" => "auto",
         "overflow-x" => "visible",
-        "background-color" => "var(--bg-primary)",
         "color" => "var(--text-primary)"
     ),
     # Remove max-height for markdown outputs

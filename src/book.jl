@@ -144,12 +144,35 @@ function Book(user_file::String; folder=nothing, replace_style = false, all_bloc
     Core.eval(runner.mod, :(macro Book(); $(book); end))
     notify(style_eval.file_watcher)
     export_md(markdown_file, book)
-    extension = joinpath(folder, "book.jl")
+    return book
+end
+
+"""
+    create_book(file; folder=nothing, replace_style=false, all_blocks_as_cell=false, plugin_kw_args...)
+
+Create a Book instance from .md or .ipynb file. This is the entry point for the plugin system.
+If a plugin exists, returns the plugin-specific book type. Otherwise returns a standard Book.
+
+**Book Constructor Arguments:**
+- `file::String`: Path to .md or .ipynb file
+- `folder::Union{Nothing, String}`: Folder for .book-name-bbook structure (default: auto-create next to .md file)
+- `replace_style::Bool`: Replace style.jl with template (default: false)
+- `all_blocks_as_cell::Bool`: Treat all code blocks as cells (default: false)
+
+**Plugin Arguments:**
+- `plugin_kw_args...`: Additional keyword arguments passed to the plugin's create_book function
+"""
+function create_book(user_file::String; folder=nothing, replace_style=false, all_blocks_as_cell=false, plugin_kw_args...)
+    # Create basic Book instance with explicit Book constructor arguments
+    book = Book(user_file; folder=folder, replace_style=replace_style, all_blocks_as_cell=all_blocks_as_cell)
+
+    # Check for plugin extension
+    extension = joinpath(book.folder, "book.jl")
     if isfile(extension)
         @info "Loading book extension: $extension"
-        mod = Base._include(identity, runner.mod, extension)
+        mod = Base._include(identity, book.runner.mod, extension)
         if !(mod isa Module)
-            error("book.jl did not define a module")
+            error("book.jl did not return a module")
         end
         variables = map(x-> getfield(mod, x), names(mod, all=true))
         booktypes = filter(x-> x isa DataType && x <: AbstractBook, variables)
@@ -159,14 +182,20 @@ function Book(user_file::String; folder=nothing, replace_style = false, all_bloc
         if length(booktypes) > 1
             @warn "book.jl defined multiple subtypes of AbstractBook, using the first one: $(booktypes[1])"
         end
-        BookType = booktypes[1]
         return Base.invokelatest() do
-            if !hasmethod(BookType, (BonitoBook.Book,))
-                error("The AbstractBook subtype defined in book.jl must be constructible from a BonitoBook.Book")
+            if !isdefined(mod, :create_book)
+                error("The module in book.jl must define a create_book(book::Book; kwargs...) function")
             end
-            return BookType(book)
+            create_book_method = getfield(mod, :create_book)
+            if !hasmethod(create_book_method, (BonitoBook.Book,))
+                error("The create_book function in book.jl must accept a BonitoBook.Book as first argument")
+            end
+            # Forward only plugin-specific kwargs to the plugin
+            return create_book_method(book; plugin_kw_args...)
         end
     end
+
+    # No plugin found, return basic Book
     return book
 end
 
@@ -767,7 +796,7 @@ function book(path::AbstractString;
     )
     name = splitext(basename(path))[1]
     app = App(title=name) do
-        return Book(path; replace_style=replace_style, all_blocks_as_cell=all_blocks_as_cell, folder=folder)
+        return create_book(path; replace_style=replace_style, all_blocks_as_cell=all_blocks_as_cell, folder=folder)
     end
     server = get_server(url, port, proxy_url)
     route!(server, "/$(name)" => app)

@@ -56,6 +56,8 @@ function RealBook(
     )
 end
 
+create_book(book::BonitoBook.Book; kw...) = RealBook(book; kw...)
+
 """
 Custom jsrender for RealBook that adds academic book layout and features.
 """

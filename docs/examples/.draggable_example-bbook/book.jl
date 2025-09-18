@@ -8,6 +8,8 @@ struct DraggableBook <: BonitoBook.AbstractBook
     book::BonitoBook.Book
 end
 
+create_book(book::BonitoBook.Book; kw...) = DraggableBook(book)
+
 # Drawing widget using Fabric.js for simple shapes
 const FabricJS = Asset("https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.0/fabric.min.js")
 

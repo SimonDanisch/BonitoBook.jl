@@ -8,20 +8,30 @@ struct SlideshowBook <: BonitoBook.AbstractBook
     book::BonitoBook.Book
     presentation_style::BonitoBook.EvalFileOnChange
 
-    function SlideshowBook(book::BonitoBook.Book)
-        # Disable markdown click-to-edit for all markdown cells in slideshow mode
-        for cell in book.cells
-            if cell.language == "markdown"
-                cell.editor.markdown_focus_edit[] = false
-            end
-        end
-
-        # Set up presentation style evaluation
-        presentation_style_path = joinpath(dirname(@__FILE__), "styles", "presentation-style.jl")
-        presentation_style = BonitoBook.EvalFileOnChange(presentation_style_path; module_context = book.runner.mod)
-        notify(presentation_style.file_watcher)
+    function SlideshowBook(book::BonitoBook.Book, presentation_style::BonitoBook.EvalFileOnChange)
         return new(book, presentation_style)
     end
+end
+
+"""
+    create_book(book::BonitoBook.Book; kwargs...)
+
+Create a SlideshowBook instance from a BonitoBook.Book.
+"""
+function create_book(book::BonitoBook.Book; kwargs...)
+    # Disable markdown click-to-edit for all markdown cells in slideshow mode
+    for cell in book.cells
+        if cell.language == "markdown"
+            cell.editor.markdown_focus_edit[] = false
+        end
+    end
+
+    # Set up presentation style evaluation
+    presentation_style_path = joinpath(dirname(@__FILE__), "styles", "presentation-style.jl")
+    presentation_style = BonitoBook.EvalFileOnChange(presentation_style_path; module_context = book.runner.mod)
+    notify(presentation_style.file_watcher)
+
+    return SlideshowBook(book, presentation_style)
 end
 
 function Bonito.jsrender(session::Session, slideshow::SlideshowBook)
