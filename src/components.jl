@@ -93,39 +93,71 @@ function Bonito.jsrender(session::Session, popup::PopUp)
         popup.content,
         class = "popup-content"
     )
-    # Create overlay wrapper
-    overlay = DOM.div(
-        popup_content,
-        class = "popup-overlay",
-        style = "display: $(popup.show[] ? "flex" : "none")",
 
-    )
-    # JavaScript for showing/hiding and keyboard handling
+    # Create a container that will hold the content and handle the portal
+    container = DOM.div(popup_content, style = "display: none;")
+
+    # JavaScript for portal rendering and popup behavior
     popup_js = js"""
         const close_button = $(close_button);
         const show = $(popup.show);
-        const overlay = $(overlay);
+        const content_container = $(container);
+
+        // Create the overlay element in JavaScript and portal it to document.body
+        const overlay = document.createElement('div');
+        overlay.className = 'popup-overlay';
+        overlay.style.display = 'none';
+
+        // Move the content from the container to the overlay
+        overlay.appendChild(content_container.firstElementChild);
+        content_container.style.display = 'none';
+
+        // Add overlay to document.body for proper positioning
+        document.body.appendChild(overlay);
+
+        // Clean up when the container is removed from DOM
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                mutation.removedNodes.forEach((node) => {
+                    if (node.contains && node.contains(content_container)) {
+                        if (overlay.parentNode === document.body) {
+                            document.body.removeChild(overlay);
+                        }
+                        observer.disconnect();
+                    }
+                });
+            });
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
+
         close_button.addEventListener('click', () => {
             show.notify(false);
         });
+
         // Handle ESC key
         document.addEventListener('keydown', (event) => {
             if (event.key === 'Escape' && overlay.style.display !== 'none') {
-                $(popup.show).notify(false);
+                show.notify(false);
             }
         });
-        document.addEventListener('click', (event) => {
-            // Hide popup when clicking outside
+
+        // Hide popup when clicking outside
+        overlay.addEventListener('click', (event) => {
             if (event.target === overlay) {
                 show.notify(false);
             }
         });
+
         // Handle show/hide
         show.on((show) => {
             overlay.style.display = show ? "flex" : "none";
         });
+
+        // Initialize with current state
+        overlay.style.display = $(popup.show).value ? "flex" : "none";
     """
-    return Bonito.jsrender(session, DOM.div(popup_js, overlay))
+
+    return Bonito.jsrender(session, DOM.div(popup_js, container))
 end
 
 """
@@ -209,9 +241,8 @@ end
 
 function select_file!(dialog::OpenFileDialog, filepath::String)
     base = dialog.base_folder[]
-
     # Resolve the full path
-    full_path = if isabs(filepath)
+    full_path = if isabspath(filepath)
         filepath
     else
         joinpath(base, filepath)
@@ -227,76 +258,29 @@ function select_file!(dialog::OpenFileDialog, filepath::String)
     end
 end
 
+# File dialog styles - simplified since PopUp handles outer container
 const FileDialogStyle = Styles(
     CSS(
-        ".file-dialog-container",
-        "position" => "relative",
-        "display" => "inline-block",
-    ),
-    CSS(
-        ".file-dialog-dropdown",
-        "position" => "relative",
-        "background-color" => "var(--bg-primary)",
-        "border-radius" => "5px",
-        "width" => "500px",
-        "max-width" => "90vw",
-        "max-height" => "70vh",
-        "display" => "flex",
-        "flex-direction" => "column",
-        "color" => "var(--text-primary)",
-    ),
-    CSS(
         ".file-dialog-content",
-        "background-color" => "var(--bg-primary)",
-        "border-radius" => "5px",
-        "box-shadow" => "var(--shadow-soft)",
-        "width" => "500px",
+        # Remove container styling (PopUp handles this)
+        "width" => "31.25rem", # 500px in rem
         "max-width" => "90vw",
         "max-height" => "70vh",
         "display" => "flex",
         "flex-direction" => "column",
-        "color" => "var(--text-primary)",
-    ),
-    CSS(
-        ".file-dialog-header",
-        "display" => "flex",
-        "justify-content" => "space-between",
-        "align-items" => "center",
-        "padding" => "16px",
-        "border-bottom" => "1px solid var(--border-primary)",
-        "font-weight" => "600",
-        "font-size" => "16px",
-    ),
-    CSS(
-        ".file-dialog-close",
-        "background" => "none",
-        "border" => "none",
-        "font-size" => "20px",
-        "color" => "var(--text-secondary)",
-        "cursor" => "pointer",
-        "padding" => "4px",
-        "border-radius" => "4px",
-        "width" => "28px",
-        "height" => "28px",
-        "display" => "flex",
-        "align-items" => "center",
-        "justify-content" => "center",
-    ),
-    CSS(
-        ".file-dialog-close:hover",
-        "background-color" => "var(--hover-bg)",
         "color" => "var(--text-primary)",
     ),
     CSS(
         ".file-dialog-input",
         "border" => "1px solid var(--border-secondary)",
-        "border-radius" => "6px",
-        "padding" => "8px 12px",
-        "font-size" => "14px",
-        "margin" => "0 16px 16px 16px",
+        "border-radius" => "var(--border-radius-large)",
+        "padding" => "var(--spacing-sm) var(--spacing-md)",
+        "font-size" => "var(--font-size-base)",
+        "margin" => "0 0 var(--spacing-lg) 0",
         "background-color" => "var(--bg-primary)",
         "color" => "var(--text-primary)",
         "outline" => "none",
+        "transition" => "all var(--transition-slow)",
     ),
     CSS(
         ".file-dialog-input:focus",
@@ -305,20 +289,20 @@ const FileDialogStyle = Styles(
     ),
     CSS(
         ".file-dialog-list",
-        "max-height" => "400px",
+        "max-height" => "25rem",
         "overflow-y" => "auto",
-        "padding" => "0 8px 16px 8px",
+        "padding" => "0",
     ),
     CSS(
         ".file-dialog-item",
         "display" => "flex",
         "align-items" => "center",
-        "padding" => "8px 12px",
+        "padding" => "var(--spacing-sm) var(--spacing-md)",
         "cursor" => "pointer",
-        "border-radius" => "6px",
-        "margin" => "2px 0",
-        "font-size" => "14px",
-        "transition" => "background-color 0.2s ease",
+        "border-radius" => "var(--border-radius-large)",
+        "margin" => "var(--spacing-xs) 0",
+        "font-size" => "var(--font-size-base)",
+        "transition" => "background-color var(--transition-slow)",
         "user-select" => "none",
     ),
     CSS(
@@ -417,26 +401,23 @@ function Bonito.jsrender(session::Session, dialog::OpenFileDialog)
         oninput = js"event => $(dialog.current_path).notify(event.target.value)"
     )
 
-    # Create the complete dialog content for popup usage
+    # Create dialog content without header/close button (PopUp handles that)
     dialog_content = DOM.div(
-        DOM.div(
-            DOM.h3("Open File", style = "margin: 0;"),
-            DOM.button("×",
-                class = "file-dialog-close",
-                onclick = js"event => $(dialog.show_dialog).notify(false)"),
-            class = "file-dialog-header"
-        ),
+        DOM.h3("Open File", style = "margin: 0 0 var(--spacing-lg) 0; font-size: var(--font-size-lg); font-weight: 600;"),
         input_with_events,
         file_list_content,
         class = "file-dialog-content"
     )
 
-    return Bonito.jsrender(
-        session, DOM.div(
-            FileDialogStyle,
-            dialog_content
-        )
-    )
+    # Use the PopUp component properly - it will add its own close button and popup styling
+    popup = PopUp(DOM.div(FileDialogStyle, dialog_content); show = false)
+
+    # Connect the dialog's show_dialog observable to the popup's show observable
+    on(session, dialog.show_dialog) do show
+        popup.show[] = show
+    end
+
+    return Bonito.jsrender(session, popup)
 end
 
 """
@@ -604,15 +585,8 @@ function Bonito.jsrender(session::Session, tabs::FileTabs)
         return DOM.div(tab_elements..., class = "file-tabs-container")
     end
 
-    # Wrap file dialog in a popup that only shows when dialog should be shown
-    dialog_popup = PopUp(tabs.file_dialog; show = false)
-
-    # Connect the file dialog show_dialog observable to the popup
-    on(session, tabs.file_dialog.show_dialog) do show
-        dialog_popup.show[] = show
-    end
-
-    return Bonito.jsrender(session, DOM.div(dialog_popup, tabs_content))
+    # The file dialog now handles its own popup overlay, so just render it directly
+    return Bonito.jsrender(session, DOM.div(tabs.file_dialog, tabs_content))
 end
 
 """
@@ -792,6 +766,7 @@ function Tooltip(element, text::String; position::String = "top")
     return Tooltip(element, text, position)
 end
 
+# Tooltip styles - uses global variables from book_style
 const TooltipStyles = Styles(
     CSS(
         ".tooltip-container",
@@ -806,16 +781,16 @@ const TooltipStyles = Styles(
         "visibility" => "hidden",
         "opacity" => "0",
         "position" => "absolute",
-        "z-index" => "3000",
+        "z-index" => "var(--z-popup)",
         "background-color" => "var(--bg-primary)",
         "color" => "var(--text-primary)",
         "border" => "1px solid var(--border-primary)",
-        "border-radius" => "6px",
-        "padding" => "8px 12px",
-        "font-size" => "12px",
+        "border-radius" => "var(--border-radius-large)",
+        "padding" => "var(--spacing-sm) var(--spacing-md)",
+        "font-size" => "var(--font-size-xs)",
         "white-space" => "nowrap",
         "box-shadow" => "var(--shadow-soft)",
-        "transition" => "opacity 0.2s ease, visibility 0.2s ease",
+        "transition" => "opacity var(--transition-slow), visibility var(--transition-slow)",
         "transition-delay" => "0s",
         "pointer-events" => "none"
     ),
@@ -830,28 +805,28 @@ const TooltipStyles = Styles(
         "bottom" => "100%",
         "left" => "50%",
         "transform" => "translateX(-50%)",
-        "margin-bottom" => "8px"
+        "margin-bottom" => "var(--spacing-sm)"
     ),
     CSS(
         ".tooltip-bottom",
         "top" => "100%",
         "left" => "50%",
         "transform" => "translateX(-50%)",
-        "margin-top" => "8px"
+        "margin-top" => "var(--spacing-sm)"
     ),
     CSS(
         ".tooltip-left",
         "right" => "100%",
         "top" => "50%",
         "transform" => "translateY(-50%)",
-        "margin-right" => "8px"
+        "margin-right" => "var(--spacing-sm)"
     ),
     CSS(
         ".tooltip-right",
         "left" => "100%",
         "top" => "50%",
         "transform" => "translateY(-50%)",
-        "margin-left" => "8px"
+        "margin-left" => "var(--spacing-sm)"
     )
 )
 
