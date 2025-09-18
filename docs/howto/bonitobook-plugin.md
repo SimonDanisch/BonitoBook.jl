@@ -50,18 +50,19 @@ using SomeExistingPlugin
 
 ## Adding Styles
 
-Copy the main BonitoBook template for `styles/style.jl` (this gets done automatically if you start from a standard bonitobook), then add custom styles on top:
+Copy the main BonitoBook template for `styles/style.jl` (this gets done automatically if you start from a standard bonitobook), then add custom styles on top, by adding another style file:
 
 ```julia
 # In your book constructor
-custom_style_path = joinpath(dirname(@__FILE__), "styles", "custom-style.jl")
+custom_style_path = joinpath(@__DIR__, "styles", "custom-style.jl")
 custom_style = BonitoBook.EvalFileOnChange(custom_style_path; module_context = book.runner.mod)
-notify(custom_style.file_watcher)  # Important, to actually include the style for the first time
+notify(custom_style.file_watcher)  # Important, to actually eval the style for the first time
 # include the style into your dom inside jsrender
 DOM.div(custom_style.last_valid_output)
 ```
 
 `styles/custom-style.jl`:
+
 ```julia
 using BonitoBook.Bonito: Styles, CSS
 
@@ -69,14 +70,16 @@ Styles(
     CSS(".my-custom-layout", "background" => "#ff6b6b")
 )
 ```
+
 The best plugin to look at for this is the slideshow_example!
 
 ## Examples
 
 See existing plugins for reference:
-- [slideshow_example](/examples/slideshow_example) - Presentation mode with navigation
-- [draggable_example](/examples/draggable_example) - Rearrangeable cells
-- [book-example](/examples/book-example) - Alternative book layout
+
+  * [slideshow_example](/examples/slideshow_example) - Presentation mode with navigation
+  * [draggable_example](/examples/draggable_example) - Rearrangeable cells
+  * [book-example](/examples/book-example) - Alternative book layout
 
 ## Usage
 
@@ -89,6 +92,4 @@ my-project/
     └── book.jl
 ```
 
-BonitoBook automatically detects and uses the plugin.
-You can use `Book`/`book(file; folder=plugin_folder)`, to use a different bonitobook folder for a notebook file.
-This will likely get more streamlined in the feature, making it easier to share plugins with the community.
+BonitoBook automatically detects and uses the plugin. You can use `Book`/`book(file; folder=plugin_folder)`, to use a different bonitobook folder for a notebook file. This will likely get more streamlined in the feature, making it easier to share plugins with the community.

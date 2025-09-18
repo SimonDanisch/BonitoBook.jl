@@ -14,14 +14,15 @@ The slideshow plugin automatically turns your markdown notebook into a presentat
 ## Navigation
 
 ### Keyboard Controls
-- **→ / Space**: Next slide
-- **← / Backspace**: Previous slide
-- **Escape**: Exit fullscreen (if used)
+
+  * **→ / Space**: Next slide
+  * **← / Backspace**: Previous slide
+  * **Escape**: Exit fullscreen (if used)
 
 ### Mouse Controls
-- **Click progress bar**: Jump to specific slide position
-- **Scroll**: Manual navigation (syncs with slide position)
 
+  * **Click progress bar**: Jump to specific slide position
+  * **Scroll**: Manual navigation (syncs with slide position)
 
 ## Styling Customization
 
@@ -36,19 +37,22 @@ MAKIE_BLUE = "#0EA5E9"
 ```
 
 ### Layout and Spacing
-- Large, readable fonts for presentations
-- Generous margins and padding
-- Optimized for viewing from distance
 
+  * Large, readable fonts for presentations
+  * Generous margins and padding
+  * Optimized for viewing from distance
 
 ## Deployment Tips
 
 ### For Live Presentations
-- Use `BonitoBook.book()` for local presentations
-- Ensure stable internet for package loading
-- Test all code cells before presenting
+
+  * Use `BonitoBook.book()` for local presentations
+  * Ensure stable internet for package loading
+  * Test all code cells before presenting
 
 ### For Sharing
-- Export to static HTML for distribution
-- Include instructions for interactive features
-- Provide fallback static versions of plots
+
+  * Export to static HTML for distribution
+  * Include instructions for interactive features
+  * Provide fallback static versions of plots
+

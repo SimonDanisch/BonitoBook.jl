@@ -8,7 +8,7 @@ Create an extension module that defines:
 
 1. **Evaluator struct** inheriting from `LanguageEval`
 2. **eval_code method** that executes code
-3. **get_language_evaluator function** that returns the evaluator
+3. **get*language*evaluator function** that returns the evaluator
 
 ## Example: Shell Evaluator
 
@@ -66,9 +66,10 @@ end
 
 ## Key Points
 
-- **Extension loading**: BonitoBook uses `Base.get_extension()` to load evaluators
-- **Thread safety**: Code runs in `spawnat(1)` for thread safety (e.g. for PythonCall)
-- **Variable sharing**: Transfer variables between language and Julia using the `mod` parameter
-- **Error handling**: Wrap execution in try-catch, BonitoBook handles display
+  * **Extension loading**: BonitoBook uses `Base.get_extension()` to load evaluators
+  * **Thread safety**: Code runs in `spawnat(1)` for thread safety (e.g. for PythonCall)
+  * **Variable sharing**: Transfer variables between language and Julia using the `mod` parameter
+  * **Error handling**: Wrap execution in try-catch, BonitoBook handles display
 
 That's it! The `AsyncRunner` handles the rest automatically.
+
