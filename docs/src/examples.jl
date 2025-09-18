@@ -39,13 +39,12 @@ function add_example_routes!(routes)
     examples_dir = normpath(joinpath(@__DIR__, "..", "examples"))
     examples = ["intro", "sunny", "book-example", "draggable_example", "slideshow_example"]
     for name in examples
-        
+
         file = joinpath(examples_dir, "$(name).md")
         route_name = "/$(name)"
         routes[route_name] = App(title=name) do
             # Create a book instance for this example
-            book = BonitoBook.create_book(file)
-            return Page(BonitoBook.InlineBook(book), name)
+            return Page(BonitoBook.InlineBook(file), name)
         end
     end
     return routes

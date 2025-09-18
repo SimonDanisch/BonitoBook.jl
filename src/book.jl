@@ -165,7 +165,6 @@ If a plugin exists, returns the plugin-specific book type. Otherwise returns a s
 function create_book(user_file::String; folder=nothing, replace_style=false, all_blocks_as_cell=false, plugin_kw_args...)
     # Create basic Book instance with explicit Book constructor arguments
     book = Book(user_file; folder=folder, replace_style=replace_style, all_blocks_as_cell=all_blocks_as_cell)
-
     # Check for plugin extension
     extension = joinpath(book.folder, "book.jl")
     if isfile(extension)
@@ -173,14 +172,6 @@ function create_book(user_file::String; folder=nothing, replace_style=false, all
         mod = Base._include(identity, book.runner.mod, extension)
         if !(mod isa Module)
             error("book.jl did not return a module")
-        end
-        variables = map(x-> getfield(mod, x), names(mod, all=true))
-        booktypes = filter(x-> x isa DataType && x <: AbstractBook, variables)
-        if length(booktypes) == 0
-            error("book.jl did not define a subtype of AbstractBook")
-        end
-        if length(booktypes) > 1
-            @warn "book.jl defined multiple subtypes of AbstractBook, using the first one: $(booktypes[1])"
         end
         return Base.invokelatest() do
             if !isdefined(mod, :create_book)
@@ -194,7 +185,6 @@ function create_book(user_file::String; folder=nothing, replace_style=false, all
             return create_book_method(book; plugin_kw_args...)
         end
     end
-
     # No plugin found, return basic Book
     return book
 end

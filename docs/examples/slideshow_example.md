@@ -4,7 +4,7 @@
 
 ```julia (editor=true, logging=false, output=true)
 using WGLMakie
-set_theme!(size=(800, 400))
+set_theme!(size=(800, 300))
 
 x = range(0, 2π, length=50)
 lines(x, sin.(x),
@@ -95,15 +95,5 @@ f
   * Publication-quality plots
   * Interactive exploration
 
-```julia (editor=true, logging=true, output=true)
-set_theme!(size=(1000,400))
-
-t = range(0, 20π, length=1000)
-x = sin.(t) .* cos.(t/3)
-y = cos.(t) .* sin.(t/2)
-
-lines(x, y, color=t, colormap=:rainbow,
-      axis=(;title="Thank You!"))
-```
 **Next:** Explore [docs.makie.org](https://docs.makie.org)
 

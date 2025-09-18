@@ -52,8 +52,8 @@ function run_all!(book::Book)
     return book
 end
 
-function InlineBook(path::String; replace_style::Bool = true)
-    book = Book(path; replace_style=replace_style)
+function InlineBook(path::String; replace_style::Bool = false)
+    book = create_book(path; replace_style=replace_style)
     run_all!(book)
     return InlineBook(book)
 end

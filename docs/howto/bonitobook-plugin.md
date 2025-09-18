@@ -80,6 +80,7 @@ using SomeExistingPlugin
 If you have an existing plugin using the constructor approach:
 
 **Old (deprecated):**
+
 ```julia
 struct MyBook <: BonitoBook.AbstractBook
     book::BonitoBook.Book
@@ -92,6 +93,7 @@ end
 ```
 
 **New (recommended):**
+
 ```julia
 struct MyBook <: BonitoBook.AbstractBook
     book::BonitoBook.Book
@@ -179,3 +181,4 @@ book("my-plugin.md"; theme="dark", enable_animations=true)
 The Book constructor arguments (`folder`, `replace_style`, `all_blocks_as_cell`) are handled automatically, while any additional kwargs are forwarded to your plugin's `create_book` function.
 
 You can also use `Book`/`book(file; folder=plugin_folder)` to use a different bonitobook folder for a notebook file. This will likely get more streamlined in the future, making it easier to share plugins with the community.
+

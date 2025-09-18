@@ -44,7 +44,7 @@ function Bonito.jsrender(session::Session, slideshow::SlideshowBook)
     )
 
     # Create tooltip widget for progress bar
-    tooltip_content = "Slide navigation:\n• Arrow keys or spacebar to navigate\n• Click progress bar to jump to position"
+    tooltip_content = "Slide navigation:\n• Arrow keys to navigate\n• Click progress bar to jump to position"
     progress_tooltip = BonitoBook.Tooltip(progress_container, tooltip_content)
 
     # Render all cells in one container - JavaScript will handle slide separation
@@ -214,7 +214,7 @@ function Bonito.jsrender(session::Session, slideshow::SlideshowBook)
 
                     // Only handle navigation if not editing
                     if (!is_editing) {
-                        if (e.key === 'ArrowRight' || e.key === ' ') {
+                        if (e.key === 'ArrowRight') {
                             e.preventDefault();
                             next_slide();
                         } else if (e.key === 'ArrowLeft') {
