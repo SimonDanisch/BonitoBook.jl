@@ -37,7 +37,6 @@ else
 end
 
 on(@Book().theme_preference) do browser_preference
-
     theme = light_theme === nothing ? browser_preference : (light_theme ? "light" : "dark")
     if theme == "light"
         Makie.set_theme!(size = (650, 450))
@@ -79,6 +78,21 @@ Styles(
             "--scrollbar-track" => "#f1f1f1",
             "--scrollbar-thumb" => "#c1c1c1",
             "--scrollbar-thumb-hover" => "#a8a8a8",
+            # Layout dimensions
+            "--editor-width" => "90ch",
+            "--editor-min-width" => "400px",
+            "--max-height-large" => "80vh",
+            "--max-height-medium" => "60vh",
+            "--border-radius-small" => "3px",
+            "--border-radius-large" => "5px",
+            "--transition-fast" => "0.1s ease-out",
+            "--transition-slow" => "0.2s ease-in",
+            "--font-family-clean" => "'Inter', 'Roboto', 'Arial', sans-serif",
+            # Book layout specific
+            "--book-max-width" => "1200px",
+            "--book-margin" => "20px auto",
+            "--toc-sidebar-width" => "200px",
+            "--book-main-padding" => "20px",
         )
     ),
 
@@ -106,6 +120,21 @@ Styles(
             "--scrollbar-track" => "#2d2d2d",
             "--scrollbar-thumb" => "#555555",
             "--scrollbar-thumb-hover" => "#777777",
+            # Layout dimensions (same for both themes)
+            "--editor-width" => "90ch",
+            "--editor-min-width" => "400px",
+            "--max-height-large" => "80vh",
+            "--max-height-medium" => "60vh",
+            "--border-radius-small" => "3px",
+            "--border-radius-large" => "5px",
+            "--transition-fast" => "0.1s ease-out",
+            "--transition-slow" => "0.2s ease-in",
+            "--font-family-clean" => "'Inter', 'Roboto', 'Arial', sans-serif",
+            # Book layout specific
+            "--book-max-width" => "1200px",
+            "--book-margin" => "20px auto",
+            "--toc-sidebar-width" => "200px",
+            "--book-main-padding" => "20px",
         )
     ),
     CSS(
@@ -146,6 +175,37 @@ Styles(
             "padding" => "0 !important"
         ),
 
+    ),
+
+    # Mobile Media Queries - Responsive Design
+    # Tablet breakpoint (768px and below)
+    CSS(
+        "@media (max-width: 768px)",
+        CSS(
+            ":root",
+            "--editor-width" => "calc(100vw - 40px)",
+            "--editor-min-width" => "280px",
+            "--book-max-width" => "100%",
+            "--book-margin" => "10px",
+            "--toc-sidebar-width" => "160px",
+            "--book-main-padding" => "15px",
+        )
+    ),
+
+    # Mobile breakpoint (480px and below)
+    CSS(
+        "@media (max-width: 480px)",
+        CSS(
+            ":root",
+            "--editor-width" => "calc(100vw - 20px)",
+            "--editor-min-width" => "260px",
+            "--book-max-width" => "100%",
+            "--book-margin" => "5px",
+            "--toc-sidebar-width" => "140px",
+            "--book-main-padding" => "10px",
+            "--border-radius-large" => "3px",
+            "--border-radius-small" => "2px",
+        )
     ),
 
     # Export mode styles - hide interactive elements when BONITO_EXPORT_MODE is true
@@ -193,7 +253,7 @@ Styles(
     ),
     CSS(
         ".monaco-list",
-        "max-height" => max_height_medium,
+        "max-height" => "var(--max-height-medium)",
         "overflow-y" => "auto !important",
         "background-color" => "var(--bg-primary)",
         "color" => "var(--text-primary)"
@@ -202,8 +262,8 @@ Styles(
     # Editor containers
     CSS(
         ".cell-editor-container",
-        "width" => editor_width,
-        "min-width" => "400px",  # Don't squeeze too much
+        "width" => "var(--editor-width)",
+        "min-width" => "var(--editor-min-width)",
         "max-width" => "95vw",
         "position" => "relative",
         "background-color" => "var(--bg-primary)",
@@ -246,11 +306,11 @@ Styles(
     ),
     CSS(
         ".cell-editor",
-        "width" => editor_width,
+        "width" => "var(--editor-width)",
         "max-width" => "95vw",
         "position" => "relative",
         "padding" => "5px 5px 10px 10px",
-        "border-radius" => border_radius_large,
+        "border-radius" => "var(--border-radius-large)",
         "box-shadow" => "var(--shadow-soft)",
         "background-color" => "var(--bg-primary)",
         "color" => "var(--text-primary)"
@@ -268,7 +328,7 @@ Styles(
         ".cell-logging",
         "min-height" => "0px",
         "max-height" => "500px",
-        "max-width" => editor_width,
+        "max-width" => "var(--editor-width)",
         "overflow-y" => "auto",
         "height" => "fit-content",
         "margin" => "0",
@@ -603,7 +663,7 @@ Styles(
         "padding" => "0px",
         "margin" => "0px",
         "width" => "100%",
-        "min-width" => editor_width,
+        "min-width" => "var(--editor-width)",
         "height" => "calc(100vh - 20px)",
         "background-color" => "var(--bg-primary)",
         "color" => "var(--text-primary)"
@@ -759,7 +819,7 @@ Styles(
         ".popup-content",
         "position" => "relative",
         "background-color" => "var(--bg-primary)",
-        "border-radius" => border_radius_large,
+        "border-radius" => "var(--border-radius-large)",
         "box-shadow" => "var(--shadow-soft)",
         "border" => "1px solid var(--border-primary)",
         "max-width" => "90vw",
@@ -1551,5 +1611,108 @@ Styles(
         "background-color" => "var(--hover-bg)",
         "font-family" => "monospace",
         "text-align" => "right"
+    ),
+
+    # RealBook Academic Layout Styles
+    CSS(
+        ".real-book-container",
+        "display" => "flex",
+        "position" => "relative",
+        "width" => "auto",
+        "max-width" => "1200px",
+        "margin" => "20px auto",
+        "overflow" => "visible",
+        "background-color" => "#ffffff",
+        "border-radius" => "8px",
+        "box-shadow" => "0 2px 12px rgba(0,0,0,0.1)"
+    ),
+    CSS(
+        ".book-toc-sidebar",
+        "width" => "200px",
+        "position" => "relative",
+        "flex-shrink" => "0",
+        "overflow-y" => "auto",
+        "background-color" => "#f8f9fa",
+        "border-right" => "1px solid #dee2e6",
+        "padding" => "12px",
+        "align-self" => "stretch"
+    ),
+    CSS(
+        ".academic-content",
+        "width" => "100%",
+        "display" => "flex",
+        "flex-direction" => "column",
+        "align-items" => "center"
+    ),
+    CSS(
+        ".book-main-area",
+        "flex" => "1",
+        "padding" => "20px",
+        "display" => "flex",
+        "flex-direction" => "column",
+        "align-items" => "center",
+        "justify-content" => "flex-start",
+        "min-width" => "0",
+        "overflow" => "visible"
+    ),
+    CSS(
+        ".toc-link",
+        "text-decoration" => "none",
+        "color" => "#3498db",
+        "transition" => "all 0.2s",
+        "display" => "block",
+        "padding" => "4px 8px",
+        "border-radius" => "4px"
+    ),
+    CSS(
+        ".toc-link.level-1, .toc-link.level-2",
+        "font-size" => "0.95em",
+        "font-weight" => "500"
+    ),
+    CSS(
+        ".toc-link.level-3, .toc-link.level-4, .toc-link.level-5, .toc-link.level-6",
+        "font-size" => "0.9em",
+        "font-weight" => "normal"
+    ),
+    CSS(
+        ".toc-link:hover",
+        "background-color" => "#e3f2fd",
+        "color" => "#1976d2"
+    ),
+    CSS(
+        ".toc-item",
+        "margin-bottom" => "2px"
+    ),
+    CSS(
+        ".toc-no-headings",
+        "font-style" => "italic",
+        "color" => "#7f8c8d",
+        "text-align" => "center"
+    ),
+    CSS(
+        ".toc-header",
+        "color" => "#2c3e50",
+        "margin-bottom" => "1.5em",
+        "font-size" => "1.2em",
+        "font-weight" => "bold",
+        "border-bottom" => "2px solid #3498db",
+        "padding-bottom" => "0.5em"
+    ),
+    CSS(
+        ".book-footer",
+        "margin-top" => "4em",
+        "padding" => "2em",
+        "border-top" => "1px solid #dee2e6",
+        "color" => "#7f8c8d",
+        "font-size" => "0.9em",
+        "text-align" => "center"
+    ),
+    CSS(
+        ".book-footer p:first-child",
+        "margin-bottom" => "0.5em"
+    ),
+    CSS(
+        ".book-footer p:last-child",
+        "font-style" => "italic"
     ),
 )

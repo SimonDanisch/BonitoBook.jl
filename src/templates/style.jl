@@ -1,16 +1,6 @@
 # Theme control: true = light, false = dark, nothing = auto (browser preference)
 light_theme = nothing
 
-# Define reusable variables for dimensions and transitions
-editor_width = "90ch"
-max_height_large = "80vh"
-max_height_medium = "60vh"
-border_radius_small = "3px"
-border_radius_large = "5px"
-transition_fast = "0.1s ease-out"
-transition_slow = "0.2s ease-in"
-font_family_clean = "'Inter', 'Roboto', 'Arial', sans-serif"
-
 # Set Makie theme and Monaco editor based on system preference
 
 # Define theme media queries based on light_theme setting
@@ -37,7 +27,6 @@ else
 end
 
 on(@Book().theme_preference) do browser_preference
-
     theme = light_theme === nothing ? browser_preference : (light_theme ? "light" : "dark")
     if theme == "light"
         Makie.set_theme!(size = (650, 450))
@@ -46,15 +35,85 @@ on(@Book().theme_preference) do browser_preference
     end
 end
 
-Styles(
+# Global CSS Variables (theme-independent)
+global_variables = Styles(
+    CSS(
+        ":root",
+        # Layout dimensions
+        "--editor-width" => "90ch",
+        "--editor-min-width" => "25rem", # Responsive minimum width
+        "--editor-max-width" => "95vw",
+        "--max-height-large" => "80vh",
+        "--max-height-medium" => "60vh",
+        "--border-radius-small" => "0.1875rem", # 3px at 16px base
+        "--border-radius-large" => "0.3125rem", # 5px at 16px base
+        "--transition-fast" => "0.1s ease-out",
+        "--transition-slow" => "0.2s ease-in",
+        "--font-family-clean" => "'Inter', 'Roboto', 'Arial', sans-serif",
+        # Common spacing (rem scales with user font preferences)
+        "--spacing-xs" => "0.25rem",   # 4px at 16px base
+        "--spacing-sm" => "0.5rem",    # 8px at 16px base
+        "--spacing-md" => "0.75rem",   # 12px at 16px base
+        "--spacing-lg" => "1rem",      # 16px at 16px base
+        "--spacing-xl" => "1.25rem",   # 20px at 16px base
+        # Typography (rem for accessibility)
+        "--font-size-xs" => "0.75rem",   # 12px at 16px base
+        "--font-size-sm" => "0.8125rem", # 13px at 16px base
+        "--font-size-base" => "0.875rem", # 14px at 16px base
+        "--font-size-lg" => "1rem",      # 16px at 16px base
+        # Common dimensions (rem for consistency)
+        "--width-xs" => "1rem",      # 16px at 16px base
+        "--width-sm" => "1.25rem",   # 20px at 16px base
+        "--width-md" => "2.25rem",   # 36px at 16px base
+        "--width-lg" => "3rem",      # 48px at 16px base
+        # Z-index layers
+        "--z-behind" => "-1",
+        "--z-base" => "1",
+        "--z-dropdown" => "10",
+        "--z-overlay" => "50",
+        "--z-sidebar" => "100",
+        "--z-modal" => "1000",
+        "--z-menu" => "1001",
+        "--z-popup" => "2000",
+        "--z-popup-close" => "2001",
+    )
+)
+
+# Base element styles
+base_styles = Styles(
     CSS(
         "body",
-        "margin" => "0px",
+        "margin" => "0",
     ),
     CSS("pre",
         "margin-block" => "5px 0px",
         "font-family" => "'Consolas', 'Monaco', 'Courier New', monospace"
     ),
+    # Global styling for all elements
+    CSS(
+        "html",
+        "background-color" => "var(--bg-primary)",
+        "color" => "var(--text-primary)"
+    ),
+    CSS(
+        "body",
+        "background-color" => "var(--bg-primary)",
+        "color" => "var(--text-primary)"
+    ),
+    CSS(
+        "*",
+        "color" => "inherit"
+    ),
+    # Fix for Markdown list
+    CSS("li p", "display" => "inline"),
+    CSS(
+        "mjx-container[jax='CHTML'][display='true']",
+        "display" => "inline"
+    ),
+)
+
+# Theme color variables
+theme_styles = Styles(
     # Light theme colors
     CSS(
         light_media_query,
@@ -108,6 +167,10 @@ Styles(
             "--scrollbar-thumb-hover" => "#777777",
         )
     ),
+)
+
+# Print and export mode styles
+print_export_styles = Styles(
     CSS(
         "@media print",
         # Preserve all colors and styles
@@ -145,7 +208,6 @@ Styles(
             "margin" => "0 !important",
             "padding" => "0 !important"
         ),
-
     ),
 
     # Export mode styles - hide interactive elements when BONITO_EXPORT_MODE is true
@@ -153,29 +215,52 @@ Styles(
         "body.bonito-export-mode .hover-buttons, body.bonito-export-mode .cell-menu-proximity-area",
         "display" => "none !important"
     ),
+)
 
-    # Global styling for all elements
+# Mobile responsive styles
+mobile_styles = Styles(
+    # Tablet breakpoint (768px and below)
     CSS(
-        "html",
-        "background-color" => "var(--bg-primary)",
-        "color" => "var(--text-primary)"
-    ),
-    CSS(
-        "body",
-        "background-color" => "var(--bg-primary)",
-        "color" => "var(--text-primary)"
-    ),
-    CSS(
-        "*",
-        "color" => "inherit"
-    ),
-    # Fix for Markdown list
-    CSS("li p", "display" => "inline"),
-    CSS(
-        "mjx-container[jax='CHTML'][display='true']",
-        "display" => "inline"
+        "@media (max-width: 768px)",
+        CSS(
+            ":root",
+            "--editor-width" => "calc(100vw - 40px)",
+            "--editor-min-width" => "280px",
+            "--editor-max-width" => "100vw",
+        )
     ),
 
+    # Mobile breakpoint (480px and below)
+    CSS(
+        "@media (max-width: 480px)",
+        CSS(
+            ":root",
+            "--editor-width" => "calc(100vw - 20px)",
+            "--editor-min-width" => "260px",
+            "--editor-max-width" => "100vw",
+            "--border-radius-large" => "3px",
+            "--border-radius-small" => "2px",
+        ),
+        # Mobile-specific layout adjustments
+        CSS(
+            ".cell-editor",
+            "padding" => "3px 3px 8px 8px",
+        ),
+        CSS(
+            ".small-menu-bar",
+            "padding" => "var(--spacing-xs)",
+            "gap" => "2px",
+        ),
+        CSS(
+            ".small-button",
+            "padding" => "6px",
+            "margin-right" => "3px",
+        ),
+    ),
+)
+
+# Monaco editor and widgets
+monaco_styles = Styles(
     # Monaco Widgets (find/command palette)
     CSS(
         ".quick-input-widget",
@@ -193,18 +278,32 @@ Styles(
     ),
     CSS(
         ".monaco-list",
-        "max-height" => max_height_medium,
+        "max-height" => "var(--max-height-medium)",
         "overflow-y" => "auto !important",
         "background-color" => "var(--bg-primary)",
         "color" => "var(--text-primary)"
     ),
+    CSS(
+        ".monaco-editor-div",
+        "background-color" => "var(--bg-primary)",
+        "padding" => "0",
+        "margin" => "0",
+        "color" => "var(--text-primary)"
+    ),
+    CSS(
+        ".sidebar-widget-content .monaco-editor-div.hide-horizontal",
+        "display" => "block !important",
+    ),
+)
 
+# Cell editor styles
+editor_styles = Styles(
     # Editor containers
     CSS(
         ".cell-editor-container",
-        "width" => editor_width,
-        "min-width" => "400px",  # Don't squeeze too much
-        "max-width" => "95vw",
+        "width" => "var(--editor-width)",
+        "min-width" => "var(--editor-min-width)",
+        "max-width" => "var(--editor-max-width)",
         "position" => "relative",
         "background-color" => "var(--bg-primary)",
         "color" => "var(--text-primary)"
@@ -213,27 +312,27 @@ Styles(
         ".cell-menu-proximity-area",
         "position" => "absolute",
         "top" => "-20px",
-        "left" => "0px",
+        "left" => "0",
         "height" => "20px",
         "width" => "100%",
         "background-color" => "transparent",
         "pointer-events" => "auto",
-        "z-index" => "-1"
+        "z-index" => "var(--z-behind)"
     ),
     # Special styling for collapsed editors - use container-level class
     CSS(
         ".cell-editor-container.editor-collapsed .cell-menu-proximity-area",
         "position" => "absolute",
-        "top" => "0px",
-        "left" => "0px",
+        "top" => "0",
+        "left" => "0",
         "height" => "6px",
         "width" => "100%",
         "background-color" => "transparent",
         "border" => "none",
         "border-radius" => "2px",
         "pointer-events" => "auto",
-        "z-index" => "1",
-        "transition" => "all 0.2s ease",
+        "z-index" => "var(--z-base)",
+        "transition" => "all var(--transition-slow)",
         "opacity" => "0"
     ),
     # Add visual feedback on hover for collapsed state
@@ -246,29 +345,27 @@ Styles(
     ),
     CSS(
         ".cell-editor",
-        "width" => editor_width,
-        "max-width" => "95vw",
+        "width" => "var(--editor-width)",
+        "max-width" => "var(--editor-max-width)",
         "position" => "relative",
         "padding" => "5px 5px 10px 10px",
-        "border-radius" => border_radius_large,
+        "border-radius" => "var(--border-radius-large)",
         "box-shadow" => "var(--shadow-soft)",
         "background-color" => "var(--bg-primary)",
         "color" => "var(--text-primary)"
     ),
+    # Cell editor focus highlight - target elements that have both classes
     CSS(
-        ".monaco-editor-div",
-        "background-color" => "var(--bg-primary)",
-        "padding" => "0px",
-        "margin" => "0px",
-        "color" => "var(--text-primary)"
+        ".cell-editor.focused",
+        "box-shadow" => "0 0 4px var(--accent-blue)",
     ),
 
     # Logging output
     CSS(
         ".cell-logging",
-        "min-height" => "0px",
+        "min-height" => "0",
         "max-height" => "500px",
-        "max-width" => editor_width,
+        "max-width" => "var(--editor-width)",
         "overflow-y" => "auto",
         "height" => "fit-content",
         "margin" => "0",
@@ -287,11 +384,11 @@ Styles(
         "width" => "100%",
         "overflow-y" => "auto",
         "margin" => "0",
-        "padding" => "8px",
+        "padding" => "var(--spacing-sm)",
         "background-color" => "var(--bg-primary)",
         "color" => "var(--text-primary)",
         "font-family" => "monospace",
-        "font-size" => "12px",
+        "font-size" => "var(--font-size-xs)",
         "line-height" => "1.4",
         "white-space" => "pre-wrap",
         "word-wrap" => "break-word"
@@ -315,7 +412,7 @@ Styles(
         "position" => "absolute",
         "right" => "-10px",
         "top" => "-23px",
-        "z-index" => 50,
+        "z-index" => "var(--z-overlay)",
         "opacity" => 0.0,
         "pointer-events" => "auto",
     ),
@@ -375,7 +472,10 @@ Styles(
         "color" => "var(--icon-color)",
         "filter" => "var(--icon-filter)"
     ),
+)
 
+# Icon system styles
+icon_styles = Styles(
     # Codicon system
     CSS(
         ".codicon",
@@ -426,203 +526,10 @@ Styles(
             "filter" => "brightness(1.3) contrast(1.1)"
         )
     ),
+)
 
-    # Scrollbar styling
-    CSS(
-        "::-webkit-scrollbar",
-        "width" => "12px"
-    ),
-    CSS(
-        "::-webkit-scrollbar-track",
-        "background" => "var(--scrollbar-track)"
-    ),
-    CSS(
-        "::-webkit-scrollbar-thumb",
-        "background-color" => "var(--scrollbar-thumb)",
-        "border-radius" => "6px",
-        "border" => "2px solid var(--scrollbar-track)"
-    ),
-    CSS(
-        "::-webkit-scrollbar-thumb:hover",
-        "background-color" => "var(--scrollbar-thumb-hover)"
-    ),
-    # Firefox scrollbar
-    CSS(
-        "*",
-        "scrollbar-width" => "thin",
-        "scrollbar-color" => "var(--scrollbar-thumb) var(--scrollbar-track)"
-    ),
-
-    # Menu and Buttons
-    CSS(
-        ".small-menu-bar",
-        "z-index" => "1001",
-        "background-color" => "var(--bg-primary)",
-        "border" => "1px solid var(--border-primary)",
-        "border-radius" => "8px",
-        "box-shadow" => "var(--shadow-soft)",
-        "padding" => "6px",
-        "display" => "flex",
-        "gap" => "4px",
-        "align-items" => "center"
-    ),
-    CSS(
-        ".small-button.toggled",
-        "color" => "var(--text-primary)",
-        "border" => "none",
-        "filter" => "grayscale(100%)",
-        "opacity" => "0.5",
-        "box-shadow" => "var(--shadow-inset)",
-    ),
-    CSS(
-        ".small-button",
-        "background-color" => "var(--bg-primary)",
-        "border" => "none",
-        "border-radius" => "8px",
-        "color" => "var(--text-secondary)",
-        "cursor" => "pointer",
-        "box-shadow" => "var(--shadow-button)",
-        "transition" => "background-color 0.2s",
-        "padding" => "8px",
-        "margin-right" => "5px",
-        "display" => "inline-flex",
-        "align-items" => "center",
-        "justify-content" => "center"
-    ),
-    CSS(
-        ".toggle-button.active",
-        "box-shadow" => "var(--shadow-inset)",
-        "color" => "var(--text-primary)",
-    ),
-    CSS(
-        ".small-button:hover",
-        "background-color" => "var(--hover-bg)",
-    ),
-    CSS(
-        ".small-button.inactive",
-        "opacity" => "0.4",
-        "cursor" => "not-allowed",
-    ),
-    CSS(
-        ".small-button.inactive:hover",
-        "background-color" => "var(--bg-primary)",
-    ),
-
-    CSS(
-        ".file-tabs-container",
-        "display" => "flex",
-        "background-color" => "var(--bg-primary)",
-        "border-bottom" => "1px solid var(--border-primary)",
-        "overflow-x" => "auto",
-        "flex-shrink" => "0",
-    ),
-    CSS(
-        ".file-tab",
-        "display" => "flex",
-        "align-items" => "center",
-        "padding" => "8px 4px",
-        "border-bottom" => "2px solid transparent",
-        "background-color" => "var(--bg-primary)",
-        "color" => "var(--text-secondary)",
-        "cursor" => "pointer",
-        "transition" => "all 0.2s ease",
-        "border-radius" => "6px 6px 0 0",
-        "margin-right" => "2px",
-        "user-select" => "none",
-    ),
-    CSS(
-        ".file-tab:hover",
-        "background-color" => "var(--hover-bg)",
-        "color" => "var(--text-primary)",
-    ),
-    CSS(
-        ".file-tab.active",
-        "background-color" => "var(--bg-primary)",
-        "color" => "var(--text-primary)",
-        "border-bottom-color" => "var(--accent-blue)",
-        "font-weight" => "500",
-    ),
-    CSS(
-        ".file-tab-content",
-        "display" => "flex",
-        "align-items" => "center",
-        "gap" => "6px",
-    ),
-    CSS(
-        ".file-tab-name",
-        "font-size" => "13px",
-        "max-width" => "150px",
-        "overflow" => "hidden",
-        "text-overflow" => "ellipsis",
-        "white-space" => "nowrap",
-    ),
-    CSS(
-        ".file-tab-close",
-        "display" => "flex",
-        "align-items" => "center",
-        "justify-content" => "center",
-        "width" => "16px",
-        "height" => "16px",
-        "border-radius" => "50%",
-        "background-color" => "transparent",
-        "border" => "none",
-        "color" => "var(--text-secondary)",
-        "cursor" => "pointer",
-        "font-size" => "12px",
-        "line-height" => "1",
-        "transition" => "all 0.2s ease",
-    ),
-    CSS(
-        ".file-tab-close:hover",
-        "background-color" => "var(--hover-bg)",
-        "color" => "var(--text-primary)",
-    ),
-    CSS(
-        ".file-tab-add",
-        "display" => "flex",
-        "align-items" => "center",
-        "justify-content" => "center",
-        "padding" => "8px 12px",
-        "background-color" => "transparent",
-        "border" => "none",
-        "color" => "var(--text-secondary)",
-        "cursor" => "pointer",
-        "font-size" => "16px",
-        "line-height" => "1",
-        "transition" => "all 0.2s ease",
-        "border-radius" => "6px",
-    ),
-    CSS(
-        ".file-tab-add:hover",
-        "background-color" => "var(--hover-bg)",
-        "color" => "var(--text-primary)",
-    ),
-
-    CSS(
-        ".file-editor",
-        "padding" => "0px",
-        "margin" => "0px",
-        "width" => "100%",
-        "min-width" => editor_width,
-        "height" => "calc(100vh - 20px)",
-        "background-color" => "var(--bg-primary)",
-        "color" => "var(--text-primary)"
-    ),
-
-    CSS(
-        ".sidebar-widget-content .monaco-editor-div.hide-horizontal",
-        "display" => "block !important",
-    ),
-    # Utility classes
-    CSS(".flex-row", "display" => "flex", "flex-direction" => "row"),
-    CSS(".flex-column", "display" => "flex", "flex-direction" => "column"),
-    CSS(".center-content", "justify-content" => "center", "align-items" => "center"),
-    CSS(".inline-block", "display" => "inline-block"),
-    CSS(".fit-content", "width" => "fit-content"),
-    CSS(".max-width-90ch", "max-width" => "90ch"),
-    CSS(".gap-10", "gap" => "10px"),
-    CSS(".full-width", "width" => "100%"),
-
+# Markdown and content styling
+markdown_styles = Styles(
     # Markdown styling
     CSS(
         ".markdown-body",
@@ -691,6 +598,238 @@ Styles(
     CSS(".markdown-body img", "border-style" => "none"),
     CSS(".markdown-body input", "font" => "inherit", "overflow" => "visible"),
     CSS(".markdown-body *", "box-sizing" => "border-box"),
+)
+
+# Data visualization and output styles
+data_styles = Styles(
+    # DataFrame styling
+    CSS(
+        ".data-frame",
+        "margin" => "1rem 0"
+    ),
+    CSS(
+        ".data-frame table",
+        "border-collapse" => "collapse",
+        "font-size" => "13px"
+    ),
+    CSS(
+        ".data-frame th",
+        "padding" => "8px 12px",
+        "background-color" => "var(--hover-bg)",
+        "font-weight" => "500",
+        "border-bottom" => "1px solid var(--border-primary)"
+    ),
+    CSS(
+        ".data-frame td",
+        "padding" => "6px 12px",
+        "border-bottom" => "1px solid var(--border-primary)"
+    ),
+    CSS(
+        ".data-frame .rowLabel",
+        "background-color" => "var(--hover-bg)",
+        "font-family" => "monospace",
+        "text-align" => "right"
+    ),
+)
+
+# UI component styles (scrollbars, buttons, menus, etc.)
+ui_styles = Styles(
+    # Utility classes
+    CSS(".flex-row", "display" => "flex", "flex-direction" => "row"),
+    CSS(".flex-column", "display" => "flex", "flex-direction" => "column"),
+    CSS(".center-content", "justify-content" => "center", "align-items" => "center"),
+    CSS(".inline-block", "display" => "inline-block"),
+    CSS(".fit-content", "width" => "fit-content"),
+    CSS(".max-width-90ch", "max-width" => "90ch"),
+    CSS(".gap-10", "gap" => "10px"),
+    CSS(".full-width", "width" => "100%"),
+
+    # Scrollbar styling
+    CSS(
+        "::-webkit-scrollbar",
+        "width" => "12px"
+    ),
+    CSS(
+        "::-webkit-scrollbar-track",
+        "background" => "var(--scrollbar-track)"
+    ),
+    CSS(
+        "::-webkit-scrollbar-thumb",
+        "background-color" => "var(--scrollbar-thumb)",
+        "border-radius" => "6px",
+        "border" => "2px solid var(--scrollbar-track)"
+    ),
+    CSS(
+        "::-webkit-scrollbar-thumb:hover",
+        "background-color" => "var(--scrollbar-thumb-hover)"
+    ),
+    # Firefox scrollbar
+    CSS(
+        "*",
+        "scrollbar-width" => "thin",
+        "scrollbar-color" => "var(--scrollbar-thumb) var(--scrollbar-track)"
+    ),
+
+    # Menu and Buttons
+    CSS(
+        ".small-menu-bar",
+        "z-index" => "var(--z-menu)",
+        "background-color" => "var(--bg-primary)",
+        "border" => "1px solid var(--border-primary)",
+        "border-radius" => "var(--spacing-sm)",
+        "box-shadow" => "var(--shadow-soft)",
+        "padding" => "6px",
+        "display" => "flex",
+        "gap" => "4px",
+        "align-items" => "center"
+    ),
+    CSS(
+        ".small-button.toggled",
+        "color" => "var(--text-primary)",
+        "border" => "none",
+        "filter" => "grayscale(100%)",
+        "opacity" => "0.5",
+        "box-shadow" => "var(--shadow-inset)",
+    ),
+    CSS(
+        ".small-button",
+        "background-color" => "var(--bg-primary)",
+        "border" => "none",
+        "border-radius" => "var(--spacing-sm)",
+        "color" => "var(--text-secondary)",
+        "cursor" => "pointer",
+        "box-shadow" => "var(--shadow-button)",
+        "transition" => "background-color var(--transition-slow)",
+        "padding" => "var(--spacing-sm)",
+        "margin-right" => "5px",
+        "display" => "inline-flex",
+        "align-items" => "center",
+        "justify-content" => "center"
+    ),
+    CSS(
+        ".toggle-button.active",
+        "box-shadow" => "var(--shadow-inset)",
+        "color" => "var(--text-primary)",
+    ),
+    CSS(
+        ".small-button:hover",
+        "background-color" => "var(--hover-bg)",
+    ),
+    CSS(
+        ".small-button.inactive",
+        "opacity" => "0.4",
+        "cursor" => "not-allowed",
+    ),
+    CSS(
+        ".small-button.inactive:hover",
+        "background-color" => "var(--bg-primary)",
+    ),
+
+    CSS(
+        ".file-tabs-container",
+        "display" => "flex",
+        "background-color" => "var(--bg-primary)",
+        "border-bottom" => "1px solid var(--border-primary)",
+        "overflow-x" => "auto",
+        "flex-shrink" => "0",
+    ),
+    CSS(
+        ".file-tab",
+        "display" => "flex",
+        "align-items" => "center",
+        "padding" => "8px 4px",
+        "border-bottom" => "2px solid transparent",
+        "background-color" => "var(--bg-primary)",
+        "color" => "var(--text-secondary)",
+        "cursor" => "pointer",
+        "transition" => "all var(--transition-slow)",
+        "border-radius" => "6px 6px 0 0",
+        "margin-right" => "2px",
+        "user-select" => "none",
+    ),
+    CSS(
+        ".file-tab:hover",
+        "background-color" => "var(--hover-bg)",
+        "color" => "var(--text-primary)",
+    ),
+    CSS(
+        ".file-tab.active",
+        "background-color" => "var(--bg-primary)",
+        "color" => "var(--text-primary)",
+        "border-bottom-color" => "var(--accent-blue)",
+        "font-weight" => "500",
+    ),
+    CSS(
+        ".file-tab-content",
+        "display" => "flex",
+        "align-items" => "center",
+        "gap" => "6px",
+    ),
+    CSS(
+        ".file-tab-name",
+        "font-size" => "var(--font-size-sm)",
+        "max-width" => "150px",
+        "overflow" => "hidden",
+        "text-overflow" => "ellipsis",
+        "white-space" => "nowrap",
+    ),
+    CSS(
+        ".file-tab-close",
+        "display" => "flex",
+        "align-items" => "center",
+        "justify-content" => "center",
+        "width" => "var(--width-xs)",
+        "height" => "var(--width-xs)",
+        "border-radius" => "50%",
+        "background-color" => "transparent",
+        "border" => "none",
+        "color" => "var(--text-secondary)",
+        "cursor" => "pointer",
+        "font-size" => "var(--font-size-xs)",
+        "line-height" => "1",
+        "transition" => "all var(--transition-slow)",
+    ),
+    CSS(
+        ".file-tab-close:hover",
+        "background-color" => "var(--hover-bg)",
+        "color" => "var(--text-primary)",
+    ),
+    CSS(
+        ".file-tab-add",
+        "display" => "flex",
+        "align-items" => "center",
+        "justify-content" => "center",
+        "padding" => "8px 12px",
+        "background-color" => "transparent",
+        "border" => "none",
+        "color" => "var(--text-secondary)",
+        "cursor" => "pointer",
+        "font-size" => "16px",
+        "line-height" => "1",
+        "transition" => "all var(--transition-slow)",
+        "border-radius" => "6px",
+    ),
+    CSS(
+        ".file-tab-add:hover",
+        "background-color" => "var(--hover-bg)",
+        "color" => "var(--text-primary)",
+    ),
+
+    CSS(
+        ".file-editor",
+        "padding" => "0",
+        "margin" => "0",
+        "width" => "100%",
+        "min-width" => "var(--editor-width)",
+        "height" => "calc(100vh - 20px)",
+        "background-color" => "var(--bg-primary)",
+        "color" => "var(--text-primary)"
+    ),
+
+    CSS(
+        ".sidebar-widget-content .monaco-editor-div.hide-horizontal",
+        "display" => "block !important",
+    ),
 
     # New Cell Menu - Redesigned
     CSS(
@@ -725,14 +864,14 @@ Styles(
     CSS(
         ".new-cell-buttons",
         "position" => "absolute",
-        "left" => "0px",
-        "top" => "0px",
+        "left" => "0",
+        "top" => "0",
         "transform" => "translate(0, -50%)", # Center vertically
         "display" => "flex",
         "opacity" => "0",
         "visibility" => "hidden",
         "transition" => "opacity 0.2s, visibility 0.2s",
-        "z-index" => "1000", # Above other content
+        "z-index" => "var(--z-modal)", # Above other content
         "padding" => "4px 4px",
     ),
     CSS(
@@ -750,7 +889,7 @@ Styles(
         "width" => "100vw",
         "height" => "100vh",
         "background-color" => "rgba(0, 0, 0, 0.5)",
-        "z-index" => "2000",
+        "z-index" => "var(--z-popup)",
         "display" => "flex",
         "align-items" => "center",
         "justify-content" => "center",
@@ -759,7 +898,7 @@ Styles(
         ".popup-content",
         "position" => "relative",
         "background-color" => "var(--bg-primary)",
-        "border-radius" => border_radius_large,
+        "border-radius" => "var(--border-radius-large)",
         "box-shadow" => "var(--shadow-soft)",
         "border" => "1px solid var(--border-primary)",
         "max-width" => "90vw",
@@ -783,13 +922,13 @@ Styles(
         "cursor" => "pointer",
         "padding" => "2px",
         "border-radius" => "50%",
-        "width" => "20px",
-        "height" => "20px",
+        "width" => "var(--width-sm)",
+        "height" => "var(--width-sm)",
         "display" => "flex",
         "align-items" => "center",
         "justify-content" => "center",
-        "transition" => "all 0.2s ease",
-        "z-index" => "2001",
+        "transition" => "all var(--transition-slow)",
+        "z-index" => "var(--z-popup-close)",
         "line-height" => "1",
     ),
     CSS(
@@ -853,7 +992,7 @@ Styles(
         "bottom" => "0",
         "left" => "0",
         "right" => "0",
-        "z-index" => "1000",
+        "z-index" => "var(--z-modal)",
         "background-color" => "var(--bg-primary)",
     ),
     CSS(
@@ -871,7 +1010,7 @@ Styles(
         "position" => "fixed",  # Use fixed positioning
         "right" => "0",
         "display" => "flex",
-        "z-index" => "100",
+        "z-index" => "var(--z-sidebar)",
         "pointer-events" => "none",
     ),
     # Vertical sidebar - center and size to content
@@ -946,7 +1085,7 @@ Styles(
     ),
     CSS(
         ".sidebar-content-container.horizontal.collapsed",
-        "height" => "0px",
+        "height" => "0",
         "opacity" => "0",
         "visibility" => "hidden",
     ),
@@ -1002,8 +1141,8 @@ Styles(
     ),
     CSS(
         ".sidebar-toggle-button",
-        "width" => "36px",
-        "height" => "36px",
+        "width" => "var(--width-md)",
+        "height" => "var(--width-md)",
         "border" => "none",
         "background-color" => "transparent",
         "color" => "var(--icon-color)",
@@ -1012,7 +1151,7 @@ Styles(
         "display" => "flex",
         "align-items" => "center",
         "justify-content" => "center",
-        "transition" => "all 0.2s ease",
+        "transition" => "all var(--transition-slow)",
         "margin-top" => "auto",
         "margin-bottom" => "10px",
     ),
@@ -1061,7 +1200,7 @@ Styles(
         ".sidebar-resize-handle",
         "position" => "absolute",
         "background-color" => "transparent",
-        "z-index" => "10",
+        "z-index" => "var(--z-dropdown)",
         "transition" => "background-color 0.2s ease",
     ),
     CSS(
@@ -1107,10 +1246,10 @@ Styles(
         "border" => "1px solid var(--border-secondary)",
         "border-radius" => "6px",
         "padding" => "8px 16px",
-        "font-size" => "14px",
+        "font-size" => "var(--font-size-base)",
         "font-weight" => "500",
         "cursor" => "pointer",
-        "transition" => "all 0.2s ease",
+        "transition" => "all var(--transition-slow)",
         "box-shadow" => "0 1px 3px rgba(0, 0, 0, 0.1)",
         "min-width" => "80px",
         "display" => "inline-flex",
@@ -1144,9 +1283,9 @@ Styles(
         "border" => "1px solid var(--border-secondary)",
         "border-radius" => "6px",
         "padding" => "8px 12px",
-        "font-size" => "14px",
+        "font-size" => "var(--font-size-base)",
         "font-family" => "inherit",
-        "transition" => "all 0.2s ease",
+        "transition" => "all var(--transition-slow)",
         "outline" => "none",
         "width" => "100%",
         "box-sizing" => "border-box"
@@ -1170,13 +1309,13 @@ Styles(
     # Checkbox styling
     CSS(
         ".bonitobook-checkbox",
-        "width" => "16px",
-        "height" => "16px",
+        "width" => "var(--width-xs)",
+        "height" => "var(--width-xs)",
         "border" => "1px solid var(--border-secondary)",
         "border-radius" => "3px",
         "background-color" => "var(--bg-primary)",
         "cursor" => "pointer",
-        "transition" => "all 0.2s ease",
+        "transition" => "all var(--transition-slow)",
         "appearance" => "none",
         "-webkit-appearance" => "none",
         "position" => "relative",
@@ -1206,7 +1345,7 @@ Styles(
         "left" => "50%",
         "transform" => "translate(-50%, -50%)",
         "color" => "white",
-        "font-size" => "12px",
+        "font-size" => "var(--font-size-xs)",
         "line-height" => "1"
     ),
 
@@ -1218,10 +1357,10 @@ Styles(
         "border" => "1px solid var(--border-secondary)",
         "border-radius" => "6px",
         "padding" => "8px 12px",
-        "font-size" => "14px",
+        "font-size" => "var(--font-size-base)",
         "font-family" => "inherit",
         "cursor" => "pointer",
-        "transition" => "all 0.2s ease",
+        "transition" => "all var(--transition-slow)",
         "outline" => "none",
         "width" => "100%",
         "box-sizing" => "border-box",
@@ -1282,8 +1421,8 @@ Styles(
         ".bonitobook-slider::-webkit-slider-thumb",
         "appearance" => "none",
         "-webkit-appearance" => "none",
-        "width" => "20px",
-        "height" => "20px",
+        "width" => "var(--width-sm)",
+        "height" => "var(--width-sm)",
         "border-radius" => "50%",
         "background" => "var(--accent-blue)",
         "cursor" => "pointer",
@@ -1298,8 +1437,8 @@ Styles(
     ),
     CSS(
         ".bonitobook-slider::-moz-range-thumb",
-        "width" => "20px",
-        "height" => "20px",
+        "width" => "var(--width-sm)",
+        "height" => "var(--width-sm)",
         "border-radius" => "50%",
         "background" => "var(--accent-blue)",
         "cursor" => "pointer",
@@ -1329,7 +1468,7 @@ Styles(
         ".manipulate-container",
         "background-color" => "var(--bg-primary)",
         "border" => "1px solid var(--border-primary)",
-        "border-radius" => "8px",
+        "border-radius" => "var(--spacing-sm)",
         "padding" => "16px",
         "margin" => "16px 0",
         "display" => "flex",
@@ -1353,7 +1492,7 @@ Styles(
     ),
     CSS(
         ".manipulate-label",
-        "font-size" => "13px",
+        "font-size" => "var(--font-size-sm)",
         "font-weight" => "500",
         "color" => "var(--text-secondary)",
         "min-width" => "120px",
@@ -1411,7 +1550,7 @@ Styles(
     CSS(
         ".interactive-error-widget",
         "border" => "1px solid #dc3545",
-        "border-radius" => "8px",
+        "border-radius" => "var(--spacing-sm)",
         "padding" => "16px",
         "margin" => "8px 0",
         "background-color" => "var(--bg-primary)",
@@ -1430,7 +1569,7 @@ Styles(
     CSS(
         ".interactive-error-widget pre",
         "font-family" => "SFMono-Regular, Consolas, Liberation Mono, Menlo, Courier, monospace",
-        "font-size" => "13px",
+        "font-size" => "var(--font-size-sm)",
         "line-height" => "1.4",
         "white-space" => "pre-wrap",
         "word-wrap" => "break-word",
@@ -1467,7 +1606,7 @@ Styles(
         "padding" => "4px 8px",
         "border-left" => "3px solid var(--border-primary)",
         "font-family" => "SFMono-Regular, Consolas, Liberation Mono, Menlo, Courier, monospace",
-        "font-size" => "12px",
+        "font-size" => "var(--font-size-xs)",
         "line-height" => "1.4",
         "border-radius" => "0 4px 4px 0",
         "transition" => "background-color 0.2s ease"
@@ -1506,7 +1645,7 @@ Styles(
         "text-decoration" => "none",
         "cursor" => "pointer",
         "font-family" => "SFMono-Regular, Consolas, Liberation Mono, Menlo, Courier, monospace",
-        "transition" => "all 0.2s ease",
+        "transition" => "all var(--transition-slow)",
         "border-radius" => "3px",
         "padding" => "1px 3px"
     ),
@@ -1524,32 +1663,7 @@ Styles(
         "font-weight" => "600"
     ),
 
-    # Minimal DataFrame styling
-    CSS(
-        ".data-frame",
-        "margin" => "1rem 0"
-    ),
-    CSS(
-        ".data-frame table",
-        "border-collapse" => "collapse",
-        "font-size" => "13px"
-    ),
-    CSS(
-        ".data-frame th",
-        "padding" => "8px 12px",
-        "background-color" => "var(--hover-bg)",
-        "font-weight" => "500",
-        "border-bottom" => "1px solid var(--border-primary)"
-    ),
-    CSS(
-        ".data-frame td",
-        "padding" => "6px 12px",
-        "border-bottom" => "1px solid var(--border-primary)"
-    ),
-    CSS(
-        ".data-frame .rowLabel",
-        "background-color" => "var(--hover-bg)",
-        "font-family" => "monospace",
-        "text-align" => "right"
-    ),
 )
+
+# Combine all modular styles
+book_style = Styles(global_variables, base_styles, theme_styles, print_export_styles, mobile_styles, monaco_styles, editor_styles, icon_styles, markdown_styles, data_styles, ui_styles)
