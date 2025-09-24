@@ -82,25 +82,25 @@ const PageStyles = Styles(
         "@media (prefers-color-scheme: light), (prefers-color-scheme: no-preference)",
         CSS(
             ":root",
-            "--bg-primary" => "#ffffff",
-            "--text-primary" => "#24292e",
-            "--text-secondary" => "#555555",
-            "--border-primary" => "rgba(0, 0, 0, 0.1)",
-            "--border-secondary" => "#ccc",
-            "--shadow-soft" => "0 4px 8px rgba(0, 0, 51, 0.2)",
-            "--shadow-button" => "0 2px 4px rgba(0, 0, 0, 0.2)",
-            "--shadow-inset" => "inset 2px 2px 5px rgba(0, 0, 0, 0.5)",
-            "--hover-bg" => "#ddd",
-            "--menu-hover-bg" => "rgba(0, 0, 0, 0.05)",
-            "--accent-blue" => "#0366d6",
-            "--animation-glow" => "0 0 20px rgba(0, 150, 51, 0.8)",
-            "--icon-color" => "#666666",
-            "--icon-hover-color" => "#333333",
-            "--icon-filter" => "none",
-            "--icon-hover-filter" => "brightness(0.7)",
-            "--scrollbar-track" => "#f1f1f1",
-            "--scrollbar-thumb" => "#c1c1c1",
-            "--scrollbar-thumb-hover" => "#a8a8a8",
+            "--site-bg-primary" => "#ffffff",
+            "--site-text-primary" => "#24292e",
+            "--site-text-secondary" => "#555555",
+            "--site-border-primary" => "rgba(0, 0, 0, 0.1)",
+            "--site-border-secondary" => "#ccc",
+            "--site-shadow-soft" => "0 4px 8px rgba(0, 0, 51, 0.2)",
+            "--site-shadow-button" => "0 2px 4px rgba(0, 0, 0, 0.2)",
+            "--site-shadow-inset" => "inset 2px 2px 5px rgba(0, 0, 0, 0.5)",
+            "--site-hover-bg" => "#ddd",
+            "--site-menu-hover-bg" => "rgba(0, 0, 0, 0.05)",
+            "--site-accent-blue" => "#0366d6",
+            "--site-animation-glow" => "0 0 20px rgba(0, 150, 51, 0.8)",
+            "--site-icon-color" => "#666666",
+            "--site-icon-hover-color" => "#333333",
+            "--site-icon-filter" => "none",
+            "--site-icon-hover-filter" => "brightness(0.7)",
+            "--site-scrollbar-track" => "#f1f1f1",
+            "--site-scrollbar-thumb" => "#c1c1c1",
+            "--site-scrollbar-thumb-hover" => "#a8a8a8",
         )
     ),
 
@@ -109,25 +109,25 @@ const PageStyles = Styles(
         "@media (prefers-color-scheme: dark)",
         CSS(
             ":root",
-            "--bg-primary" => "#1e1e1e",
-            "--text-primary" => "rgb(212, 212, 212)",
-            "--text-secondary" => "rgb(212, 212, 212)",
-            "--border-primary" => "rgba(255, 255, 255, 0.1)",
-            "--border-secondary" => "rgba(255, 255, 255, 0.1)",
-            "--shadow-soft" => "0 4px 8px rgba(255, 255, 255, 0.2)",
-            "--shadow-button" => "0 2px 4px rgba(255, 255, 255, 0.2)",
-            "--shadow-inset" => "inset 2px 2px 3px rgba(0, 0, 0, 0.5)",
-            "--hover-bg" => "rgba(255, 255, 255, 0.1)",
-            "--menu-hover-bg" => "rgba(255, 255, 255, 0.05)",
-            "--accent-blue" => "#0366d6",
-            "--animation-glow" => "0 0 20px rgba(10, 155, 55, 0.5)",
-            "--icon-color" => "#cccccc",
-            "--icon-hover-color" => "#ffffff",
-            "--icon-filter" => "invert(1)",
-            "--icon-hover-filter" => "invert(1) brightness(1.2)",
-            "--scrollbar-track" => "#2d2d2d",
-            "--scrollbar-thumb" => "#555555",
-            "--scrollbar-thumb-hover" => "#777777",
+            "--site-bg-primary" => "#1e1e1e",
+            "--site-text-primary" => "rgb(212, 212, 212)",
+            "--site-text-secondary" => "rgb(212, 212, 212)",
+            "--site-border-primary" => "rgba(255, 255, 255, 0.1)",
+            "--site-border-secondary" => "rgba(255, 255, 255, 0.1)",
+            "--site-shadow-soft" => "0 4px 8px rgba(255, 255, 255, 0.2)",
+            "--site-shadow-button" => "0 2px 4px rgba(255, 255, 255, 0.2)",
+            "--site-shadow-inset" => "inset 2px 2px 3px rgba(0, 0, 0, 0.5)",
+            "--site-hover-bg" => "rgba(255, 255, 255, 0.1)",
+            "--site-menu-hover-bg" => "rgba(255, 255, 255, 0.05)",
+            "--site-accent-blue" => "#0366d6",
+            "--site-animation-glow" => "0 0 20px rgba(10, 155, 55, 0.5)",
+            "--site-icon-color" => "#cccccc",
+            "--site-icon-hover-color" => "#ffffff",
+            "--site-icon-filter" => "invert(1)",
+            "--site-icon-hover-filter" => "invert(1) brightness(1.2)",
+            "--site-scrollbar-track" => "#2d2d2d",
+            "--site-scrollbar-thumb" => "#555555",
+            "--site-scrollbar-thumb-hover" => "#777777",
         )
     ),
     # Global reset and base styles
@@ -137,16 +137,16 @@ const PageStyles = Styles(
     ),
     CSS(
         "html",
-        "background-color" => "var(--bg-primary)",
-        "color" => "var(--text-primary)"
+        "background-color" => "var(--site-bg-primary)",
+        "color" => "var(--site-text-primary)"
     ),
     CSS(
         "body",
         "margin" => "0",
         "padding" => "0",
         "font-family" => "'Inter', 'Roboto', 'Arial', sans-serif",
-        "background-color" => "var(--bg-primary)",
-        "color" => "var(--text-primary)",
+        "background-color" => "var(--site-bg-primary)",
+        "color" => "var(--site-text-primary)",
         "line-height" => "1.6"
     ),
     CSS(
@@ -166,35 +166,35 @@ const PageStyles = Styles(
     ),
     CSS(
         "::-webkit-scrollbar-track",
-        "background" => "var(--scrollbar-track)"
+        "background" => "var(--site-scrollbar-track)"
     ),
     CSS(
         "::-webkit-scrollbar-thumb",
-        "background-color" => "var(--scrollbar-thumb)",
+        "background-color" => "var(--site-scrollbar-thumb)",
         "border-radius" => "6px",
-        "border" => "2px solid var(--scrollbar-track)"
+        "border" => "2px solid var(--site-scrollbar-track)"
     ),
     CSS(
         "::-webkit-scrollbar-thumb:hover",
-        "background-color" => "var(--scrollbar-thumb-hover)"
+        "background-color" => "var(--site-scrollbar-thumb-hover)"
     ),
     # Firefox scrollbar
     CSS(
         "*",
         "scrollbar-width" => "thin",
-        "scrollbar-color" => "var(--scrollbar-thumb) var(--scrollbar-track)"
+        "scrollbar-color" => "var(--site-scrollbar-thumb) var(--site-scrollbar-track)"
     ),
 
     # Header styles with gradient
     CSS(
         ".bonitobook-header",
-        "background" => "linear-gradient(135deg, var(--bg-primary) 0%, var(--menu-hover-bg) 100%)",
-        "border-bottom" => "1px solid var(--border-primary)",
+        "background" => "linear-gradient(135deg, var(--site-bg-primary) 0%, var(--site-menu-hover-bg) 100%)",
+        "border-bottom" => "1px solid var(--site-border-primary)",
         "height" => "var(--header-height)",
         "display" => "flex",
         "align-items" => "center",
         "justify-content" => "center",
-        "box-shadow" => "var(--shadow-soft)",
+        "box-shadow" => "var(--site-shadow-soft)",
         "backdrop-filter" => "blur(10px)",
         "position" => "relative"
     ),
@@ -206,7 +206,7 @@ const PageStyles = Styles(
         "left" => "0",
         "right" => "0",
         "bottom" => "0",
-        "background" => "var(--animation-glow)",
+        "background" => "var(--site-animation-glow)",
         "opacity" => "0.03",
         "pointer-events" => "none"
     ),
@@ -221,14 +221,14 @@ const PageStyles = Styles(
         "margin" => "0",
         "font-size" => "2.5rem",
         "font-weight" => "700",
-        "color" => "var(--text-primary)"
+        "color" => "var(--site-text-primary)"
     ),
 
     # Navigation styles
     CSS(
         ".bonitobook-navbar",
-        "background-color" => "var(--bg-primary)",
-        "border-bottom" => "1px solid var(--border-primary)",
+        "background-color" => "var(--site-bg-primary)",
+        "border-bottom" => "1px solid var(--site-border-primary)",
         "height" => "var(--navbar-height)",
         "display" => "flex",
         "align-items" => "center",
@@ -248,7 +248,7 @@ const PageStyles = Styles(
     CSS(
         ".nav-item",
         "text-decoration" => "none",
-        "color" => "var(--text-primary)",
+        "color" => "var(--site-text-primary)",
         "font-weight" => "500",
         "padding" => "8px 16px",
         "border-radius" => "6px",
@@ -256,16 +256,16 @@ const PageStyles = Styles(
     ),
     CSS(
         ".nav-item:hover",
-        "background-color" => "var(--hover-bg)",
-        "color" => "var(--accent-blue)"
+        "background-color" => "var(--site-hover-bg)",
+        "color" => "var(--site-accent-blue)"
     ),
 
     # Main content styles
     CSS(
         ".bonitobook-page",
         "min-height" => "100vh",
-        "background-color" => "var(--bg-primary)",
-        "color" => "var(--text-primary)"
+        "background-color" => "var(--site-bg-primary)",
+        "color" => "var(--site-text-primary)"
     ),
     CSS(
         ".main-content",
@@ -277,19 +277,19 @@ const PageStyles = Styles(
         ".hero-section",
         "text-align" => "center",
         "padding" => "60px 0",
-        "border-bottom" => "1px solid var(--border-primary)"
+        "border-bottom" => "1px solid var(--site-border-primary)"
     ),
     CSS(
         ".hero-title",
         "font-size" => "3rem",
         "font-weight" => "700",
         "margin-bottom" => "20px",
-        "color" => "var(--text-primary)"
+        "color" => "var(--site-text-primary)"
     ),
     CSS(
         ".hero-subtitle",
         "font-size" => "1.25rem",
-        "color" => "var(--text-secondary)",
+        "color" => "var(--site-text-secondary)",
         "max-width" => "600px",
         "margin" => "0 auto 40px"
     ),
@@ -305,7 +305,7 @@ const PageStyles = Styles(
         "display" => "inline-flex",
         "align-items" => "center",
         "justify-content" => "center",
-        "background-color" => "var(--accent-blue)",
+        "background-color" => "var(--site-accent-blue)",
         "color" => "white",
         "padding" => "12px 24px",
         "border-radius" => "8px",
@@ -314,35 +314,35 @@ const PageStyles = Styles(
         "transition" => "all 0.2s ease",
         "border" => "none",
         "cursor" => "pointer",
-        "box-shadow" => "var(--shadow-button)",
+        "box-shadow" => "var(--site-shadow-button)",
         "font-size" => "16px",
         "font-family" => "inherit",
         "min-width" => "120px"
     ),
     CSS(
         ".hero-button:hover",
-        "background-color" => "var(--hover-bg)",
-        "color" => "var(--accent-blue)",
+        "background-color" => "var(--site-hover-bg)",
+        "color" => "var(--site-accent-blue)",
         "transform" => "translateY(-1px)",
         "box-shadow" => "0 4px 12px rgba(3, 102, 214, 0.3)"
     ),
     CSS(
         ".hero-button:active",
         "transform" => "translateY(0px)",
-        "box-shadow" => "var(--shadow-inset)"
+        "box-shadow" => "var(--site-shadow-inset)"
     ),
     CSS(
         ".hero-button-secondary",
-        "background-color" => "var(--bg-primary)",
-        "color" => "var(--text-primary)",
-        "border" => "1px solid var(--border-secondary)",
-        "box-shadow" => "var(--shadow-button)"
+        "background-color" => "var(--site-bg-primary)",
+        "color" => "var(--site-text-primary)",
+        "border" => "1px solid var(--site-border-secondary)",
+        "box-shadow" => "var(--site-shadow-button)"
     ),
     CSS(
         ".hero-button-secondary:hover",
-        "background-color" => "var(--hover-bg)",
-        "border-color" => "var(--accent-blue)",
-        "color" => "var(--accent-blue)",
+        "background-color" => "var(--site-hover-bg)",
+        "border-color" => "var(--site-accent-blue)",
+        "color" => "var(--site-accent-blue)",
         "transform" => "translateY(-1px)"
     ),
 
@@ -359,20 +359,20 @@ const PageStyles = Styles(
     ),
     CSS(
         ".example-card",
-        "background-color" => "var(--bg-primary)",
-        "border" => "1px solid var(--border-primary)",
+        "background-color" => "var(--site-bg-primary)",
+        "border" => "1px solid var(--site-border-primary)",
         "border-radius" => "10px",
         "padding" => "24px",
         "transition" => "all 0.2s ease-out",
-        "box-shadow" => "var(--shadow-soft)",
+        "box-shadow" => "var(--site-shadow-soft)",
         "position" => "relative",
         "overflow" => "hidden",
     ),
     CSS(
         ".example-card:hover",
         "transform" => "translateY(-2px)",
-        "box-shadow" => "var(--animation-glow)",
-        "border-color" => "var(--accent-blue)"
+        "box-shadow" => "var(--site-animation-glow)",
+        "border-color" => "var(--site-accent-blue)"
     ),
     CSS(
         ".example-card::before",
@@ -382,7 +382,7 @@ const PageStyles = Styles(
         "left" => "-100%",
         "width" => "100%",
         "height" => "2px",
-        "background" => "linear-gradient(90deg, transparent, var(--accent-blue), transparent)",
+        "background" => "linear-gradient(90deg, transparent, var(--site-accent-blue), transparent)",
         "transition" => "left 0.5s ease"
     ),
     CSS(
@@ -394,12 +394,12 @@ const PageStyles = Styles(
         "margin" => "0 0 12px 0",
         "font-size" => "1.25rem",
         "font-weight" => "600",
-        "color" => "var(--text-primary)"
+        "color" => "var(--site-text-primary)"
     ),
     CSS(
         ".example-description",
         "margin" => "0 0 20px 0",
-        "color" => "var(--text-secondary)",
+        "color" => "var(--site-text-secondary)",
         "line-height" => "1.6"
     ),
     CSS(
@@ -407,21 +407,21 @@ const PageStyles = Styles(
         "display" => "inline-flex",
         "align-items" => "center",
         "justify-content" => "center",
-        "background-color" => "var(--bg-primary)",
-        "color" => "var(--accent-blue)",
+        "background-color" => "var(--site-bg-primary)",
+        "color" => "var(--site-accent-blue)",
         "text-decoration" => "none",
         "font-weight" => "500",
         "padding" => "8px 16px",
-        "border" => "1px solid var(--accent-blue)",
+        "border" => "1px solid var(--site-accent-blue)",
         "border-radius" => "8px",
         "transition" => "all 0.2s ease",
-        "box-shadow" => "var(--shadow-button)",
+        "box-shadow" => "var(--site-shadow-button)",
         "font-size" => "14px",
         "min-width" => "100px"
     ),
     CSS(
         ".example-link:hover",
-        "background-color" => "var(--accent-blue)",
+        "background-color" => "var(--site-accent-blue)",
         "color" => "white",
         "transform" => "translateY(-1px)",
         "box-shadow" => "0 4px 12px rgba(3, 102, 214, 0.3)"
@@ -429,7 +429,7 @@ const PageStyles = Styles(
     CSS(
         ".example-link:active",
         "transform" => "translateY(0px)",
-        "box-shadow" => "var(--shadow-inset)"
+        "box-shadow" => "var(--site-shadow-inset)"
     ),
 
     # Section styles
@@ -442,35 +442,23 @@ const PageStyles = Styles(
         "font-size" => "2rem",
         "font-weight" => "700",
         "margin-bottom" => "20px",
-        "color" => "var(--text-primary)"
+        "color" => "var(--site-text-primary)"
     ),
     CSS(
         ".section-content",
-        "color" => "var(--text-secondary)",
+        "color" => "var(--site-text-secondary)",
         "line-height" => "1.8",
         "font-size" => "1.1rem"
     ),
 
-    # Code block styles - matching BonitoBook monaco editor
-    CSS(
-        "pre",
-        "background-color" => "var(--bg-primary)",
-        "border" => "1px solid var(--border-primary)",
-        "border-radius" => "10px",
-        "padding" => "16px",
-        "overflow-x" => "auto",
-        "margin" => "16px 0",
-        "box-shadow" => "var(--shadow-soft)",
-        "position" => "relative"
-    ),
     CSS(
         "code",
         "font-family" => "'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', monospace",
         "font-size" => "0.9em",
-        "background-color" => "var(--menu-hover-bg)",
+        "background-color" => "var(--site-menu-hover-bg)",
         "padding" => "2px 6px",
         "border-radius" => "4px",
-        "border" => "1px solid var(--border-primary)"
+        "border" => "1px solid var(--site-border-primary)"
     ),
     CSS(
         "pre code",
@@ -483,20 +471,20 @@ const PageStyles = Styles(
         "@media (prefers-color-scheme: dark)",
         CSS(
             "code",
-            "background-color" => "var(--menu-hover-bg)",
-            "color" => "var(--text-primary)"
+            "background-color" => "var(--site-menu-hover-bg)",
+            "color" => "var(--site-text-primary)"
         )
     ),
 
     # Getting Started InlineBook styling
     CSS(
         ".getting-started-inline",
-        "background-color" => "var(--bg-primary)",
-        "border" => "1px solid var(--border-primary)",
+        "background-color" => "var(--site-bg-primary)",
+        "border" => "1px solid var(--site-border-primary)",
         "border-radius" => "10px",
         "padding" => "30px",
         "margin-top" => "20px",
-        "box-shadow" => "var(--shadow-soft)"
+        "box-shadow" => "var(--site-shadow-soft)"
     ),
     CSS(
         ".getting-started-inline .cell-editor-container",
@@ -505,9 +493,9 @@ const PageStyles = Styles(
     ),
     CSS(
         ".getting-started-inline .cell-output",
-        "background-color" => "var(--menu-hover-bg)",
+        "background-color" => "var(--site-menu-hover-bg)",
         "border-radius" => "6px",
-        "border" => "1px solid var(--border-primary)"
+        "border" => "1px solid var(--site-border-primary)"
     ),
     CSS(
         ".getting-started-inline .hover-buttons",
