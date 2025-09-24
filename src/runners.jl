@@ -30,6 +30,20 @@ Julia code evaluator that uses Base.include_string for execution.
 """
 struct JuliaEval <: LanguageEval end
 
+function book_include(bookmodule, bookfile, bookfolder, include_file)
+    to_try = [
+        include_file,
+        joinpath(dirname(bookfile), include_file),
+        joinpath(bookfolder, include_file)
+    ]
+    for file in to_try
+        if isfile(file)
+            return Base._include(identity, bookmodule, abspath(file))
+        end
+    end
+    error("Cant include $(include_file)")
+end
+
 function eval_code(::JuliaEval, mod::Module, file::String, line::Int, source::String)
     if startswith(source, "]")
         Pkg.REPLMode.pkgstr(source[2:end])
@@ -50,8 +64,6 @@ function eval_code(::JuliaEval, mod::Module, file::String, line::Int, source::St
         end
     end
 end
-
-
 
 """
     MarkdownRunner
@@ -83,7 +95,7 @@ function parse_source(::MarkdownRunner, source)
                 elseif node.language == ""
                     return node
                 else
-                    editor = MonacoEditor(node.code; language = node.language, readOnly = true, lineNumbers = "off", editor_classes = ["markdown-inline-code"])
+                    editor = MonacoEditor(node.code; language=node.language, readOnly=true, lineNumbers="off", editor_classes=["markdown-inline-code"])
                     editor.js_init_func[] = js"""
                     (editor) => {
                         Promise.all([$(Monaco), editor.monaco, editor.editor]).then(([mod, monaco, e]) => {
@@ -127,7 +139,7 @@ Asynchronous code execution runner that handles multi-language code evaluation i
 struct AsyncRunner
     mod::Module
     project::String
-    language_evaluators::Dict{String, LanguageEval}
+    language_evaluators::Dict{String,LanguageEval}
     task_queue::Channel{RunnerTask}
     thread::Task
     callback::Base.RefValue{Function}
@@ -159,14 +171,13 @@ Get dictionary of language evaluators, including extensions.
 Base implementation includes Julia, extensions are loaded via Base.get_extension.
 """
 function get_language_evaluators()
-    evaluators = Dict{String, LanguageEval}()
+    evaluators = Dict{String,LanguageEval}()
 
     for (lang_name, lang) in ALL_LANGUAGES
         if lang.always_available
             # Add always available languages
             if lang_name == "julia"
                 evaluators[lang_name] = JuliaEval()
-            # Markdown doesn't need an evaluator (handled by MarkdownRunner)
             end
         else
             # Check if extension is loaded and get evaluator from it
@@ -200,11 +211,12 @@ Create a new asynchronous code runner.
 # Returns
 Configured `AsyncRunner` instance ready for code execution.
 """
-function AsyncRunner(project::String, mod::Module = Module(gensym("BonitoBook")); callback = identity, global_logger = Observable(""))
+function AsyncRunner(project::String, mod::Module=Module(gensym("BonitoBook")); callback=identity, global_logger=Observable(""))
     language_evaluators = get_language_evaluators()
     task_queue = Channel{RunnerTask}(Inf)
     redirect_target = redirect_all_to_channel()
     redirect_target[] = global_logger
+
     taskref = spawnat(1) do
         for task in task_queue
             try
@@ -296,7 +308,7 @@ function run!(runner::AsyncRunner, editor::EvalEditor)
     return
 end
 
-function run!(mod::Module, language_evaluators::Dict{String, LanguageEval}, task::RunnerTask)
+function run!(mod::Module, language_evaluators::Dict{String,LanguageEval}, task::RunnerTask)
     result = task.result
     source = task.source
     language = task.language
@@ -308,9 +320,9 @@ function run!(mod::Module, language_evaluators::Dict{String, LanguageEval}, task
             throw(ErrorException("No evaluator for language '$language' found. $(help.activation_help)"))
         end
         eval_result = eval_code(evaluator, mod, "", 1, source)
-        result[] =  Base.invokelatest(book_display, eval_result)
+        result[] = Base.invokelatest(book_display, eval_result)
     catch e
-        result[] = InteractiveError(e, Base.catch_backtrace())
+        result[] = InteractiveError(e, Base.catch_backtrace(), mod.current_book())
     end
     return
 end

@@ -16,6 +16,7 @@ mutable struct Book <: AbstractBook
     spinner::BookSpinner
     current_cell::Observable{Union{CellEditor, Nothing}}
     theme_preference::Observable{String}
+    monaco_theme::Observable{String}
 end
 
 function create_book_structure(bookfile; replace_style=false)
@@ -39,9 +40,9 @@ function create_book_structure(bookfile; replace_style=false)
         mkpath(joinpath(folder, "data"))
         # Create styles folder and copy template
         mkpath(joinpath(folder, "styles"))
-        style_path_template = joinpath(template_folder, "style.jl")
+        style_path_template = joinpath(template_folder, "style_template.jl")
         style_path = joinpath(folder, "styles", "style.jl")
-        cp(style_path_template, style_path)
+        write(style_path, read(style_path_template, String))
 
         # Create AI folder with prefixed configuration files for each agent
         ai_folder = joinpath(folder, "ai")
@@ -66,9 +67,9 @@ function create_book_structure(bookfile; replace_style=false)
         # Handle style file replacement for existing folders
         style_path = joinpath(folder, "styles", "style.jl")
         if replace_style || !isfile(style_path)
-            style_path_template = joinpath(template_folder, "style.jl")
+            style_path_template = joinpath(template_folder, "style_template.jl")
             mkpath(joinpath(folder, "styles"))
-            cp(style_path_template, style_path; force=true)
+            write(style_path, read(style_path_template, String))
         end
     end
 
@@ -123,25 +124,37 @@ function Book(user_file::String; folder=nothing, replace_style = false, all_bloc
 
     # The runner will cd into folder for code execution
     runner = AsyncRunner(folder; global_logger=global_logging_widget.logging)
-    editors = cells2editors(cells, runner)
+    monaco_theme = Observable{String}("default")
+    editors = cells2editors(cells, runner, monaco_theme)
     progress = Observable((false, 0.0))
 
     # Activate the project in the parent directory (where Project.toml is)
     # Load required packages
     Core.eval(runner.mod, :(using BonitoBook, BonitoBook.Bonito, BonitoBook.Markdown, BonitoBook.WGLMakie))
-
+    Core.eval(runner.mod, :(include(file) = BonitoBook.book_include(
+        $(runner.mod),
+        $(markdown_file),
+        $(folder),
+        file)
+    ))
+    include_file = joinpath(folder, "include.jl")
+    if isfile(include_file)
+        runner.mod.include(include_file)
+    end
     # Set up style evaluation with single style path
     style_path = joinpath(folder, "styles", "style.jl")
     style_eval = EvalFileOnChange(style_path; module_context = runner.mod)
+    mainpath = joinpath(@__DIR__, "templates/style.jl")
+    main_style = EvalFileOnChange(mainpath; module_context = runner.mod)
     spinner = BookSpinner()
     current_cell = Observable{Union{CellEditor, Nothing}}(nothing)
     theme_preference = Observable{String}("auto")
-
     book = Book(
         markdown_file, folder, editors, runner, progress, nothing, nothing, Dict{String, Any}(),
-        global_logging_widget, style_eval, spinner, current_cell, theme_preference
+        global_logging_widget, style_eval, spinner, current_cell, theme_preference, monaco_theme
     )
-    Core.eval(runner.mod, :(macro Book(); $(book); end))
+    Core.eval(runner.mod, :(current_book() = $(book)))
+    notify(main_style.file_watcher)
     notify(style_eval.file_watcher)
     export_md(markdown_file, book)
     return book
@@ -192,6 +205,10 @@ end
 "Get the tabbed file editor widget."
 function get_file_editor(book::Book)::TabbedFileEditor
     return book.widgets["file_editor"]
+end
+# New book-specific version
+function monaco_theme!(book::Book, name::String)
+    return book.monaco_theme[] = name
 end
 
 "Book cell with source code and display options."
@@ -448,9 +465,9 @@ Insert cell at position (:begin, :end, or index).
 function insert_cell_at!(book, source::String, lang::String, pos)
     # Create cell editor with appropriate settings
     editor = if lang == "markdown"
-        CellEditor(source, lang, book.runner; show_editor=true, show_output=false)
+        CellEditor(source, lang, book.runner; show_editor=true, show_output=false, theme=book.monaco_theme)
     else
-        CellEditor(source, lang, book.runner)
+        CellEditor(source, lang, book.runner; theme=book.monaco_theme)
     end
 
     # Handle different position types by finding the editor above
@@ -524,9 +541,9 @@ function new_cell_menu(book, editor_above_uuid, runner, above_cell_language = "j
         # Always attach handler - inactive buttons won't trigger them
         on(click) do _
             if lang_name == "markdown"
-                new_cell = CellEditor("", lang_name, runner; show_editor = true, show_output = false)
+                new_cell = CellEditor("", lang_name, runner; show_editor = true, show_output = false, theme=book.monaco_theme)
             else
-                new_cell = CellEditor("", lang_name, runner)
+                new_cell = CellEditor("", lang_name, runner; theme=book.monaco_theme)
             end
             insert_editor_below!(book, new_cell, editor_above_uuid)
         end
@@ -548,9 +565,9 @@ function new_cell_menu(book, editor_above_uuid, runner, above_cell_language = "j
     # Add click handler to plus icon
     on(plus_value) do _
         if above_cell_language == "markdown"
-            new_cell = CellEditor("", above_cell_language, runner; show_editor = true, show_output = false)
+            new_cell = CellEditor("", above_cell_language, runner; show_editor = true, show_output = false, theme=book.monaco_theme)
         else
-            new_cell = CellEditor("", above_cell_language, runner)
+            new_cell = CellEditor("", above_cell_language, runner; theme=book.monaco_theme)
         end
         insert_editor_below!(book, new_cell, editor_above_uuid)
     end

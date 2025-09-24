@@ -55,6 +55,7 @@ function EvalFileOnChange(filepath::String; module_context=Main)
             current_output[] = res
             last_valid_output[] = res
         catch e
+            @warn "Error evaluating file $filepath: $(string(e))" exception=(e, catch_backtrace())
             current_output[] = e
         end
     end

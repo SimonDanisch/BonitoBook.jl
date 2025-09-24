@@ -189,13 +189,14 @@ Convert a vector of cells to interactive cell editors.
 # Returns
 Vector of `CellEditor` objects ready for interactive use.
 """
-function cells2editors(cells, runner)
+function cells2editors(cells, runner, theme = Observable("default"))
     return map(cells) do cell
         return CellEditor(
             cell.source, string(cell.language), runner;
             show_editor = cell.show_editor,
             show_logging = cell.show_logging,
-            show_output = cell.show_output
+            show_output = cell.show_output,
+            theme = theme
         )
     end
 end

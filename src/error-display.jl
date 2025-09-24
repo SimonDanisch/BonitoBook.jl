@@ -1,5 +1,5 @@
 """
-    InteractiveError(error, stacktrace)
+    InteractiveError(error, stacktrace, book)
 
 An interactive error display widget that shows errors with collapsible stacktraces,
 clickable file paths, and filtering options.
@@ -7,10 +7,12 @@ clickable file paths, and filtering options.
 # Fields
 - `error::Any`: The error object
 - `stacktrace::Vector`: The stacktrace vector (raw backtrace from catch_backtrace)
+- `book::Book`: The current book for file operations
 """
 struct InteractiveError
     error::Any
     stacktrace::Vector
+    book::Book
 end
 
 """
@@ -58,12 +60,12 @@ function process_stacktrace(stacktrace::Vector, filtered::Bool = true)
 end
 
 """
-    linkify_stacktrace_string(stacktrace_string::String, session::Session)
+    linkify_stacktrace_string(stacktrace_string::String, session::Session, book::Book)
 
 Process stacktrace string to make file paths clickable.
 Based on the linkify_stacktrace function from Bonito.HTTPServer.
 """
-function linkify_stacktrace_string(stacktrace_string::String, session::Session)
+function linkify_stacktrace_string(stacktrace_string::String, session::Session, book::Book)
     lines = split(stacktrace_string, '\n'; keepempty=false)
     elements = []
 
@@ -81,10 +83,8 @@ function linkify_stacktrace_string(stacktrace_string::String, session::Session)
             # Set up the callback to open the file when clicked
             on(session, click_obs) do _
                 try
-                    # Try to find the current book and open the file
-                    # This is a bit of a workaround - we'll get the book from the global scope
-                    # current_book = @Book()
-                    file_editor = get_file_editor(current_book)
+                    # Use the book from InteractiveError
+                    file_editor = get_file_editor(book)
 
                     # Parse line number
                     line_number = tryparse(Int, line_num)
@@ -148,7 +148,7 @@ function Bonito.jsrender(session::Session, interactive_error::InteractiveError)
     # Create the stacktrace content that updates when toggle changes
     stacktrace_content = map(show_filtered) do filtered
         stacktrace_string = process_stacktrace(interactive_error.stacktrace, filtered)
-        return linkify_stacktrace_string(stacktrace_string, session)
+        return linkify_stacktrace_string(stacktrace_string, session, interactive_error.book)
     end
 
     # Create filter toggle button using BonitoBook's SmallToggle

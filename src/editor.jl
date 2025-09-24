@@ -1,21 +1,6 @@
 const Monaco = ES6Module(joinpath(@__DIR__, "javascript", "Monaco.js"))
 
-# TODO, this better not be a global, but rather part of `Book`
-# Cant be `Observable("default")`, since for a global compiled into the
-# Pkg image, it will always end up with ID 1, like any global observable from another Package -.-
-const MONACO_THEME = Observable{String}[]
 
-function get_monaco_theme()
-    if isempty(MONACO_THEME)
-        push!(MONACO_THEME, Observable("default"))
-    end
-    return MONACO_THEME[1]
-end
-
-function monaco_theme!(name::String)
-    obs = get_monaco_theme()
-    return obs[] = name
-end
 
 """
     ToggleButton(icon_name, obs_to_toggle)
@@ -64,14 +49,14 @@ struct MonacoEditor
     options::Dict{Symbol, Any}
     js_init_func::Base.RefValue{Bonito.JSCode}
     editor_classes::Vector{String}
-    theme::String
+    theme::Observable{String}
     hiding_direction::String
     init_visible::Bool
 end
 
 function MonacoEditor(
         source;
-        js_init_func = nothing, theme = "default", hiding_direction = "horizontal",
+        js_init_func = nothing, theme = Observable("default"), hiding_direction = "horizontal",
         show_editor = true, editor_classes = String[], options...
     )
     defaults = Dict{Symbol, Any}(
@@ -120,8 +105,8 @@ function Bonito.jsrender(session::Session, editor::MonacoEditor)
     end
     eclasses = join(classes, " ")
     editor_div = DOM.div(class = "monaco-editor-div $(eclasses)")
-    # needs a return statement to actually return a function
-    theme = copy(get_monaco_theme())
+    # Use the editor's theme observable instead of global
+    theme = editor.theme
     return Bonito.jsrender(
         session, DOM.div(
             editor_div,
@@ -254,10 +239,12 @@ function EvalEditor(
         container_classes = String[],
         resize_to_lines = true,
         markdown_focus_edit = nothing,  # Auto-detect if nothing provided
+        theme = Observable("default"),
         options...
     )
     js_init_func = isnothing(js_init_func) ? js"() => {}" : js_init_func
-    editor = MonacoEditor(source; language = language, show_editor = show_editor, editor_classes = editor_classes, options...)
+
+    editor = MonacoEditor(source; language = language, show_editor = show_editor, editor_classes = editor_classes, theme = theme, options...)
     loading = Observable(false)
     js_to_julia = Observable(Dict{String, Any}())
     julia_to_js = Observable(Dict{String, Any}())
@@ -383,14 +370,14 @@ Create an interactive cell editor with code execution capabilities.
 # Returns
 Configured `CellEditor` instance ready for interactive use.
 """
-function CellEditor(content, language, runner; show_editor = true, show_logging = false, show_output = true)
+function CellEditor(content, language, runner; show_editor = true, show_logging = false, show_output = true, theme = Observable("default"))
     runner = language == "markdown" ? MarkdownRunner() : runner
     uuid = string(UUIDs.uuid4())
 
     jleditor = EvalEditor(
         content, runner;
         show_editor = show_editor, show_logging = show_logging, language = language,
-        show_output = show_output,
+        show_output = show_output, theme = theme,
         tabCompletion = "on"
     )
 
