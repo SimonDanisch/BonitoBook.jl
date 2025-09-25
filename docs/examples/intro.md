@@ -56,6 +56,7 @@ Thanks to Bonito.jl's universal design, BonitoBook can be viewed across multiple
 Since WGLMakie is also based on Bonito.jl, the Makie integration is seamless and supports all WGLMakie features including interactive widgets, observables and JavaScript integration. Here's a live example of an interactive 3D galaxy visualization, with the animation done in Javascript so it stays interactive without running Julia. The other plots shown in this notebook are not interactive in that way, and can only be interacted with when actually running the notebook with Julia.
 
 ```julia (editor=true, logging=false, output=true)
+using WGLMakie
 # Interactive 3D galaxy with real-time JavaScript integration
 time_slider = Components.Slider(1:360; value=1)
 spiral_factor = Components.Slider(1:50; value=20)
@@ -100,15 +101,20 @@ $(mplot).then(plots=>{
     }
 
     [time, spiral, explosion].forEach(obs => obs.on(update_galaxy));
-    markersize.on(size => plot.update([['markersize', [size, size, size]]]));
+    markersize.on(size => plot.update(['markersize', [size, size, size]]));
 });
 """
 
 DOM.div(
-    DOM.div([DOM.label("Time: "), time_slider], [DOM.label("Spiral: "), spiral_factor],
-            [DOM.label("Explosion: "), explosion], [DOM.label("Size: "), markersize];
-        style="display: flex; gap: 20px; align-items: center; justify-content: center; padding: 15px; background: #1a1a2e; border-radius: 10px; margin: 10px;"),
-    fig, jss
+    Grid(
+        [DOM.span("Time: "), time_slider], 
+        [DOM.span("Spiral: "), spiral_factor],
+        [DOM.span("Explosion: "), explosion], 
+        [DOM.span("Size: "), markersize];
+        columns="repeat(4, 1fr)", gap="20px"
+    ),
+    fig, jss; 
+    style=Styles("padding" => "50px")
 )
 ```
 ## Notebook format

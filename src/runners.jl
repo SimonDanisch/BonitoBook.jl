@@ -322,7 +322,7 @@ function run!(mod::Module, language_evaluators::Dict{String,LanguageEval}, task:
         eval_result = eval_code(evaluator, mod, "", 1, source)
         result[] = Base.invokelatest(book_display, eval_result)
     catch e
-        result[] = InteractiveError(e, Base.catch_backtrace(), mod.current_book())
+        result[] = InteractiveError(e, Base.catch_backtrace(), Base.invokelatest(mod.current_book))
     end
     return
 end

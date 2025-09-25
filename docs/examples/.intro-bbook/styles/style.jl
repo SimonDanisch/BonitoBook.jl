@@ -8,7 +8,7 @@
 # Generate the base style with your customizations
 style = BonitoBook.generate_style(current_book(),
     # Theme control (nothing = auto-detect, true = force light, false = force dark)
-    light_theme = nothing,
+    light_theme = true,
 
     # Layout Variables
     editor_width = "90ch",
