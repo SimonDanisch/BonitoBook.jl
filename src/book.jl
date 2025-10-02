@@ -19,6 +19,13 @@ mutable struct Book <: AbstractBook
     monaco_theme::Observable{String}
 end
 
+
+# cp without preserving e.g. file permissions
+function _cp(src, dest)
+    bytes = read(src)
+    write(dest, bytes)
+end
+
 function create_book_structure(bookfile; replace_style=false)
     # Always create .book-name-bbook folder structure
     book_file = normpath(abspath(bookfile))
@@ -50,26 +57,26 @@ function create_book_structure(bookfile; replace_style=false)
         # Copy prefixed configuration templates if they exist
         claude_config_template = joinpath(template_folder, "claude-config.toml")
         claude_config_path = joinpath(ai_folder, "claude-config.toml")
-        cp(claude_config_template, claude_config_path)
+        _cp(claude_config_template, claude_config_path)
 
         pt_config_template = joinpath(template_folder, "promptingtools-config.toml")
         pt_config_path = joinpath(ai_folder, "promptingtools-config.toml")
-        cp(pt_config_template, pt_config_path)
+        _cp(pt_config_template, pt_config_path)
 
         claude_prompt_template = joinpath(template_folder, "claude-system-prompt.md")
         claude_prompt_path = joinpath(ai_folder, "claude-system-prompt.md")
-        cp(claude_prompt_template, claude_prompt_path)
+        _cp(claude_prompt_template, claude_prompt_path)
 
         pt_prompt_template = joinpath(template_folder, "promptingtools-system-prompt.md")
         pt_prompt_path = joinpath(ai_folder, "promptingtools-system-prompt.md")
-        cp(pt_prompt_template, pt_prompt_path)
+        _cp(pt_prompt_template, pt_prompt_path)
     else
         # Handle style file replacement for existing folders
         style_path = joinpath(folder, "styles", "style.jl")
         if replace_style || !isfile(style_path)
             style_path_template = joinpath(template_folder, "style_template.jl")
             mkpath(joinpath(folder, "styles"))
-            write(style_path, read(style_path_template, String))
+            _cp(style_path, style_path_template)
         end
     end
 
