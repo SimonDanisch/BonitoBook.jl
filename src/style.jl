@@ -528,7 +528,6 @@ function generate_style(book;
             "max-height" => "1000px",
             "overflow-y" => "auto",
             "overflow-x" => "visible",
-            "background-color" => "var(--bg-primary)",
             "color" => "var(--text-primary)"
         ),
         # Remove max-height for markdown outputs

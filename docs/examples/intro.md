@@ -107,13 +107,13 @@ $(mplot).then(plots=>{
 
 DOM.div(
     Grid(
-        [DOM.span("Time: "), time_slider], 
+        [DOM.span("Time: "), time_slider],
         [DOM.span("Spiral: "), spiral_factor],
-        [DOM.span("Explosion: "), explosion], 
+        [DOM.span("Explosion: "), explosion],
         [DOM.span("Size: "), markersize];
         columns="repeat(4, 1fr)", gap="20px"
     ),
-    fig, jss; 
+    fig, jss;
     style=Styles("padding" => "50px")
 )
 ```
@@ -121,21 +121,25 @@ DOM.div(
 
 The format is a simple markdown file with more config options and data stored in a separate folder. This keeps the notebook format fully compatible with markdown and makes it easy to edit it with other editors.
 
-The a hidden folder structure looks like this:
+The hidden folder structure looks like this:
 
 ```
 mybook.md                # Main content file
-.mybook-bbook/           # Hidden folder structure
-├── styles/
-│   └── style.jl         # Custom styling
-├── ai/
-│   ├── config.toml      # AI configuration
-│   └── system-prompt.md # Custom AI prompt
+.mybook-bbook/           # Hidden folder structure (or .bbook/ for shared)
+├── style.jl             # Custom styling (lazy-loaded from template)
+├── ai/                  # AI configs (lazy-loaded from template)
+│   ├── claude-config.toml
+│   ├── claude-system-prompt.md
+│   ├── promptingtools-config.toml
+│   └── promptingtools-system-prompt.md
+├── data/                # Write to ./data to include in zip
+│   └── data.csv
+├── meta.toml            # Version tracking (auto-created)
 └── .versions/           # Automatic backups
     └── mybook-*.md      # Timestamped backups
-└── data/             # Write out to `./data` to get included into the zip
-    └── data.csv      # Any data needed for the notebook
 ```
+
+**Note:** Files are only created when edited. Until then, they're loaded from BonitoBook templates.
 
 Jupyter notebooks (.ipynb) are automatically converted to markdown files with the same name before setting up the notebook and creating the fodler structure.
 
@@ -360,7 +364,7 @@ BonitoBook.@bedit Book("intro.md") # Opens function source in editor
 
 ## Style customization
 
-Customize your book's appearance by editing `.name-bbook/styles/style.jl` (accessible via the paint can icon):
+Customize your book's appearance by editing `.name-bbook/style.jl` (accessible via the paint can icon):
 
 ```julia (editor=true, logging=false, output=true)
 # Modify colors, fonts, layout dimensions

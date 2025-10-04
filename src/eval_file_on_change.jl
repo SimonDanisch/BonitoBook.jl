@@ -88,6 +88,53 @@ function EvalFileOnChange(filepath::String; module_context=Main)
     return EvalFileOnChange(filepath, current_output, last_valid_output, file_watcher, watcher_task, close)
 end
 
+"""
+    update_filepath!(eval_component::EvalFileOnChange, new_filepath::String)
+
+Update the file path being watched by the EvalFileOnChange component.
+Stops watching the old file and starts watching the new one.
+"""
+function update_filepath!(eval_component::EvalFileOnChange, new_filepath::String)
+    if eval_component.filepath == new_filepath
+        return  # No change needed
+    end
+
+    # Stop the old watcher
+    eval_component.close[] = true
+    # Wait briefly for old task to finish
+    sleep(0.05)
+
+    # Update filepath
+    eval_component.filepath = new_filepath
+
+    # Reset close flag
+    eval_component.close[] = false
+
+    # Start new watcher task
+    eval_component.watcher_task[] = @async begin
+        while !eval_component.close[]
+            try
+                result = FileWatching.watch_file(new_filepath)
+                if result.changed || result.renamed
+                    eval_component.file_watcher[] = mtime(new_filepath)
+                end
+            catch e
+                if e isa InterruptException
+                    break
+                end
+                if !isfile(new_filepath)
+                    break
+                end
+                @error "Error watching file $new_filepath: $(string(e))" exception=(e, catch_backtrace())
+                sleep(0.1)
+            end
+        end
+    end
+
+    # Trigger immediate evaluation of new file
+    notify(eval_component.file_watcher)
+end
+
 function Bonito.jsrender(session::Session, eval_component::EvalFileOnChange)
     # Create popup for errors only
     popup_content = Observable(DOM.div())

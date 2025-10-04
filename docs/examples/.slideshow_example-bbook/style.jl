@@ -18,9 +18,28 @@ presentation_style = Styles(
         "background" => "linear-gradient(135deg, $(MAKIE_LIGHT) 0%, #E2E8F0 100%)",
     ),
 
-    # Remove white backgrounds from markdown content
+    # Remove white backgrounds from markdown content - all possible classes
     CSS(
         ".presentation-themed-slideshow .slideshow-content .markdown-body",
+        "background-color" => "transparent !important",
+        "background" => "none !important",
+        "border" => "none !important",
+        "box-shadow" => "none !important",
+        "padding" => "0 !important"
+    ),
+
+    # Target markdown cell containers
+    CSS(
+        ".presentation-themed-slideshow .slideshow-content .markdown-cell",
+        "background-color" => "transparent !important",
+        "background" => "none !important",
+        "border" => "none !important",
+        "box-shadow" => "none !important"
+    ),
+
+    # Target markdown display containers
+    CSS(
+        ".presentation-themed-slideshow .slideshow-content .markdown-display",
         "background-color" => "transparent !important",
         "background" => "none !important",
         "border" => "none !important",
@@ -175,7 +194,7 @@ slideshow_styles = Styles(
     # Content container - optimized for presentation (only apply within slideshow-container)
     CSS(
         ":where(.slideshow-container .slideshow-content)",
-        "padding" => "80px 120px", # More side padding for centering
+        "padding" => "80px 120px calc(100vh - 200px) 120px", # Bottom padding ensures last slide can scroll to top
         "scroll-behavior" => "smooth",
         "line-height" => "1.6",
         "display" => "flex",

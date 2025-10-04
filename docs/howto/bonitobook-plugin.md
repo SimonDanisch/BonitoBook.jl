@@ -4,14 +4,20 @@ Create custom book formats that transform how your markdown notebooks are render
 
 ## Basic Structure
 
-BonitoBook plugins are directories with the pattern `.name-bbook/` containing a `book.jl` file that returns a module:
+BonitoBook plugins are directories with the pattern `.name-bbook/` (per-file) or `.bbook/` (shared) containing a `book.jl` file that returns a module:
 
 ```
-.my-plugin-bbook/
+.my-plugin-bbook/        # or .bbook/ for shared configs
 ├── book.jl              # Must return a module
-└── styles/              # Optional styling
-    └── style.jl
+├── style.jl             # Optional custom styling (lazy-loaded from template if not present)
+├── ai/                  # Optional AI configs (lazy-loaded)
+│   ├── claude-config.toml
+│   └── promptingtools-config.toml
+├── data/                # Optional data files
+└── meta.toml            # Version tracking (auto-created)
 ```
+
+**Note:** Files are lazily initialized - they're only created when you edit them. Until then, they're loaded from BonitoBook templates.
 
 ## Minimal Example
 
@@ -107,38 +113,35 @@ end
 
 ## Adding Styles
 
-Copy the main BonitoBook template for `styles/style.jl` (this gets done automatically if you start from a standard bonitobook), then add custom styles on top, by adding another style file:
+Styles are lazy-loaded: the base `style.jl` comes from templates. Add custom styles on top:
 
 ```julia
 # In your create_book function
-custom_style_path = joinpath(@__DIR__, "styles", "custom-style.jl")
+custom_style_path = joinpath(@__DIR__, "custom-style.jl")
 custom_style = BonitoBook.EvalFileOnChange(custom_style_path; module_context = book.runner.mod)
-notify(custom_style.file_watcher)  # Important, to actually eval the style for the first time
+notify(custom_style.file_watcher)  # Important!
 
-# Store the style in your custom book type and include it in jsrender
+# Store in your book type
 struct MyBook <: BonitoBook.AbstractBook
     book::BonitoBook.Book
     custom_style::BonitoBook.EvalFileOnChange
 end
 
 function create_book(book::BonitoBook.Book; kwargs...)
-    # Set up custom styles
-    custom_style_path = joinpath(@__DIR__, "styles", "custom-style.jl")
+    custom_style_path = joinpath(@__DIR__, "custom-style.jl")
     custom_style = BonitoBook.EvalFileOnChange(custom_style_path; module_context = book.runner.mod)
     notify(custom_style.file_watcher)
-
     return MyBook(book, custom_style)
 end
 
-# In jsrender, include the style
+# Include in jsrender
 function Bonito.jsrender(session::Session, my_book::MyBook)
-    # ... other rendering logic ...
+    # ... rendering ...
     return DOM.div(my_book.custom_style.last_valid_output, container)
 end
 ```
 
-`styles/custom-style.jl`:
-
+`custom-style.jl`:
 ```julia
 using BonitoBook.Bonito: Styles, CSS
 
@@ -147,7 +150,7 @@ Styles(
 )
 ```
 
-The best plugin to look at for this is the slideshow_example!
+See [slideshow_example](/examples/slideshow_example) for a complete example.
 
 ## Examples
 

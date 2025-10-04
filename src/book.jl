@@ -26,62 +26,8 @@ function _cp(src, dest)
     write(dest, bytes)
 end
 
-function create_book_structure(bookfile; replace_style=false)
-    # Always create .book-name-bbook folder structure
-    book_file = normpath(abspath(bookfile))
-    name, ext = splitext(book_file)
-    if !(ext in (".md", ".ipynb"))
-        error("File $bookfile is not a markdown or ipynb file: $(ext)")
-    end
-
-    # Create hidden folder structure: .book-name-bbook
-    book_dir = dirname(book_file)
-    book_basename = basename(name)
-    folder = joinpath(book_dir, ".$(book_basename)-bbook")
-
-    # Create the folder structure if it doesn't exist
-    template_folder = joinpath(@__DIR__, "templates")
-    if !isdir(folder)
-        mkpath(folder)
-        # Create default data dir
-        mkpath(joinpath(folder, "data"))
-        # Create styles folder and copy template
-        mkpath(joinpath(folder, "styles"))
-        style_path_template = joinpath(template_folder, "style_template.jl")
-        style_path = joinpath(folder, "styles", "style.jl")
-        write(style_path, read(style_path_template, String))
-
-        # Create AI folder with prefixed configuration files for each agent
-        ai_folder = joinpath(folder, "ai")
-        mkpath(ai_folder)
-        # Copy prefixed configuration templates if they exist
-        claude_config_template = joinpath(template_folder, "claude-config.toml")
-        claude_config_path = joinpath(ai_folder, "claude-config.toml")
-        _cp(claude_config_template, claude_config_path)
-
-        pt_config_template = joinpath(template_folder, "promptingtools-config.toml")
-        pt_config_path = joinpath(ai_folder, "promptingtools-config.toml")
-        _cp(pt_config_template, pt_config_path)
-
-        claude_prompt_template = joinpath(template_folder, "claude-system-prompt.md")
-        claude_prompt_path = joinpath(ai_folder, "claude-system-prompt.md")
-        _cp(claude_prompt_template, claude_prompt_path)
-
-        pt_prompt_template = joinpath(template_folder, "promptingtools-system-prompt.md")
-        pt_prompt_path = joinpath(ai_folder, "promptingtools-system-prompt.md")
-        _cp(pt_prompt_template, pt_prompt_path)
-    else
-        # Handle style file replacement for existing folders
-        style_path = joinpath(folder, "styles", "style.jl")
-        if replace_style || !isfile(style_path)
-            style_path_template = joinpath(template_folder, "style_template.jl")
-            mkpath(joinpath(folder, "styles"))
-            _cp(style_path, style_path_template)
-        end
-    end
-
-    return folder
-end
+# Include book structure management functions
+include("book_structure.jl")
 
 function import_bookfile(book_file, folder, replace_style)
     if !isfile(book_file)
@@ -148,11 +94,10 @@ function Book(user_file::String; folder=nothing, replace_style = false, all_bloc
     if isfile(include_file)
         runner.mod.include(include_file)
     end
-    # Set up style evaluation with single style path
-    style_path = joinpath(folder, "styles", "style.jl")
+    # Set up style evaluation - use get_file_path to check custom then template
+    style_path, is_custom = get_file_path(folder, "style.jl")
     style_eval = EvalFileOnChange(style_path; module_context = runner.mod)
-    mainpath = joinpath(@__DIR__, "templates/style.jl")
-    main_style = EvalFileOnChange(mainpath; module_context = runner.mod)
+    # Load main styling implementation
     spinner = BookSpinner()
     current_cell = Observable{Union{CellEditor, Nothing}}(nothing)
     theme_preference = Observable{String}("auto")
@@ -161,7 +106,6 @@ function Book(user_file::String; folder=nothing, replace_style = false, all_bloc
         global_logging_widget, style_eval, spinner, current_cell, theme_preference, monaco_theme
     )
     Core.eval(runner.mod, :(current_book() = $(book)))
-    notify(main_style.file_watcher)
     notify(style_eval.file_watcher)
     export_md(markdown_file, book)
     return book
@@ -603,10 +547,13 @@ function create_chat_agent(book::Book)
 end
 
 function setup_menu(book::Book, tabbed_file_editor::TabbedFileEditor)
-    style_path = joinpath(book.folder, "styles", "style.jl")
     style_setting_button, click = SmallButton("paintcan")
     on(click) do _click
-        # Toggle style editor visibility
+        # Initialize file for editing (creates folder/file if needed)
+        style_path = initialize_file_for_editing(book.folder, "style.jl")
+        # Update the book's style_eval to watch the custom file
+        update_filepath!(book.style_eval, style_path)
+        # Open in editor
         open_file!(tabbed_file_editor, style_path)
     end
     # Settings menu button

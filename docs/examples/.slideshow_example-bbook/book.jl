@@ -6,10 +6,8 @@ using Bonito, BonitoBook
 
 struct SlideshowBook <: BonitoBook.AbstractBook
     book::BonitoBook.Book
-    presentation_style::BonitoBook.EvalFileOnChange
-
-    function SlideshowBook(book::BonitoBook.Book, presentation_style::BonitoBook.EvalFileOnChange)
-        return new(book, presentation_style)
+    function SlideshowBook(book::BonitoBook.Book)
+        return new(book)
     end
 end
 
@@ -27,11 +25,7 @@ function create_book(book::BonitoBook.Book; kwargs...)
     end
 
     # Set up presentation style evaluation
-    presentation_style_path = joinpath(dirname(@__FILE__), "styles", "presentation-style.jl")
-    presentation_style = BonitoBook.EvalFileOnChange(presentation_style_path; module_context = book.runner.mod)
-    notify(presentation_style.file_watcher)
-
-    return SlideshowBook(book, presentation_style)
+    return SlideshowBook(book)
 end
 
 function Bonito.jsrender(session::Session, slideshow::SlideshowBook)
@@ -245,7 +239,6 @@ function Bonito.jsrender(session::Session, slideshow::SlideshowBook)
     elements = BonitoBook.standard_setup!(session, book)
 
     # Get presentation styles (will be re-evaluated if file changes)
-    presentation_styles = slideshow.presentation_style.last_valid_output
     # Add branding elements with logo
     logo_path = joinpath(dirname(@__FILE__), "logo.svg")
     logo = isfile(logo_path) ? DOM.img(src=Asset(logo_path), style="height: 24px; margin-right: 8px;") : ""
@@ -258,7 +251,7 @@ function Bonito.jsrender(session::Session, slideshow::SlideshowBook)
         class="presentation-themed-slideshow"
     )
 
-    return Bonito.jsrender(session, DOM.div(presentation_styles, presentation_wrapper))
+    return Bonito.jsrender(session, presentation_wrapper)
 end
 
 

@@ -34,9 +34,9 @@ Create a new Claude agent using the local Claude Code CLI.
 function ClaudeAgent(book::BonitoBook.Book; config::Dict = Dict())
     folder = book.folder
 
-    # Load configuration from TOML file if it exists
-    config_path = joinpath(folder, "ai", "claude-config.toml")
-    system_prompt_path = joinpath(folder, "ai", "claude-system-prompt.md")
+    # Use get_file_path to check custom folder first, then template
+    config_path, _ = BonitoBook.get_file_path(folder, "ai/claude-config.toml")
+    system_prompt_path, _ = BonitoBook.get_file_path(folder, "ai/claude-system-prompt.md")
 
     # Load TOML config if it exists
     toml_config = Dict()
@@ -93,16 +93,14 @@ function ClaudeAgent(book::BonitoBook.Book; config::Dict = Dict())
         nothing
     end
     if !isnothing(cli)
-        cd(book.folder) do
+        try
             try
-                try
-                    run(`$cli mcp remove julia-server`)
-                catch e
-                end
-                run(`$cli mcp add --transport http julia-server $(BonitoBook.get_server_url(mcp_server))`)
-            catch e
-                @warn "Error when adding the MCP julia server" exception=(e, Base.catch_backtrace())
+                run(`$cli mcp remove julia-server`) # this can fail if not added yet
+            catch
             end
+            run(`$cli mcp add --transport http julia-server $(BonitoBook.get_server_url(mcp_server))`)
+        catch e
+            @warn "Error when adding the MCP julia server" exception=(e, Base.catch_backtrace())
         end
     else
         @warn "Claude CLI not found, MCP server may not be fully functional"
@@ -159,10 +157,8 @@ end
 Save current agent configuration to TOML file.
 """
 function save_config_to_toml(agent::ClaudeAgent)
-    config_path = joinpath(agent.book.folder, "ai", "claude-config.toml")
-
-    # Create directory if it doesn't exist
-    mkpath(dirname(config_path))
+    # Initialize file for editing (creates folder/file if needed)
+    config_path = BonitoBook.initialize_file_for_editing(agent.book.folder, "ai/claude-config.toml")
 
     # Build TOML structure, excluding nothing values
     toml_data = Dict{String, Any}()
@@ -528,7 +524,8 @@ function BonitoBook.settings_menu(agent::ClaudeAgent)
 
     # Handle edit system prompt button
     Bonito.on(edit_prompt_clicks) do _
-        system_prompt_path = joinpath(agent.book.folder, "ai", "claude-system-prompt.md")
+        # Initialize file for editing (creates folder/file if needed)
+        system_prompt_path = BonitoBook.initialize_file_for_editing(agent.book.folder, "ai/claude-system-prompt.md")
         BonitoBook.open_file!(BonitoBook.get_file_editor(agent.book), system_prompt_path)
         @info "Opened system prompt in file editor: $system_prompt_path"
     end

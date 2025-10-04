@@ -220,15 +220,12 @@ function AsyncRunner(project::String, mod::Module=Module(gensym("BonitoBook")); 
     taskref = spawnat(1) do
         for task in task_queue
             try
-                cd(project) do
-                    redirect_target[] = task.logging
-                    run!(mod, language_evaluators, task)
-                    println()
-                end
+                redirect_target[] = task.logging
+                run!(mod, language_evaluators, task)
+                println()
             catch e
                 @error "Error running code: $(task.source)" exception = (e, catch_backtrace())
             finally
-                sleep(0.5)
                 redirect_target[] = global_logger
             end
         end
