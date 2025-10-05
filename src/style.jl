@@ -321,9 +321,13 @@ function generate_style(book;
             "@media (max-width: 768px)",
             CSS(
                 ":root",
-                "--editor-width" => "calc(100vw - 40px)",
+                "--editor-width" => "calc(100vw - 30px)",
                 "--editor-min-width" => "280px",
-                "--editor-max-width" => "100vw",
+                "--editor-max-width" => "calc(100vw - 20px)",
+            ),
+            CSS(
+                ".book-cells-area",
+                "padding" => "15px 5px",
             )
         ),
 
@@ -332,16 +336,59 @@ function generate_style(book;
             "@media (max-width: 480px)",
             CSS(
                 ":root",
-                "--editor-width" => "calc(100vw - 20px)",
-                "--editor-min-width" => "260px",
-                "--editor-max-width" => "100vw",
+                "--editor-width" => "100%",
+                "--editor-min-width" => "100%",
+                "--editor-max-width" => "100%",
                 "--border-radius-large" => "3px",
                 "--border-radius-small" => "2px",
             ),
             # Mobile-specific layout adjustments
             CSS(
+                ".book-cells-area",
+                "padding" => "10px",
+                "box-sizing" => "border-box",
+            ),
+            # Override fit-content on mobile to constrain width
+            CSS(
+                ".book-cells-area .fit-content",
+                "width" => "100%",
+                "max-width" => "100%",
+            ),
+            CSS(
                 ".cell-editor",
-                "padding" => "3px 3px 8px 8px",
+                "padding" => "5px",
+                "box-sizing" => "border-box",
+                "width" => "100%",
+            ),
+            CSS(
+                ".cell-editor-container",
+                "width" => "100% !important",
+                "max-width" => "100% !important",
+                "min-width" => "0 !important",
+                "box-sizing" => "border-box",
+            ),
+            CSS(
+                ".cell-output",
+                "max-width" => "100%",
+                "box-sizing" => "border-box",
+            ),
+            CSS(
+                ".markdown-body",
+                "max-width" => "100%",
+                "width" => "100%",
+                "overflow-wrap" => "break-word",
+                "word-break" => "break-word",
+                "box-sizing" => "border-box",
+            ),
+            CSS(
+                ".markdown-body *",
+                "max-width" => "100%",
+                "box-sizing" => "border-box",
+            ),
+            CSS(
+                ".markdown-body pre, .markdown-body code",
+                "overflow-x" => "auto",
+                "word-wrap" => "normal",
             ),
             CSS(
                 ".small-menu-bar",
@@ -352,6 +399,15 @@ function generate_style(book;
                 ".small-button",
                 "padding" => "6px",
                 "margin-right" => "3px",
+            ),
+            # Reposition new cell plus button to avoid cutoff
+            CSS(
+                ".new-cell-plus",
+                "left" => "-0.5rem",
+            ),
+            CSS(
+                ".new-cell-buttons",
+                "left" => "-0.5rem",
             ),
         ),
         ),
