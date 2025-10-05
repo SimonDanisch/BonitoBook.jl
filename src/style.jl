@@ -169,15 +169,11 @@ function generate_style(book;
     # Base element styles
     _base_styles = Styles(
         Styles(
+            # Global box-sizing and inheritance
             CSS(
-                "body",
-                "margin" => "0",
+                "*",
+                "box-sizing" => "border-box"
             ),
-            CSS("pre",
-                "margin-block" => "5px 0px",
-                "font-family" => "'Consolas', 'Monaco', 'Courier New', monospace"
-            ),
-            # Global styling for all elements
             CSS(
                 "html",
                 "background-color" => "var(--bg-primary)",
@@ -185,12 +181,11 @@ function generate_style(book;
             ),
             CSS(
                 "body",
-                "background-color" => "var(--bg-primary)",
-                "color" => "var(--text-primary)"
+                "margin" => "0"
             ),
-            CSS(
-                "*",
-                "color" => "inherit"
+            CSS("pre",
+                "margin-block" => "5px 0px",
+                "font-family" => "'Consolas', 'Monaco', 'Courier New', monospace"
             ),
             # Fix for Markdown list
             CSS("li p", "display" => "inline"),
@@ -345,45 +340,39 @@ function generate_style(book;
             # Mobile-specific layout adjustments
             CSS(
                 ".book-cells-area",
-                "padding" => "10px",
-                "box-sizing" => "border-box",
+                "padding" => "10px"
             ),
             # Override fit-content on mobile to constrain width
             CSS(
                 ".book-cells-area .fit-content",
                 "width" => "100%",
-                "max-width" => "100%",
+                "max-width" => "100%"
             ),
             CSS(
                 ".cell-editor",
                 "padding" => "5px",
-                "box-sizing" => "border-box",
-                "width" => "100%",
+                "width" => "100%"
             ),
             CSS(
                 ".cell-editor-container",
                 "width" => "100% !important",
                 "max-width" => "100% !important",
-                "min-width" => "0 !important",
-                "box-sizing" => "border-box",
+                "min-width" => "0 !important"
             ),
             CSS(
                 ".cell-output",
-                "max-width" => "100%",
-                "box-sizing" => "border-box",
+                "max-width" => "100%"
             ),
             CSS(
                 ".markdown-body",
                 "max-width" => "100%",
                 "width" => "100%",
                 "overflow-wrap" => "break-word",
-                "word-break" => "break-word",
-                "box-sizing" => "border-box",
+                "word-break" => "break-word"
             ),
             CSS(
                 ".markdown-body *",
-                "max-width" => "100%",
-                "box-sizing" => "border-box",
+                "max-width" => "100%"
             ),
             CSS(
                 ".markdown-body pre, .markdown-body code",
@@ -419,36 +408,23 @@ function generate_style(book;
         Styles(
         # Monaco Widgets (find/command palette)
         CSS(
-            ".quick-input-widget",
+            ".quick-input-widget, .find-widget",
             "position" => "fixed !important",
-            "top" => "10px !important",
-            "background-color" => "var(--bg-primary)",
-            "color" => "var(--text-primary)"
-        ),
-        CSS(
-            ".find-widget",
-            "position" => "fixed !important",
-            "top" => "10px !important",
-            "background-color" => "var(--bg-primary)",
-            "color" => "var(--text-primary)"
+            "top" => "10px !important"
         ),
         CSS(
             ".monaco-list",
             "max-height" => "var(--max-height-medium)",
-            "overflow-y" => "auto !important",
-            "background-color" => "var(--bg-primary)",
-            "color" => "var(--text-primary)"
+            "overflow-y" => "auto !important"
         ),
         CSS(
             ".monaco-editor-div",
-            "background-color" => "var(--bg-primary)",
             "padding" => "0",
-            "margin" => "0",
-            "color" => "var(--text-primary)"
+            "margin" => "0"
         ),
         CSS(
             ".sidebar-widget-content .monaco-editor-div.hide-horizontal",
-            "display" => "block !important",
+            "display" => "block !important"
         ),
         ),
         monaco_styles
@@ -463,9 +439,7 @@ function generate_style(book;
             "width" => "var(--editor-width)",
             "min-width" => "var(--editor-min-width)",
             "max-width" => "var(--editor-max-width)",
-            "position" => "relative",
-            "background-color" => "var(--bg-primary)",
-            "color" => "var(--text-primary)"
+            "position" => "relative"
         ),
         CSS(
             ".cell-menu-proximity-area",
@@ -509,9 +483,7 @@ function generate_style(book;
             "position" => "relative",
             "padding" => "5px 5px 10px 10px",
             "border-radius" => "var(--border-radius-large)",
-            "box-shadow" => "var(--shadow-soft)",
-            "background-color" => "var(--bg-primary)",
-            "color" => "var(--text-primary)"
+            "box-shadow" => "var(--shadow-soft)"
         ),
         # Cell editor focus highlight - target elements that have both classes
         CSS(
@@ -526,14 +498,11 @@ function generate_style(book;
             "max-height" => "500px",
             "max-width" => "var(--editor-width)",
             "overflow-y" => "auto",
-            "height" => "fit-content",
+            "height" => "auto",
             "margin" => "0",
             "padding" => "0",
-            "background-color" => "var(--bg-primary)",
-            "color" => "var(--text-primary)",
             "white-space" => "pre-wrap",
             "word-wrap" => "break-word",
-            "height" => "auto",
             "flex" => "0 0 auto"
         ),
 
@@ -544,8 +513,6 @@ function generate_style(book;
             "overflow-y" => "auto",
             "margin" => "0",
             "padding" => "var(--spacing-sm)",
-            "background-color" => "var(--bg-primary)",
-            "color" => "var(--text-primary)",
             "font-family" => "monospace",
             "font-size" => "var(--font-size-xs)",
             "line-height" => "1.4",
@@ -556,11 +523,7 @@ function generate_style(book;
             ".logging-widget pre",
             "margin" => "0",
             "padding" => "0",
-            "background-color" => "transparent",
-            "color" => "inherit",
-            "font-family" => "inherit",
-            "font-size" => "inherit",
-            "line-height" => "inherit",
+            "font" => "inherit",
             "white-space" => "pre-wrap",
             "word-wrap" => "break-word"
         ),
@@ -583,8 +546,7 @@ function generate_style(book;
             "margin" => "5px",
             "max-height" => "1000px",
             "overflow-y" => "auto",
-            "overflow-x" => "visible",
-            "color" => "var(--text-primary)"
+            "overflow-x" => "visible"
         ),
         # Remove max-height for markdown outputs
         CSS(
@@ -761,7 +723,6 @@ function generate_style(book;
         CSS(".markdown-body pre", "margin-bottom" => "0", "margin-top" => "0"),
         CSS(".markdown-body img", "border-style" => "none"),
         CSS(".markdown-body input", "font" => "inherit", "overflow" => "visible"),
-        CSS(".markdown-body *", "box-sizing" => "border-box"),
         ),
         markdown_styles
     )
@@ -844,7 +805,6 @@ function generate_style(book;
         CSS(
             ".small-menu-bar",
             "z-index" => "var(--z-menu)",
-            "background-color" => "var(--bg-primary)",
             "border" => "1px solid var(--border-primary)",
             "border-radius" => "var(--spacing-sm)",
             "box-shadow" => "var(--shadow-soft)",
@@ -892,16 +852,15 @@ function generate_style(book;
         ),
         CSS(
             ".small-button.inactive:hover",
-            "background-color" => "var(--bg-primary)",
+            "background-color" => "inherit"
         ),
 
         CSS(
             ".file-tabs-container",
             "display" => "flex",
-            "background-color" => "var(--bg-primary)",
             "border-bottom" => "1px solid var(--border-primary)",
             "overflow-x" => "auto",
-            "flex-shrink" => "0",
+            "flex-shrink" => "0"
         ),
         CSS(
             ".file-tab",
@@ -909,13 +868,12 @@ function generate_style(book;
             "align-items" => "center",
             "padding" => "8px 4px",
             "border-bottom" => "2px solid transparent",
-            "background-color" => "var(--bg-primary)",
             "color" => "var(--text-secondary)",
             "cursor" => "pointer",
             "transition" => "all var(--transition-slow)",
             "border-radius" => "6px 6px 0 0",
             "margin-right" => "2px",
-            "user-select" => "none",
+            "user-select" => "none"
         ),
         CSS(
             ".file-tab:hover",
@@ -924,10 +882,9 @@ function generate_style(book;
         ),
         CSS(
             ".file-tab.active",
-            "background-color" => "var(--bg-primary)",
             "color" => "var(--text-primary)",
             "border-bottom-color" => "var(--accent-blue)",
-            "font-weight" => "500",
+            "font-weight" => "500"
         ),
         CSS(
             ".file-tab-content",
@@ -991,9 +948,7 @@ function generate_style(book;
             "margin" => "0",
             "width" => "100%",
             "min-width" => "var(--editor-width)",
-            "height" => "calc(100vh - 20px)",
-            "background-color" => "var(--bg-primary)",
-            "color" => "var(--text-primary)"
+            "height" => "calc(100vh - 20px)"
         ),
 
         CSS(
@@ -1114,8 +1069,7 @@ function generate_style(book;
             "display" => "flex",
             "flex-direction" => "row",
             "width" => "100%",
-            "justify-content" => "center",
-            "background-color" => "var(--bg-primary)"
+            "justify-content" => "center"
         ),
         CSS(
             ".book-main-menu .file-tabs-container",
@@ -1162,8 +1116,7 @@ function generate_style(book;
             "bottom" => "0",
             "left" => "0",
             "right" => "0",
-            "z-index" => "var(--z-modal)",
-            "background-color" => "var(--bg-primary)",
+            "z-index" => "var(--z-modal)"
         ),
         CSS(
             ".book-main-content",
@@ -1204,10 +1157,9 @@ function generate_style(book;
         ),
         CSS(
             ".sidebar-content-container",
-            "background-color" => "var(--bg-primary)",
             "transition" => "width 0.3s ease, opacity 0.3s ease",
             "overflow" => "hidden",
-            "pointer-events" => "auto",
+            "pointer-events" => "auto"
         ),
         # Vertical sidebar specific - resize to content and stay connected
         CSS(
@@ -1245,13 +1197,12 @@ function generate_style(book;
         ),
         CSS(
             ".sidebar-content-container.horizontal",
-            "background-color" => "var(--bg-primary)",
             "border-top" => "1px solid var(--border-primary)",
             "transition" => "height 0.3s ease, opacity 0.3s ease",
             "overflow" => "hidden",
             "width" => "100%",
             "opacity" => "1",
-            "visibility" => "visible",
+            "visibility" => "visible"
         ),
         CSS(
             ".sidebar-content-container.horizontal.collapsed",
@@ -1281,7 +1232,6 @@ function generate_style(book;
         CSS(
             ".sidebar-tabs",
             "width" => "48px",
-            "background-color" => "var(--bg-primary)",
             "border-left" => "1px solid var(--border-primary)",
             "border-radius" => "0 8px 8px 0",
             "display" => "flex",
@@ -1291,7 +1241,7 @@ function generate_style(book;
             "gap" => "4px",
             "flex-shrink" => "0",
             "pointer-events" => "auto",
-            "height" => "fit-content",
+            "height" => "fit-content"
         ),
         CSS(
             ".sidebar-tab",
@@ -1340,9 +1290,8 @@ function generate_style(book;
             "overflow-x" => "hidden",
             "padding" => "0",
             "width" => "100%",
-            "background-color" => "var(--bg-primary)",
             "position" => "relative",
-            "height" => "100%",
+            "height" => "100%"
         ),
         # Vertical sidebar content - adapt height to content
         CSS(
@@ -1411,8 +1360,6 @@ function generate_style(book;
         # BonitoBook Components Styling
         CSS(
             ".bonitobook-button",
-            "background-color" => "var(--bg-primary)",
-            "color" => "var(--text-primary)",
             "border" => "1px solid var(--border-secondary)",
             "border-radius" => "6px",
             "padding" => "8px 16px",
@@ -1424,8 +1371,7 @@ function generate_style(book;
             "min-width" => "80px",
             "display" => "inline-flex",
             "align-items" => "center",
-            "justify-content" => "center",
-            "font-family" => "inherit"
+            "justify-content" => "center"
         ),
         CSS(
             ".bonitobook-button:hover",
@@ -1448,17 +1394,13 @@ function generate_style(book;
         # Input field styling
         CSS(
             ".bonitobook-input",
-            "background-color" => "var(--bg-primary)",
-            "color" => "var(--text-primary)",
             "border" => "1px solid var(--border-secondary)",
             "border-radius" => "6px",
             "padding" => "8px 12px",
             "font-size" => "var(--font-size-base)",
-            "font-family" => "inherit",
             "transition" => "all var(--transition-slow)",
             "outline" => "none",
-            "width" => "100%",
-            "box-sizing" => "border-box"
+            "width" => "100%"
         ),
         CSS(
             ".bonitobook-input:hover",
@@ -1483,7 +1425,6 @@ function generate_style(book;
             "height" => "var(--width-xs)",
             "border" => "1px solid var(--border-secondary)",
             "border-radius" => "3px",
-            "background-color" => "var(--bg-primary)",
             "cursor" => "pointer",
             "transition" => "all var(--transition-slow)",
             "appearance" => "none",
@@ -1522,18 +1463,14 @@ function generate_style(book;
         # Dropdown styling
         CSS(
             ".bonitobook-dropdown",
-            "background-color" => "var(--bg-primary)",
-            "color" => "var(--text-primary)",
             "border" => "1px solid var(--border-secondary)",
             "border-radius" => "6px",
             "padding" => "8px 12px",
             "font-size" => "var(--font-size-base)",
-            "font-family" => "inherit",
             "cursor" => "pointer",
             "transition" => "all var(--transition-slow)",
             "outline" => "none",
             "width" => "100%",
-            "box-sizing" => "border-box",
             "appearance" => "none",
             "-webkit-appearance" => "none",
             "background-repeat" => "no-repeat",
@@ -1549,11 +1486,6 @@ function generate_style(book;
             ".bonitobook-dropdown:focus",
             "border-color" => "var(--accent-blue)",
             "box-shadow" => "0 0 0 2px rgba(3, 102, 214, 0.2)"
-        ),
-        CSS(
-            ".bonitobook-dropdown option",
-            "background-color" => "var(--bg-primary)",
-            "color" => "var(--text-primary)"
         ),
 
         # Light theme dropdown arrow
@@ -1636,7 +1568,6 @@ function generate_style(book;
         # Manipulate widget styling
         CSS(
             ".manipulate-container",
-            "background-color" => "var(--bg-primary)",
             "border" => "1px solid var(--border-primary)",
             "border-radius" => "var(--spacing-sm)",
             "padding" => "16px",
@@ -1676,7 +1607,6 @@ function generate_style(book;
         ),
         CSS(
             ".manipulate-output",
-            "background-color" => "var(--bg-primary)",
             "border-radius" => "6px",
             "padding" => "12px",
             "min-height" => "100px",
@@ -1723,7 +1653,6 @@ function generate_style(book;
             "border-radius" => "var(--spacing-sm)",
             "padding" => "16px",
             "margin" => "8px 0",
-            "background-color" => "var(--bg-primary)",
             "box-shadow" => "0 2px 8px rgba(220, 53, 69, 0.15)"
         ),
 
