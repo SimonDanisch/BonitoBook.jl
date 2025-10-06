@@ -60,8 +60,6 @@ function symbols(bindings)
     return map(x -> x.args[1], bindings)
 end
 
-
-
 struct ManipulateWidgets
     widgets::Vector{Pair{Symbol, Any}}
     callback::Function
@@ -73,7 +71,7 @@ function Bonito.jsrender(s::Session, mw::ManipulateWidgets)
         return create_widget(name, input)
     end
     observies = map(x -> x.value, widgets)
-    init = map(to_value, observies)
+    init = map(Observables.to_value, observies)
     obs = Observable(Base.invokelatest(func, init...))
     l = Base.ReentrantLock()
     Bonito.onany(observies...) do args...
@@ -192,13 +190,3 @@ macro manipulate(for_expr)
     end
 end
 export @manipulate
-
-function Bonito.jsrender(s::Bonito.Session, value::Makie.GridLayoutSpec)
-    f, ax, pl = plot(value)
-    return Bonito.jsrender(s, f)
-end
-
-function Bonito.jsrender(s::Bonito.Session, value::Observable{Makie.GridLayoutSpec})
-    f, ax, pl = plot(value)
-    return Bonito.jsrender(s, f)
-end

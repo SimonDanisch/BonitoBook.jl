@@ -55,7 +55,7 @@ Thanks to Bonito.jl's universal design, BonitoBook can be viewed across multiple
 
 Since WGLMakie is also based on Bonito.jl, the Makie integration is seamless and supports all WGLMakie features including interactive widgets, observables and JavaScript integration. Here's a live example of an interactive 3D galaxy visualization, with the animation done in Javascript so it stays interactive without running Julia. The other plots shown in this notebook are not interactive in that way, and can only be interacted with when actually running the notebook with Julia.
 
-```julia (editor=true, logging=false, output=true)
+```julia (editor=true, logging=true, output=true)
 using WGLMakie
 # Interactive 3D galaxy with real-time JavaScript integration
 time_slider = Components.Slider(1:360; value=1)
@@ -116,9 +116,6 @@ DOM.div(
     fig, jss;
     style=Styles("padding" => "20px")
 )
-```
-```julia (editor=true, logging=false, output=true)
-?Grid
 ```
 ## Notebook format
 
@@ -203,7 +200,7 @@ BonitoBook is built entirely in Julia using Bonito.jl, providing native performa
 
 With Bonito it's easy to [create and share components](https://simondanisch.github.io/Bonito.jl/stable/components.html).  All BonitoBook components can be used outside the notebook, which will further extend the Bonito ecosystem for building interactive web applications Here is a quick example how one can make a simple checkbox widget in Bonito:
 
-```julia (editor=true, logging=false, output=true)
+```julia (editor=true, logging=true, output=true)
 struct MyCheckbox
     value::Observable{Bool}
 end
@@ -222,13 +219,13 @@ Note, you can include any css or javascript dependency in your widgets and Bonit
 
 This is why we can e.g. use the editor widget in the notebook itself:
 
-```julia (editor=true, logging=false, output=true)
+```julia (editor=true, logging=true, output=true)
 using BonitoBook
 BonitoBook.EvalEditor("println(\"Hello World\")\n1+1")
 ```
 And why we can easily re-arrange any notebook into a completely different layout/form:
 
-```julia (editor=true, logging=false, output=true)
+```julia (editor=true, logging=true, output=true)
 
 style = Styles(
     CSS(".small-vertical .cell-editor-container",
@@ -263,7 +260,7 @@ Any package defining Bonito Apps are working inside BonitoBook. This includes cu
 
 BonitoBook includes its own component library—essentially the standard Bonito components with enhanced styling that integrates seamlessly with the notebook interface.
 
-```julia (editor=true, logging=false, output=true)
+```julia (editor=true, logging=true, output=true)
 # Create one of each component type
 button = Components.Button("Submit")
 slider = Components.Slider(1:100, value=50)
@@ -306,7 +303,7 @@ DOM.div(
 
 BonitoBook revives the beloved `@manipulate` macro from [Interact.jl](https://github.com/JuliaGizmos/Interact.jl) with modern enhancements. It works great together with Makie's SpecApi, which is the [new declarative API](https://docs.makie.org/stable/explanations/specapi#SpecApi) for Makie.
 
-```julia (editor=true, logging=false, output=true)
+```julia (editor=true, logging=true, output=true)
 import Makie.SpecApi as S
 @manipulate for cmap=["viridis", "heat", "blues"],
                 func=(sqrt=sqrt, square=x->x^2, sin=sin, cos=cos),
@@ -342,19 +339,19 @@ Python support is powered by PythonCall and CondaPkg, enabling Julia-like depend
 
 ## Package management
 
-```python (editor=true, logging=false, output=true)
+```python (editor=true, logging=true, output=true)
 ]add numpy matplotlib pandas
 ```
 ## Shared namespace
 
 The shared namespace enables seamless cross-language workflows:
 
-```python (editor=true, logging=false, output=true)
+```python (editor=true, logging=true, output=true)
 import numpy as np
 data = np.random.randn(1000, 2)  # Generate data in Python
 labels = ["x", "y"]
 ```
-```julia (editor=true, logging=false, output=true)
+```julia (editor=true, logging=true, output=true)
 # Directly use Python variables in Julia with full Makie features
 scatter(data[:, 1], data[:, 2], axis=(xlabel=labels[1], ylabel=labels[2]))
 ```
@@ -362,7 +359,7 @@ scatter(data[:, 1], data[:, 2], axis=(xlabel=labels[1], ylabel=labels[2]))
 
 MIME support enables matplotlib plots to display automatically, perfect for mixed-language visualizations:
 
-```python (editor=true, logging=false, output=true)
+```python (editor=true, logging=true, output=true)
 import matplotlib.pyplot as plt
 fig, ax = plt.subplots()
 ax.plot([1, 2, 3, 4], [1, 4, 2, 3])
@@ -384,7 +381,7 @@ BonitoBook.@bedit Book("intro.md") # Opens function source in editor
 
 Customize your book's appearance by editing `.name-bbook/style.jl` (accessible via the paint can icon):
 
-```julia (editor=true, logging=false, output=true)
+```julia (editor=true, logging=true, output=true)
 # Modify colors, fonts, layout dimensions
 light_theme = true # Force light theme
 editor_width = "800px" # Adjust editor width;
@@ -419,3 +416,4 @@ There are lots of plans for what can be done in the future.
   * Exe building of a notebook
   * Better model agnostic agent tools implementation, so one isn't locked into an AI provider, while not loosing any features.
   * Support `display(...)` inside for loop and have more examples on how to customize display behavior
+

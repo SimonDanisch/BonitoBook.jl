@@ -87,11 +87,34 @@ include("completions.jl")
 include("interact.jl")
 include("chat.jl")
 include("mcp_julia_server.jl")
-# include("ai.jl")
 
 export Book, ChatComponent, ChatAgent, ChatMessage, MCPJuliaServer, Collapsible, Components, LoggingWidget, export_zip, import_zip, InteractiveError
 export InlineBook
 export LanguageEval, JuliaEval, eval_code, get_language_evaluators
 export ALL_LANGUAGES
+
+function _MakieModule end
+
+
+"""
+    MakieModule()
+
+Returns a module-like object that provides access to Makie functionality.
+This function is a stub that gets implemented when Makie is loaded
+through the BonitoBookMakieExt extension.
+
+# Example
+```julia
+MakieModule().set_theme!(size = (650, 450))
+MakieModule().set_theme!(MakieModule().theme_dark(), size = (650, 450))
+```
+"""
+function MakieModule()
+    if !isnothing(Base.get_extension(@__MODULE__, :BonitoBookMakieExt))
+        return _MakieModule()
+    else
+        return nothing
+    end
+end
 
 end

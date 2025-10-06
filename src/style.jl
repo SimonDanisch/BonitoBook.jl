@@ -90,14 +90,11 @@ function generate_style(book;
     # Define theme media queries based on light_theme setting
     light_media_query = if light_theme === nothing
         BonitoBook.monaco_theme!(book, "default")  # Auto-detect in JS
-        Makie.set_theme!(size = (650, 450))
         "@media (prefers-color-scheme: light), (prefers-color-scheme: no-preference)"
     elseif light_theme === true
         BonitoBook.monaco_theme!(book, "vs")  # Force light Monaco theme
-        Makie.set_theme!(size = (650, 450))
         "@media screen"  # Apply directly to root
     else
-        Makie.set_theme!(Makie.theme_dark(), size = (650, 450))
         BonitoBook.monaco_theme!(book, "vs-dark")  # Force dark Monaco theme
         "@media (max-width: 0px)"  # Never apply
     end
@@ -111,6 +108,8 @@ function generate_style(book;
     end
 
     on(book.theme_preference) do browser_preference
+        Makie = MakieModule()
+        Makie === nothing && return
         theme = light_theme === nothing ? browser_preference : (light_theme ? "light" : "dark")
         if theme == "light"
             Makie.set_theme!(size = (650, 450))
