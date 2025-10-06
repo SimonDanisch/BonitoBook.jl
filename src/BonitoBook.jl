@@ -6,7 +6,6 @@ using UUIDs
 using Pkg
 using ANSIColoredPrinters
 using Logging
-using WGLMakie
 using Markdown
 using Bonito.HTTP
 using JSON3

@@ -229,9 +229,6 @@ BonitoBook.EvalEditor("println(\"Hello World\")\n1+1")
 And why we can easily re-arrange any notebook into a completely different layout/form:
 
 ```julia (editor=true, logging=false, output=true)
-# Properly Centered Row Example
-using BonitoBook
-using WGLMakie  # for Row
 
 style = Styles(
     CSS(".small-vertical .cell-editor-container",
@@ -422,4 +419,3 @@ There are lots of plans for what can be done in the future.
   * Exe building of a notebook
   * Better model agnostic agent tools implementation, so one isn't locked into an AI provider, while not loosing any features.
   * Support `display(...)` inside for loop and have more examples on how to customize display behavior
-

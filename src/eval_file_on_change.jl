@@ -79,8 +79,6 @@ function EvalFileOnChange(filepath::String; module_context=Main)
                     break
                 end
                 @error "Error watching file $filepath: $(string(e))" exception=(e, catch_backtrace())
-                # Sleep briefly on error and try again
-                sleep(0.1)
             end
         end
     end
@@ -101,9 +99,9 @@ function update_filepath!(eval_component::EvalFileOnChange, new_filepath::String
 
     # Stop the old watcher
     eval_component.close[] = true
-    # Wait briefly for old task to finish
-    sleep(0.05)
-
+    # notify old file, so that watch_file can exit if it's blocking
+    touch(eval_component.filepath)
+    wait(eval_component.watcher_task[])
     # Update filepath
     eval_component.filepath = new_filepath
 

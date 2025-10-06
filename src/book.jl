@@ -86,7 +86,7 @@ function Book(user_file::String; folder=nothing, replace_style=false, all_blocks
 
     # Activate the project in the parent directory (where Project.toml is)
     # Load required packages
-    Core.eval(runner.mod, :(using BonitoBook, BonitoBook.Bonito, BonitoBook.Markdown, BonitoBook.WGLMakie))
+    Core.eval(runner.mod, :(using BonitoBook, BonitoBook.Bonito, BonitoBook.Markdown))
     Core.eval(runner.mod, :(include(file) = BonitoBook.book_include(
         $(runner.mod),
         $(markdown_file),
@@ -385,7 +385,7 @@ function Base.delete!(book::Book, editor::CellEditor)
 end
 
 "Save book with versioned backup."
-function WGLMakie.save(book::Book)
+function save(book::Book)
     if !isdir(joinpath(book.folder, ".versions"))
         mkpath(joinpath(book.folder, ".versions"))
     end
