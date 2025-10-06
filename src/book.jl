@@ -7,14 +7,14 @@ mutable struct Book <: AbstractBook
     folder::String
     cells::Vector{CellEditor}
     runner::Any
-    progress::Observable{Tuple{Bool, Float64}}
+    progress::Observable{Tuple{Bool,Float64}}
     mcp_server::Any
-    session::Union{Session, Nothing}
-    widgets::Dict{String, Any}
+    session::Union{Session,Nothing}
+    widgets::Dict{String,Any}
     global_logging_widget::Any
     style_eval::EvalFileOnChange
     spinner::BookSpinner
-    current_cell::Observable{Union{CellEditor, Nothing}}
+    current_cell::Observable{Union{CellEditor,Nothing}}
     theme_preference::Observable{String}
     monaco_theme::Observable{String}
 end
@@ -31,11 +31,14 @@ include("book_structure.jl")
 
 function import_bookfile(book_file, folder, replace_style)
     if !isfile(book_file)
-        write(book_file, """
-        # New Book
-        ```julia (editor=true, logging=false, output=true)
-        ```
-        """)
+        write(
+            book_file,
+            """
+# New Book
+```julia (editor=true, logging=false, output=true)
+```
+"""
+        )
     end
     name, ext = splitext(book_file)
     if ext == ".zip"
@@ -68,7 +71,7 @@ Create Book from .md or .ipynb file.
 - `replace_style::Bool`: Replace style.jl with template
 - `all_blocks_as_cell::Bool`: Treat all code blocks as cells
 """
-function Book(user_file::String; folder=nothing, replace_style = false, all_blocks_as_cell = false)
+function Book(user_file::String; folder=nothing, replace_style=false, all_blocks_as_cell=false)
     # Ensure we have a file path
     markdown_file, folder = import_bookfile(user_file, folder, replace_style)
     # Load the book content
@@ -96,16 +99,20 @@ function Book(user_file::String; folder=nothing, replace_style = false, all_bloc
     end
     # Set up style evaluation - use get_file_path to check custom then template
     style_path, is_custom = get_file_path(folder, "style.jl")
-    style_eval = EvalFileOnChange(style_path; module_context = runner.mod)
+    style_eval = EvalFileOnChange(style_path; module_context=runner.mod)
     # Load main styling implementation
     spinner = BookSpinner()
-    current_cell = Observable{Union{CellEditor, Nothing}}(nothing)
+    current_cell = Observable{Union{CellEditor,Nothing}}(nothing)
     theme_preference = Observable{String}("auto")
     book = Book(
-        markdown_file, folder, editors, runner, progress, nothing, nothing, Dict{String, Any}(),
+        markdown_file, folder, editors, runner, progress, nothing, nothing, Dict{String,Any}(),
         global_logging_widget, style_eval, spinner, current_cell, theme_preference, monaco_theme
     )
     Core.eval(runner.mod, :(current_book() = $(book)))
+    # Add data string macro for convenient data folder access
+    Core.eval(runner.mod, :(macro data_str(path)
+        joinpath(current_book().folder, "data", path)
+    end))
     notify(style_eval.file_watcher)
     export_md(markdown_file, book)
     return book
@@ -280,7 +287,7 @@ function saving_menu(session, book)
     )
     return DOM.div(
         icon("save"), save_html_tooltip, save_md_tooltip, save_pdf_tooltip, save_quarto_tooltip, save_ipynb_tooltip, save_zip_tooltip;
-        class = "saving small-menu-bar"
+        class="saving small-menu-bar"
     )
 end
 
@@ -301,7 +308,7 @@ function play_menu(book)
                 run_from_newest!(cell.editor)
             end
             sleep(0.5)
-            x = Bonito.wait_for(()-> isempty(book.runner.task_queue))
+            x = Bonito.wait_for(() -> isempty(book.runner.task_queue))
         end
         show_spinner!(book.spinner, task; message="Running all cells...")
     end
@@ -315,7 +322,7 @@ function play_menu(book)
     )
     return DOM.div(
         run_all_tooltip, stop_all_tooltip;
-        class = "saving small-menu-bar"
+        class="saving small-menu-bar"
     )
 end
 
@@ -336,22 +343,45 @@ function setup_editor_callbacks!(book, editor)
 
     on(book.session, editor.delete_self) do delete
         if delete
-            # Clear current cell if it's being deleted
-            if book.current_cell[] === editor
-                book.current_cell[] = nothing
-            end
-            filter!(x -> x.uuid != editor.uuid, book.cells)
-            evaljs(
-                book.session, js"""
-                    $(Monaco).then(Monaco => {
-                        Monaco.BOOK.remove_editor($(editor.uuid));
-                    })
-                """
-            )
-            save(book)  # Save the notebook after cell deletion
+            Base.delete!(book, editor)
         end
     end
     return
+end
+
+"""
+    delete!(book::Book, editor::CellEditor)
+
+Delete a cell editor from the book and clean up all associated resources.
+
+- `book::Book`: Book instance
+- `editor::CellEditor`: Cell editor to delete
+"""
+function Base.delete!(book::Book, editor::CellEditor)
+    # Clear current cell if it's being deleted
+    if book.current_cell[] === editor
+        book.current_cell[] = nothing
+    end
+
+    # Clean up all observables using the editor's close method
+    close(editor)
+
+    # Remove from book cells list
+    filter!(x -> x.uuid != editor.uuid, book.cells)
+
+    # Remove from DOM
+    evaljs(
+        book.session, js"""
+            $(Monaco).then(Monaco => {
+                Monaco.BOOK.remove_editor($(editor.uuid));
+            })
+        """
+    )
+
+    # Save the notebook after cell deletion
+    save(book)
+
+    return nothing
 end
 
 "Save book with versioned backup."
@@ -362,7 +392,7 @@ function WGLMakie.save(book::Book)
     version = Dates.format(Dates.now(), "yyyy-mm-dd_HHMMSS")
     # Create backup with original filename
     backup_name = "$(splitext(basename(book.file))[1])-$version.md"
-    cp(book.file, joinpath(book.folder, ".versions", backup_name))
+    cp(book.file, joinpath(book.folder, ".versions", backup_name); force=true)
     return export_md(book.file, book)
 end
 
@@ -416,7 +446,7 @@ Insert cell at position (:begin, :end, or index).
 function insert_cell_at!(book, source::String, lang::String, pos)
     # Create cell editor with appropriate settings
     editor = if lang == "markdown"
-        CellEditor(source, lang, book.runner; show_editor=true, show_output=false, theme=book.monaco_theme)
+        CellEditor(source, lang, book.runner; show_editor=false, show_output=true, theme=book.monaco_theme)
     else
         CellEditor(source, lang, book.runner; theme=book.monaco_theme)
     end
@@ -462,7 +492,7 @@ function insert_cell_at!(book, source::String, lang::String, pos)
             return insert_cell_at!(book, source, lang, :end)
         else
             # Insert at specific position by using the editor above as reference
-            editor_above_uuid = book.cells[pos - 1].uuid
+            editor_above_uuid = book.cells[pos-1].uuid
             return insert_editor_below!(book, editor, editor_above_uuid)
         end
     else
@@ -470,7 +500,7 @@ function insert_cell_at!(book, source::String, lang::String, pos)
     end
 end
 
-function new_cell_menu(book, editor_above_uuid, runner, above_cell_language = "julia")
+function new_cell_menu(book, editor_above_uuid, runner, above_cell_language="julia")
     buttons = []
 
     for (lang_name, lang) in ALL_LANGUAGES
@@ -478,7 +508,7 @@ function new_cell_menu(book, editor_above_uuid, runner, above_cell_language = "j
         is_available = lang.always_available || (isa(runner, AsyncRunner) && haskey(runner.language_evaluators, lang_name))
 
         # Create button
-        button, click = SmallButton(lang.icon; inactive = !is_available)
+        button, click = SmallButton(lang.icon; inactive=!is_available)
 
         # Add tooltip for inactive buttons with activation instructions
         if !is_available && !isempty(lang.activation_help)
@@ -492,7 +522,7 @@ function new_cell_menu(book, editor_above_uuid, runner, above_cell_language = "j
         # Always attach handler - inactive buttons won't trigger them
         on(click) do _
             if lang_name == "markdown"
-                new_cell = CellEditor("", lang_name, runner; show_editor = true, show_output = false, theme=book.monaco_theme)
+                new_cell = CellEditor("", lang_name, runner; show_editor=true, show_output=false, theme=book.monaco_theme)
             else
                 new_cell = CellEditor("", lang_name, runner; theme=book.monaco_theme)
             end
@@ -509,14 +539,14 @@ function new_cell_menu(book, editor_above_uuid, runner, above_cell_language = "j
     )
     plus_icon = DOM.div(
         plus_tooltip;
-        class = "new-cell-plus",
-        onclick = js"event => $(plus_value).notify(true)"
+        class="new-cell-plus",
+        onclick=js"event => $(plus_value).notify(true)"
     )
 
     # Add click handler to plus icon
     on(plus_value) do _
         if above_cell_language == "markdown"
-            new_cell = CellEditor("", above_cell_language, runner; show_editor = true, show_output = false, theme=book.monaco_theme)
+            new_cell = CellEditor("", above_cell_language, runner; show_editor=true, show_output=false, theme=book.monaco_theme)
         else
             new_cell = CellEditor("", above_cell_language, runner; theme=book.monaco_theme)
         end
@@ -524,12 +554,12 @@ function new_cell_menu(book, editor_above_uuid, runner, above_cell_language = "j
     end
 
     # Create the language buttons container
-    buttons_container = DOM.div(buttons...; class = "new-cell-buttons")
+    buttons_container = DOM.div(buttons...; class="new-cell-buttons")
 
     return DOM.div(
         plus_icon,
         buttons_container;
-        class = "new-cell-menu"
+        class="new-cell-menu"
     )
 end
 
@@ -563,7 +593,7 @@ function setup_menu(book::Book, tabbed_file_editor::TabbedFileEditor)
     )
     menu = DOM.div(
         icon("settings"), style_button_tooltip;
-        class = "settings small-menu-bar"
+        class="settings small-menu-bar"
     )
     return menu
 end
@@ -658,12 +688,12 @@ function Bonito.jsrender(session::Session, book::Book)
     save = saving_menu(session, book)
     player = play_menu(book)
 
-    menu = DOM.div(save, player, _setup_menu; class = "book-main-menu")
+    menu = DOM.div(save, player, _setup_menu; class="book-main-menu")
 
-    cell_obs = DOM.div(cells; class = "inline-block fit-content")
+    cell_obs = DOM.div(cells; class="inline-block fit-content")
 
     # Wrap cells in scrollable area
-    cells_area = DOM.div(cell_obs; class = "book-cells-area")
+    cells_area = DOM.div(cell_obs; class="book-cells-area")
     # Create chat component with appropriate agent
     chat_agent = create_chat_agent(book)
     chat_component = ChatComponent(chat_agent; book=book)
@@ -671,32 +701,32 @@ function Bonito.jsrender(session::Session, book::Book)
 
     # Create sidebar with widgets from book
     sidebar = Sidebar([
-        ("file-editor", book.widgets["file_editor"], "File Editor", "file-code"),
-        ("chat", book.widgets["chat"], "AI Chat", "chat-sparkle")
-    ]; width = "800px")
+            ("file-editor", book.widgets["file_editor"], "File Editor", "file-code"),
+            ("chat", book.widgets["chat"], "AI Chat", "chat-sparkle")
+        ]; width="800px")
 
     # Create horizontal sidebar for global logging
     global_logging_sidebar = Sidebar([
-        ("global-logging", book.global_logging_widget, "Global Output", "terminal")
-    ]; width = "100vw", orientation = "horizontal")
+            ("global-logging", book.global_logging_widget, "Global Output", "terminal")
+        ]; width="100vw", orientation="horizontal")
 
     # Create content area that includes both cells and sidebar
-    content = DOM.div(cells_area, sidebar; class = "book-content")
+    content = DOM.div(cells_area, sidebar; class="book-content")
 
     # Create menu and spinner container to match width
-    menu_and_spinner = DOM.div(book.spinner, menu; class = "book-menu-container")
+    menu_and_spinner = DOM.div(book.spinner, menu; class="book-menu-container")
 
     # Create main content area (everything except the bottom global logging)
-    main_content = DOM.div(menu_and_spinner, content; class = "book-main-content")
+    main_content = DOM.div(menu_and_spinner, content; class="book-main-content")
 
     # Create document structure with main content and bottom global logging
     document = DOM.div(
         main_content,
-        DOM.div(global_logging_sidebar; class = "book-bottom-panel");
-        class = "book-document"
+        DOM.div(global_logging_sidebar; class="book-bottom-panel");
+        class="book-document"
     )
     elements = standard_setup!(session, book)
-    return Bonito.jsrender(session, DOM.div(elements, document; class = "book-wrapper"))
+    return Bonito.jsrender(session, DOM.div(elements, document; class="book-wrapper"))
 end
 
 """
@@ -706,7 +736,7 @@ Get currently selected cell editor.
 
 - `book::Book`: Book instance
 """
-function current_cell(book::Book)::Union{CellEditor, Nothing}
+function current_cell(book::Book)::Union{CellEditor,Nothing}
     return book.current_cell[]
 end
 
@@ -721,7 +751,7 @@ function theme_preference(book::Book)::String
     return book.theme_preference[]
 end
 
-const BOOK_SERVERS = Dict{Int, Bonito.Server}()
+const BOOK_SERVERS = Dict{Int,Bonito.Server}()
 
 function get_server(url, port, proxy_url)
     server = get!(BOOK_SERVERS, port) do
@@ -747,14 +777,14 @@ Launch a BonitoBook server for interactive notebook editing.
 - `openbrowser::Bool`: Open browser automatically
 """
 function book(path::AbstractString;
-        replace_style=false,
-        all_blocks_as_cell=false,
-        url="127.0.0.1",
-        folder=nothing,
-        port=8773,
-        proxy_url="",
-        openbrowser=true
-    )
+    replace_style=false,
+    all_blocks_as_cell=false,
+    url="127.0.0.1",
+    folder=nothing,
+    port=8773,
+    proxy_url="",
+    openbrowser=true
+)
     name = splitext(basename(path))[1]
     app = App(title=name) do
         return create_book(path; replace_style=replace_style, all_blocks_as_cell=all_blocks_as_cell, folder=folder)

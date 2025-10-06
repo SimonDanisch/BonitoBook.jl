@@ -364,6 +364,23 @@ class Book {
     }
 }
 const BOOK = new Book();
+function add_editor_at_beginning(elem, uuid1) {
+    if (BOOK.cells.length === 0) {
+        const inline_block = document.querySelector(".inline-block");
+        if (inline_block) {
+            inline_block.appendChild(elem);
+        }
+        BOOK.cells.unshift(uuid1);
+    } else {
+        const first_uuid = BOOK.cells[0];
+        const first_editor_div = document.getElementById(first_uuid);
+        if (first_editor_div) {
+            const parent = first_editor_div.parentElement;
+            parent.insertAdjacentElement("beforebegin", elem);
+        }
+        BOOK.cells.unshift(uuid1);
+    }
+}
 function add_editor_below(above_editor_uuid, elem, uuid1) {
     const editor_div = document.getElementById(above_editor_uuid);
     const parent1 = editor_div.parentElement;
@@ -690,6 +707,7 @@ function register_cell_editor(eval_editor, uuid1) {
 export { MonacoEditor as MonacoEditor };
 export { EvalEditor as EvalEditor };
 export { BOOK as BOOK };
+export { add_editor_at_beginning as add_editor_at_beginning };
 export { add_editor_below as add_editor_below };
 export { add_command as add_command };
 export { resize_to_lines as resize_to_lines };

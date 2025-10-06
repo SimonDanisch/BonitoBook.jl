@@ -489,7 +489,19 @@ const PageStyles = Styles(
     CSS(
         ".getting-started-inline .cell-editor-container",
         "margin-bottom" => "20px",
-        "max-width" => "100%"
+        "width" => "100% !important",
+        "max-width" => "100% !important",
+        "min-width" => "0 !important"
+    ),
+    CSS(
+        ".getting-started-inline .cell-editor",
+        "width" => "100% !important",
+        "max-width" => "100% !important"
+    ),
+    CSS(
+        ".getting-started-inline .book-cells-area .fit-content",
+        "width" => "100% !important",
+        "max-width" => "100% !important"
     ),
     CSS(
         ".getting-started-inline .cell-output",
@@ -514,6 +526,28 @@ const PageStyles = Styles(
         CSS(".hero-buttons", "flex-direction" => "column", "align-items" => "center"),
         CSS(".examples-grid", "grid-template-columns" => "1fr !important"),
         CSS(":root", "--content-padding" => "20px"),
-        CSS(".getting-started-inline", "padding" => "20px")
+        CSS(".getting-started-inline", "padding" => "20px"),
+        # Force embedded books to use container width, not viewport width
+        CSS(
+            ".getting-started-inline .markdown-body",
+            "max-width" => "100% !important",
+            "overflow-wrap" => "break-word !important"
+        ),
+        CSS(
+            ".getting-started-inline .markdown-body *",
+            "max-width" => "100% !important"
+        )
+    ),
+    CSS(
+        "@media (max-width: 480px)",
+        CSS(
+            ".getting-started-inline .cell-editor",
+            "padding" => "5px !important"
+        ),
+        CSS(
+            ".getting-started-inline .book-cells-area",
+            "padding" => "10px !important"
+        )
     )
 )
+

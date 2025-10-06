@@ -10,7 +10,7 @@ using WGLMakie
 using Markdown
 using Bonito.HTTP
 using JSON3
-using CondaPkg
+using Observables
 
 # Global constant defining all supported languages
 const ALL_LANGUAGES = Dict(

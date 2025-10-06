@@ -385,6 +385,26 @@ class Book {
 
 export const BOOK = new Book();
 
+export function add_editor_at_beginning(elem, uuid) {
+    if (BOOK.cells.length === 0) {
+        // No cells exist, just append to the inline block
+        const inline_block = document.querySelector(".inline-block");
+        if (inline_block) {
+            inline_block.appendChild(elem);
+        }
+        BOOK.cells.unshift(uuid);
+    } else {
+        // Insert before the first cell
+        const first_uuid = BOOK.cells[0];
+        const first_editor_div = document.getElementById(first_uuid);
+        if (first_editor_div) {
+            const parent = first_editor_div.parentElement;
+            parent.insertAdjacentElement("beforebegin", elem);
+        }
+        BOOK.cells.unshift(uuid);
+    }
+}
+
 export function add_editor_below(above_editor_uuid, elem, uuid) {
     const editor_div = document.getElementById(above_editor_uuid); // Correct function
     const parent1 = editor_div.parentElement; // Parent of editor_div

@@ -79,7 +79,7 @@ function ClaudeAgent(book::BonitoBook.Book; config::Dict = Dict())
         disallowed_tools=String[],
         model="claude-sonnet-4-20250514",
         permission_prompt_tool_name=nothing,
-        cwd=folder,
+        cwd=pwd(),
     )
 
     # Override with TOML config, then with passed config
@@ -109,7 +109,6 @@ function ClaudeAgent(book::BonitoBook.Book; config::Dict = Dict())
 end
 
 BonitoBook.create_claude_agent(book::BonitoBook.Book) = ClaudeAgent(book)
-
 
 """
     update_options(options::ClaudeCodeOptions, config::Dict)
@@ -314,9 +313,7 @@ If mcp_server_url is provided, configures Claude to use the Julia execution MCP 
 """
 function BonitoBook.prompt(agent::ClaudeAgent, question::String)
     # Update dynamic options based on current agent state
-    # Ensure cwd is set to the book's folder
-    updated_options = update_options(agent.options, Dict("cwd" => agent.book.folder))
-    return ClaudeCodeSDK.query_stream(prompt=question, options=updated_options)
+    return ClaudeCodeSDK.query_stream(prompt=question, options=agent.options)
 end
 
 # MCP server integration will be configured externally via Claude Code CLI

@@ -142,6 +142,7 @@ end
 ```
 
 `custom-style.jl`:
+
 ```julia
 using BonitoBook.Bonito: Styles, CSS
 

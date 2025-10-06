@@ -335,6 +335,27 @@ function Bonito.jsrender(session::Session, editor::EvalEditor)
 end
 
 """
+    Base.close(editor::EvalEditor)
+
+Clean up all observables and resources associated with an EvalEditor.
+"""
+function Base.close(editor::EvalEditor)
+    Observables.clear(editor.js_to_julia)
+    Observables.clear(editor.julia_to_js)
+    Observables.clear(editor.source)
+    Observables.clear(editor.output)
+    Observables.clear(editor.logging)
+    Observables.clear(editor.logging_html)
+    Observables.clear(editor.show_logging)
+    Observables.clear(editor.show_output)
+    Observables.clear(editor.show_editor)
+    Observables.clear(editor.loading)
+    Observables.clear(editor.markdown_focus_edit)
+    Observables.clear(editor.editor.theme)
+    return nothing
+end
+
+"""
     CellEditor
 
 Interactive cell for code editing and execution.
@@ -395,6 +416,22 @@ function CellEditor(content, language, runner; show_editor = true, show_logging 
         language, jleditor,
         uuid, Observable(false), focused
     )
+end
+
+"""
+    Base.close(editor::CellEditor)
+
+Clean up all observables and resources associated with a CellEditor.
+"""
+function Base.close(editor::CellEditor)
+    # Clean up the underlying EvalEditor
+    close(editor.editor)
+
+    # Clean up CellEditor-specific observables
+    Observables.clear(editor.delete_self)
+    Observables.clear(editor.focused)
+
+    return nothing
 end
 
 function Bonito.jsrender(session::Session, editor::CellEditor)

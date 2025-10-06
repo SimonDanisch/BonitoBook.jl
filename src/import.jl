@@ -1,5 +1,3 @@
-using JSON, Markdown
-
 """
     parse_cell_options(options_str)
 
@@ -122,8 +120,8 @@ Convert a Jupyter notebook file to book cells.
 Vector of `Cell` objects representing the notebook content.
 """
 function ipynb2book(json_path::String)
-    # Read the JSON file
-    json_content = JSON.parsefile(json_path)
+    # Read the json file
+    json_content = JSON3.read(read(json_path))
     cells = Cell[]
     for cell in json_content["cells"]
         cell_type = cell["cell_type"]

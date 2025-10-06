@@ -316,13 +316,13 @@ function generate_style(book;
             "@media (max-width: 768px)",
             CSS(
                 ":root",
-                "--editor-width" => "calc(100vw - 30px)",
-                "--editor-min-width" => "280px",
-                "--editor-max-width" => "calc(100vw - 20px)",
+                "--editor-width" => "100%",
+                "--editor-min-width" => "0",
+                "--editor-max-width" => "100%"
             ),
             CSS(
                 ".book-cells-area",
-                "padding" => "15px 5px",
+                "padding" => "15px 5px"
             )
         ),
 
@@ -332,32 +332,19 @@ function generate_style(book;
             CSS(
                 ":root",
                 "--editor-width" => "100%",
-                "--editor-min-width" => "100%",
+                "--editor-min-width" => "0",
                 "--editor-max-width" => "100%",
                 "--border-radius-large" => "3px",
-                "--border-radius-small" => "2px",
+                "--border-radius-small" => "2px"
             ),
             # Mobile-specific layout adjustments
             CSS(
                 ".book-cells-area",
                 "padding" => "10px"
             ),
-            # Override fit-content on mobile to constrain width
-            CSS(
-                ".book-cells-area .fit-content",
-                "width" => "100%",
-                "max-width" => "100%"
-            ),
             CSS(
                 ".cell-editor",
-                "padding" => "5px",
-                "width" => "100%"
-            ),
-            CSS(
-                ".cell-editor-container",
-                "width" => "100% !important",
-                "max-width" => "100% !important",
-                "min-width" => "0 !important"
+                "padding" => "5px"
             ),
             CSS(
                 ".cell-output",

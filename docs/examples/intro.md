@@ -101,21 +101,24 @@ $(mplot).then(plots=>{
     }
 
     [time, spiral, explosion].forEach(obs => obs.on(update_galaxy));
-    markersize.on(size => plot.update(['markersize', [size, size, size]]));
+    markersize.on(size => plot.update([['markersize', [size, size, size]]]));
 });
 """
 
 DOM.div(
     Grid(
-        [DOM.span("Time: "), time_slider],
-        [DOM.span("Spiral: "), spiral_factor],
-        [DOM.span("Explosion: "), explosion],
-        [DOM.span("Size: "), markersize];
-        columns="repeat(4, 1fr)", gap="20px"
+        ["Time: ", time_slider],
+        ["Spiral: ", spiral_factor],
+        ["Explosion: ", explosion],
+        ["Size: ", markersize];
+        columns="auto 1fr", gap="10px 20px"
     ),
     fig, jss;
-    style=Styles("padding" => "50px")
+    style=Styles("padding" => "20px")
 )
+```
+```julia (editor=true, logging=false, output=true)
+?Grid
 ```
 ## Notebook format
 
@@ -132,16 +135,34 @@ mybook.md                # Main content file
 │   ├── claude-system-prompt.md
 │   ├── promptingtools-config.toml
 │   └── promptingtools-system-prompt.md
-├── data/                # Write to ./data to include in zip
+├── data/                # Store data files here
 │   └── data.csv
 ├── meta.toml            # Version tracking (auto-created)
 └── .versions/           # Automatic backups
     └── mybook-*.md      # Timestamped backups
 ```
 
+Jupyter notebooks (.ipynb) are automatically converted to markdown files with the same name before setting up the notebook and creating the folderer structure.
+
 **Note:** Files are only created when edited. Until then, they're loaded from BonitoBook templates.
 
-Jupyter notebooks (.ipynb) are automatically converted to markdown files with the same name before setting up the notebook and creating the fodler structure.
+### Accessing data files
+
+Use the `data""` string macro to reference files in your notebook's data folder:
+
+```julia
+# Load a CSV file from the data folder
+using CSV, DataFrames
+df = CSV.read(data"data.csv", DataFrame)
+
+# Display an image
+DOM.img(src=Asset(data"plot.png"))
+
+# Load a video
+DOM.video(src=Asset(data"demo.mp4"), autoplay=true, loop=true)
+```
+
+The `data""` macro automatically resolves to the correct path in `.mybook-bbook/data/`, regardless of your working directory. All files in the data folder are included when exporting to ZIP.
 
 ### Project compatibility
 
@@ -165,7 +186,7 @@ The zip export feature packages everything into a reproducible, shareable archiv
 The current implementation is based on a generic chat, which can use different chat agents to talk with. Those agents are currently installed as Package extensions on [ClaudeCodeSDK](https://github.com/AtelierArith/ClaudeCodeSDK.jl/) and on [PromptingTools](https://github.com/svilupp/PromptingTools.jl). Install those and use them, to activate them. By default, if both are loaded, Claude Code is preferred, since the integration is better and the agentic features are just more mature.
 
 ```julia (editor=false, logging=false, output=true)
-DOM.video(src=Asset("./data/ai-demo.mp4"), autoplay=true, loop=true, muted=true,
+DOM.video(src=Asset(data"ai-demo.mp4"), autoplay=true, loop=true, muted=true,
     style=Styles("width" => "100%"))
 ```
 ## Supports the common commandline modes
@@ -224,7 +245,7 @@ style = Styles(
     )
 )
 # Load notebook we shipped in the data folder
-cells = Book("./data/test.md"; all_blocks_as_cell=true).cells
+cells = Book(data"test.md"; all_blocks_as_cell=true).cells
 # Execute code in the cell
 foreach(x-> BonitoBook.run_sync!(x.editor), cells)
 DOM.div(

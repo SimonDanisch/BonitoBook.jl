@@ -269,6 +269,7 @@ run!(::Nothing, ::EvalEditor) = nothing
 
 function run!(runner::MarkdownRunner, editor::EvalEditor)
     editor.output[] = parse_source(runner, editor.source[])
+    editor.loading[] = false
     return
 end
 
@@ -280,11 +281,9 @@ function run_sync!(runner::MarkdownRunner, editor::EvalEditor)
 end
 
 function run_sync!(runner::AsyncRunner, editor::EvalEditor)
-    task = RunnerTask(editor.source[], editor.output, editor.logging, editor.language)
     fetch(spawnat(1) do
-        cd(runner.project) do
-            Base.invokelatest(run!, runner.mod, runner.language_evaluators, task)
-        end
+        task = RunnerTask(editor.source[], editor.output, editor.logging, editor.language)
+        Base.invokelatest(run!, runner.mod, runner.language_evaluators, task)
     end)
     return
 end
