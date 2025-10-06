@@ -1,0 +1,5 @@
+’Ç-j“Ù$5e82bd7a-9aed-4b47-987a-aef69f0f74ad€¤root’ÈYk’Ç`j“Ù$5e82bd7a-9aed-4b47-987a-aef69f0f74ad¥29018Ç*e’¥29018Ù!cell-output cell-output-markdown ¤rootƒ£obsÇh¥29018§payloadÇÑf“€Ùvreturn value => {
+    Bonito.update_node_attribute(document.querySelector('[data-jscall-id="45"]'), 'class', value);
+}ÙU/home/runner/.julia/packages/Bonito/j7uJq/src/rendering/hyperscript_integration.jl:92¨msg_type¡1È^k’Çej“Ù$5e82bd7a-9aed-4b47-987a-aef69f0f74ad¥29019Ç/e’¥29019Ù&cell-editor-container editor-collapsed¤rootƒ£obsÇh¥29019§payloadÇÑf“€Ùvreturn value => {
+    Bonito.update_node_attribute(document.querySelector('[data-jscall-id="30"]'), 'class', value);
+}ÙU/home/runner/.julia/packages/Bonito/j7uJq/src/rendering/hyperscript_integration.jl:92¨msg_type¡1

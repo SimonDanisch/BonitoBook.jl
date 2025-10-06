@@ -8,11 +8,19 @@
     <style></style>
   </head>
   <body>
-    <script type="module">Bonito.init_session("a964708c-e5ce-49d1-9f2a-3478ba9aa491", null, "root", false);
+    <script type="module">Bonito.init_session("e4c25449-4f1a-444d-a359-c97b23392d9e", null, "root", false);
 </script>
-    <div id="a964708c-e5ce-49d1-9f2a-3478ba9aa491" data-jscall-id="root">
+    <div id="e4c25449-4f1a-444d-a359-c97b23392d9e" data-jscall-id="root">
       <div class="bonitobook-page" data-jscall-id="1">
-        <style>.nav-item:hover {
+        <style>@media (max-width: 480px) {
+  .getting-started-inline .cell-editor {
+    padding: 5px !important;
+  }
+  .getting-started-inline .book-cells-area {
+    padding: 10px !important;
+  }
+}
+.nav-item:hover {
   background-color: var(--site-hover-bg);
   color: var(--site-accent-blue);
 }
@@ -130,6 +138,10 @@ pre code {
 .example-content {
   margin: var(--content-padding);
 }
+.getting-started-inline .book-cells-area .fit-content {
+  max-width: 100% !important;
+  width: 100% !important;
+}
 @media (max-width: 768px) {
   .hero-title {
     font-size: 2rem !important;
@@ -137,8 +149,15 @@ pre code {
   :root {
     --content-padding: 20px;
   }
+  .getting-started-inline .markdown-body * {
+    max-width: 100% !important;
+  }
   .getting-started-inline {
     padding: 20px;
+  }
+  .getting-started-inline .markdown-body {
+    max-width: 100% !important;
+    overflow-wrap: break-word !important;
   }
   .hero-buttons {
     align-items: center;
@@ -367,7 +386,9 @@ a {
   transition: all 0.2s ease;
 }
 .getting-started-inline .cell-editor-container {
-  max-width: 100%;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  width: 100% !important;
   margin-bottom: 20px;
 }
 .examples-grid {
@@ -382,6 +403,10 @@ a {
   padding: 0 var(--content-padding);
   gap: 30px;
   width: 100%;
+}
+.getting-started-inline .cell-editor {
+  max-width: 100% !important;
+  width: 100% !important;
 }
 </style>
         <header class="bonitobook-header" data-jscall-id="2">
