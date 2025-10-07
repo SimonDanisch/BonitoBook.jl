@@ -5,7 +5,7 @@ using ClaudeCodeSDK
 using Bonito
 using Markdown
 using TOML
-using JSON
+using JSON3
 
 """
     ClaudeAgent <: ChatAgent
@@ -223,7 +223,7 @@ function Bonito.jsrender(session::Bonito.Session, value::ClaudeCodeSDK.ToolUseBl
         render_julia_exec_preview(value)
     else
         # Default fallback for other tools
-        JSON.json(value.input)
+        JSON3.write(value.input)
     end
     return Bonito.jsrender(session, BonitoBook.Collapsible("Tool Use: $(value.name)", rendered, expanded=false))
 end
@@ -291,7 +291,7 @@ function render_julia_exec_preview(tool_use::ClaudeCodeSDK.ToolUseBlock)
         )
         return code_preview
     end
-    return BonitoBook.Collapsible("Julia Exec Tool Use", JSON.json(input), expanded=false)
+    return BonitoBook.Collapsible("Julia Exec Tool Use", JSON3.write(input), expanded=false)
 end
 
 function Bonito.jsrender(session::Bonito.Session, value::ClaudeCodeSDK.TextBlock)
