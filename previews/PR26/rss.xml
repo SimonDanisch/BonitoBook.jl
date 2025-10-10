@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<rss version="2.0">
+  <channel>
+    <title>BonitoBook Documentation</title>
+    <link>https://bonitobook.org</link>
+    <description>Interactive notebooks powered by Julia and Bonito</description>
+    <item>
+      <title>BonitoBook October Update: Plugin System, Language Extensions & Simplified Styling</title>
+      <link>./blogposts/bonitobook-october</link>
+      <description>Major update introducing a powerful plugin system, extensible language evaluators, and a completely redesigned styling architecture</description>
+      <pubDate>Thu, 10 Oct 2024 0:0:0</pubDate>
+    </item>
+  </channel>
+</rss>

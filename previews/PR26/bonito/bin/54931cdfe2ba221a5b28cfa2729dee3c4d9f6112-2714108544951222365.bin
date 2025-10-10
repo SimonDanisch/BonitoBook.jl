@@ -1,0 +1,556 @@
+’Ç,j“Ù$cc745f35-1a66-4827-8488-f2f09175147b€£subŸÇék’Ç-j“Ù$101b28f4-d742-49bc-8a6e-aa567483f35a€¤root‚§payloadÇ¡f“€Ù]    window.BONITO_EXPORT_MODE = true;
+    document.body.classList.add('bonito-export-mode');
+Ù>/home/runner/work/BonitoBook.jl/BonitoBook.jl/src/export.jl:96¨msg_type¡2È¿k’Ç-j“Ù$101b28f4-d742-49bc-8a6e-aa567483f35a€¤root‚§payloadÈvf“€Ú1(() => {
+    document.querySelector('[data-jscall-id="27"]')['onclick'] = () => {
+    const a = document.createElement('a');
+a.href = '../bonito/md/bonitobook-plugin5931286127715594056.md';
+a.download = 'bonitobook-plugin.md';
+document.body.appendChild(a);
+a.click();
+document.body.removeChild(a);
+
+}
+})()Ù>/home/runner/work/BonitoBook.jl/BonitoBook.jl/src/export.jl:78¨msg_type¡2Çïk’Ç-j“Ù$101b28f4-d742-49bc-8a6e-aa567483f35a€¤root‚§payloadÇ§f“€Ùc(() => {
+    document.querySelector('[data-jscall-id="29"]')['onclick'] = ()=> window.print();
+})()Ù>/home/runner/work/BonitoBook.jl/BonitoBook.jl/src/export.jl:85¨msg_type¡2È}k’Ç8j“Ù$101b28f4-d742-49bc-8a6e-aa567483f35a¢41Çe’¢41Â¤root‚§payloadÈ)f“´10244224833153933297Çh¢41ÚÉ(() => {
+    document.querySelector('[data-jscall-id="35"]')['onclick'] = event=> {
+    const button = event.target.closest('button');
+    const newValue = !__lookup_interpolated('10244224833153933297').value;
+    __lookup_interpolated('10244224833153933297').notify(newValue);
+
+    // Toggle the active class based on new value
+    if (newValue) {
+        button.classList.add('active');
+    } else {
+        button.classList.remove('active');
+    }
+}
+})()Ù>/home/runner/work/BonitoBook.jl/BonitoBook.jl/src/editor.jl:21¨msg_type¡2Èzk’Ç8j“Ù$101b28f4-d742-49bc-8a6e-aa567483f35a¢42Çe’¢42Â¤root‚§payloadÈ&f“³8688350844162260599Çh¢42ÚÇ(() => {
+    document.querySelector('[data-jscall-id="37"]')['onclick'] = event=> {
+    const button = event.target.closest('button');
+    const newValue = !__lookup_interpolated('8688350844162260599').value;
+    __lookup_interpolated('8688350844162260599').notify(newValue);
+
+    // Toggle the active class based on new value
+    if (newValue) {
+        button.classList.add('active');
+    } else {
+        button.classList.remove('active');
+    }
+}
+})()Ù>/home/runner/work/BonitoBook.jl/BonitoBook.jl/src/editor.jl:21¨msg_type¡2È}k’Ç8j“Ù$101b28f4-d742-49bc-8a6e-aa567483f35a¢40Çe’¢40Ã¤root‚§payloadÈ)f“´14138963059270460971Çh¢40ÚÉ(() => {
+    document.querySelector('[data-jscall-id="39"]')['onclick'] = event=> {
+    const button = event.target.closest('button');
+    const newValue = !__lookup_interpolated('14138963059270460971').value;
+    __lookup_interpolated('14138963059270460971').notify(newValue);
+
+    // Toggle the active class based on new value
+    if (newValue) {
+        button.classList.add('active');
+    } else {
+        button.classList.remove('active');
+    }
+}
+})()Ù>/home/runner/work/BonitoBook.jl/BonitoBook.jl/src/editor.jl:21¨msg_type¡2ÈDk’Ç8j“Ù$101b28f4-d742-49bc-8a6e-aa567483f35a¢43Çe’¢43Â¤root‚§payloadÇñf“´16049343930646147908Çh¢43Ù‘(() => {
+    document.querySelector('[data-jscall-id="41"]')['onclick'] = event=> __lookup_interpolated('16049343930646147908').notify(true)
+})()Ù?/home/runner/work/BonitoBook.jl/BonitoBook.jl/src/editor.jl:451¨msg_type¡2È4šk’Èúj“Ù$101b28f4-d742-49bc-8a6e-aa567483f35aŠ¢17Çe’¢17Â¢10Çe’¢10Ã¡6Çe’¡6§default¡7Öe’¡7Â¢23Çe’¢23Â¢44Çe’¢44Â¢16Çe’¢16Ã¡9Öe’¡9€¢13Ège’¢13Ú`# How to Create a BonitoBook Plugin
+
+Create custom book formats that transform how your markdown notebooks are rendered and behave.
+
+## Basic Structure
+
+BonitoBook plugins are directories with the pattern `.name-bbook/` (per-file) or `.bbook/` (shared) containing a `book.jl` file that returns a module:
+
+```
+.my-plugin-bbook/        # or .bbook/ for shared configs
+â”œâ”€â”€ book.jl              # Must return a module
+â”œâ”€â”€ style.jl             # Optional custom styling (lazy-loaded from template if not present)
+â”œâ”€â”€ ai/                  # Optional AI configs (lazy-loaded)
+â”‚   â”œâ”€â”€ claude-config.toml
+â”‚   â””â”€â”€ promptingtools-config.toml
+â”œâ”€â”€ data/                # Optional data files
+â””â”€â”€ meta.toml            # Version tracking (auto-created)
+```
+
+**Note:** Files are lazily initialized - they're only created when you edit them. Until then, they're loaded from BonitoBook templates.
+
+## Minimal Example
+
+`book.jl` - return a module with a custom book type and `create_book` function:
+
+```julia
+module MyPlugin
+
+using Bonito, BonitoBook
+
+struct MyBook <: BonitoBook.AbstractBook
+    book::BonitoBook.Book
+end
+
+"""
+    create_book(book::BonitoBook.Book; kwargs...)
+
+Create a MyBook instance from a BonitoBook.Book.
+This is the entry point that the plugin system calls.
+
+Plugin-specific keyword arguments can be passed via create_book:
+- `create_book(file; theme="dark", custom_setting=true)`
+  The Book constructor arguments (folder, replace_style, all_blocks_as_cell)
+  are handled automatically, and only plugin-specific kwargs are forwarded here.
+"""
+function create_book(book::BonitoBook.Book; kwargs...)
+    # Plugin initialization logic using kwargs
+    # For example:
+    # theme = get(kwargs, :theme, "auto")
+    # custom_setting = get(kwargs, :custom_setting, false)
+
+    return MyBook(book)
+end
+
+function Bonito.jsrender(session::Session, my_book::MyBook)
+    # Custom rendering logic
+    container = DOM.div(
+        my_book.book.cells...,
+        class="my-custom-layout"
+    )
+
+    elements = BonitoBook.standard_setup!(session, my_book.book)
+    return Bonito.jsrender(session, DOM.div(elements, container))
+end
+
+end # module
+```
+
+Alternatively, just use an existing module:
+
+```julia
+# book.jl can simply be:
+using SomeExistingPlugin
+# Note: SomeExistingPlugin must export a create_book function
+```
+
+## Key Requirements
+
+1. **Module Structure**: The `book.jl` file must return a module
+2. **AbstractBook Subtype**: Define a struct that inherits from `BonitoBook.AbstractBook`
+3. **create_book Function**: Define a `create_book(book::BonitoBook.Book; kwargs...)` function that returns your custom book instance
+4. **Rendering**: Implement `Bonito.jsrender(session::Session, your_book::YourBookType)` for custom display logic
+
+## Adding Styles
+
+Styles are lazy-loaded: the base `style.jl` comes from templates. Add custom styles on top:
+
+```julia
+# In your create_book function
+custom_style_path = joinpath(@__DIR__, "custom-style.jl")
+custom_style = BonitoBook.EvalFileOnChange(custom_style_path; module_context = book.runner.mod)
+notify(custom_style.file_watcher)  # Important!
+
+# Store in your book type
+struct MyBook <: BonitoBook.AbstractBook
+    book::BonitoBook.Book
+    custom_style::BonitoBook.EvalFileOnChange
+end
+
+function create_book(book::BonitoBook.Book; kwargs...)
+    custom_style_path = joinpath(@__DIR__, "custom-style.jl")
+    custom_style = BonitoBook.EvalFileOnChange(custom_style_path; module_context = book.runner.mod)
+    notify(custom_style.file_watcher)
+    return MyBook(book, custom_style)
+end
+
+# Include in jsrender
+function Bonito.jsrender(session::Session, my_book::MyBook)
+    # ... rendering ...
+    return DOM.div(my_book.custom_style.last_valid_output, container)
+end
+```
+
+`custom-style.jl`:
+
+```julia
+using BonitoBook.Bonito: Styles, CSS
+
+Styles(
+    CSS(".my-custom-layout", "background" => "#ff6b6b")
+)
+```
+
+See [slideshow_example](/examples/slideshow_example) for a complete example.
+
+## Examples
+
+See existing plugins for reference:
+
+  * [slideshow_example](/examples/slideshow_example) - Presentation mode with navigation
+  * [draggable_example](/examples/draggable_example) - Rearrangeable cells
+  * [book-example](/examples/book-example) - Alternative book layout
+
+## Usage
+
+Place your notebook next to the plugin directory:
+
+```
+my-project/
+â”œâ”€â”€ my-plugin.md              # Your content
+â””â”€â”€ .my-plugin-bbook/        # Your plugin
+    â””â”€â”€ book.jl
+```
+
+BonitoBook automatically detects and uses the plugin. You can also pass plugin-specific arguments:
+
+```julia
+# Using create_book directly with plugin arguments
+create_book("my-plugin.md"; theme="dark", enable_animations=true)
+
+# Using book() server with plugin arguments
+book("my-plugin.md"; theme="dark", enable_animations=true)
+```
+
+The Book constructor arguments (`folder`, `replace_style`, `all_blocks_as_cell`) are handled automatically, while any additional kwargs are forwarded to your plugin's `create_book` function.
+
+You can also use `Book`/`book(file; folder=plugin_folder)` to use a different bonitobook folder for a notebook file. This will likely get more streamlined in the future, making it easier to share plugins with the community.
+¡8Öe’¡8€¤root‚§payloadÈƒf“‹´17405662648767687927Õh¡7³7676184819749164696Çh¢13´13969737703511553370Õh¡8³5074796138239298897Çh¢17´17386843124761792739Çh¢44´18392428548506498120Ş ³overviewRulerBorderÂ¬autoSurround¯languageDefined¨language¨markdown´lineDecorationsWidth µfastScrollSensitivity ªautoIndent¤full®wordWrapColumnP²overviewRulerLanes ¨wordWrap®wordWrapColumn±autoClosingQuotes¦always©scrollbarƒªhorizontal¦hidden¨vertical¦hidden±verticalHasArrowsÂ´scrollBeyondLastLineÂ¥valueÚ`# How to Create a BonitoBook Plugin
+
+Create custom book formats that transform how your markdown notebooks are rendered and behave.
+
+## Basic Structure
+
+BonitoBook plugins are directories with the pattern `.name-bbook/` (per-file) or `.bbook/` (shared) containing a `book.jl` file that returns a module:
+
+```
+.my-plugin-bbook/        # or .bbook/ for shared configs
+â”œâ”€â”€ book.jl              # Must return a module
+â”œâ”€â”€ style.jl             # Optional custom styling (lazy-loaded from template if not present)
+â”œâ”€â”€ ai/                  # Optional AI configs (lazy-loaded)
+â”‚   â”œâ”€â”€ claude-config.toml
+â”‚   â””â”€â”€ promptingtools-config.toml
+â”œâ”€â”€ data/                # Optional data files
+â””â”€â”€ meta.toml            # Version tracking (auto-created)
+```
+
+**Note:** Files are lazily initialized - they're only created when you edit them. Until then, they're loaded from BonitoBook templates.
+
+## Minimal Example
+
+`book.jl` - return a module with a custom book type and `create_book` function:
+
+```julia
+module MyPlugin
+
+using Bonito, BonitoBook
+
+struct MyBook <: BonitoBook.AbstractBook
+    book::BonitoBook.Book
+end
+
+"""
+    create_book(book::BonitoBook.Book; kwargs...)
+
+Create a MyBook instance from a BonitoBook.Book.
+This is the entry point that the plugin system calls.
+
+Plugin-specific keyword arguments can be passed via create_book:
+- `create_book(file; theme="dark", custom_setting=true)`
+  The Book constructor arguments (folder, replace_style, all_blocks_as_cell)
+  are handled automatically, and only plugin-specific kwargs are forwarded here.
+"""
+function create_book(book::BonitoBook.Book; kwargs...)
+    # Plugin initialization logic using kwargs
+    # For example:
+    # theme = get(kwargs, :theme, "auto")
+    # custom_setting = get(kwargs, :custom_setting, false)
+
+    return MyBook(book)
+end
+
+function Bonito.jsrender(session::Session, my_book::MyBook)
+    # Custom rendering logic
+    container = DOM.div(
+        my_book.book.cells...,
+        class="my-custom-layout"
+    )
+
+    elements = BonitoBook.standard_setup!(session, my_book.book)
+    return Bonito.jsrender(session, DOM.div(elements, container))
+end
+
+end # module
+```
+
+Alternatively, just use an existing module:
+
+```julia
+# book.jl can simply be:
+using SomeExistingPlugin
+# Note: SomeExistingPlugin must export a create_book function
+```
+
+## Key Requirements
+
+1. **Module Structure**: The `book.jl` file must return a module
+2. **AbstractBook Subtype**: Define a struct that inherits from `BonitoBook.AbstractBook`
+3. **create_book Function**: Define a `create_book(book::BonitoBook.Book; kwargs...)` function that returns your custom book instance
+4. **Rendering**: Implement `Bonito.jsrender(session::Session, your_book::YourBookType)` for custom display logic
+
+## Adding Styles
+
+Styles are lazy-loaded: the base `style.jl` comes from templates. Add custom styles on top:
+
+```julia
+# In your create_book function
+custom_style_path = joinpath(@__DIR__, "custom-style.jl")
+custom_style = BonitoBook.EvalFileOnChange(custom_style_path; module_context = book.runner.mod)
+notify(custom_style.file_watcher)  # Important!
+
+# Store in your book type
+struct MyBook <: BonitoBook.AbstractBook
+    book::BonitoBook.Book
+    custom_style::BonitoBook.EvalFileOnChange
+end
+
+function create_book(book::BonitoBook.Book; kwargs...)
+    custom_style_path = joinpath(@__DIR__, "custom-style.jl")
+    custom_style = BonitoBook.EvalFileOnChange(custom_style_path; module_context = book.runner.mod)
+    notify(custom_style.file_watcher)
+    return MyBook(book, custom_style)
+end
+
+# Include in jsrender
+function Bonito.jsrender(session::Session, my_book::MyBook)
+    # ... rendering ...
+    return DOM.div(my_book.custom_style.last_valid_output, container)
+end
+```
+
+`custom-style.jl`:
+
+```julia
+using BonitoBook.Bonito: Styles, CSS
+
+Styles(
+    CSS(".my-custom-layout", "background" => "#ff6b6b")
+)
+```
+
+See [slideshow_example](/examples/slideshow_example) for a complete example.
+
+## Examples
+
+See existing plugins for reference:
+
+  * [slideshow_example](/examples/slideshow_example) - Presentation mode with navigation
+  * [draggable_example](/examples/draggable_example) - Rearrangeable cells
+  * [book-example](/examples/book-example) - Alternative book layout
+
+## Usage
+
+Place your notebook next to the plugin directory:
+
+```
+my-project/
+â”œâ”€â”€ my-plugin.md              # Your content
+â””â”€â”€ .my-plugin-bbook/        # Your plugin
+    â””â”€â”€ book.jl
+```
+
+BonitoBook automatically detects and uses the plugin. You can also pass plugin-specific arguments:
+
+```julia
+# Using create_book directly with plugin arguments
+create_book("my-plugin.md"; theme="dark", enable_animations=true)
+
+# Using book() server with plugin arguments
+book("my-plugin.md"; theme="dark", enable_animations=true)
+```
+
+The Book constructor arguments (`folder`, `replace_style`, `all_blocks_as_cell`) are handled automatically, while any additional kwargs are forwarded to your plugin's `create_book` function.
+
+You can also use `Book`/`book(file; folder=plugin_folder)` to use a different bonitobook folder for a notebook file. This will likely get more streamlined in the future, making it easier to share plugins with the community.
+¬formatOnTypeÃ»mouseWheelScrollSensitivity ³renderLineHighlight¤none­tabCompletion¢on³autoClosingBrackets¦always³disableLayerHintingÃ¹hideCursorInOverviewRulerÃ¯automaticLayoutÃ¶scrollBeyondLastColumn ·bracketPairColorization§enabledÃ§minimap§enabledÂ³1823996028740892847Çh¢16´16236395238662328822Õh¡9³5926918094398974202Õh¡6³4073791381396723229Çh¢10³1236940290104261328Çh¢23Ú“import(new URL('../bonito/js/Monaco.bundled5076920984461186154.js', window.location.href).href).then(mod => {
+    const init_func = ((editor) => {
+    const output_div = document.querySelector('[data-jscall-id="46"]');
+    const logging_div = document.querySelector('[data-jscall-id="47"]');
+    return import(new URL('../bonito/js/Monaco.bundled5076920984461186154.js', window.location.href).href).then(mod => {
+        const ee = new mod.EvalEditor(
+            editor, output_div, logging_div, 'horizontal',
+            __lookup_interpolated('13969737703511553370'), __lookup_interpolated('16236395238662328822'), __lookup_interpolated('7676184819749164696'),
+            __lookup_interpolated('4073791381396723229'), __lookup_interpolated('5074796138239298897'), true
+        );
+        const callback = ((editor) => {
+    return import(new URL('../bonito/js/Monaco.bundled5076920984461186154.js', window.location.href).href).then(Monaco => {
+        Monaco.register_cell_editor(editor, 'aca80c6b-aa52-460f-8286-c30779e89bee')
+        Monaco.setup_cell_editor(
+            editor,
+            'aca80c6b-aa52-460f-8286-c30779e89bee-hover', 'aca80c6b-aa52-460f-8286-c30779e89bee-container', 'aca80c6b-aa52-460f-8286-c30779e89bee-card-content',
+            __lookup_interpolated('17405662648767687927'), __lookup_interpolated('17386843124761792739'),
+            __lookup_interpolated('1823996028740892847'),
+            __lookup_interpolated('1236940290104261328')
+        );
+    })
+}
+);
+        return callback(ee);
+    })
+})
+;
+    const editor = new mod.MonacoEditor(document.querySelector('[data-jscall-id="45"]'), __lookup_interpolated('18392428548506498120'), init_func, 'horizontal', false, __lookup_interpolated('5926918094398974202'));
+    if (false) {
+        // return promise tho wait for the editor to be ready
+        return editor.editor;
+    }
+    // if invisible, editor doesn't get initialized, so we dont wait on it
+})
+Ù?/home/runner/work/BonitoBook.jl/BonitoBook.jl/src/editor.jl:113¨msg_type¡2Èk’Ç:j“Ù$101b28f4-d742-49bc-8a6e-aa567483f35a¢48Çe’¢48Ôl ¤rootƒ£obsÇh¢48§payloadÇ¬f“€Ù\return (val)=> {
+    document.querySelector('[data-jscall-id="49"]').replaceChildren(val);
+}ÙJ/home/runner/.julia/packages/Bonito/Wixad/src/rendering/observables.jl:117¨msg_type¡1È=k’ÇGj“Ù$101b28f4-d742-49bc-8a6e-aa567483f35a¢50Çe’¢50¯hide-horizontal¤rootƒ£obsÇh¢50§payloadÇÑf“€Ùvreturn value => {
+    Bonito.update_node_attribute(document.querySelector('[data-jscall-id="48"]'), 'class', value);
+}ÙU/home/runner/.julia/packages/Bonito/Wixad/src/rendering/hyperscript_integration.jl:92¨msg_type¡1È
+Æk’Ç>j“Ù$cc745f35-1a66-4827-8488-f2f09175147b¢33Çe’¢33§default£sub‚§payloadÈ
+lf“‚´14356334060638919547Çh¢33³2221484201469286926Ş ³overviewRulerBorderÂ¬autoSurround¯languageDefined¨language¥julia´lineDecorationsWidth µfastScrollSensitivity ªautoIndent¤full®wordWrapColumnP²overviewRulerLanes ¨readOnlyÃ¨wordWrap®wordWrapColumn±autoClosingQuotes¦always©scrollbarƒªhorizontal¦hidden¨vertical¦hidden±verticalHasArrowsÂ´scrollBeyondLastLineÂ¥valueÚwmodule MyPlugin
+
+using Bonito, BonitoBook
+
+struct MyBook <: BonitoBook.AbstractBook
+    book::BonitoBook.Book
+end
+
+"""
+    create_book(book::BonitoBook.Book; kwargs...)
+
+Create a MyBook instance from a BonitoBook.Book.
+This is the entry point that the plugin system calls.
+
+Plugin-specific keyword arguments can be passed via create_book:
+- `create_book(file; theme="dark", custom_setting=true)`
+  The Book constructor arguments (folder, replace_style, all_blocks_as_cell)
+  are handled automatically, and only plugin-specific kwargs are forwarded here.
+"""
+function create_book(book::BonitoBook.Book; kwargs...)
+    # Plugin initialization logic using kwargs
+    # For example:
+    # theme = get(kwargs, :theme, "auto")
+    # custom_setting = get(kwargs, :custom_setting, false)
+
+    return MyBook(book)
+end
+
+function Bonito.jsrender(session::Session, my_book::MyBook)
+    # Custom rendering logic
+    container = DOM.div(
+        my_book.book.cells...,
+        class="my-custom-layout"
+    )
+
+    elements = BonitoBook.standard_setup!(session, my_book.book)
+    return Bonito.jsrender(session, DOM.div(elements, container))
+end
+
+end # module¬formatOnTypeÃ»mouseWheelScrollSensitivity «lineNumbers£off³renderLineHighlight¤none³autoClosingBrackets¦always³disableLayerHintingÃ¹hideCursorInOverviewRulerÃ¯automaticLayoutÃ¶scrollBeyondLastColumn ·bracketPairColorization§enabledÃ§minimap§enabledÂÚEimport(new URL('../bonito/js/Monaco.bundled5076920984461186154.js', window.location.href).href).then(mod => {
+    const init_func = (editor) => {
+    Promise.all([import(new URL('../bonito/js/Monaco.bundled5076920984461186154.js', window.location.href).href), editor.monaco, editor.editor]).then(([mod, monaco, e]) => {
+        // Resize editor to fit content
+        mod.resize_to_lines(e, monaco, editor.editor_div);
+    });
+}
+;
+    const editor = new mod.MonacoEditor(document.querySelector('[data-jscall-id="70"]'), __lookup_interpolated('2221484201469286926'), init_func, 'horizontal', true, __lookup_interpolated('14356334060638919547'));
+    if (true) {
+        // return promise tho wait for the editor to be ready
+        return editor.editor;
+    }
+    // if invisible, editor doesn't get initialized, so we dont wait on it
+})
+Ù?/home/runner/work/BonitoBook.jl/BonitoBook.jl/src/editor.jl:113¨msg_type¡2È½k’Ç>j“Ù$cc745f35-1a66-4827-8488-f2f09175147b¢34Çe’¢34§default£sub‚§payloadÈcf“‚´10073772571764770624Ş ³overviewRulerBorderÂ¬autoSurround¯languageDefined¨language¥julia´lineDecorationsWidth µfastScrollSensitivity ªautoIndent¤full®wordWrapColumnP²overviewRulerLanes ¨readOnlyÃ¨wordWrap®wordWrapColumn±autoClosingQuotes¦always©scrollbarƒªhorizontal¦hidden¨vertical¦hidden±verticalHasArrowsÂ´scrollBeyondLastLineÂ¥valueÙo# book.jl can simply be:
+using SomeExistingPlugin
+# Note: SomeExistingPlugin must export a create_book function¬formatOnTypeÃ»mouseWheelScrollSensitivity «lineNumbers£off³renderLineHighlight¤none³autoClosingBrackets¦always³disableLayerHintingÃ¹hideCursorInOverviewRulerÃ¯automaticLayoutÃ¶scrollBeyondLastColumn ·bracketPairColorization§enabledÃ§minimap§enabledÂ³1108522374440177707Çh¢34ÚEimport(new URL('../bonito/js/Monaco.bundled5076920984461186154.js', window.location.href).href).then(mod => {
+    const init_func = (editor) => {
+    Promise.all([import(new URL('../bonito/js/Monaco.bundled5076920984461186154.js', window.location.href).href), editor.monaco, editor.editor]).then(([mod, monaco, e]) => {
+        // Resize editor to fit content
+        mod.resize_to_lines(e, monaco, editor.editor_div);
+    });
+}
+;
+    const editor = new mod.MonacoEditor(document.querySelector('[data-jscall-id="73"]'), __lookup_interpolated('10073772571764770624'), init_func, 'horizontal', true, __lookup_interpolated('1108522374440177707'));
+    if (true) {
+        // return promise tho wait for the editor to be ready
+        return editor.editor;
+    }
+    // if invisible, editor doesn't get initialized, so we dont wait on it
+})
+Ù?/home/runner/work/BonitoBook.jl/BonitoBook.jl/src/editor.jl:113¨msg_type¡2È	¤k’Ç>j“Ù$cc745f35-1a66-4827-8488-f2f09175147b¢35Çe’¢35§default£sub‚§payloadÈ	Jf“‚³6390969441586262649Çh¢35³2758840934630200156Ş ³overviewRulerBorderÂ¬autoSurround¯languageDefined¨language¥julia´lineDecorationsWidth µfastScrollSensitivity ªautoIndent¤full®wordWrapColumnP²overviewRulerLanes ¨readOnlyÃ¨wordWrap®wordWrapColumn±autoClosingQuotes¦always©scrollbarƒªhorizontal¦hidden¨vertical¦hidden±verticalHasArrowsÂ´scrollBeyondLastLineÂ¥valueÚW# In your create_book function
+custom_style_path = joinpath(@__DIR__, "custom-style.jl")
+custom_style = BonitoBook.EvalFileOnChange(custom_style_path; module_context = book.runner.mod)
+notify(custom_style.file_watcher)  # Important!
+
+# Store in your book type
+struct MyBook <: BonitoBook.AbstractBook
+    book::BonitoBook.Book
+    custom_style::BonitoBook.EvalFileOnChange
+end
+
+function create_book(book::BonitoBook.Book; kwargs...)
+    custom_style_path = joinpath(@__DIR__, "custom-style.jl")
+    custom_style = BonitoBook.EvalFileOnChange(custom_style_path; module_context = book.runner.mod)
+    notify(custom_style.file_watcher)
+    return MyBook(book, custom_style)
+end
+
+# Include in jsrender
+function Bonito.jsrender(session::Session, my_book::MyBook)
+    # ... rendering ...
+    return DOM.div(my_book.custom_style.last_valid_output, container)
+end¬formatOnTypeÃ»mouseWheelScrollSensitivity «lineNumbers£off³renderLineHighlight¤none³autoClosingBrackets¦always³disableLayerHintingÃ¹hideCursorInOverviewRulerÃ¯automaticLayoutÃ¶scrollBeyondLastColumn ·bracketPairColorization§enabledÃ§minimap§enabledÂÚDimport(new URL('../bonito/js/Monaco.bundled5076920984461186154.js', window.location.href).href).then(mod => {
+    const init_func = (editor) => {
+    Promise.all([import(new URL('../bonito/js/Monaco.bundled5076920984461186154.js', window.location.href).href), editor.monaco, editor.editor]).then(([mod, monaco, e]) => {
+        // Resize editor to fit content
+        mod.resize_to_lines(e, monaco, editor.editor_div);
+    });
+}
+;
+    const editor = new mod.MonacoEditor(document.querySelector('[data-jscall-id="96"]'), __lookup_interpolated('2758840934630200156'), init_func, 'horizontal', true, __lookup_interpolated('6390969441586262649'));
+    if (true) {
+        // return promise tho wait for the editor to be ready
+        return editor.editor;
+    }
+    // if invisible, editor doesn't get initialized, so we dont wait on it
+})
+Ù?/home/runner/work/BonitoBook.jl/BonitoBook.jl/src/editor.jl:113¨msg_type¡2È¶k’Ç>j“Ù$cc745f35-1a66-4827-8488-f2f09175147b¢36Çe’¢36§default£sub‚§payloadÈ\f“‚´16587462382105539688Ş ³overviewRulerBorderÂ¬autoSurround¯languageDefined¨language¥julia´lineDecorationsWidth µfastScrollSensitivity ªautoIndent¤full®wordWrapColumnP²overviewRulerLanes ¨readOnlyÃ¨wordWrap®wordWrapColumn±autoClosingQuotes¦always©scrollbarƒªhorizontal¦hidden¨vertical¦hidden±verticalHasArrowsÂ´scrollBeyondLastLineÂ¥valueÙgusing BonitoBook.Bonito: Styles, CSS
+
+Styles(
+    CSS(".my-custom-layout", "background" => "#ff6b6b")
+)¬formatOnTypeÃ»mouseWheelScrollSensitivity «lineNumbers£off³renderLineHighlight¤none³autoClosingBrackets¦always³disableLayerHintingÃ¹hideCursorInOverviewRulerÃ¯automaticLayoutÃ¶scrollBeyondLastColumn ·bracketPairColorization§enabledÃ§minimap§enabledÂ³5801978269642324574Çh¢36ÚFimport(new URL('../bonito/js/Monaco.bundled5076920984461186154.js', window.location.href).href).then(mod => {
+    const init_func = (editor) => {
+    Promise.all([import(new URL('../bonito/js/Monaco.bundled5076920984461186154.js', window.location.href).href), editor.monaco, editor.editor]).then(([mod, monaco, e]) => {
+        // Resize editor to fit content
+        mod.resize_to_lines(e, monaco, editor.editor_div);
+    });
+}
+;
+    const editor = new mod.MonacoEditor(document.querySelector('[data-jscall-id="100"]'), __lookup_interpolated('16587462382105539688'), init_func, 'horizontal', true, __lookup_interpolated('5801978269642324574'));
+    if (true) {
+        // return promise tho wait for the editor to be ready
+        return editor.editor;
+    }
+    // if invisible, editor doesn't get initialized, so we dont wait on it
+})
+Ù?/home/runner/work/BonitoBook.jl/BonitoBook.jl/src/editor.jl:113¨msg_type¡2È+k’Ç>j“Ù$cc745f35-1a66-4827-8488-f2f09175147b¢37Çe’¢37§default£sub‚§payloadÈÑf“‚´10019456328207125500Çh¢37³8647075790029220099Ş ³overviewRulerBorderÂ¬autoSurround¯languageDefined¨language¥julia´lineDecorationsWidth µfastScrollSensitivity ªautoIndent¤full®wordWrapColumnP²overviewRulerLanes ¨readOnlyÃ¨wordWrap®wordWrapColumn±autoClosingQuotes¦always©scrollbarƒªhorizontal¦hidden¨vertical¦hidden±verticalHasArrowsÂ´scrollBeyondLastLineÂ¥valueÙÜ# Using create_book directly with plugin arguments
+create_book("my-plugin.md"; theme="dark", enable_animations=true)
+
+# Using book() server with plugin arguments
+book("my-plugin.md"; theme="dark", enable_animations=true)¬formatOnTypeÃ»mouseWheelScrollSensitivity «lineNumbers£off³renderLineHighlight¤none³autoClosingBrackets¦always³disableLayerHintingÃ¹hideCursorInOverviewRulerÃ¯automaticLayoutÃ¶scrollBeyondLastColumn ·bracketPairColorization§enabledÃ§minimap§enabledÂÚFimport(new URL('../bonito/js/Monaco.bundled5076920984461186154.js', window.location.href).href).then(mod => {
+    const init_func = (editor) => {
+    Promise.all([import(new URL('../bonito/js/Monaco.bundled5076920984461186154.js', window.location.href).href), editor.monaco, editor.editor]).then(([mod, monaco, e]) => {
+        // Resize editor to fit content
+        mod.resize_to_lines(e, monaco, editor.editor_div);
+    });
+}
+;
+    const editor = new mod.MonacoEditor(document.querySelector('[data-jscall-id="121"]'), __lookup_interpolated('8647075790029220099'), init_func, 'horizontal', true, __lookup_interpolated('10019456328207125500'));
+    if (true) {
+        // return promise tho wait for the editor to be ready
+        return editor.editor;
+    }
+    // if invisible, editor doesn't get initialized, so we dont wait on it
+})
+Ù?/home/runner/work/BonitoBook.jl/BonitoBook.jl/src/editor.jl:113¨msg_type¡2
