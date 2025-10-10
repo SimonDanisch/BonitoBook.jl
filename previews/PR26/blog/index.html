@@ -172,6 +172,18 @@ pre code {
   background-color: var(--site-scrollbar-thumb);
   border-radius: 6px;
 }
+.example-card {
+  max-width: 400px;
+  border: 1px solid var(--site-border-primary);
+  background-color: var(--site-bg-primary);
+  box-shadow: var(--site-shadow-soft);
+  padding: 24px;
+  position: relative;
+  width: fit-content;
+  border-radius: 10px;
+  transition: all 0.2s ease-out;
+  overflow: hidden;
+}
 ::-webkit-scrollbar {
   width: 12px;
 }
@@ -179,16 +191,6 @@ pre code {
   max-width: var(--max-content-width);
   padding: 0 var(--content-padding);
   width: 100%;
-}
-.example-card {
-  border: 1px solid var(--site-border-primary);
-  background-color: var(--site-bg-primary);
-  box-shadow: var(--site-shadow-soft);
-  padding: 24px;
-  position: relative;
-  border-radius: 10px;
-  transition: all 0.2s ease-out;
-  overflow: hidden;
 }
 .bonitobook-header::before {
   left: 0;
@@ -403,11 +405,33 @@ a {
   width: 100% !important;
 }
 </style>
+    <style>div.blog_entry img, div.blog_entry video {
+  height: auto;
+  max-width: 100%;
+  object-fit: cover;
+}
+div.blog_entry .date {
+  font-size: 1rem;
+  font-weight: 400;
+  color: gray;
+  line-height: 1.6rem;
+}
+div.blog_entry h4 {
+  font-size: 1rem;
+  font-weight: 500;
+  line-height: 1.6rem;
+}
+div.blog_entry h3 {
+  font-size: 1.125rem;
+  font-weight: 700;
+  line-height: 1.75rem;
+}
+</style>
   </head>
   <body>
-    <script type="module">Bonito.init_session("09c8e246-f684-46fd-a3b0-c4b65f08c3af", null, "root", false);
+    <script type="module">Bonito.init_session("65b0eca4-9c81-41da-9734-247678f12282", null, "root", false);
 </script>
-    <div id="09c8e246-f684-46fd-a3b0-c4b65f08c3af" data-jscall-id="root">
+    <div id="65b0eca4-9c81-41da-9734-247678f12282" data-jscall-id="root">
       <div class="bonitobook-page" data-jscall-id="1">
         <header class="bonitobook-header" data-jscall-id="2">
           <div class="header-content" data-jscall-id="3">
@@ -429,12 +453,19 @@ a {
               <h1 class="section-title" data-jscall-id="15">Blog</h1>
               <p class="section-content" data-jscall-id="16">Stay updated with the latest BonitoBook news, features, and tutorials.</p>
             </section>
-            <div class="examples-grid" data-jscall-id="17">
+            <div data-jscall-id="17">
               <div class="example-card" data-jscall-id="18">
-                <h3 class="example-title" data-jscall-id="19">BonitoBook October Update: Plugin System, Language Extensions &#38; Simplified Styling</h3>
-                <p class="example-description" data-jscall-id="20">Major update introducing a powerful plugin system, extensible language evaluators, and a completely redesigned styling architecture</p>
-                <p class="blog-date" style="color: var(--site-text-secondary); font-size: 0.9rem; margin-bottom: 1rem;" data-jscall-id="21">Thu, 10 Oct 2024</p>
-                <a class="example-link" href="../blogposts/bonitobook-october" data-jscall-id="22">Read More</a>
+                <div class="blog_entry" data-jscall-id="19">
+                  <a href="../blogposts/october" data-jscall-id="20">
+                    <a href="../blogposts/october" data-jscall-id="21">
+                      <h3 data-jscall-id="22">v0.2: Plugin System, Language Extensions &#38; Simplified Styling</h3>
+                    </a>
+                    <h4 data-jscall-id="23">Major update introducing a powerful plugin system, extensible language evaluators,
+    and a completely redesigned styling architecture</h4>
+                    <video height="300px" data-jscall-id="24" src="../bonito/mp4/slideshow18223573542725588307.mp4" loop="true" autoplay="true" muted="true"></video>
+                    <div class="date" data-jscall-id="25">Fri, 10 Oct 2025 14:23:0</div>
+                  </a>
+                </div>
               </div>
             </div>
           </div>

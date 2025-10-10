@@ -5,10 +5,14 @@
     <link>https://bonitobook.org</link>
     <description>Interactive notebooks powered by Julia and Bonito</description>
     <item>
-      <title>BonitoBook October Update: Plugin System, Language Extensions & Simplified Styling</title>
-      <link>./blogposts/bonitobook-october</link>
-      <description>Major update introducing a powerful plugin system, extensible language evaluators, and a completely redesigned styling architecture</description>
-      <pubDate>Thu, 10 Oct 2024 0:0:0</pubDate>
+      <title>v0.2: Plugin System, Language Extensions & Simplified Styling</title>
+      <link>./blogposts/october</link>
+      <description>Major update introducing a powerful plugin system, extensible language evaluators,
+    and a completely redesigned styling architecture</description>
+      <pubDate>Fri, 10 Oct 2025 14:23:0</pubDate>
+      <image>
+        <url>/home/runner/work/BonitoBook.jl/BonitoBook.jl/docs/src/blogposts/october/./website/slideshow.mp4</url>
+      </image>
     </item>
   </channel>
 </rss>
