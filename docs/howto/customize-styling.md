@@ -157,7 +157,7 @@ function create_book(book::BonitoBook.Book; kwargs...)
 end
 ```
 
-See [bonitobook-plugin.md](bonitobook-plugin.md) for more details.
+See [bonitobook-plugin](/howto/bonitobook-plugin) for more details.
 
 ## Troubleshooting
 
@@ -175,5 +175,5 @@ See [bonitobook-plugin.md](bonitobook-plugin.md) for more details.
 
 ## See Also
 
-- [BonitoBook Plugin Guide](bonitobook-plugin.md) - Creating custom book formats
-- [Examples](../../examples/) - Example notebooks with custom styling
+- [BonitoBook Plugin Guide](/howto/bonitobook-plugin) - Creating custom book formats
+- [Examples](/examples) - Example notebooks with custom styling

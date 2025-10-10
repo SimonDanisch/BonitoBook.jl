@@ -1,6 +1,6 @@
 # Plugin System, Language Extensions & Simplified Styling
 
-We're excited to announce a major update to [BonitoBook](https://bonitobook.org) that transforms it from a single-purpose notebook into an extensible platform. This release introduces a powerful plugin system, extensible language evaluators, and a completely redesigned styling architecture.
+We're excited to announce a major update to BonitoBook that transforms it from a single-purpose notebook into an extensible platform. This release introduces a powerful plugin system, extensible language evaluators, and a completely redesigned styling architecture.
 
 ## 1. Plugin System: Transform Your Notebooks
 
@@ -12,13 +12,11 @@ Plugins live in `.name-bbook/book.jl` or a shared `.bbook/book.jl`:
 
 ```julia
 module MyPlugin
-
 using Bonito, BonitoBook
 
 struct MyBook <: BonitoBook.AbstractBook
     book::BonitoBook.Book
 end
-
 # Plugin initialization with custom kwargs
 create_book(book::BonitoBook.Book; kwargs...) = MyBook(book)
 
@@ -32,23 +30,21 @@ end
 end # module
 ```
 
-From the [plugin guide](../../bonitobook-plugin):
+From the [plugin guide](/howto/bonitobook-plugin):
 
 ### Built-in Plugin Examples
 
 We've included three example plugins showcasing different use cases:
 
-**Slideshow Plugin** - [Turn notebooks into presentations](../../slideshow_example)
-**Draggable Plugin** - [Interactive drag-and-drop layouts](../../draggable_example)
-**Book Plugin** - [Custom book formats with enhanced styling and table of content](../../book-example)
+**Slideshow Plugin** - [Turn notebooks into presentations](/examples/slideshow_example)
+
+**Draggable Plugin** - [Interactive drag-and-drop layouts](/examples/draggable_example)
+
+**Book Plugin** - [Custom book formats with enhanced styling and table of content](/examples/book-example)
 
 ## 2. Extensible Language Evaluators
 
-BonitoBook now supports multiple programming languages through an extensible evaluator system. We've moved language-specific code into extensions and made it easy to add new languages.
-
-### Python Support
-
-Python is now supported via an extension using PythonCall.jl:
+BonitoBook now supports an extensible evaluator system for any language. We've moved language-specific code into extensions and made it easy to add new languages. Python support now needs using PythonCall.jl and CondaPkg:
 
 ```julia
 # no-eval
@@ -60,7 +56,7 @@ Variables are automatically transferred between Python and Julia scopes, and the
 
 ### Creating Custom Language Evaluators
 
-Adding a new language to BonitoBook is straightforward. From the [language evaluator guide](../../language-evaluator):
+Adding a new language to BonitoBook is straightforward. From the [language evaluator guide](/howto/language-evaluator):
 
 ```julia
 # ext/BonitoBookShellExt.jl
@@ -73,8 +69,6 @@ end
 get_language_evaluator() = ShellEval()
 end
 ```
-
-Register it in `ALL_LANGUAGES` and it appears in the language dropdown automatically.
 
 ### Dependency Reduction
 
@@ -135,6 +129,7 @@ Beyond the major features, numerous small improvements enhance the daily experie
   * **Consistent spacing**: All UI components now use the CSS variable system
   * **New cell menu**: It was quite annoying that the new cell menu changed the whole layout, so now it's fixed and opens a non obstructive hover menu
   * **More Tooltips**: Added quite a few Tooltips to explain the UI
+  * **fixed include**: include wasn't working which should be fixed now
 
 ## Migration Guide
 
@@ -157,3 +152,4 @@ The new `meta.toml` file tracks versions and helps detect when migration is need
 ## Looking Ahead
 
 This release shows how BonitoBook can be an extensible platform rather than a single-purpose tool. The next feature we plan to work on is a plugin for an LLM agent dashboard and polish the LLM integration. The plugin system opens up exciting possibilities for specialized notebook formats - we can't wait to see what the community builds!
+

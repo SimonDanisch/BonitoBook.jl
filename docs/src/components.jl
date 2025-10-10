@@ -31,13 +31,13 @@ function NavBar(items::Vector{Pair{String, String}})
 end
 
 # Card component for examples
-function ExampleCard(title::AbstractString, description::AbstractString)
+function ExampleCard(title::AbstractString, description::AbstractString, route_prefix::AbstractString="")
     return DOM.div(
         DOM.h3(titlecase(title), class="example-title"),
         DOM.p(description, class="example-description"),
         DOM.a(
             "Open Example",
-            href=Bonito.Link("/$(title)"),
+            href=Bonito.Link("$(route_prefix)/$(title)"),
             class="example-link"
         ),
         class="example-card"
@@ -551,4 +551,3 @@ const PageStyles = Styles(
         )
     )
 )
-

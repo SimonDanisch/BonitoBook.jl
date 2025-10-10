@@ -11,9 +11,9 @@ function howto()
 
     # Create how-to cards
     howto_cards = [
-        ExampleCard("language-evaluator", "Learn how to create a custom language evaluator to run code in your preferred language."),
-        ExampleCard("bonitobook-plugin", "Step-by-step guide to creating BonitoBook plugins like slideshow, draggable layouts, and custom book formats."),
-        ExampleCard("slideshow-presentation", "Learn how to create engaging presentations using the slideshow plugin with navigation and styling tips."),
+        ExampleCard("language-evaluator", "Learn how to create a custom language evaluator to run code in your preferred language.", "/howto"),
+        ExampleCard("bonitobook-plugin", "Step-by-step guide to creating BonitoBook plugins like slideshow, draggable layouts, and custom book formats.", "/howto"),
+        ExampleCard("slideshow-presentation", "Learn how to create engaging presentations using the slideshow plugin with navigation and styling tips.", "/howto"),
     ]
     # Filter out nothing values
     howto_cards = filter(!isnothing, howto_cards)
@@ -36,7 +36,7 @@ function add_howto_routes!(routes)
     guides = ["language-evaluator", "bonitobook-plugin", "slideshow-presentation"]
     for name in guides
         file = joinpath(howto_dir, "$(name).md")
-        route_name = "/$(name)"
+        route_name = "/howto/$(name)"
         routes[route_name] = App(title=name) do
             # Create a book instance for this how-to guide
             return Page(BonitoBook.InlineBook(file), name)

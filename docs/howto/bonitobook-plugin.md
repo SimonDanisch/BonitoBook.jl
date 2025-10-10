@@ -9,15 +9,12 @@ BonitoBook plugins are directories with the pattern `.name-bbook/` (per-file) or
 ```
 .my-plugin-bbook/        # or .bbook/ for shared configs
 ├── book.jl              # Must return a module
-├── style.jl             # Optional custom styling (lazy-loaded from template if not present)
+├── include.jl           # Will run any code included here
+├── style.jl             # custom styling
 ├── ai/                  # Optional AI configs (lazy-loaded)
-│   ├── claude-config.toml
-│   └── promptingtools-config.toml
 ├── data/                # Optional data files
 └── meta.toml            # Version tracking (auto-created)
 ```
-
-**Note:** Files are lazily initialized - they're only created when you edit them. Until then, they're loaded from BonitoBook templates.
 
 ## Minimal Example
 
@@ -48,7 +45,6 @@ function create_book(book::BonitoBook.Book; kwargs...)
     # For example:
     # theme = get(kwargs, :theme, "auto")
     # custom_setting = get(kwargs, :custom_setting, false)
-
     return MyBook(book)
 end
 
@@ -58,7 +54,6 @@ function Bonito.jsrender(session::Session, my_book::MyBook)
         my_book.book.cells...,
         class="my-custom-layout"
     )
-
     elements = BonitoBook.standard_setup!(session, my_book.book)
     return Bonito.jsrender(session, DOM.div(elements, container))
 end
@@ -83,45 +78,92 @@ using SomeExistingPlugin
 
 ## Adding Styles
 
-Styles are lazy-loaded: the base `style.jl` comes from templates. Add custom styles on top:
+BonitoBook automatically loads `style.jl` from your plugin folder. The file is lazy-loaded from a template if not present, so you only create it when you need custom styling.
+
+### Simple Approach: Customize with `generate_style()`
+
+Use the built-in `generate_style()` function with 70+ customization parameters:
 
 ```julia
-# In your create_book function
-custom_style_path = joinpath(@__DIR__, "custom-style.jl")
-custom_style = BonitoBook.EvalFileOnChange(custom_style_path; module_context = book.runner.mod)
-notify(custom_style.file_watcher)  # Important!
+# .my-plugin-bbook/style.jl
 
-# Store in your book type
-struct MyBook <: BonitoBook.AbstractBook
-    book::BonitoBook.Book
-    custom_style::BonitoBook.EvalFileOnChange
-end
+# Generate base style with custom colors
+custom_style = BonitoBook.generate_style(current_book();
+    light_theme = true,  # or false, or nothing for auto-detect
 
-function create_book(book::BonitoBook.Book; kwargs...)
-    custom_style_path = joinpath(@__DIR__, "custom-style.jl")
-    custom_style = BonitoBook.EvalFileOnChange(custom_style_path; module_context = book.runner.mod)
-    notify(custom_style.file_watcher)
-    return MyBook(book, custom_style)
-end
+    # Override specific colors
+    bg_primary_light = "#F8FAFC",
+    accent_blue_light = "#6366F1",
+    text_primary_light = "#1E293B",
 
-# Include in jsrender
-function Bonito.jsrender(session::Session, my_book::MyBook)
-    # ... rendering ...
-    return DOM.div(my_book.custom_style.last_valid_output, container)
-end
-```
-
-`custom-style.jl`:
-
-```julia
-using BonitoBook.Bonito: Styles, CSS
-
-Styles(
-    CSS(".my-custom-layout", "background" => "#ff6b6b")
+    # Customize spacing
+    spacing_lg = "1.5rem",
+    spacing_xs = "0.5rem",
 )
+
+# Return the style (BonitoBook expects this)
+custom_style
 ```
 
-See [slideshow_example](/examples/slideshow_example) for a complete example.
+### Advanced Approach: Combine Base + Custom CSS
+
+For complete control, combine the base style with your custom CSS:
+
+```julia
+# .my-plugin-bbook/style.jl
+# Define custom colors
+MY_PRIMARY = "#6366F1"
+MY_SECONDARY = "#0EA5E9"
+
+# Create plugin-specific styles
+plugin_style = Styles(
+    CSS(
+        ".my-custom-layout",
+        "background" => "linear-gradient(135deg, $(MY_PRIMARY), $(MY_SECONDARY))"
+    ),
+    CSS(
+        ".my-custom-layout h1",
+        "color" => MY_PRIMARY,
+        "font-size" => "3rem"
+    )
+)
+
+# Generate base BonitoBook styles
+base_style = BonitoBook.generate_style(current_book(); light_theme=true)
+
+# Merge and return
+Styles(base_style, plugin_style)
+```
+
+### Scoping Styles to Your Plugin
+
+Use higher-specificity selectors to scope styles to your plugin. The slideshow example wraps everything in `.presentation-themed-slideshow`:
+
+```julia
+# Generate base style
+base_style = BonitoBook.generate_style(current_book())
+
+# Scope global elements to your plugin container
+scoped_style = Styles(
+    CSS(
+        ".my-plugin-container",
+        "font-family" => "'Inter', sans-serif",
+        "background-color" => "var(--bg-primary)"
+    ),
+    CSS(
+        ".my-plugin-container h1",
+        "font-size" => "3.5rem",
+        "color" => "var(--text-primary)"
+    )
+)
+
+# Combine
+Styles(base_style, scoped_style, your_custom_styles)
+```
+
+**Important:** The `style.jl` file must return a `Styles` object (or something that can be rendered as styles).
+
+See the [slideshow_example](/examples/slideshow_example) for a complete real-world example.
 
 ## Examples
 
@@ -155,3 +197,4 @@ book("my-plugin.md"; theme="dark", enable_animations=true)
 The Book constructor arguments (`folder`, `replace_style`, `all_blocks_as_cell`) are handled automatically, while any additional kwargs are forwarded to your plugin's `create_book` function.
 
 You can also use `Book`/`book(file; folder=plugin_folder)` to use a different bonitobook folder for a notebook file. This will likely get more streamlined in the future, making it easier to share plugins with the community.
+

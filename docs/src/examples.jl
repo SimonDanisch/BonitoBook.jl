@@ -11,11 +11,11 @@ function examples()
 
     # Create example cards
     example_cards = [
-        ExampleCard("intro", "A quick intro to BonitoBook, giving a rough overview of the features and how to use them."),
-        ExampleCard("sunny", "Sunny.jl uses Makie a lot and they have some wonderful notebooks, which we can import directly from ipynb."),
-        ExampleCard("book-example", "An AI generated Book format for BonitoBook, showing how easy it is to completely change the layout."),
-        ExampleCard("draggable_example", "Shows of a completely different layout with draggable cells."),
-        ExampleCard("slideshow_example", "A slideshow plugin for BonitoBook."),
+        ExampleCard("intro", "A quick intro to BonitoBook, giving a rough overview of the features and how to use them.", "/examples"),
+        ExampleCard("sunny", "Sunny.jl uses Makie a lot and they have some wonderful notebooks, which we can import directly from ipynb.", "/examples"),
+        ExampleCard("book-example", "An AI generated Book format for BonitoBook, showing how easy it is to completely change the layout.", "/examples"),
+        ExampleCard("draggable_example", "Shows of a completely different layout with draggable cells.", "/examples"),
+        ExampleCard("slideshow_example", "A slideshow plugin for BonitoBook.", "/examples"),
     ]
     # Filter out nothing values
     example_cards = filter(!isnothing, example_cards)
@@ -32,8 +32,6 @@ function examples()
     return Page(content, "BonitoBook Examples")
 end
 
-include("../examples/.book-example-bbook/book.jl")
-
 # Add routes for individual example pages
 function add_example_routes!(routes)
     examples_dir = normpath(joinpath(@__DIR__, "..", "examples"))
@@ -41,7 +39,7 @@ function add_example_routes!(routes)
     for name in examples
 
         file = joinpath(examples_dir, "$(name).md")
-        route_name = "/$(name)"
+        route_name = "/examples/$(name)"
         routes[route_name] = App(title=name) do
             # Create a book instance for this example
             return Page(BonitoBook.InlineBook(file), name)
