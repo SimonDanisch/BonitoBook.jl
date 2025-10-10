@@ -163,15 +163,15 @@ Styles(base_style, scoped_style, your_custom_styles)
 
 **Important:** The `style.jl` file must return a `Styles` object (or something that can be rendered as styles).
 
-See the [slideshow_example](/examples/slideshow_example) for a complete real-world example.
+See the [slideshow_example](../../examples/slideshow_example) for a complete real-world example.
 
 ## Examples
 
 See existing plugins for reference:
 
-  * [slideshow_example](/examples/slideshow_example) - Presentation mode with navigation
-  * [draggable_example](/examples/draggable_example) - Rearrangeable cells
-  * [book-example](/examples/book-example) - Alternative book layout
+  * [slideshow_example](../../examples/slideshow_example) - Presentation mode with navigation
+  * [draggable_example](../../examples/draggable_example) - Rearrangeable cells
+  * [book-example](../../examples/book-example) - Alternative book layout
 
 ## Usage
 
@@ -197,4 +197,3 @@ book("my-plugin.md"; theme="dark", enable_animations=true)
 The Book constructor arguments (`folder`, `replace_style`, `all_blocks_as_cell`) are handled automatically, while any additional kwargs are forwarded to your plugin's `create_book` function.
 
 You can also use `Book`/`book(file; folder=plugin_folder)` to use a different bonitobook folder for a notebook file. This will likely get more streamlined in the future, making it easier to share plugins with the community.
-
