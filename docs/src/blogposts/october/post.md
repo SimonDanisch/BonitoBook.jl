@@ -36,11 +36,11 @@ From the [plugin guide](/howto/bonitobook-plugin):
 
 We've included three example plugins showcasing different use cases:
 
-**Slideshow Plugin** - [Turn notebooks into presentations](/examples/slideshow_example)
+**Slideshow Plugin** - [Turn notebooks into presentations](../../examples/slideshow_example)
 
-**Draggable Plugin** - [Interactive drag-and-drop layouts](/examples/draggable_example)
+**Draggable Plugin** - [Interactive drag-and-drop layouts](../../examples/draggable_example)
 
-**Book Plugin** - [Custom book formats with enhanced styling and table of content](/examples/book-example)
+**Book Plugin** - [Custom book formats with enhanced styling and table of content](../../examples/book-example)
 
 ## 2. Extensible Language Evaluators
 
@@ -152,4 +152,3 @@ The new `meta.toml` file tracks versions and helps detect when migration is need
 ## Looking Ahead
 
 This release shows how BonitoBook can be an extensible platform rather than a single-purpose tool. The next feature we plan to work on is a plugin for an LLM agent dashboard and polish the LLM integration. The plugin system opens up exciting possibilities for specialized notebook formats - we can't wait to see what the community builds!
-
