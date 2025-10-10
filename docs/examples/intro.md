@@ -55,7 +55,8 @@ Thanks to Bonito.jl's universal design, BonitoBook can be viewed across multiple
 
 Since WGLMakie is also based on Bonito.jl, the Makie integration is seamless and supports all WGLMakie features including interactive widgets, observables and JavaScript integration. Here's a live example of an interactive 3D galaxy visualization, with the animation done in Javascript so it stays interactive without running Julia. The other plots shown in this notebook are not interactive in that way, and can only be interacted with when actually running the notebook with Julia.
 
-```julia (editor=true, logging=false, output=true)
+```julia (editor=true, logging=true, output=true)
+using WGLMakie
 # Interactive 3D galaxy with real-time JavaScript integration
 time_slider = Components.Slider(1:360; value=1)
 spiral_factor = Components.Slider(1:50; value=20)
@@ -105,33 +106,60 @@ $(mplot).then(plots=>{
 """
 
 DOM.div(
-    DOM.div([DOM.label("Time: "), time_slider], [DOM.label("Spiral: "), spiral_factor],
-            [DOM.label("Explosion: "), explosion], [DOM.label("Size: "), markersize];
-        style="display: flex; gap: 20px; align-items: center; justify-content: center; padding: 15px; background: #1a1a2e; border-radius: 10px; margin: 10px;"),
-    fig, jss
+    Grid(
+        ["Time: ", time_slider],
+        ["Spiral: ", spiral_factor],
+        ["Explosion: ", explosion],
+        ["Size: ", markersize];
+        columns="auto 1fr", gap="10px 20px"
+    ),
+    fig, jss;
+    style=Styles("padding" => "20px")
 )
 ```
 ## Notebook format
 
 The format is a simple markdown file with more config options and data stored in a separate folder. This keeps the notebook format fully compatible with markdown and makes it easy to edit it with other editors.
 
-The a hidden folder structure looks like this:
+The hidden folder structure looks like this:
 
 ```
 mybook.md                # Main content file
-.mybook-bbook/           # Hidden folder structure
-├── styles/
-│   └── style.jl         # Custom styling
-├── ai/
-│   ├── config.toml      # AI configuration
-│   └── system-prompt.md # Custom AI prompt
+.mybook-bbook/           # Hidden folder structure (or .bbook/ for shared)
+├── style.jl             # Custom styling (lazy-loaded from template)
+├── ai/                  # AI configs (lazy-loaded from template)
+│   ├── claude-config.toml
+│   ├── claude-system-prompt.md
+│   ├── promptingtools-config.toml
+│   └── promptingtools-system-prompt.md
+├── data/                # Store data files here
+│   └── data.csv
+├── meta.toml            # Version tracking (auto-created)
 └── .versions/           # Automatic backups
     └── mybook-*.md      # Timestamped backups
-└── data/             # Write out to `./data` to get included into the zip
-    └── data.csv      # Any data needed for the notebook
 ```
 
-Jupyter notebooks (.ipynb) are automatically converted to markdown files with the same name before setting up the notebook and creating the fodler structure.
+Jupyter notebooks (.ipynb) are automatically converted to markdown files with the same name before setting up the notebook and creating the folderer structure.
+
+**Note:** Files are only created when edited. Until then, they're loaded from BonitoBook templates.
+
+### Accessing data files
+
+Use the `data""` string macro to reference files in your notebook's data folder:
+
+```julia
+# Load a CSV file from the data folder
+using CSV, DataFrames
+df = CSV.read(data"data.csv", DataFrame)
+
+# Display an image
+DOM.img(src=Asset(data"plot.png"))
+
+# Load a video
+DOM.video(src=Asset(data"demo.mp4"), autoplay=true, loop=true)
+```
+
+The `data""` macro automatically resolves to the correct path in `.mybook-bbook/data/`, regardless of your working directory. All files in the data folder are included when exporting to ZIP.
 
 ### Project compatibility
 
@@ -155,7 +183,7 @@ The zip export feature packages everything into a reproducible, shareable archiv
 The current implementation is based on a generic chat, which can use different chat agents to talk with. Those agents are currently installed as Package extensions on [ClaudeCodeSDK](https://github.com/AtelierArith/ClaudeCodeSDK.jl/) and on [PromptingTools](https://github.com/svilupp/PromptingTools.jl). Install those and use them, to activate them. By default, if both are loaded, Claude Code is preferred, since the integration is better and the agentic features are just more mature.
 
 ```julia (editor=false, logging=false, output=true)
-DOM.video(src=Asset("./data/ai-demo.mp4"), autoplay=true, loop=true, muted=true,
+DOM.video(src=Asset(data"ai-demo.mp4"), autoplay=true, loop=true, muted=true,
     style=Styles("width" => "100%"))
 ```
 ## Supports the common commandline modes
@@ -172,7 +200,7 @@ BonitoBook is built entirely in Julia using Bonito.jl, providing native performa
 
 With Bonito it's easy to [create and share components](https://simondanisch.github.io/Bonito.jl/stable/components.html).  All BonitoBook components can be used outside the notebook, which will further extend the Bonito ecosystem for building interactive web applications Here is a quick example how one can make a simple checkbox widget in Bonito:
 
-```julia (editor=true, logging=false, output=true)
+```julia (editor=true, logging=true, output=true)
 struct MyCheckbox
     value::Observable{Bool}
 end
@@ -191,16 +219,13 @@ Note, you can include any css or javascript dependency in your widgets and Bonit
 
 This is why we can e.g. use the editor widget in the notebook itself:
 
-```julia (editor=true, logging=false, output=true)
+```julia (editor=true, logging=true, output=true)
 using BonitoBook
 BonitoBook.EvalEditor("println(\"Hello World\")\n1+1")
 ```
 And why we can easily re-arrange any notebook into a completely different layout/form:
 
-```julia (editor=true, logging=false, output=true)
-# Properly Centered Row Example
-using BonitoBook
-using WGLMakie  # for Row
+```julia (editor=true, logging=true, output=true)
 
 style = Styles(
     CSS(".small-vertical .cell-editor-container",
@@ -214,7 +239,7 @@ style = Styles(
     )
 )
 # Load notebook we shipped in the data folder
-cells = Book("./data/test.md"; all_blocks_as_cell=true).cells
+cells = Book(data"test.md"; all_blocks_as_cell=true).cells
 # Execute code in the cell
 foreach(x-> BonitoBook.run_sync!(x.editor), cells)
 DOM.div(
@@ -235,7 +260,7 @@ Any package defining Bonito Apps are working inside BonitoBook. This includes cu
 
 BonitoBook includes its own component library—essentially the standard Bonito components with enhanced styling that integrates seamlessly with the notebook interface.
 
-```julia (editor=true, logging=false, output=true)
+```julia (editor=true, logging=true, output=true)
 # Create one of each component type
 button = Components.Button("Submit")
 slider = Components.Slider(1:100, value=50)
@@ -278,7 +303,7 @@ DOM.div(
 
 BonitoBook revives the beloved `@manipulate` macro from [Interact.jl](https://github.com/JuliaGizmos/Interact.jl) with modern enhancements. It works great together with Makie's SpecApi, which is the [new declarative API](https://docs.makie.org/stable/explanations/specapi#SpecApi) for Makie.
 
-```julia (editor=true, logging=false, output=true)
+```julia (editor=true, logging=true, output=true)
 import Makie.SpecApi as S
 @manipulate for cmap=["viridis", "heat", "blues"],
                 func=(sqrt=sqrt, square=x->x^2, sin=sin, cos=cos),
@@ -314,19 +339,19 @@ Python support is powered by PythonCall and CondaPkg, enabling Julia-like depend
 
 ## Package management
 
-```python (editor=true, logging=false, output=true)
+```python (editor=true, logging=true, output=true)
 ]add numpy matplotlib pandas
 ```
 ## Shared namespace
 
 The shared namespace enables seamless cross-language workflows:
 
-```python (editor=true, logging=false, output=true)
+```python (editor=true, logging=true, output=true)
 import numpy as np
 data = np.random.randn(1000, 2)  # Generate data in Python
 labels = ["x", "y"]
 ```
-```julia (editor=true, logging=false, output=true)
+```julia (editor=true, logging=true, output=true)
 # Directly use Python variables in Julia with full Makie features
 scatter(data[:, 1], data[:, 2], axis=(xlabel=labels[1], ylabel=labels[2]))
 ```
@@ -334,7 +359,7 @@ scatter(data[:, 1], data[:, 2], axis=(xlabel=labels[1], ylabel=labels[2]))
 
 MIME support enables matplotlib plots to display automatically, perfect for mixed-language visualizations:
 
-```python (editor=true, logging=false, output=true)
+```python (editor=true, logging=true, output=true)
 import matplotlib.pyplot as plt
 fig, ax = plt.subplots()
 ax.plot([1, 2, 3, 4], [1, 4, 2, 3])
@@ -354,9 +379,9 @@ BonitoBook.@bedit Book("intro.md") # Opens function source in editor
 
 ## Style customization
 
-Customize your book's appearance by editing `.name-bbook/styles/style.jl` (accessible via the paint can icon):
+Customize your book's appearance by editing `.name-bbook/style.jl` (accessible via the paint can icon):
 
-```julia (editor=true, logging=false, output=true)
+```julia (editor=true, logging=true, output=true)
 # Modify colors, fonts, layout dimensions
 light_theme = true # Force light theme
 editor_width = "800px" # Adjust editor width;

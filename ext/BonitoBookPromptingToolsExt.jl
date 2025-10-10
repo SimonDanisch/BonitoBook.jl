@@ -40,9 +40,9 @@ Create a new PromptingTools agent.
 function PromptingToolsAgent(book::BonitoBook.Book; config::Dict = Dict())
     folder = book.folder
 
-    # Load configuration from TOML file if it exists
-    config_path = joinpath(folder, "ai", "promptingtools-config.toml")
-    system_prompt_path = joinpath(folder, "ai", "promptingtools-system-prompt.md")
+    # Use get_file_path to check custom folder first, then template
+    config_path, _ = BonitoBook.get_file_path(folder, "ai/promptingtools-config.toml")
+    system_prompt_path, _ = BonitoBook.get_file_path(folder, "ai/promptingtools-system-prompt.md")
 
     # Load TOML config if it exists
     toml_config = Dict()
@@ -172,10 +172,8 @@ end
 Save current agent configuration to TOML file.
 """
 function save_config_to_toml(agent::PromptingToolsAgent)
-    config_path = joinpath(agent.book.folder, "ai", "promptingtools-config.toml")
-
-    # Create directory if it doesn't exist
-    mkpath(dirname(config_path))
+    # Initialize file for editing (creates folder/file if needed)
+    config_path = BonitoBook.initialize_file_for_editing(agent.book.folder, "ai/promptingtools-config.toml")
 
     # Build TOML structure
     toml_data = Dict{String, Any}()
@@ -207,7 +205,7 @@ function Bonito.jsrender(session::Bonito.Session, msg::PromptingTools.SystemMess
 end
 
 function Bonito.jsrender(session::Bonito.Session, msg::PromptingTools.UserMessage)
-    return Bonito.jsrender(session, Bonito.DOM.div(msg.content))
+    return Bonito.jsrender(session, DOM.div(msg.content))
 end
 
 
@@ -227,7 +225,6 @@ function BonitoBook.prompt(agent::PromptingToolsAgent, question::String)
         # Conversation loop with tool support
         iteration = 0
         while iteration < 10
-            @show iteration
             iteration += 1
             # Generate response using full conversation history
             response = PromptingTools.aigenerate(
@@ -235,7 +232,6 @@ function BonitoBook.prompt(agent::PromptingToolsAgent, question::String)
                 model = agent.model,
                 return_all = false,
             )
-            @show response
             # Add AI response to conversation history
             push!(agent.conversation_history, response)
             put!(response_channel, response)
@@ -264,12 +260,12 @@ function BonitoBook.prompt(agent::PromptingToolsAgent, question::String)
             end
         end
         if iteration >= 10
-            put!(response_channel, Bonito.DOM.div("Conversation loop reached maximum iterations", style="color: orange;"))
+            put!(response_channel, DOM.div("Conversation loop reached maximum iterations", style="color: orange;"))
         end
     catch e
         # Send error message
         error_msg = "Error: $(string(e))"
-        put!(response_channel, Bonito.DOM.div(error_msg, style="color: red;"))
+        put!(response_channel, DOM.div(error_msg, style="color: red;"))
     finally
         close(response_channel)
     end
@@ -298,17 +294,17 @@ function BonitoBook.settings_menu(agent::PromptingToolsAgent)
     model_dropdown = BonitoBook.Components.Dropdown(available_models; index=current_index)
 
     # Model section
-    model_section = Bonito.DOM.div(
-        Bonito.DOM.div("Model:", class="settings-label"),
-        Bonito.DOM.div(model_dropdown, class="settings-input"),
+    model_section = DOM.div(
+        DOM.div("Model:", class="settings-label"),
+        DOM.div(model_dropdown, class="settings-input"),
         class="settings-row"
     )
 
     # MCP Server info section
-    mcp_info_section = Bonito.DOM.div(
-        Bonito.DOM.div("MCP Server:", class="settings-label"),
-        Bonito.DOM.div(
-            Bonito.DOM.code(agent.mcp_server_url, style="font-size: 11px; color: var(--text-secondary);"),
+    mcp_info_section = DOM.div(
+        DOM.div("MCP Server:", class="settings-label"),
+        DOM.div(
+            DOM.code(agent.mcp_server_url, style="font-size: 11px; color: var(--text-secondary);"),
             class="settings-input"
         ),
         class="settings-row"
@@ -316,25 +312,25 @@ function BonitoBook.settings_menu(agent::PromptingToolsAgent)
 
     # Edit system prompt button
     edit_prompt_button, edit_prompt_clicks = BonitoBook.SmallButton("edit")
-    edit_prompt_section = Bonito.DOM.div(
-        Bonito.DOM.div("System Prompt:", class="settings-label"),
-        Bonito.DOM.div(edit_prompt_button, class="settings-input"),
+    edit_prompt_section = DOM.div(
+        DOM.div("System Prompt:", class="settings-label"),
+        DOM.div(edit_prompt_button, class="settings-input"),
         class="settings-row"
     )
 
     # Apply button
     apply_button, apply_clicks = BonitoBook.SmallButton("check")
-    apply_section = Bonito.DOM.div(
-        Bonito.DOM.span("Apply Settings"),
+    apply_section = DOM.div(
+        DOM.span("Apply Settings"),
         apply_button,
         class="settings-apply-section"
     )
 
     # Main settings card
-    settings_card = Bonito.DOM.div(
+    settings_card = DOM.div(
         SettingsStyles,
-        Bonito.DOM.div(
-            Bonito.DOM.h3("PromptingTools Agent Settings", class="settings-title"),
+        DOM.div(
+            DOM.h3("PromptingTools Agent Settings", class="settings-title"),
             model_section,
             mcp_info_section,
             edit_prompt_section,
@@ -355,7 +351,8 @@ function BonitoBook.settings_menu(agent::PromptingToolsAgent)
 
     # Handle edit system prompt button
     Bonito.on(edit_prompt_clicks) do _
-        system_prompt_path = joinpath(agent.book.folder, "ai", "promptingtools-system-prompt.md")
+        # Initialize file for editing (creates folder/file if needed)
+        system_prompt_path = BonitoBook.initialize_file_for_editing(agent.book.folder, "ai/promptingtools-system-prompt.md")
         BonitoBook.open_file!(BonitoBook.get_file_editor(agent.book), system_prompt_path)
         @info "Opened system prompt in file editor: $system_prompt_path"
     end
@@ -365,12 +362,12 @@ end
 
 # Settings-specific styles (reusing from ClaudeCode extension)
 const SettingsStyles = BonitoBook.Styles(
-    BonitoBook.CSS(
+    CSS(
         ".settings-container",
         "max-width" => "500px",
         "margin" => "0 auto"
     ),
-    BonitoBook.CSS(
+    CSS(
         ".settings-title",
         "margin-top" => "0",
         "color" => "var(--text-primary)",
@@ -378,14 +375,14 @@ const SettingsStyles = BonitoBook.Styles(
         "font-size" => "18px",
         "margin-bottom" => "20px"
     ),
-    BonitoBook.CSS(
+    CSS(
         ".settings-row",
         "display" => "flex",
         "align-items" => "center",
         "margin-bottom" => "16px",
         "gap" => "12px"
     ),
-    BonitoBook.CSS(
+    CSS(
         ".settings-label",
         "font-size" => "13px",
         "color" => "var(--text-secondary)",
@@ -393,12 +390,12 @@ const SettingsStyles = BonitoBook.Styles(
         "text-align" => "left",
         "flex-shrink" => "0"
     ),
-    BonitoBook.CSS(
+    CSS(
         ".settings-input",
         "flex" => "1",
         "min-width" => "0"
     ),
-    BonitoBook.CSS(
+    CSS(
         ".settings-apply-section",
         "display" => "flex",
         "align-items" => "center",

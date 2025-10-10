@@ -24,16 +24,18 @@ end
 
 function create_widget(sym, data::AbstractVector{<:Real})
     s = Components.Slider(data)
-    return LabeledWidget(sym, s)
+    return LabeledWidget(sym, s.value, DOM.div(s, s.value, class="flex-row", style="gap: var(--spacing-sm); align-items: center;"))
 end
 
 function create_widget(sym, data::AbstractVector)
     if length(data) < 1000
-        s = Components.Dropdown(data)
+        w = Components.Dropdown(data)
+        c = w
     else
-        s = Components.Slider(data)
+        w = Components.Slider(data)
+        c = DOM.div(w, w.value, class="flex-row", style="gap: var(--spacing-sm); align-items: center;")
     end
-    return LabeledWidget(sym, s)
+    return LabeledWidget(sym, w.value, c)
 end
 
 function create_widget(sym, data::AbstractDict)
@@ -60,8 +62,6 @@ function symbols(bindings)
     return map(x -> x.args[1], bindings)
 end
 
-
-
 struct ManipulateWidgets
     widgets::Vector{Pair{Symbol, Any}}
     callback::Function
@@ -73,7 +73,7 @@ function Bonito.jsrender(s::Session, mw::ManipulateWidgets)
         return create_widget(name, input)
     end
     observies = map(x -> x.value, widgets)
-    init = map(to_value, observies)
+    init = map(Observables.to_value, observies)
     obs = Observable(Base.invokelatest(func, init...))
     l = Base.ReentrantLock()
     Bonito.onany(observies...) do args...
@@ -102,11 +102,10 @@ function Bonito.jsrender(s::Session, mw::ManipulateWidgets)
     )
 
     # Create main container
-    return Bonito.jsrender(s, DOM.div(
+    return Bonito.jsrender(s, Components.Card(DOM.div(
         controls,
         output,
-        class="manipulate-container"
-    ))
+    )))
 end
 
 
@@ -192,13 +191,3 @@ macro manipulate(for_expr)
     end
 end
 export @manipulate
-
-function Bonito.jsrender(s::Bonito.Session, value::Makie.GridLayoutSpec)
-    f, ax, pl = plot(value)
-    return Bonito.jsrender(s, f)
-end
-
-function Bonito.jsrender(s::Bonito.Session, value::Observable{Makie.GridLayoutSpec})
-    f, ax, pl = plot(value)
-    return Bonito.jsrender(s, f)
-end

@@ -109,7 +109,7 @@ bedit(func, types) =  (func, types)
 macro bedit(expr)
     quote
         func, types = $(InteractiveUtils.gen_call_with_extracted_types(__module__, bedit, expr))
-        book = $(__module__).@Book()
+        book = $(__module__).current_book()
         fe = BonitoBook.get_file_editor(book)
         file, line = InteractiveUtils.functionloc(func, types)
         BonitoBook.open_file!(fe, file; line=Int64(line))

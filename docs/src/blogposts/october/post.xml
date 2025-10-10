@@ -1,0 +1,11 @@
+<item>
+  <title>v0.2: Plugin System, Language Extensions & Simplified Styling</title>
+  <link>./blogposts/october</link>
+  <description>Major update introducing a powerful plugin system, extensible language evaluators,
+    and a completely redesigned styling architecture</description>
+  <pubDate>Fri, 10 Oct 2025 14:23:00</pubDate>
+  <!-- <bluesky></bluesky> -->
+  <image>
+    <url>./slideshow.mp4</url>
+  </image>
+</item>

@@ -3,20 +3,22 @@ using BonitoBook
 
 path = normpath(joinpath(dirname(pathof(BonitoBook)), "..", "docs", "examples"))
 
-for f in readdir(path; join=true)
-    if endswith(f, ".md")
-        # First replace all styles
-        name = basename(splitext(f)[1])
-        b = BonitoBook.Book(f; replace_style=name != "book-example")
-        zip_path = joinpath(path, "$(name).zip")
-        BonitoBook.export_zip(b, zip_path)
-        b2 = BonitoBook.Book(zip_path)
-        @test b2 isa Book
-        rm(zip_path, force=true)
-        rm(joinpath(path, name); force=true, recursive=true)
+mktempdir() do temppath
+    for f in readdir(path; join=true)
+        if endswith(f, ".md")
+            # First replace all styles
+            name = basename(splitext(f)[1])
+            replace_style = name in ["book-example", "draggable_example", "slideshow_example"]
+            b = BonitoBook.Book(f; replace_style=!replace_style)
+            zip_path = joinpath(temppath, "$(name).zip")
+            BonitoBook.export_zip(b, zip_path)
+            b2 = BonitoBook.Book(zip_path)
+            @test b2 isa Book
+            rm(zip_path, force=true)
+            rm(joinpath(path, name); force=true, recursive=true)
+        end
     end
 end
-
 
 # Actually run all cells in the book!
 InlineBook(joinpath(path, "intro.md"))

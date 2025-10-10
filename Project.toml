@@ -1,65 +1,61 @@
 name = "BonitoBook"
 uuid = "b416d416-7a6e-4336-8c1a-1f8a8cd59518"
-version = "0.1.0"
 authors = ["Simon Danisch"]
+version = "0.2.0"
 
 [deps]
 ANSIColoredPrinters = "a4c015fc-c6ff-483c-b24f-f7ea428134e9"
 Base64 = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
 Bonito = "824d6782-a2ef-11e9-3a09-e5662e0c26f8"
-CondaPkg = "992eb4ea-22a4-4c89-a5bb-47a3300528ab"
 Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
 FileWatching = "7b1f6079-737a-58dc-b8bc-7a2ca5c1b5ee"
 InteractiveUtils = "b77e0a4c-d291-57a0-90e8-8db25a27a240"
-JSON = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
 JSON3 = "0f8b85d8-7281-11e9-16c2-39a750bddbf1"
 Logging = "56ddb016-857b-54e1-b83d-db4d58db5568"
-Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
 Markdown = "d6f4376e-aef5-505a-96c1-9c027394607a"
+Observables = "510215fc-4207-5dde-b226-833fc4488ee2"
 Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
-PythonCall = "6099a3de-0909-46bc-b1f4-468b9a2dfc0d"
 REPL = "3fa0cd96-eef1-5676-8a61-b3b8758bbffb"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 TOML = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
 UUIDs = "cf7118a7-6976-5b1a-9a39-7adc72f591a4"
-WGLMakie = "276b4fcb-3e11-5398-bf8b-a0c2d153d008"
 ZipFile = "a5390f91-8eb1-5f08-bee0-b1d1ffed6cea"
 p7zip_jll = "3f19e933-33d8-53b3-aaab-bd5110c3b7a0"
 
 [weakdeps]
 AlgebraOfGraphics = "cbdf2221-f076-402e-a563-3d30da359d67"
 ClaudeCodeSDK = "38ea0fac-78ee-46bd-bc10-f52e7269b833"
+CondaPkg = "992eb4ea-22a4-4c89-a5bb-47a3300528ab"
+Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
 PromptingTools = "670122d1-24a8-4d70-bfce-740807c42192"
-
-[sources]
-Makie = {rev = "master", subdir = "Makie", url = "https://github.com/MakieOrg/Makie.jl.git"}
-WGLMakie = {rev = "master", subdir = "WGLMakie", url = "https://github.com/MakieOrg/Makie.jl.git"}
+PythonCall = "6099a3de-0909-46bc-b1f4-468b9a2dfc0d"
 
 [extensions]
 BonitoBookAlgebraOfGraphicsExt = "AlgebraOfGraphics"
 BonitoBookClaudeCodeExt = "ClaudeCodeSDK"
+BonitoBookMakieExt = "Makie"
 BonitoBookPromptingToolsExt = "PromptingTools"
+BonitoBookPythonCallExt = ["PythonCall", "CondaPkg"]
 
 [compat]
 ANSIColoredPrinters = "0.0.1"
 Base64 = "1"
 Bonito = "4.1.2"
 ClaudeCodeSDK = "0.1.0"
-CondaPkg = "0.2.29"
+CondaPkg = "0.2"
 Dates = "1"
 FileWatching = "1"
 InteractiveUtils = "1"
-JSON = "0.21.4"
 JSON3 = "1.14.3"
 Makie = "0.22.2, 0.23, 0.24"
 Markdown = "1"
+Observables = "0.5.5"
 Pkg = "1"
 PythonCall = "0.9.25"
 REPL = "1"
 Random = "1"
 TOML = "1"
 UUIDs = "1"
-WGLMakie = "0.11.2, 0.12, 0.13"
 ZipFile = "0.9, 0.10"
 julia = "1.10"
 p7zip_jll = "17"

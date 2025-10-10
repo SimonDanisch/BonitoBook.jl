@@ -1,79 +1,69 @@
-using PythonCall
+using Pkg
 
-mutable struct PythonRunner
-    globals::Py
-    locals::Py
-    function PythonRunner()
-        return new(PythonCall.pydict(), PythonCall.pydict())
-    end
-end
+"""
+Abstract base type for language evaluators.
+Implementations should define eval_code method.
+"""
+abstract type LanguageEval end
 
-global eval_python_code = nothing
+"""
+    eval_code(evaluator::LanguageEval, mod::Module, file::String, line::Int, source::String)
 
-function get_func()
-    if isnothing(eval_python_code)
-        pyexec(
-            """
-            import ast
-            import textwrap
+Evaluate source code using the given language evaluator.
 
-            def eval_python_code(source, globals_dict, locals_dict):
-                tree = ast.parse(source, mode="exec")
-                body = tree.body
-                n = len(body)
-                if n == 0:
-                    return None
+# Arguments
+- `evaluator`: The language-specific evaluator
+- `mod`: Module for code execution
+- `file`: Source file name (for error reporting)
+- `line`: Starting line number (for error reporting)
+- `source`: Source code to evaluate
 
-                exprs = body[:-1]
-                last_stmt = body[-1]
+# Returns
+Result of the code evaluation, or nothing if no result.
+"""
+function eval_code end
 
-                if exprs:
-                    init_code = textwrap.dedent("\\n".join(ast.unparse(stmt) for stmt in exprs))
-                    exec(init_code, globals_dict, locals_dict)
+"""
+    JuliaEval <: LanguageEval
 
-                if isinstance(last_stmt, ast.Expr):
-                    tail_expr = ast.unparse(last_stmt.value)
-                    return eval(tail_expr, globals_dict, locals_dict)
-                else:
-                    full_code = textwrap.dedent(source)
-                    exec(full_code, globals_dict, locals_dict)
-                    return None
-            """, Main
-        )
-        global eval_python_code = pyeval("eval_python_code", Main)
-    end
-    return eval_python_code
-end
+Julia code evaluator that uses Base.include_string for execution.
+"""
+struct JuliaEval <: LanguageEval end
 
-
-function transfer_python_vars(python_dict::Py, julia_module, var_type::String)
-    jl_dict = pyconvert(Dict, python_dict)
-    for key in keys(jl_dict)
-        key_str = string(key)
-        if !startswith(key_str, "_")  # Skip private variables
-            julia_symbol = Symbol(key_str)
-            if !hasproperty(julia_module, julia_symbol)
-                try
-                    value = jl_dict[key]
-                    @eval julia_module $julia_symbol = $value
-                catch e
-                    @warn "Could not transfer Python $var_type variable $key_str to Julia: " e
-                end
-            end
+function book_include(bookmodule, bookfile, bookfolder, include_file)
+    to_try = [
+        include_file,
+        joinpath(dirname(bookfile), include_file),
+        joinpath(bookfolder, include_file)
+    ]
+    for file in to_try
+        if isfile(file)
+            return Base._include(identity, bookmodule, abspath(file))
         end
     end
-    return
+    error("Cant include $(include_file)")
 end
 
-function eval_python_code_jl(runner::PythonRunner, mod, filename, start_line, python_source)
-    eval_py = get_func()  # Ensure eval_python_code is defined
-    result = eval_py(python_source, runner.globals, runner.locals)
-    # PythonCall.pyexec(python_source, runner.globals, runner.locals)
-    transfer_python_vars(runner.globals, mod, "global")
-    transfer_python_vars(runner.locals, mod, "local")
-    return result
+function eval_code(::JuliaEval, mod::Module, file::String, line::Int, source::String)
+    if startswith(source, "]")
+        Pkg.REPLMode.pkgstr(source[2:end])
+        return nothing
+    elseif startswith(source, "?")
+        sym = Base.eval(mod, Meta.parse(source[2:end]))
+        return Base.Docs.doc(sym)
+    elseif startswith(source, ";")
+        cmd = `$(split(source[2:end]))`
+        run(cmd)
+        return nothing
+    else
+        res = Base.include_string(mod, source)
+        if endswith(source, ";")
+            return nothing
+        else
+            return res
+        end
+    end
 end
-
 
 """
     MarkdownRunner
@@ -105,7 +95,7 @@ function parse_source(::MarkdownRunner, source)
                 elseif node.language == ""
                     return node
                 else
-                    editor = MonacoEditor(node.code; language = node.language, readOnly = true, lineNumbers = "off", editor_classes = ["markdown-inline-code"])
+                    editor = MonacoEditor(node.code; language=node.language, readOnly=true, lineNumbers="off", editor_classes=["markdown-inline-code"])
                     editor.js_init_func[] = js"""
                     (editor) => {
                         Promise.all([$(Monaco), editor.monaco, editor.editor]).then(([mod, monaco, e]) => {
@@ -136,23 +126,20 @@ end
 """
     AsyncRunner
 
-Asynchronous code execution runner that handles Julia and Python code evaluation in a separate thread.
+Asynchronous code execution runner that handles multi-language code evaluation in a separate thread.
 
 # Fields
 - `mod::Module`: Module for code execution
-- `python_runner::PythonRunner`: Python execution context
+- `project::String`: Project directory path
+- `language_evaluators::Dict{String, LanguageEval}`: Dictionary of language-specific evaluators
 - `task_queue::Channel{RunnerTask}`: Queue of tasks to execute
 - `thread::Task`: Background execution thread
 - `callback::Base.RefValue{Function}`: Result processing callback
-- `iochannel::Channel{Vector{UInt8}}`: IO redirection channel
-- `redirect_target::Base.RefValue{Observable{String}}`: Target for redirected output
-- `open::Threads.Atomic{Bool}`: Whether the runner is active
-- `global_logging_widget::Base.RefValue{Any}`: Global logging widget for output
 """
 struct AsyncRunner
     mod::Module
     project::String
-    python_runner::PythonRunner
+    language_evaluators::Dict{String,LanguageEval}
     task_queue::Channel{RunnerTask}
     thread::Task
     callback::Base.RefValue{Function}
@@ -166,6 +153,7 @@ function set_task_tid!(task::Task, tid::Integer)
     task.sticky = true
     return ccall(:jl_set_task_tid, Cint, (Any, Cint), task, tid - 1)
 end
+
 function spawnat(f, tid)
     task = Task(f)
     set_task_tid!(task, tid)
@@ -174,42 +162,75 @@ function spawnat(f, tid)
 end
 
 global LOGGING_OBS = []
+
+
 """
-    AsyncRunner(project::String, mod=Module(); callback=identity, spawn=false, global_logging_widget=nothing)
+    get_language_evaluators()
+
+Get dictionary of language evaluators, including extensions.
+Base implementation includes Julia, extensions are loaded via Base.get_extension.
+"""
+function get_language_evaluators()
+    evaluators = Dict{String,LanguageEval}()
+
+    for (lang_name, lang) in ALL_LANGUAGES
+        if lang.always_available
+            # Add always available languages
+            if lang_name == "julia"
+                evaluators[lang_name] = JuliaEval()
+            end
+        else
+            # Check if extension is loaded and get evaluator from it
+            if lang.extension_module !== nothing
+                ext = Base.get_extension(BonitoBook, lang.extension_module)
+                if ext !== nothing
+                    try
+                        evaluator = ext.get_language_evaluator()
+                        evaluators[lang_name] = evaluator
+                    catch e
+                        @warn "Failed to get language evaluator for $(lang_name) from extension $(lang.extension_module): $e"
+                    end
+                end
+            end
+        end
+    end
+    return evaluators
+end
+
+"""
+    AsyncRunner(project::String, mod=Module(); callback=identity, global_logger=Observable(""))
 
 Create a new asynchronous code runner.
 
 # Arguments
+- `project`: Project directory path
 - `mod`: Module for code execution (defaults to new module)
 - `callback`: Function to process results (defaults to identity)
-- `spawn`: Whether to spawn the task (defaults to false)
-- `global_logging_widget`: Global logging widget for output redirection after task completion
+- `global_logger`: Observable for global logging output
 
 # Returns
 Configured `AsyncRunner` instance ready for code execution.
 """
-function AsyncRunner(project::String, mod::Module = Module(gensym("BonitoBook")); callback = identity, global_logger = Observable(""))
-    python_runner = fetch(spawnat(()-> PythonRunner(), 1))
+function AsyncRunner(project::String, mod::Module=Module(gensym("BonitoBook")); callback=identity, global_logger=Observable(""))
+    language_evaluators = get_language_evaluators()
     task_queue = Channel{RunnerTask}(Inf)
     redirect_target = redirect_all_to_channel()
     redirect_target[] = global_logger
+
     taskref = spawnat(1) do
         for task in task_queue
             try
-                cd(project) do
-                    redirect_target[] = task.logging
-                    run!(mod, python_runner, task)
-                    println()
-                end
+                redirect_target[] = task.logging
+                run!(mod, language_evaluators, task)
+                println()
             catch e
                 @error "Error running code: $(task.source)" exception = (e, catch_backtrace())
             finally
-                sleep(0.5)
                 redirect_target[] = global_logger
             end
         end
     end
-    return AsyncRunner(mod, project, python_runner, task_queue, taskref, Base.RefValue{Function}(callback))
+    return AsyncRunner(mod, project, language_evaluators, task_queue, taskref, Base.RefValue{Function}(callback))
 end
 
 function interrupt!(runner::AsyncRunner)
@@ -248,6 +269,7 @@ run!(::Nothing, ::EvalEditor) = nothing
 
 function run!(runner::MarkdownRunner, editor::EvalEditor)
     editor.output[] = parse_source(runner, editor.source[])
+    editor.loading[] = false
     return
 end
 
@@ -259,11 +281,9 @@ function run_sync!(runner::MarkdownRunner, editor::EvalEditor)
 end
 
 function run_sync!(runner::AsyncRunner, editor::EvalEditor)
-    task = RunnerTask(editor.source[], editor.output, editor.logging, editor.language)
     fetch(spawnat(1) do
-        cd(runner.project) do
-            Base.invokelatest(run!, runner.mod, runner.python_runner, task)
-        end
+        task = RunnerTask(editor.source[], editor.output, editor.logging, editor.language)
+        Base.invokelatest(run!, runner.mod, runner.language_evaluators, task)
     end)
     return
 end
@@ -284,44 +304,21 @@ function run!(runner::AsyncRunner, editor::EvalEditor)
     return
 end
 
-function run!(mod::Module, python_runner::PythonRunner, task::RunnerTask)
+function run!(mod::Module, language_evaluators::Dict{String,LanguageEval}, task::RunnerTask)
     result = task.result
     source = task.source
     language = task.language
     try
-        if language == "python"
-            # Execute Python code
-            if startswith(source, "]add ")
-                packages = split(replace(source, "]add " => ""), " ")
-                CondaPkg.add(packages)
-                result[] = nothing
-            else
-                py_result = eval_python_code_jl(python_runner, mod, "", 1, source)
-                result[] = py_result
-            end
-        else
-            # Execute Julia code (default behavior)
-            if startswith(source, "]")
-                Pkg.REPLMode.pkgstr(source[2:end])
-                result[] = nothing
-            elseif startswith(source, "?")
-                sym = Base.eval(mod, Meta.parse(source[2:end]))
-                result[] = Base.Docs.doc(sym)
-            elseif startswith(source, ";")
-                cmd = `$(split(source[2:end]))`
-                run(cmd)
-                result[] = nothing
-            else
-                res = Base.include_string(mod, source)
-                if endswith(source, ";")
-                    result[] = nothing
-                else
-                    result[] = Base.invokelatest(book_display, res)
-                end
-            end
+        # Use language-specific evaluator
+        evaluator = get(language_evaluators, language, nothing)
+        if evaluator === nothing
+            help = get(ALL_LANGUAGES, language, (; activation_help="Language $(language) is not currently implemented. Check out docs to see how to add support for a new language."))
+            throw(ErrorException("No evaluator for language '$language' found. $(help.activation_help)"))
         end
+        eval_result = eval_code(evaluator, mod, "", 1, source)
+        result[] = Base.invokelatest(book_display, eval_result)
     catch e
-        result[] = InteractiveError(e, Base.catch_backtrace())
+        result[] = InteractiveError(e, Base.catch_backtrace(), Base.invokelatest(mod.current_book))
     end
     return
 end

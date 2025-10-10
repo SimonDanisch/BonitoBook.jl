@@ -37,15 +37,30 @@ function export_html(filename, book)
 end
 
 struct InlineBook
-    book::Book
+    book::AbstractBook
 end
 
-function InlineBook(path::String; replace_style::Bool = true)
-    book = Book(path; replace_style=replace_style)
+function run_all!(book::AbstractBook)
+    hasproperty(book, :book) && run_all!(book.book)
+    return book
+end
+
+function run_all!(book::Book)
     for cell in book.cells
         run_sync!(cell.editor)
     end
+    return book
+end
+
+function InlineBook(path::String; replace_style::Bool = false)
+    book = create_book(path; replace_style=replace_style)
+    run_all!(book)
     return InlineBook(book)
+end
+
+# Just render the whole book for any plugin
+function export_dom(::Session, book::AbstractBook)
+    return book
 end
 
 function Bonito.jsrender(session::Session, inline_book::InlineBook)
@@ -353,5 +368,5 @@ function import_zip(zip_path::String, target_dir::String="")
     run(`$(p7zip_jll.p7zip()) x -tzip -y -o$(target_dir) $(zip_path)`)
     book_file = joinpath(target_dir, basename(splitext(zip_path)[1]) * ".md")
     @info "Imported book from ZIP to: $book_file"
-    return book_file
+    return book_file, target_dir
 end

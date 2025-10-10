@@ -17,7 +17,9 @@ css_asset(files...) = Asset(asset_path("css", files...))
 include("components.jl")
 include("index.jl")
 include("examples.jl")
+include("howto.jl")
+include("blog.jl")
 
-export index, examples, add_example_routes!
+export index, examples, howto, blog, add_example_routes!, add_howto_routes!, add_blogposts!, all_posts
 
 end

@@ -1,21 +1,6 @@
 const Monaco = ES6Module(joinpath(@__DIR__, "javascript", "Monaco.js"))
 
-# TODO, this better not be a global, but rather part of `Book`
-# Cant be `Observable("default")`, since for a global compiled into the
-# Pkg image, it will always end up with ID 1, like any global observable from another Package -.-
-const MONACO_THEME = Observable{String}[]
 
-function get_monaco_theme()
-    if isempty(MONACO_THEME)
-        push!(MONACO_THEME, Observable("default"))
-    end
-    return MONACO_THEME[1]
-end
-
-function monaco_theme!(name::String)
-    obs = get_monaco_theme()
-    return obs[] = name
-end
 
 """
     ToggleButton(icon_name, obs_to_toggle)
@@ -64,14 +49,14 @@ struct MonacoEditor
     options::Dict{Symbol, Any}
     js_init_func::Base.RefValue{Bonito.JSCode}
     editor_classes::Vector{String}
-    theme::String
+    theme::Observable{String}
     hiding_direction::String
     init_visible::Bool
 end
 
 function MonacoEditor(
         source;
-        js_init_func = nothing, theme = "default", hiding_direction = "horizontal",
+        js_init_func = nothing, theme = Observable("default"), hiding_direction = "horizontal",
         show_editor = true, editor_classes = String[], options...
     )
     defaults = Dict{Symbol, Any}(
@@ -120,8 +105,8 @@ function Bonito.jsrender(session::Session, editor::MonacoEditor)
     end
     eclasses = join(classes, " ")
     editor_div = DOM.div(class = "monaco-editor-div $(eclasses)")
-    # needs a return statement to actually return a function
-    theme = copy(get_monaco_theme())
+    # Use the editor's theme observable instead of global
+    theme = editor.theme
     return Bonito.jsrender(
         session, DOM.div(
             editor_div,
@@ -183,6 +168,7 @@ struct EvalEditor
     loading::Observable{Bool}
     language::String
     resize_to_lines::Bool
+    markdown_focus_edit::Observable{Bool}  # Controls click-to-edit for markdown cells
 end
 
 function process_message(editor::EvalEditor, message::Dict)
@@ -252,10 +238,13 @@ function EvalEditor(
         editor_classes = String[],
         container_classes = String[],
         resize_to_lines = true,
+        markdown_focus_edit = nothing,  # Auto-detect if nothing provided
+        theme = Observable("default"),
         options...
     )
     js_init_func = isnothing(js_init_func) ? js"() => {}" : js_init_func
-    editor = MonacoEditor(source; language = language, show_editor = show_editor, editor_classes = editor_classes, options...)
+
+    editor = MonacoEditor(source; language = language, show_editor = show_editor, editor_classes = editor_classes, theme = theme, options...)
     loading = Observable(false)
     js_to_julia = Observable(Dict{String, Any}())
     julia_to_js = Observable(Dict{String, Any}())
@@ -272,6 +261,13 @@ function EvalEditor(
             logging_html[] = logging_html[] * str
         end
     end
+    # Initialize markdown_focus_edit based on parameter or auto-detect
+    markdown_focus_edit_obs = if isnothing(markdown_focus_edit)
+        Observable(language == "markdown")
+    else
+        Observable(markdown_focus_edit)
+    end
+
     editor = EvalEditor(
         editor,
         Base.RefValue(js_init_func),
@@ -290,7 +286,8 @@ function EvalEditor(
         show_editor_obs,
         loading,
         language,
-        resize_to_lines
+        resize_to_lines,
+        markdown_focus_edit_obs
     )
     on(js_to_julia) do message
         process_message(editor, message)
@@ -311,7 +308,7 @@ function render_editor(editor::EvalEditor)
     output_div = DOM.div(editor.output, class = map(c -> "cell-output cell-output-$(editor.language) $(c)", output_class))
     logging_html = Observable(HTML(""))
     on(editor.logging_html) do str
-        logging_html[] = HTML(str)
+        logging_html[] = HTML("<pre>" * str * "</pre>")
     end
     logging_div = DOM.div(ANSI_CSS, DOM.div(logging_html, class = logging_class))
     # Set the init func, which we can only do here where we have all divs
@@ -335,6 +332,27 @@ end
 function Bonito.jsrender(session::Session, editor::EvalEditor)
     elems = render_editor(editor)
     return Bonito.jsrender(session, DOM.div(elems...))
+end
+
+"""
+    Base.close(editor::EvalEditor)
+
+Clean up all observables and resources associated with an EvalEditor.
+"""
+function Base.close(editor::EvalEditor)
+    Observables.clear(editor.js_to_julia)
+    Observables.clear(editor.julia_to_js)
+    Observables.clear(editor.source)
+    Observables.clear(editor.output)
+    Observables.clear(editor.logging)
+    Observables.clear(editor.logging_html)
+    Observables.clear(editor.show_logging)
+    Observables.clear(editor.show_output)
+    Observables.clear(editor.show_editor)
+    Observables.clear(editor.loading)
+    Observables.clear(editor.markdown_focus_edit)
+    Observables.clear(editor.editor.theme)
+    return nothing
 end
 
 """
@@ -373,14 +391,14 @@ Create an interactive cell editor with code execution capabilities.
 # Returns
 Configured `CellEditor` instance ready for interactive use.
 """
-function CellEditor(content, language, runner; show_editor = true, show_logging = false, show_output = true)
+function CellEditor(content, language, runner; show_editor = true, show_logging = false, show_output = true, theme = Observable("default"))
     runner = language == "markdown" ? MarkdownRunner() : runner
     uuid = string(UUIDs.uuid4())
 
     jleditor = EvalEditor(
         content, runner;
         show_editor = show_editor, show_logging = show_logging, language = language,
-        show_output = show_output,
+        show_output = show_output, theme = theme,
         tabCompletion = "on"
     )
 
@@ -398,6 +416,22 @@ function CellEditor(content, language, runner; show_editor = true, show_logging 
         language, jleditor,
         uuid, Observable(false), focused
     )
+end
+
+"""
+    Base.close(editor::CellEditor)
+
+Clean up all observables and resources associated with a CellEditor.
+"""
+function Base.close(editor::CellEditor)
+    # Clean up the underlying EvalEditor
+    close(editor.editor)
+
+    # Clean up CellEditor-specific observables
+    Observables.clear(editor.delete_self)
+    Observables.clear(editor.focused)
+
+    return nothing
 end
 
 function Bonito.jsrender(session::Session, editor::CellEditor)
@@ -423,7 +457,7 @@ function Bonito.jsrender(session::Session, editor::CellEditor)
     container_id = "$(editor.uuid)-container"
     card_content_id = "$(editor.uuid)-card-content"
     any_loading = jleditor.loading
-    hide_on_focus_obs = Observable(editor.language == "markdown")
+    hide_on_focus_obs = editor.editor.markdown_focus_edit
     any_visible = map(|, jleditor.show_editor, jleditor.show_logging)
 
     editor.editor.js_init_func[] = js"""
@@ -443,11 +477,7 @@ function Bonito.jsrender(session::Session, editor::CellEditor)
     hover_buttons = DOM.div(show_editor, show_logging, out, delete_editor; class = "hover-buttons", id = hover_id)
 
     # Create small always-visible language indicator positioned in bottom right
-    names = Dict(
-        "julia" => "julia-logo",
-        "markdown" => "markdown",
-        "python" => "python-logo",
-    )
+    names = Dict(lang_name => lang.icon for (lang_name, lang) in ALL_LANGUAGES)
     name = get(names, editor.language, "file-code")
     small_language_indicator = icon(name, size = "10px", class = "small-language-icon")
 
