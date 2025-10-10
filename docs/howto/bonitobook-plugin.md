@@ -81,36 +81,6 @@ using SomeExistingPlugin
 3. **create_book Function**: Define a `create_book(book::BonitoBook.Book; kwargs...)` function that returns your custom book instance
 4. **Rendering**: Implement `Bonito.jsrender(session::Session, your_book::YourBookType)` for custom display logic
 
-## Migration from Constructor-based Plugins
-
-If you have an existing plugin using the constructor approach:
-
-**Old (deprecated):**
-
-```julia
-struct MyBook <: BonitoBook.AbstractBook
-    book::BonitoBook.Book
-
-    function MyBook(book::BonitoBook.Book)
-        # initialization logic
-        return new(book)
-    end
-end
-```
-
-**New (recommended):**
-
-```julia
-struct MyBook <: BonitoBook.AbstractBook
-    book::BonitoBook.Book
-end
-
-function create_book(book::BonitoBook.Book; kwargs...)
-    # initialization logic
-    return MyBook(book)
-end
-```
-
 ## Adding Styles
 
 Styles are lazy-loaded: the base `style.jl` comes from templates. Add custom styles on top:
@@ -185,4 +155,3 @@ book("my-plugin.md"; theme="dark", enable_animations=true)
 The Book constructor arguments (`folder`, `replace_style`, `all_blocks_as_cell`) are handled automatically, while any additional kwargs are forwarded to your plugin's `create_book` function.
 
 You can also use `Book`/`book(file; folder=plugin_folder)` to use a different bonitobook folder for a notebook file. This will likely get more streamlined in the future, making it easier to share plugins with the community.
-

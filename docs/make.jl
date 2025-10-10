@@ -19,11 +19,14 @@ function create_routes()
         "/" => App(Website.index, title="BonitoBook"),
         "/examples" => App(Website.examples, title="Examples"),
         "/howto" => App(Website.howto, title="How-To Guides"),
+        "/blog" => App(Website.blog, title="Blog"),
     )
     # Add individual example pages
     Website.add_example_routes!(routes)
     # Add individual how-to pages
     Website.add_howto_routes!(routes)
+    # Add individual blog posts
+    Website.add_blogposts!(routes)
     return routes
 end
 
@@ -32,6 +35,11 @@ dir = joinpath(@__DIR__, "build")
 !isdir(dir) && mkdir(dir)
 Bonito.export_static(dir, create_routes())
 using BonitoSites
+
+# Generate RSS feed
+rss_path = joinpath(dir, "rss.xml")
+entries = last.(Website.all_posts())
+BonitoSites.generate_rss_feed(entries, rss_path; title, link, description, relative_path="./website/")
 
 # Deploy to GitHub Pages
 BonitoSites.deploy(

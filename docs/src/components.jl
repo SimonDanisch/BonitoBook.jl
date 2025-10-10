@@ -50,7 +50,8 @@ function Page(content, title::String="BonitoBook")
     navbar = NavBar([
         "Home" => "/",
         "Examples" => "/examples",
-        "How-To" => "/howto"
+        "How-To" => "/howto",
+        "Blog" => "/blog"
     ])
 
     return DOM.div(

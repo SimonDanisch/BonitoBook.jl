@@ -18,7 +18,8 @@ include("components.jl")
 include("index.jl")
 include("examples.jl")
 include("howto.jl")
+include("blog.jl")
 
-export index, examples, howto, add_example_routes!, add_howto_routes!
+export index, examples, howto, blog, add_example_routes!, add_howto_routes!, add_blogposts!, all_posts
 
 end

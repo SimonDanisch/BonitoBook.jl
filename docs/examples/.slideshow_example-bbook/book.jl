@@ -6,26 +6,59 @@ using Bonito, BonitoBook
 
 struct SlideshowBook <: BonitoBook.AbstractBook
     book::BonitoBook.Book
-    function SlideshowBook(book::BonitoBook.Book)
-        return new(book)
+    branding_text::String
+    branding_logo::Union{String, Nothing}
+    footer_text::String
+
+    function SlideshowBook(book::BonitoBook.Book; branding_text="", branding_logo=nothing, footer_text="")
+        return new(book, branding_text, branding_logo, footer_text)
     end
 end
 
 """
-    create_book(book::BonitoBook.Book; kwargs...)
+    create_book(book::BonitoBook.Book; branding_text="", branding_logo=nothing, footer_text="", kwargs...)
 
 Create a SlideshowBook instance from a BonitoBook.Book.
+
+# Arguments
+- `branding_text::String=""`: Text to display in the branding area (top-right corner)
+- `branding_logo::Union{String, Nothing}=nothing`: Path to a logo file to display next to branding text
+- `footer_text::String=""`: Text to display in the footer (bottom of slides)
+
+# Example
+For a Makie-themed presentation:
+```julia
+create_book(book;
+    branding_text="Makie.jl",
+    branding_logo=joinpath(@__DIR__, "logo.svg"),
+    footer_text="Interactive Data Visualization"
+)
+```
+
+For a generic presentation (no branding):
+```julia
+create_book(book)  # Uses empty defaults
+```
 """
-function create_book(book::BonitoBook.Book; kwargs...)
+function create_book(book::BonitoBook.Book; branding_text="", branding_logo=nothing, footer_text="", kwargs...)
+    # For this Makie-specific example, set default branding if not provided
+    # Other users can override by passing empty strings or their own values
+    if isempty(branding_text) && isnothing(branding_logo) && isempty(footer_text)
+        # This is the Makie example - use Makie branding by default
+        logo_path = joinpath(dirname(@__FILE__), "logo.svg")
+        branding_text = "Makie.jl"
+        branding_logo = isfile(logo_path) ? logo_path : nothing
+        footer_text = "Interactive Data Visualization"
+    end
+
     # Disable markdown click-to-edit for all markdown cells in slideshow mode
     for cell in book.cells
         if cell.language == "markdown"
             cell.editor.markdown_focus_edit[] = false
         end
     end
-
     # Set up presentation style evaluation
-    return SlideshowBook(book)
+    return SlideshowBook(book; branding_text, branding_logo, footer_text)
 end
 
 function Bonito.jsrender(session::Session, slideshow::SlideshowBook)
@@ -239,20 +272,25 @@ function Bonito.jsrender(session::Session, slideshow::SlideshowBook)
     elements = BonitoBook.standard_setup!(session, book)
 
     # Get presentation styles (will be re-evaluated if file changes)
-    # Add branding elements with logo
-    logo_path = joinpath(dirname(@__FILE__), "logo.svg")
-    logo = isfile(logo_path) ? DOM.img(src=Asset(logo_path), style="height: 24px; margin-right: 8px;") : ""
-    branding = DOM.div(logo, "Makie.jl", class="slideshow-branding")
-    footer = DOM.div("Interactive Data Visualization", class="slideshow-footer")
+    # Add branding elements with optional logo
+    branding_elements = []
+    if !isnothing(slideshow.branding_logo) && isfile(slideshow.branding_logo)
+        push!(branding_elements, DOM.img(src=Asset(slideshow.branding_logo), style="height: 24px; margin-right: 8px;"))
+    end
+    if !isempty(slideshow.branding_text)
+        push!(branding_elements, slideshow.branding_text)
+    end
+    branding = isempty(branding_elements) ? nothing : DOM.div(branding_elements..., class="slideshow-branding")
+
+    # Add footer if text is provided
+    footer = isempty(slideshow.footer_text) ? nothing : DOM.div(slideshow.footer_text, class="slideshow-footer")
 
     # Wrap everything in a presentation-themed container for higher CSS specificity
     presentation_wrapper = DOM.div(
         elements, final_container, branding, footer,
         class="presentation-themed-slideshow"
     )
-
     return Bonito.jsrender(session, presentation_wrapper)
 end
-
 
 end
