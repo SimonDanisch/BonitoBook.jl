@@ -11,11 +11,14 @@ function generate_style(book;
         transition_fast = "0.1s ease-out",
         transition_slow = "0.2s ease-in",
         font_family_clean = "'Inter', 'Roboto', 'Arial', sans-serif",
+        spacing_xxs = "0.125rem",
         spacing_xs = "0.25rem",
         spacing_sm = "0.5rem",
         spacing_md = "0.75rem",
         spacing_lg = "1rem",
         spacing_xl = "1.25rem",
+        shadow_blur_sm = "3px",
+        shadow_blur_md = "10px",
         font_size_xs = "0.75rem",
         font_size_sm = "0.8125rem",
         font_size_base = "0.875rem",
@@ -38,13 +41,13 @@ function generate_style(book;
         text_secondary_light = "#555555",
         border_primary_light = "rgba(0, 0, 0, 0.1)",
         border_secondary_light = "#ccc",
-        shadow_soft_light = "0 0 4px rgba(0, 0, 51, 0.2)",
-        shadow_button_light = "0 1px 3px rgba(0, 0, 0, 0.2)",
-        shadow_inset_light = "inset 1px 1px 3px rgba(0, 0, 0, 0.2)",
+        shadow_color_soft_light = "rgba(0, 0, 51, 0.2)",
+        shadow_color_button_light = "rgba(0, 0, 0, 0.2)",
+        shadow_color_inset_light = "rgba(0, 0, 0, 0.2)",
+        glow_color_light = "rgba(0, 150, 51, 0.8)",
         hover_bg_light = "#ddd",
         menu_hover_bg_light = "rgba(0, 0, 0, 0.05)",
         accent_blue_light = "#0366d6",
-        animation_glow_light = "0 0 10px rgba(0, 150, 51, 0.8)",
         icon_color_light = "#666666",
         icon_hover_color_light = "#333333",
         icon_filter_light = "none",
@@ -57,13 +60,13 @@ function generate_style(book;
         text_secondary_dark = "rgb(212, 212, 212)",
         border_primary_dark = "rgba(255, 255, 255, 0.1)",
         border_secondary_dark = "rgba(255, 255, 255, 0.1)",
-        shadow_soft_dark = "0 0 4px rgba(255, 255, 255, 0.2)",
-        shadow_button_dark = "0 1px 3px rgba(255, 255, 255, 0.2)",
-        shadow_inset_dark = "inset 1px 1px 2px rgba(0, 0, 0, 0.5)",
+        shadow_color_soft_dark = "rgba(255, 255, 255, 0.2)",
+        shadow_color_button_dark = "rgba(255, 255, 255, 0.2)",
+        shadow_color_inset_dark = "rgba(0, 0, 0, 0.5)",
+        glow_color_dark = "rgba(10, 155, 55, 0.5)",
         hover_bg_dark = "rgba(255, 255, 255, 0.1)",
         menu_hover_bg_dark = "rgba(255, 255, 255, 0.05)",
         accent_blue_dark = "#0366d6",
-        animation_glow_dark = "0 0 20px rgba(10, 155, 55, 0.5)",
         icon_color_dark = "#cccccc",
         icon_hover_color_dark = "#ffffff",
         icon_filter_dark = "invert(1)",
@@ -135,11 +138,15 @@ function generate_style(book;
                 "--transition-slow" => transition_slow,
                 "--font-family-clean" => font_family_clean,
                 # Common spacing
+                "--spacing-xxs" => spacing_xxs,
                 "--spacing-xs" => spacing_xs,
                 "--spacing-sm" => spacing_sm,
                 "--spacing-md" => spacing_md,
                 "--spacing-lg" => spacing_lg,
                 "--spacing-xl" => spacing_xl,
+                # Shadow-specific blur sizes
+                "--shadow-blur-sm" => shadow_blur_sm,
+                "--shadow-blur-md" => shadow_blur_md,
                 # Typography
                 "--font-size-xs" => font_size_xs,
                 "--font-size-sm" => font_size_sm,
@@ -160,6 +167,13 @@ function generate_style(book;
                 "--z-menu" => z_menu,
                 "--z-popup" => z_popup,
                 "--z-popup-close" => z_popup_close,
+                # Reusable box-shadow patterns (use theme-specific color variables)
+                "--shadow-soft" => "0 0 var(--spacing-xs) 0 var(--shadow-color-soft)",
+                "--shadow-button" => "0 1px var(--shadow-blur-sm) 0 var(--shadow-color-button)",
+                "--shadow-inset" => "inset 1px 1px var(--shadow-blur-sm) 0 var(--shadow-color-inset)",
+                "--shadow-focus" => "0 0 0 var(--spacing-xss) var(--shadow-color-soft)",
+                "--shadow-glow" => "0 0 var(--spacing-xs) 0 var(--accent-blue)",
+                "--shadow-glow-animation" => "0 0 var(--shadow-blur-md) 0 var(--glow-color)",
             )
         ),
         layout_variables
@@ -209,13 +223,13 @@ function generate_style(book;
                     "--text-secondary" => text_secondary_light,
                     "--border-primary" => border_primary_light,
                     "--border-secondary" => border_secondary_light,
-                    "--shadow-soft" => shadow_soft_light,
-                    "--shadow-button" => shadow_button_light,
-                    "--shadow-inset" => shadow_inset_light,
+                    "--shadow-color-soft" => shadow_color_soft_light,
+                    "--shadow-color-button" => shadow_color_button_light,
+                    "--shadow-color-inset" => shadow_color_inset_light,
+                    "--glow-color" => glow_color_light,
                     "--hover-bg" => hover_bg_light,
                     "--menu-hover-bg" => menu_hover_bg_light,
                     "--accent-blue" => accent_blue_light,
-                    "--animation-glow" => animation_glow_light,
                     "--icon-color" => icon_color_light,
                     "--icon-hover-color" => icon_hover_color_light,
                     "--icon-filter" => icon_filter_light,
@@ -236,13 +250,13 @@ function generate_style(book;
                     "--text-secondary" => text_secondary_dark,
                     "--border-primary" => border_primary_dark,
                     "--border-secondary" => border_secondary_dark,
-                    "--shadow-soft" => shadow_soft_dark,
-                    "--shadow-button" => shadow_button_dark,
-                    "--shadow-inset" => shadow_inset_dark,
+                    "--shadow-color-soft" => shadow_color_soft_dark,
+                    "--shadow-color-button" => shadow_color_button_dark,
+                    "--shadow-color-inset" => shadow_color_inset_dark,
+                    "--glow-color" => glow_color_dark,
                     "--hover-bg" => hover_bg_dark,
                     "--menu-hover-bg" => menu_hover_bg_dark,
                     "--accent-blue" => accent_blue_dark,
-                    "--animation-glow" => animation_glow_dark,
                     "--icon-color" => icon_color_dark,
                     "--icon-hover-color" => icon_hover_color_dark,
                     "--icon-filter" => icon_filter_dark,
@@ -474,7 +488,7 @@ function generate_style(book;
         # Cell editor focus highlight - target elements that have both classes
         CSS(
             ".cell-editor.focused",
-            "box-shadow" => "0 0 4px var(--accent-blue)",
+            "box-shadow" => "var(--shadow-glow)",
         ),
 
         # Logging output
@@ -563,7 +577,7 @@ function generate_style(book;
         CSS(
             "@keyframes shadow-pulse",
             CSS("0%", "box-shadow" => "var(--shadow-soft)"),
-            CSS("50%", "box-shadow" => "var(--animation-glow)"),
+            CSS("50%", "box-shadow" => "var(--shadow-glow-animation)"),
             CSS("100%", "box-shadow" => "var(--shadow-soft)")
         ),
 
@@ -1156,7 +1170,7 @@ function generate_style(book;
             "flex-direction" => "column",
             "border-left" => "1px solid var(--border-primary)",
             "border-radius" => "8px 0 0 8px",
-            "box-shadow" => "-4px 0 8px rgba(0, 0, 0, 0.1)"
+            "box-shadow" => "-var(--spacing-xs) 0 var(--spacing-sm) 0 var(--shadow-color-soft)"
         ),
         CSS(
             ".sidebar-content-container.collapsed",
@@ -1353,28 +1367,29 @@ function generate_style(book;
             "font-weight" => "500",
             "cursor" => "pointer",
             "transition" => "all var(--transition-slow)",
-            "box-shadow" => "0 1px 3px rgba(0, 0, 0, 0.1)",
+            "box-shadow" => "var(--shadow-button)",
             "min-width" => "80px",
             "display" => "inline-flex",
             "align-items" => "center",
-            "justify-content" => "center"
+            "justify-content" => "center",
+            "background-color" => "var(--bg-primary)",
+            "color" => "var(--text-primary)"
         ),
         CSS(
             ".bonitobook-button:hover",
             "background-color" => "var(--hover-bg)",
             "border-color" => "var(--accent-blue)",
-            "box-shadow" => "0 2px 6px rgba(0, 0, 0, 0.15)"
         ),
         CSS(
             ".bonitobook-button:focus",
             "outline" => "none",
             "border-color" => "var(--accent-blue)",
-            "box-shadow" => "0 0 0 2px rgba(3, 102, 214, 0.2)"
+            "box-shadow" => "var(--shadow-focus)"
         ),
         CSS(
             ".bonitobook-button:active",
             "transform" => "translateY(1px)",
-            "box-shadow" => "0 1px 2px rgba(0, 0, 0, 0.1)"
+            "box-shadow" => "0 var(--spacing-xs) var(--spacing-sm) 0 var(--shadow-color-button)"
         ),
 
         # Input field styling
@@ -1386,7 +1401,9 @@ function generate_style(book;
             "font-size" => "var(--font-size-base)",
             "transition" => "all var(--transition-slow)",
             "outline" => "none",
-            "width" => "100%"
+            "width" => "100%",
+            "background-color" => "var(--bg-primary)",
+            "color" => "var(--text-primary)"
         ),
         CSS(
             ".bonitobook-input:hover",
@@ -1395,7 +1412,7 @@ function generate_style(book;
         CSS(
             ".bonitobook-input:focus",
             "border-color" => "var(--accent-blue)",
-            "box-shadow" => "0 0 0 2px rgba(3, 102, 214, 0.2)"
+            "box-shadow" => "var(--shadow-focus)"
         ),
         CSS(
             ".bonitobook-input:disabled",
@@ -1427,7 +1444,7 @@ function generate_style(book;
             ".bonitobook-checkbox:focus",
             "outline" => "none",
             "border-color" => "var(--accent-blue)",
-            "box-shadow" => "0 0 0 2px rgba(3, 102, 214, 0.2)"
+            "box-shadow" => "var(--shadow-focus)"
         ),
         CSS(
             ".bonitobook-checkbox:checked",
@@ -1462,7 +1479,9 @@ function generate_style(book;
             "background-repeat" => "no-repeat",
             "background-position" => "right 12px center",
             "background-size" => "12px",
-            "padding-right" => "36px"
+            "padding-right" => "36px",
+            "background-color" => "var(--bg-primary)",
+            "color" => "var(--text-primary)"
         ),
         CSS(
             ".bonitobook-dropdown:hover",
@@ -1471,7 +1490,7 @@ function generate_style(book;
         CSS(
             ".bonitobook-dropdown:focus",
             "border-color" => "var(--accent-blue)",
-            "box-shadow" => "0 0 0 2px rgba(3, 102, 214, 0.2)"
+            "box-shadow" => "var(--shadow-focus)"
         ),
 
         # Light theme dropdown arrow
@@ -1491,7 +1510,17 @@ function generate_style(book;
                 "background-image" => "url('data:image/svg+xml;charset=US-ASCII,<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 4 5\"><path fill=\"%23ccc\" d=\"M2 0L0 2h4zm0 5L0 3h4z\"/></svg>')"
             )
         ),
-
+        CSS(
+            ".bonitobook-card",
+            "background-color" => "var(--bg-primary)",
+            "color" => "var(--text-primary)",
+            "padding" => "var(--spacing-sm)",
+            "margin" => "var(--spacing-sm)",
+            "border" => "1px solid var(--border-secondary)",
+            "border-radius" => "var(--spacing-sm)",
+            "box-shadow" => "var(--shadow-soft)",
+            "overflow" => "hidden"
+        ),
         # Slider styling
         CSS(
             ".bonitobook-slider",
@@ -1514,14 +1543,14 @@ function generate_style(book;
             "border-radius" => "50%",
             "background" => "var(--accent-blue)",
             "cursor" => "pointer",
-            "border" => "2px solid var(--bg-primary)",
-            "box-shadow" => "0 2px 6px rgba(0, 0, 0, 0.2)",
+            "border" => "1px solid var(--bg-primary)",
+            "box-shadow" => "0 var(--spacing-xxs) var(--spacing-xxs) 0 var(--shadow-color-button)",
             "transition" => "all 0.2s ease"
         ),
         CSS(
             ".bonitobook-slider::-webkit-slider-thumb:hover",
             "transform" => "scale(1.1)",
-            "box-shadow" => "0 3px 8px rgba(0, 0, 0, 0.3)"
+            "box-shadow" => "0 var(--spacing-xxs) var(--spacing-xs) 0 var(--shadow-color-button)"
         ),
         CSS(
             ".bonitobook-slider::-moz-range-thumb",
@@ -1531,7 +1560,7 @@ function generate_style(book;
             "background" => "var(--accent-blue)",
             "cursor" => "pointer",
             "border" => "2px solid var(--bg-primary)",
-            "box-shadow" => "0 2px 6px rgba(0, 0, 0, 0.2)",
+            "box-shadow" => "0 var(--spacing-xxs) 6px 0 var(--shadow-color-button)",
             "transition" => "all 0.2s ease"
         ),
         CSS(
@@ -1548,7 +1577,7 @@ function generate_style(book;
         ),
         CSS(
             ".bonitobook-slider:focus::-webkit-slider-thumb",
-            "box-shadow" => "0 0 0 2px rgba(3, 102, 214, 0.2), 0 2px 6px rgba(0, 0, 0, 0.2)"
+            "box-shadow" => "var(--shadow-focus), 0 var(--spacing-xxs) 6px 0 var(--shadow-color-button)"
         ),
 
         # Manipulate widget styling
@@ -1614,7 +1643,7 @@ function generate_style(book;
             "background-size" => "40px 100%",
             "animation" => "spinner-stripes 1.5s linear infinite",
             "border-radius" => "4px",
-            "box-shadow" => "0 0 8px rgba(3, 102, 214, 0.2)"
+            "box-shadow" => "0 0 var(--spacing-sm) 0 var(--shadow-color-soft)"
         ),
         CSS(
             "@keyframes spinner-stripes",
@@ -1629,7 +1658,7 @@ function generate_style(book;
         # Cell editor focus highlight - target elements that have both classes
         CSS(
             ".cell-editor.focused",
-            "box-shadow" => "0 0 4px var(--accent-blue)",
+            "box-shadow" => "var(--shadow-glow)",
         ),
 
         # Interactive Error Display Styling
@@ -1639,7 +1668,7 @@ function generate_style(book;
             "border-radius" => "var(--spacing-sm)",
             "padding" => "16px",
             "margin" => "8px 0",
-            "box-shadow" => "0 2px 8px rgba(220, 53, 69, 0.15)"
+            "box-shadow" => "0 var(--spacing-xxs) var(--spacing-sm) 0 var(--shadow-color-soft)"
         ),
 
         # Error message styling

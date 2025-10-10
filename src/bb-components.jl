@@ -8,265 +8,8 @@ module Components
 
 using Bonito
 
-export Button, Card, Checkbox, Dropdown, NumberInput, Slider
 
-# Define global widget styles that use CSS variables
-const WIDGET_STYLES = Styles(
-    CSS(
-        ".bonitobook-button",
-        "background-color" => "var(--bg-primary)",
-        "color" => "var(--text-primary)",
-        "border" => "1px solid var(--border-secondary)",
-        "border-radius" => "6px",
-        "padding" => "8px 16px",
-        "margin" => "4px",
-        "font-size" => "14px",
-        "font-weight" => "500",
-        "cursor" => "pointer",
-        "transition" => "all 0.2s ease",
-        "box-shadow" => "0 1px 3px rgba(0, 0, 0, 0.1)",
-        "min-width" => "80px",
-        "display" => "inline-flex",
-        "align-items" => "center",
-        "justify-content" => "center",
-        "font-family" => "inherit"
-    ),
-    CSS(
-        ".bonitobook-button:hover",
-        "background-color" => "var(--hover-bg)",
-        "border-color" => "var(--accent-blue)",
-        "box-shadow" => "0 2px 6px rgba(0, 0, 0, 0.15)"
-    ),
-    CSS(
-        ".bonitobook-button:focus",
-        "outline" => "none",
-        "border-color" => "var(--accent-blue)",
-        "box-shadow" => "0 0 0 2px rgba(3, 102, 214, 0.2)"
-    ),
-    CSS(
-        ".bonitobook-button:active",
-        "transform" => "translateY(1px)",
-        "box-shadow" => "0 1px 2px rgba(0, 0, 0, 0.1)"
-    )
-)
 
-const INPUT_STYLES = Styles(
-    CSS(
-        ".bonitobook-input",
-        "background-color" => "var(--bg-primary)",
-        "color" => "var(--text-primary)",
-        "border" => "1px solid var(--border-secondary)",
-        "border-radius" => "6px",
-        "padding" => "8px 12px",
-        "margin" => "4px",
-        "font-size" => "14px",
-        "font-family" => "inherit",
-        "transition" => "all 0.2s ease",
-        "outline" => "none",
-        "width" => "calc(100% - 8px)",
-        "box-sizing" => "border-box"
-    ),
-    CSS(
-        ".bonitobook-input:hover",
-        "border-color" => "var(--accent-blue)"
-    ),
-    CSS(
-        ".bonitobook-input:focus",
-        "border-color" => "var(--accent-blue)",
-        "box-shadow" => "0 0 0 2px rgba(3, 102, 214, 0.2)"
-    ),
-    CSS(
-        ".bonitobook-input:disabled",
-        "background-color" => "var(--hover-bg)",
-        "color" => "var(--text-secondary)",
-        "cursor" => "not-allowed"
-    )
-)
-
-const CHECKBOX_STYLES = Styles(
-    CSS(
-        ".bonitobook-checkbox",
-        "width" => "16px",
-        "height" => "16px",
-        "border" => "1px solid var(--border-secondary)",
-        "border-radius" => "3px",
-        "background-color" => "var(--bg-primary)",
-        "cursor" => "pointer",
-        "transition" => "all 0.2s ease",
-        "appearance" => "none",
-        "-webkit-appearance" => "none",
-        "position" => "relative",
-        "margin" => "4px 8px 4px 4px",
-        "flex-shrink" => "0"
-    ),
-    CSS(
-        ".bonitobook-checkbox:hover",
-        "border-color" => "var(--accent-blue)"
-    ),
-    CSS(
-        ".bonitobook-checkbox:focus",
-        "outline" => "none",
-        "border-color" => "var(--accent-blue)",
-        "box-shadow" => "0 0 0 2px rgba(3, 102, 214, 0.2)"
-    ),
-    CSS(
-        ".bonitobook-checkbox:checked",
-        "background-color" => "var(--accent-blue)",
-        "border-color" => "var(--accent-blue)"
-    ),
-    CSS(
-        ".bonitobook-checkbox:checked::after",
-        "content" => "\"✓\"",
-        "position" => "absolute",
-        "top" => "50%",
-        "left" => "50%",
-        "transform" => "translate(-50%, -50%)",
-        "color" => "white",
-        "font-size" => "12px",
-        "line-height" => "1"
-    )
-)
-
-const DROPDOWN_STYLES = Styles(
-    CSS(
-        ".bonitobook-dropdown",
-        "background-color" => "var(--bg-primary)",
-        "color" => "var(--text-primary)",
-        "border" => "1px solid var(--border-secondary)",
-        "border-radius" => "6px",
-        "padding" => "8px 12px",
-        "margin" => "4px",
-        "font-size" => "14px",
-        "font-family" => "inherit",
-        "cursor" => "pointer",
-        "transition" => "all 0.2s ease",
-        "outline" => "none",
-        "width" => "calc(100% - 8px)",
-        "box-sizing" => "border-box",
-        "appearance" => "none",
-        "-webkit-appearance" => "none",
-        "background-image" => "url('data:image/svg+xml;charset=US-ASCII,<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 4 5\"><path fill=\"%23666\" d=\"M2 0L0 2h4zm0 5L0 3h4z\"/></svg>')",
-        "background-repeat" => "no-repeat",
-        "background-position" => "right 12px center",
-        "background-size" => "12px",
-        "padding-right" => "36px"
-    ),
-    CSS(
-        ".bonitobook-dropdown:hover",
-        "border-color" => "var(--accent-blue)"
-    ),
-    CSS(
-        ".bonitobook-dropdown:focus",
-        "border-color" => "var(--accent-blue)",
-        "box-shadow" => "0 0 0 2px rgba(3, 102, 214, 0.2)"
-    ),
-    CSS(
-        ".bonitobook-dropdown option",
-        "background-color" => "var(--bg-primary)",
-        "color" => "var(--text-primary)"
-    )
-)
-
-const SLIDER_STYLES = Styles(
-    CSS(
-        ".bonitobook-slider",
-        "width" => "calc(100% - 8px)",
-        "height" => "6px",
-        "border-radius" => "3px",
-        "background" => "var(--border-secondary)",
-        "outline" => "none",
-        "appearance" => "none",
-        "-webkit-appearance" => "none",
-        "cursor" => "pointer",
-        "transition" => "all 0.2s ease",
-        "margin" => "4px"
-    ),
-    CSS(
-        ".bonitobook-slider::-webkit-slider-thumb",
-        "appearance" => "none",
-        "-webkit-appearance" => "none",
-        "width" => "20px",
-        "height" => "20px",
-        "border-radius" => "50%",
-        "background" => "var(--accent-blue)",
-        "cursor" => "pointer",
-        "border" => "2px solid var(--bg-primary)",
-        "box-shadow" => "0 2px 6px rgba(0, 0, 0, 0.2)",
-        "transition" => "all 0.2s ease"
-    ),
-    CSS(
-        ".bonitobook-slider::-webkit-slider-thumb:hover",
-        "transform" => "scale(1.1)",
-        "box-shadow" => "0 3px 8px rgba(0, 0, 0, 0.3)"
-    ),
-    CSS(
-        ".bonitobook-slider::-moz-range-thumb",
-        "width" => "20px",
-        "height" => "20px",
-        "border-radius" => "50%",
-        "background" => "var(--accent-blue)",
-        "cursor" => "pointer",
-        "border" => "2px solid var(--bg-primary)",
-        "box-shadow" => "0 2px 6px rgba(0, 0, 0, 0.2)",
-        "transition" => "all 0.2s ease"
-    ),
-    CSS(
-        ".bonitobook-slider::-moz-range-track",
-        "width" => "100%",
-        "height" => "6px",
-        "border-radius" => "3px",
-        "background" => "var(--border-secondary)",
-        "border" => "none"
-    ),
-    CSS(
-        ".bonitobook-slider:focus",
-        "outline" => "none"
-    ),
-    CSS(
-        ".bonitobook-slider:focus::-webkit-slider-thumb",
-        "box-shadow" => "0 0 0 2px rgba(3, 102, 214, 0.2), 0 2px 6px rgba(0, 0, 0, 0.2)"
-    )
-)
-
-const CARD_STYLES = Styles(
-    CSS(
-        ".bonitobook-card",
-        "background-color" => "var(--bg-primary)",
-        "color" => "var(--text-primary)",
-        "border" => "1px solid var(--border-secondary)",
-        "border-radius" => "12px",
-        "padding" => "2rem",
-        "margin" => "8px",
-        "box-shadow" => "0 1px 3px rgba(0, 0, 0, 0.05)",
-        "transition" => "all 0.3s ease",
-        "display" => "block",
-        "box-sizing" => "border-box",
-        "position" => "relative",
-        "overflow" => "hidden"
-    ),
-    CSS(
-        ".bonitobook-card:hover",
-        "box-shadow" => "0 8px 25px rgba(0, 0, 0, 0.1)",
-        "border-color" => "var(--accent-blue)",
-        "transform" => "translateY(-2px)"
-    ),
-    CSS(
-        ".bonitobook-card::before",
-        "content" => "''",
-        "position" => "absolute",
-        "top" => "0",
-        "left" => "0",
-        "right" => "0",
-        "height" => "3px",
-        "background" => "linear-gradient(90deg, var(--accent-blue), var(--accent-purple))",
-        "opacity" => "0",
-        "transition" => "opacity 0.3s ease"
-    ),
-    CSS(
-        ".bonitobook-card:hover::before",
-        "opacity" => "1"
-    )
-)
 
 """
     Button(content; style=Styles(), attributes...)
@@ -293,7 +36,7 @@ function Button(content; style=Styles(), attributes...)
 end
 
 function Bonito.jsrender(session::Session, button::Button)
-    css = Styles(get(button.attributes, :style, Styles()), WIDGET_STYLES)
+    css = get(button.attributes, :style, Styles)
     button_dom = DOM.button(
         button.content[];
         onclick=js"event=> $(button.value).notify(true);",
@@ -323,7 +66,7 @@ function Card(content; style=Styles(), attributes...)
 end
 
 function Bonito.jsrender(session::Session, card::Card)
-    css = Styles(get(card.attributes, :style, Styles()), CARD_STYLES)
+    css = get(card.attributes, :style, Styles())
     card_dom = DOM.div(
         card.content;
         class="bonitobook-card",
@@ -356,7 +99,7 @@ function Checkbox(default_value; style=Styles(), attributes...)
 end
 
 function Bonito.jsrender(session::Session, checkbox::Checkbox)
-    css = Styles(get(checkbox.attributes, :style, Styles()), CHECKBOX_STYLES)
+    css = get(checkbox.attributes, :style, Styles())
     return Bonito.jsrender(
         session,
         DOM.input(;
@@ -393,7 +136,7 @@ function NumberInput(default_value; style=Styles(), attributes...)
 end
 
 function Bonito.jsrender(session::Session, ni::NumberInput)
-    css = Styles(get(ni.attributes, :style, Styles()), INPUT_STYLES)
+    css = get(ni.attributes, :style, Styles())
     return Bonito.jsrender(
         session,
         DOM.input(;
@@ -446,7 +189,7 @@ function Dropdown(options; index=1, option_to_string=string, style=Styles(), att
 end
 
 function Bonito.jsrender(session::Session, dropdown::Dropdown)
-    css = Styles(get(dropdown.attributes, :style, Styles()), DROPDOWN_STYLES)
+    css = get(dropdown.attributes, :style, Styles())
     string_options = map(x-> map(dropdown.option_to_string, x), session, dropdown.options)
 
     onchange = js"""
@@ -514,7 +257,7 @@ function Slider(values::AbstractArray{T}; value=first(values), style=Styles(), a
 end
 
 function Bonito.jsrender(session::Session, slider::Slider)
-    css = Styles(get(slider.attributes, :style, Styles()), SLIDER_STYLES)
+    css = get(slider.attributes, :style, Styles())
     values = slider.values
     index = slider.index
     onjs(
@@ -536,10 +279,7 @@ function Bonito.jsrender(session::Session, slider::Slider)
             value=index,
             step=1,
             oninput=js"""(event)=> {
-                console.log(event)
                 const idx = event.srcElement.valueAsNumber;
-                console.log(idx)
-                console.log($(index))
                 if (idx !== $(index).value) {
                     $(index).notify(idx)
                 }

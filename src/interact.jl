@@ -24,16 +24,18 @@ end
 
 function create_widget(sym, data::AbstractVector{<:Real})
     s = Components.Slider(data)
-    return LabeledWidget(sym, s)
+    return LabeledWidget(sym, s.value, DOM.div(s, s.value, class="flex-row", style="gap: var(--spacing-sm); align-items: center;"))
 end
 
 function create_widget(sym, data::AbstractVector)
     if length(data) < 1000
-        s = Components.Dropdown(data)
+        w = Components.Dropdown(data)
+        c = w
     else
-        s = Components.Slider(data)
+        w = Components.Slider(data)
+        c = DOM.div(w, w.value, class="flex-row", style="gap: var(--spacing-sm); align-items: center;")
     end
-    return LabeledWidget(sym, s)
+    return LabeledWidget(sym, w.value, c)
 end
 
 function create_widget(sym, data::AbstractDict)
