@@ -9,7 +9,7 @@ using Pkg
 Pkg.add(url = "https://github.com/SimonDanisch/BonitoBook.jl/")
 using BonitoBook
 # Usage:
-BonitoBook.book("path-to-notebook-file")
+BonitoBook.book("new-notebook.md") # non existing files create a new notebook
 # Example notebooks:
 path = normpath(joinpath(dirname(pathof(BonitoBook)), "..", "docs", "examples"))
 BonitoBook.book(joinpath(path, "intro.md"))
