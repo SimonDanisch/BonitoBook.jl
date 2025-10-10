@@ -368,6 +368,8 @@ const PageStyles = Styles(
         "box-shadow" => "var(--site-shadow-soft)",
         "position" => "relative",
         "overflow" => "hidden",
+        "width" => "fit-content",
+        "max-width" => "400px",
     ),
     CSS(
         ".example-card:hover",

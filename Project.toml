@@ -1,7 +1,7 @@
 name = "BonitoBook"
 uuid = "b416d416-7a6e-4336-8c1a-1f8a8cd59518"
 authors = ["Simon Danisch"]
-version = "0.1.0"
+version = "0.2.0"
 
 [deps]
 ANSIColoredPrinters = "a4c015fc-c6ff-483c-b24f-f7ea428134e9"

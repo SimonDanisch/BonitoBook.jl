@@ -63,26 +63,11 @@ function blog()
 
     entries = all_posts()
     blog_cards = map(entries) do (dir, entry)
-        # Create a card for each blog post
-        human_date = Dates.format(entry.date, "e, d u Y")
-        route = replace(entry.link, "./" => "/")
-
-        DOM.div(
-            DOM.h3(entry.title, class="example-title"),
-            DOM.p(entry.description, class="example-description"),
-            DOM.p(human_date, class="blog-date", style="color: var(--site-text-secondary); font-size: 0.9rem; margin-bottom: 1rem;"),
-            DOM.a(
-                "Read More",
-                href=Bonito.Link(route),
-                class="example-link"
-            ),
-            class="example-card"
-        )
+        DOM.div(entry; class = "example-card")
     end
 
     blog_grid = DOM.div(
-        blog_cards...,
-        class="examples-grid"
+        blog_cards,
     )
 
     content = DOM.div(
