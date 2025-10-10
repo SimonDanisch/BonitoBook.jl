@@ -556,7 +556,8 @@ function Bonito.jsrender(session::Session, tabs::FileTabs)
             tab_class = is_active ? "file-tab active" : "file-tab"
 
             # Tab content with file name and close button
-            tab_name = DOM.span(basename(file), class = "file-tab-name")
+            # TODO, tooltip wont be readable for long paths + many tabs
+            tab_name = Tooltip(DOM.span(basename(file), class = "file-tab-name"), file; position="right")
 
             # Close button (only show if more than one file)
             if length(files) > 1
