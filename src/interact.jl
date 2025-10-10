@@ -102,11 +102,10 @@ function Bonito.jsrender(s::Session, mw::ManipulateWidgets)
     )
 
     # Create main container
-    return Bonito.jsrender(s, DOM.div(
+    return Bonito.jsrender(s, Components.Card(DOM.div(
         controls,
         output,
-        class="manipulate-container"
-    ))
+    )))
 end
 
 

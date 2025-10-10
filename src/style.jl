@@ -197,7 +197,7 @@ function generate_style(book;
                 "margin" => "0"
             ),
             CSS("pre",
-                "margin-block" => "5px 0px",
+                "margin-block" => "var(--spacing-xs) 0px",
                 "font-family" => "'Consolas', 'Monaco', 'Courier New', monospace"
             ),
             # Fix for Markdown list
@@ -335,7 +335,7 @@ function generate_style(book;
             ),
             CSS(
                 ".book-cells-area",
-                "padding" => "15px 5px"
+                "padding" => "var(--spacing-lg) var(--spacing-xs)"
             )
         ),
 
@@ -357,7 +357,7 @@ function generate_style(book;
             ),
             CSS(
                 ".cell-editor",
-                "padding" => "5px"
+                "padding" => "var(--spacing-xs)"
             ),
             CSS(
                 ".cell-output",
@@ -481,7 +481,7 @@ function generate_style(book;
             "width" => "var(--editor-width)",
             "max-width" => "var(--editor-max-width)",
             "position" => "relative",
-            "padding" => "5px 5px 10px 10px",
+            "padding" => "var(--spacing-xs) var(--spacing-xs) 10px 10px",
             "border-radius" => "var(--border-radius-large)",
             "box-shadow" => "var(--shadow-soft)"
         ),
@@ -543,7 +543,7 @@ function generate_style(book;
         CSS(
             ".cell-output",
             "width" => "100%",
-            "margin" => "5px",
+            "margin" => "var(--spacing-xs)",
             "max-height" => "1000px",
             "overflow-y" => "auto",
             "overflow-x" => "visible"
@@ -700,7 +700,7 @@ function generate_style(book;
             "border" => "0",
             "border-bottom" => "1px solid #dfe2e5",
             "height" => "0",
-            "margin" => "15px 0",
+            "margin" => "var(--spacing-lg) 0",
             "overflow" => "hidden"
         ),
         CSS(
@@ -831,7 +831,7 @@ function generate_style(book;
             "box-shadow" => "var(--shadow-button)",
             "transition" => "background-color var(--transition-slow)",
             "padding" => "var(--spacing-sm)",
-            "margin-right" => "5px",
+            "margin-right" => "var(--spacing-xs)",
             "display" => "inline-flex",
             "align-items" => "center",
             "justify-content" => "center"
@@ -1095,7 +1095,7 @@ function generate_style(book;
             "align-items" => "center",
             "overflow-y" => "auto",
             "overflow-x" => "hidden",
-            "padding" => "15px 10px",
+            "padding" => "var(--spacing-lg) var(--spacing-sm)",
         ),
         CSS(
             ".book-document",
@@ -1225,7 +1225,7 @@ function generate_style(book;
             "justify-content" => "center",
             "background-color" => "var(--bg-primary)",
             "border-top" => "1px solid var(--border-primary)",
-            "padding" => "4px",
+            "padding" => "var(--spacing-xs)",
             "width" => "100%",
             "height" => "auto",
         ),
@@ -1237,8 +1237,8 @@ function generate_style(book;
             "display" => "flex",
             "flex-direction" => "column",
             "align-items" => "center",
-            "padding-top" => "10px",
-            "gap" => "4px",
+            "padding-top" => "var(--spacing-sm)",
+            "gap" => "var(--spacing-xs)",
             "flex-shrink" => "0",
             "pointer-events" => "auto",
             "height" => "fit-content"
@@ -1267,13 +1267,13 @@ function generate_style(book;
             "background-color" => "transparent",
             "color" => "var(--icon-color)",
             "cursor" => "pointer",
-            "border-radius" => "6px",
+            "border-radius" => "var(--spacing-xs)",
             "display" => "flex",
             "align-items" => "center",
             "justify-content" => "center",
             "transition" => "all var(--transition-slow)",
             "margin-top" => "auto",
-            "margin-bottom" => "10px",
+            "margin-bottom" => "var(--spacing-sm)",
         ),
         CSS(
             ".sidebar-toggle-button:hover",
@@ -1361,8 +1361,8 @@ function generate_style(book;
         CSS(
             ".bonitobook-button",
             "border" => "1px solid var(--border-secondary)",
-            "border-radius" => "6px",
-            "padding" => "8px 16px",
+            "border-radius" => "var(--spacing-xs)",
+            "padding" => "var(--spacing-sm) var(--spacing-lg)",
             "font-size" => "var(--font-size-base)",
             "font-weight" => "500",
             "cursor" => "pointer",
@@ -1396,8 +1396,8 @@ function generate_style(book;
         CSS(
             ".bonitobook-input",
             "border" => "1px solid var(--border-secondary)",
-            "border-radius" => "6px",
-            "padding" => "8px 12px",
+            "border-radius" => "var(--spacing-xs)",
+            "padding" => "var(--spacing-sm) var(--spacing-md)",
             "font-size" => "var(--font-size-base)",
             "transition" => "all var(--transition-slow)",
             "outline" => "none",
@@ -1427,13 +1427,13 @@ function generate_style(book;
             "width" => "var(--width-xs)",
             "height" => "var(--width-xs)",
             "border" => "1px solid var(--border-secondary)",
-            "border-radius" => "3px",
+            "border-radius" => "var(--spacing-xxs)",
             "cursor" => "pointer",
             "transition" => "all var(--transition-slow)",
             "appearance" => "none",
             "-webkit-appearance" => "none",
             "position" => "relative",
-            "margin" => "0 8px 0 0",
+            "margin" => "0 var(--spacing-sm) 0 0",
             "flex-shrink" => "0"
         ),
         CSS(
@@ -1467,8 +1467,8 @@ function generate_style(book;
         CSS(
             ".bonitobook-dropdown",
             "border" => "1px solid var(--border-secondary)",
-            "border-radius" => "6px",
-            "padding" => "8px 12px",
+            "border-radius" => "var(--spacing-xs)",
+            "padding" => "var(--spacing-sm) var(--spacing-md)",
             "font-size" => "var(--font-size-base)",
             "cursor" => "pointer",
             "transition" => "all var(--transition-slow)",
@@ -1477,8 +1477,8 @@ function generate_style(book;
             "appearance" => "none",
             "-webkit-appearance" => "none",
             "background-repeat" => "no-repeat",
-            "background-position" => "right 12px center",
-            "background-size" => "12px",
+            "background-position" => "right var(--spacing-md) center",
+            "background-size" => "var(--spacing-md)",
             "padding-right" => "36px",
             "background-color" => "var(--bg-primary)",
             "color" => "var(--text-primary)"
@@ -1526,7 +1526,7 @@ function generate_style(book;
             ".bonitobook-slider",
             "width" => "100%",
             "height" => "6px",
-            "border-radius" => "3px",
+            "border-radius" => "var(--spacing-xxs)",
             "background" => "var(--border-secondary)",
             "outline" => "none",
             "appearance" => "none",
@@ -1567,7 +1567,7 @@ function generate_style(book;
             ".bonitobook-slider::-moz-range-track",
             "width" => "100%",
             "height" => "6px",
-            "border-radius" => "3px",
+            "border-radius" => "var(--spacing-xxs)",
             "background" => "var(--border-secondary)",
             "border" => "none"
         ),
@@ -1585,26 +1585,24 @@ function generate_style(book;
             ".manipulate-container",
             "border" => "1px solid var(--border-primary)",
             "border-radius" => "var(--spacing-sm)",
-            "padding" => "16px",
-            "margin" => "16px 0",
+            "padding" => "var(--spacing-lg)",
+            "margin" => "var(--spacing-lg) 0",
             "display" => "flex",
             "flex-direction" => "column",
-            "gap" => "16px"
+            "gap" => "var(--spacing-lg)"
         ),
         CSS(
             ".manipulate-controls",
-            "background-color" => "var(--hover-bg)",
-            "border-radius" => "6px",
-            "padding" => "12px",
+            "padding" => "var(--spacing-md)",
             "display" => "flex",
             "flex-direction" => "column",
-            "gap" => "12px"
+            "gap" => "var(--spacing-md)"
         ),
         CSS(
             ".manipulate-control-row",
             "display" => "flex",
             "align-items" => "center",
-            "gap" => "12px"
+            "gap" => "var(--spacing-md)"
         ),
         CSS(
             ".manipulate-label",
@@ -1622,8 +1620,8 @@ function generate_style(book;
         ),
         CSS(
             ".manipulate-output",
-            "border-radius" => "6px",
-            "padding" => "12px",
+            "border-radius" => "var(--spacing-xs)",
+            "padding" => "var(--spacing-md)",
             "min-height" => "100px",
             "display" => "flex",
             "align-items" => "center",
@@ -1666,8 +1664,8 @@ function generate_style(book;
             ".interactive-error-widget",
             "border" => "1px solid #dc3545",
             "border-radius" => "var(--spacing-sm)",
-            "padding" => "16px",
-            "margin" => "8px 0",
+            "padding" => "var(--spacing-lg)",
+            "margin" => "var(--spacing-sm) 0",
             "box-shadow" => "0 var(--spacing-xxs) var(--spacing-sm) 0 var(--shadow-color-soft)"
         ),
 
@@ -1675,7 +1673,7 @@ function generate_style(book;
         CSS(
             ".interactive-error-widget h4",
             "color" => "#dc3545",
-            "margin" => "0 0 8px 0",
+            "margin" => "0 0 var(--spacing-sm) 0",
             "font-size" => "1.1em",
             "font-weight" => "600"
         ),
@@ -1687,9 +1685,9 @@ function generate_style(book;
             "line-height" => "1.4",
             "white-space" => "pre-wrap",
             "word-wrap" => "break-word",
-            "margin" => "8px 0",
-            "padding" => "12px",
-            "border-radius" => "6px",
+            "margin" => "var(--spacing-sm) 0",
+            "padding" => "var(--spacing-md)",
+            "border-radius" => "var(--spacing-xs)",
             "border" => "1px solid rgba(220, 53, 69, 0.2)"
         ),
 
