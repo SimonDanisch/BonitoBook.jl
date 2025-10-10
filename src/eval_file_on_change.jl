@@ -35,6 +35,32 @@ mutable struct EvalFileOnChange
     end
 end
 
+function start_watch_loop!(efo::EvalFileOnChange)
+    if isassigned(efo.watcher_task) && !istaskdone(efo.watcher_task[])
+        efo.close[] = true
+        wait(efo.watcher_task[])
+        efo.close[] = false
+    end
+    file = efo.filepath
+    efo.watcher_task[] = @async begin
+        while !efo.close[]
+            try
+                result = FileWatching.watch_file(efo.filepath, 1)
+                if result.changed || result.renamed || file != efo.filepath
+                    efo.file_watcher[] = mtime(efo.filepath)
+                    file = efo.filepath
+                end
+            catch e
+                if e isa InterruptException || !isfile(efo.filepath)
+                    break
+                end
+                @error "Error watching file $(efo.filepath): $(string(e))" exception = (e, catch_backtrace())
+            end
+        end
+        println("DONE WATCHING")
+    end
+end
+
 """
     EvalFileOnChange(filepath::String; module_context=Main)
 
@@ -49,41 +75,23 @@ function EvalFileOnChange(filepath::String; module_context=Main)
     file_watcher = Observable(mtime(filepath))
     current_output = Observable{Any}(nothing)
     last_valid_output = Observable{Any}(nothing)
-    on(file_watcher) do _time
-        try
-            res = Base._include(identity, module_context, filepath)
-            current_output[] = res
-            last_valid_output[] = res
-        catch e
-            @warn "Error evaluating file $filepath: $(string(e))" exception=(e, catch_backtrace())
-            current_output[] = e
-        end
-    end
+
     # Create async task for file watching
     watcher_task = Ref{Task}()
     close = Threads.Atomic{Bool}(false)
-    # Start file watcher task
-    watcher_task[] = @async begin
-        while !close[]
-            try
-                # Watch for file changes
-                result = FileWatching.watch_file(filepath)
-                if result.changed || result.renamed
-                    file_watcher[] = mtime(filepath)
-                end
-            catch e
-                if e isa InterruptException
-                    break
-                end
-                if !isfile(filepath)
-                    break
-                end
-                @error "Error watching file $filepath: $(string(e))" exception=(e, catch_backtrace())
-            end
+    efo = EvalFileOnChange(filepath, current_output, last_valid_output, file_watcher, watcher_task, close)
+    on(file_watcher) do _time
+        try
+            res = Base._include(identity, module_context, efo.filepath)
+            current_output[] = res
+            last_valid_output[] = res
+        catch e
+            @warn "Error evaluating file $filepath: $(string(e))" exception = (e, catch_backtrace())
+            current_output[] = e
         end
     end
-
-    return EvalFileOnChange(filepath, current_output, last_valid_output, file_watcher, watcher_task, close)
+    start_watch_loop!(efo)
+    return efo
 end
 
 """
@@ -93,44 +101,7 @@ Update the file path being watched by the EvalFileOnChange component.
 Stops watching the old file and starts watching the new one.
 """
 function update_filepath!(eval_component::EvalFileOnChange, new_filepath::String)
-    if eval_component.filepath == new_filepath
-        return  # No change needed
-    end
-
-    # Stop the old watcher
-    eval_component.close[] = true
-    # notify old file, so that watch_file can exit if it's blocking
-    touch(eval_component.filepath)
-    wait(eval_component.watcher_task[])
-    # Update filepath
     eval_component.filepath = new_filepath
-
-    # Reset close flag
-    eval_component.close[] = false
-
-    # Start new watcher task
-    eval_component.watcher_task[] = @async begin
-        while !eval_component.close[]
-            try
-                result = FileWatching.watch_file(new_filepath)
-                if result.changed || result.renamed
-                    eval_component.file_watcher[] = mtime(new_filepath)
-                end
-            catch e
-                if e isa InterruptException
-                    break
-                end
-                if !isfile(new_filepath)
-                    break
-                end
-                @error "Error watching file $new_filepath: $(string(e))" exception=(e, catch_backtrace())
-                sleep(0.1)
-            end
-        end
-    end
-
-    # Trigger immediate evaluation of new file
-    notify(eval_component.file_watcher)
 end
 
 function Bonito.jsrender(session::Session, eval_component::EvalFileOnChange)
