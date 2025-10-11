@@ -226,7 +226,6 @@ BonitoBook.EvalEditor("println(\"Hello World\")\n1+1")
 And why we can easily re-arrange any notebook into a completely different layout/form:
 
 ```julia (editor=true, logging=true, output=true)
-
 style = Styles(
     CSS(".small-vertical .cell-editor-container",
         "width" => "200px",

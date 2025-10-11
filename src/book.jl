@@ -690,10 +690,8 @@ function Bonito.jsrender(session::Session, book::Book)
 
     menu = DOM.div(save, player, _setup_menu; class="book-main-menu")
 
-    cell_obs = DOM.div(cells; class="inline-block fit-content")
-
     # Wrap cells in scrollable area
-    cells_area = DOM.div(cell_obs; class="book-cells-area")
+    cells_area = DOM.div(DOM.div(cells; class="book-cells"); class="book-cells-area")
     # Create chat component with appropriate agent
     chat_agent = create_chat_agent(book)
     chat_component = ChatComponent(chat_agent; book=book)

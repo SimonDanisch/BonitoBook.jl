@@ -325,57 +325,39 @@ function generate_style(book;
     _mobile_styles = Styles(
         Styles(
         # Tablet breakpoint (768px and below)
-        CSS(
-            "@media (max-width: 768px)",
             CSS(
-                ".book-cells-area",
-                "padding" => "var(--spacing-xs)"
-            )
-        ),
-
-        # Mobile breakpoint (480px and below)
-        CSS(
-            "@media (max-width: 480px)",
-            CSS(
-                ":root",
-                "--border-radius-large" => "3px",
-                "--border-radius-small" => "2px"
-            ),
-            # Mobile-specific layout adjustments
-            CSS(
-                ".book-cells-area",
-                "padding" => "10px"
-            ),
-            CSS(
-                ".cell-editor",
-                "padding" => "var(--spacing-xs)"
+                "@media (max-width: 768px)",
+                CSS(
+                    ":root",
+                    "--editor-width" => "95vw",
+                )
             ),
 
+            # Mobile breakpoint (480px and below)
             CSS(
-                ".markdown-body",
-                "overflow-wrap" => "break-word",
-                "word-break" => "break-word"
+                "@media (max-width: 480px)",
+                CSS(
+                    ":root",
+                    "--border-radius-large" => "3px",
+                    "--border-radius-small" => "2px"
+                ),
+                # Mobile-specific layout adjustments
+                CSS(
+                    ".markdown-body",
+                    "overflow-wrap" => "break-word",
+                    "word-break" => "break-word"
+                ),
+
+                # Reposition new cell plus button to avoid cutoff
+                CSS(
+                    ".new-cell-plus",
+                    "left" => "-0.5rem",
+                ),
+                CSS(
+                    ".new-cell-buttons",
+                    "left" => "-0.5rem",
+                ),
             ),
-            CSS(
-                ".small-menu-bar",
-                "padding" => "var(--spacing-xs)",
-                "gap" => "2px",
-            ),
-            CSS(
-                ".small-button",
-                "padding" => "6px",
-                "margin-right" => "3px",
-            ),
-            # Reposition new cell plus button to avoid cutoff
-            CSS(
-                ".new-cell-plus",
-                "left" => "-0.5rem",
-            ),
-            CSS(
-                ".new-cell-buttons",
-                "left" => "-0.5rem",
-            ),
-        ),
         ),
         mobile_styles
     )
@@ -397,7 +379,8 @@ function generate_style(book;
         CSS(
             ".monaco-editor-div",
             "padding" => "0",
-            "margin" => "0"
+            "margin" => "0",
+            "width" => "var(--editor-width)",
         ),
         CSS(
             ".sidebar-widget-content .monaco-editor-div.hide-horizontal",
@@ -413,10 +396,7 @@ function generate_style(book;
         # Editor containers
         CSS(
             ".cell-editor-container",
-            "width" => "var(--editor-width)",
-            "min-width" => "var(--editor-min-width)",
-            "max-width" => "var(--editor-max-width)",
-            "position" => "relative"
+            "position" => "relative",
         ),
         CSS(
             ".cell-menu-proximity-area",
@@ -455,10 +435,9 @@ function generate_style(book;
         ),
         CSS(
             ".cell-editor",
-            "width" => "var(--editor-width)",
-            "max-width" => "var(--editor-max-width)",
+            "width" => "fit-content",
             "position" => "relative",
-            "padding" => "var(--spacing-xs) var(--spacing-xs) 10px 10px",
+            "padding" => "var(--spacing-sm) 0px var(--spacing-sm) 0px",
             "border-radius" => "var(--border-radius-large)",
             "box-shadow" => "var(--shadow-soft)"
         ),
@@ -519,11 +498,11 @@ function generate_style(book;
         # Cell output
         CSS(
             ".cell-output",
-            "width" => "100%",
             "margin" => "var(--spacing-xs)",
             "max-height" => "1000px",
             "overflow-y" => "auto",
-            "overflow-x" => "visible"
+            "overflow-x" => "visible",
+            "width" => "var(--editor-width)",
         ),
         # Remove max-height for markdown outputs
         CSS(
@@ -1055,30 +1034,28 @@ function generate_style(book;
         ),
         CSS(
             ".book-content",
-            "display" => "flex",
-            "flex-direction" => "row",
-            "flex" => "1",
-            "padding-top" => "20px", # to have some space for overlay menu
             "overflow" => "hidden", # Prevent the container from scrolling
-            "width" => "100%",
-            "height" => "calc(100vh - 20px)" # Full height minus menu space
+        ),
+        CSS(
+            ".book-cells",
+            "width" => "fit-content", # Prevent the container from scrolling
         ),
         CSS(
             ".book-cells-area",
-            "flex" => "1 1 auto",
-            "min-width" => "0", # Allow shrinking
-            "display" => "flex",
-            "flex-direction" => "column",
-            "align-items" => "center",
             "overflow-y" => "auto",
             "overflow-x" => "hidden",
-            "padding" => "var(--spacing-lg) var(--spacing-sm)",
+            "width" => "100%",
+            "display" => "grid",
+            "place-items" => "center",
+        ),
+        CSS(
+            ".book-main-content",
+            "overflow" => "hidden",
         ),
         CSS(
             ".book-document",
             "display" => "flex",
             "flex-direction" => "column",
-            "width" => "100%",
             "height" => "100vh",
             "overflow" => "hidden"
         ),
@@ -1095,14 +1072,7 @@ function generate_style(book;
             "right" => "0",
             "z-index" => "var(--z-modal)"
         ),
-        CSS(
-            ".book-main-content",
-            "padding-bottom" => "50px", # Add padding to avoid overlap with horizontal sidebar
-            "flex" => "1",
-            "display" => "flex",
-            "flex-direction" => "column",
-            "overflow" => "hidden",
-        ),
+
 
         # Sidebar styles
         CSS(
@@ -1757,5 +1727,10 @@ function generate_style(book;
     )
 
     # Combine all modular styles
-    return Styles(_layout_variables, _base_styles, _theme_styles, _print_export_styles, _mobile_styles, _monaco_styles, _editor_styles, _icon_styles, _markdown_styles, _data_styles, _ui_styles)
+    return Styles(
+        _layout_variables, _base_styles, _theme_styles,
+        _print_export_styles, _monaco_styles, _editor_styles,
+        _icon_styles, _markdown_styles, _data_styles,
+        _ui_styles, _mobile_styles
+    )
 end
