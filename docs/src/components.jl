@@ -25,7 +25,7 @@ function NavBar(items::Vector{Pair{String, String}})
     end
 
     return DOM.nav(
-        DOM.div(nav_items..., class="nav-items"),
+        nav_items...,
         class="bonitobook-navbar"
     )
 end
@@ -230,13 +230,15 @@ const PageStyles = Styles(
         ".bonitobook-navbar",
         "background-color" => "var(--site-bg-primary)",
         "border-bottom" => "1px solid var(--site-border-primary)",
+        "padding" => "0 40px",
         "height" => "var(--navbar-height)",
         "display" => "flex",
         "align-items" => "center",
         "justify-content" => "center",
         "position" => "sticky",
         "top" => "0",
-        "z-index" => "100"
+        "z-index" => "100",
+        "box-shadow" => "0 2px 4px rgba(0, 0, 0, 0.05)"
     ),
     CSS(
         ".nav-items",
@@ -248,8 +250,10 @@ const PageStyles = Styles(
         "text-decoration" => "none",
         "color" => "var(--site-text-primary)",
         "font-weight" => "500",
+        "padding" => "10px 16px",
         "border-radius" => "6px",
-        "transition" => "all 0.2s ease"
+        "transition" => "all 0.2s ease",
+        "white-space" => "nowrap"
     ),
     CSS(
         ".nav-item:hover",
@@ -430,6 +434,40 @@ const PageStyles = Styles(
         ".example-link:active",
         "transform" => "translateY(0px)",
         "box-shadow" => "var(--site-shadow-inset)"
+    ),
+
+    # Blog styles
+    CSS(
+        ".blog-content",
+        "max-width" => "800px",
+        "margin" => "0 auto",
+        "padding" => "var(--content-padding)",
+        "display" => "flex",
+        "flex-direction" => "column",
+        "align-items" => "center"
+    ),
+    CSS(
+        ".blog-list",
+        "width" => "100%",
+        "display" => "flex",
+        "flex-direction" => "column",
+        "gap" => "24px",
+        "margin-top" => "40px"
+    ),
+    CSS(
+        ".blog-card",
+        "width" => "100%",
+        "background-color" => "var(--site-bg-primary)",
+        "border" => "1px solid var(--site-border-primary)",
+        "border-radius" => "10px",
+        "padding" => "24px",
+        "transition" => "all 0.2s ease",
+        "box-shadow" => "var(--site-shadow-soft)"
+    ),
+    CSS(
+        ".blog-card:hover",
+        "box-shadow" => "var(--site-animation-glow)",
+        "border-color" => "var(--site-accent-blue)"
     ),
 
     # Section styles
