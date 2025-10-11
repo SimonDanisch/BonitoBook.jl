@@ -357,7 +357,9 @@ const PageStyles = Styles(
         "margin-top" => "40px"
     ),
     CSS(".example-content",
-        "margin" => "var(--content-padding)"
+        "max-width" => "1200px",
+        "margin" => "0 auto",
+        "padding" => "var(--content-padding)"
     ),
     CSS(
         ".example-card",
