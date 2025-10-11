@@ -328,14 +328,8 @@ function generate_style(book;
         CSS(
             "@media (max-width: 768px)",
             CSS(
-                ":root",
-                "--editor-width" => "100%",
-                "--editor-min-width" => "0",
-                "--editor-max-width" => "100%"
-            ),
-            CSS(
                 ".book-cells-area",
-                "padding" => "var(--spacing-lg) var(--spacing-xs)"
+                "padding" => "var(--spacing-xs)"
             )
         ),
 
@@ -344,9 +338,6 @@ function generate_style(book;
             "@media (max-width: 480px)",
             CSS(
                 ":root",
-                "--editor-width" => "100%",
-                "--editor-min-width" => "0",
-                "--editor-max-width" => "100%",
                 "--border-radius-large" => "3px",
                 "--border-radius-small" => "2px"
             ),
@@ -359,25 +350,11 @@ function generate_style(book;
                 ".cell-editor",
                 "padding" => "var(--spacing-xs)"
             ),
-            CSS(
-                ".cell-output",
-                "max-width" => "100%"
-            ),
+
             CSS(
                 ".markdown-body",
-                "max-width" => "100%",
-                "width" => "100%",
                 "overflow-wrap" => "break-word",
                 "word-break" => "break-word"
-            ),
-            CSS(
-                ".markdown-body *",
-                "max-width" => "100%"
-            ),
-            CSS(
-                ".markdown-body pre, .markdown-body code",
-                "overflow-x" => "auto",
-                "word-wrap" => "normal",
             ),
             CSS(
                 ".small-menu-bar",

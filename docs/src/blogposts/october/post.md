@@ -152,3 +152,4 @@ The new `meta.toml` file tracks versions and helps detect when migration is need
 ## Looking Ahead
 
 This release shows how BonitoBook can be an extensible platform rather than a single-purpose tool. The next feature we plan to work on is a plugin for an LLM agent dashboard and polish the LLM integration. The plugin system opens up exciting possibilities for specialized notebook formats - we can't wait to see what the community builds!
+

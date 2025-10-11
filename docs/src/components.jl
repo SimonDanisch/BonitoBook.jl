@@ -241,17 +241,13 @@ const PageStyles = Styles(
     CSS(
         ".nav-items",
         "display" => "flex",
-        "gap" => "30px",
         "width" => "100%",
-        "max-width" => "var(--max-content-width)",
-        "padding" => "0 var(--content-padding)"
     ),
     CSS(
         ".nav-item",
         "text-decoration" => "none",
         "color" => "var(--site-text-primary)",
         "font-weight" => "500",
-        "padding" => "8px 16px",
         "border-radius" => "6px",
         "transition" => "all 0.2s ease"
     ),
@@ -265,6 +261,7 @@ const PageStyles = Styles(
     CSS(
         ".bonitobook-page",
         "min-height" => "100vh",
+        "width" => "100%",
         "background-color" => "var(--site-bg-primary)",
         "color" => "var(--site-text-primary)"
     ),
