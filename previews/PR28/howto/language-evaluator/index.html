@@ -22,7 +22,8 @@
   width: 1.2em;
 }
 .style_5 {
-  position: relative;
+  color: red;
+  width: 1.2em;
 }
 .style_6 {
   width: 10px;
@@ -31,8 +32,7 @@
   width: 100%;
 }
 .style_8 {
-  color: red;
-  width: 1.2em;
+  position: relative;
 }
 </style>
     <style>code {
@@ -147,16 +147,10 @@ pre code {
   color: white;
   font-family: inherit;
 }
-.bonitobook-navbar {
-  align-items: center;
-  height: var(--navbar-height);
-  display: flex;
-  background-color: var(--site-bg-primary);
+.hero-section {
+  padding: 60px 0;
   border-bottom: 1px solid var(--site-border-primary);
-  top: 0;
-  position: sticky;
-  z-index: 100;
-  justify-content: center;
+  text-align: center;
 }
 .bonitobook-header::before {
   left: 0;
@@ -168,11 +162,6 @@ pre code {
   position: absolute;
   opacity: 0.03;
   background: var(--site-animation-glow);
-}
-.hero-section {
-  padding: 60px 0;
-  border-bottom: 1px solid var(--site-border-primary);
-  text-align: center;
 }
 @media (prefers-color-scheme: light), (prefers-color-scheme: no-preference) {
   :root {
@@ -200,14 +189,43 @@ pre code {
 ::-webkit-scrollbar-thumb:hover {
   background-color: var(--site-scrollbar-thumb-hover);
 }
+.bonitobook-navbar {
+  z-index: 100;
+  align-items: center;
+  height: var(--navbar-height);
+  display: flex;
+  padding: 0 40px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  position: sticky;
+  justify-content: center;
+  background-color: var(--site-bg-primary);
+  top: 0;
+  border-bottom: 1px solid var(--site-border-primary);
+}
 .example-description {
   color: var(--site-text-secondary);
   margin: 0 0 20px 0;
   line-height: 1.6;
 }
+.blog-list {
+  margin-top: 40px;
+  display: flex;
+  gap: 24px;
+  width: 100%;
+  flex-direction: column;
+}
 .nav-item:hover {
   background-color: var(--site-hover-bg);
   color: var(--site-accent-blue);
+}
+.blog-card {
+  border: 1px solid var(--site-border-primary);
+  background-color: var(--site-bg-primary);
+  box-shadow: var(--site-shadow-soft);
+  padding: 24px;
+  width: 100%;
+  border-radius: 10px;
+  transition: all 0.2s ease;
 }
 .hero-button-secondary:hover {
   border-color: var(--site-accent-blue);
@@ -224,6 +242,10 @@ pre code {
   box-shadow: 0 4px 12px rgba(3, 102, 214, 0.3);
   color: white;
   transform: translateY(-1px);
+}
+.blog-card:hover {
+  border-color: var(--site-accent-blue);
+  box-shadow: var(--site-animation-glow);
 }
 .example-card::before {
   left: -100%;
@@ -396,6 +418,15 @@ a {
 .getting-started-inline .hover-buttons {
   display: none !important;
 }
+.nav-item {
+  font-weight: 500;
+  padding: 10px 16px;
+  text-decoration: none;
+  white-space: nowrap;
+  color: var(--site-text-primary);
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
 @media (max-width: 480px) {
   .getting-started-inline .cell-editor {
     padding: 5px !important;
@@ -404,19 +435,20 @@ a {
     padding: 10px !important;
   }
 }
+.blog-content {
+  align-items: center;
+  max-width: 800px;
+  display: flex;
+  padding: var(--content-padding);
+  margin: 0 auto;
+  flex-direction: column;
+}
 .section {
   margin: 60px 0;
 }
 html {
   background-color: var(--site-bg-primary);
   color: var(--site-text-primary);
-}
-.nav-item {
-  font-weight: 500;
-  text-decoration: none;
-  color: var(--site-text-primary);
-  border-radius: 6px;
-  transition: all 0.2s ease;
 }
 .hero-subtitle {
   max-width: 600px;
@@ -595,9 +627,9 @@ span.sgr97 {
 </style>
   </head>
   <body>
-    <script type="module">Bonito.init_session("39fe10bf-0be9-4122-b94b-3e92a96f1838", Bonito.fetch_binary('../../bonito/bin/2aeedfc3c327f88817c7761a4c45561dc74e5afd-2986712325430236311.bin'), "root", false);
+    <script type="module">Bonito.init_session("fd13b8da-3d17-4c98-b405-ddef88f660f2", Bonito.fetch_binary('../../bonito/bin/8a2a988d4269f786828ac7bffa5ec0d0a8864608-9630393014500831133.bin'), "root", false);
 </script>
-    <div id="39fe10bf-0be9-4122-b94b-3e92a96f1838" data-jscall-id="root">
+    <div id="fd13b8da-3d17-4c98-b405-ddef88f660f2" data-jscall-id="root">
       <div class="bonitobook-page" data-jscall-id="1">
         <header class="bonitobook-header" data-jscall-id="2">
           <div class="header-content" data-jscall-id="3">
@@ -605,20 +637,18 @@ span.sgr97 {
           </div>
         </header>
         <nav class="bonitobook-navbar" data-jscall-id="5">
-          <div class="nav-items" data-jscall-id="6">
-            <a class="nav-item" href="../../" data-jscall-id="7">Home</a>
-            <a class="nav-item" href="../../examples" data-jscall-id="8">Examples</a>
-            <a class="nav-item" href="../../howto" data-jscall-id="9">How-To</a>
-            <a class="nav-item" href="../../blog" data-jscall-id="10">Blog</a>
-          </div>
+          <a class="nav-item" href="../../" data-jscall-id="6">Home</a>
+          <a class="nav-item" href="../../examples" data-jscall-id="7">Examples</a>
+          <a class="nav-item" href="../../howto" data-jscall-id="8">How-To</a>
+          <a class="nav-item" href="../../blog" data-jscall-id="9">Blog</a>
         </nav>
-        <main class="main-content" data-jscall-id="11">
-          <div data-jscall-id="12">
-            <div data-jscall-id="14">
-              <div class="bonito-fragment" id="c4b21bb8-dd84-417b-9527-785f518e93ba" data-jscall-id="subsession-application-dom">
-                <div data-jscall-id="15">
-                  <style data-jscall-id="16"></style>
-                  <style data-jscall-id="17">:root {
+        <main class="main-content" data-jscall-id="10">
+          <div data-jscall-id="11">
+            <div data-jscall-id="13">
+              <div class="bonito-fragment" id="3990bf5c-88b4-4952-b9dd-5099843e96d3" data-jscall-id="subsession-application-dom">
+                <div data-jscall-id="14">
+                  <style data-jscall-id="15"></style>
+                  <style data-jscall-id="16">:root {
   --shadow-glow: 0 0 var(--spacing-xs) 0 var(--accent-blue);
   --width-md: 2.25rem;
   --z-menu: 1001;
@@ -1882,140 +1912,140 @@ body.bonito-export-mode .hover-buttons, body.bonito-export-mode .cell-menu-proxi
 }
 </style>
                 </div>
-                <div data-jscall-id="18">
-                  <script data-jscall-id="19" type="module">Bonito.init_session("c4b21bb8-dd84-417b-9527-785f518e93ba", null, "sub", false);
+                <div data-jscall-id="17">
+                  <script data-jscall-id="18" type="module">Bonito.init_session("3990bf5c-88b4-4952-b9dd-5099843e96d3", null, "sub", false);
 </script>
-                  <span data-jscall-id="13"></span>
+                  <span data-jscall-id="12"></span>
                 </div>
               </div>
             </div>
-            <div data-jscall-id="20">
-              <div class=" style_7" style="" data-jscall-id="21">
-                <div class=" style_3" style="" data-jscall-id="22">
-                  <div data-jscall-id="23">
-                    <div class="book-main-menu" data-jscall-id="24">
-                      <div class="saving small-menu-bar" data-jscall-id="25">
-                        <img class="codicon  style_4" style="" data-jscall-id="26" src="../../bonito/svg/save10542206391802304284.svg" />
-                        <div onclick="" class="small-button" data-jscall-id="27">
-                          <img class="codicon  style_4" style="" data-jscall-id="28" src="../../bonito/svg/markdown5122053856860942473.svg" />
+            <div data-jscall-id="19">
+              <div class=" style_7" style="" data-jscall-id="20">
+                <div class=" style_3" style="" data-jscall-id="21">
+                  <div data-jscall-id="22">
+                    <div class="book-main-menu" data-jscall-id="23">
+                      <div class="saving small-menu-bar" data-jscall-id="24">
+                        <img class="codicon  style_4" style="" data-jscall-id="25" src="../../bonito/svg/save10542206391802304284.svg" />
+                        <div onclick="" class="small-button" data-jscall-id="26">
+                          <img class="codicon  style_4" style="" data-jscall-id="27" src="../../bonito/svg/markdown5122053856860942473.svg" />
                         </div>
-                        <div onclick="" class="small-button" data-jscall-id="29">
-                          <img class="codicon  style_4" style="" data-jscall-id="30" src="../../bonito/svg/file-pdf10350221278639379597.svg" />
+                        <div onclick="" class="small-button" data-jscall-id="28">
+                          <img class="codicon  style_4" style="" data-jscall-id="29" src="../../bonito/svg/file-pdf10350221278639379597.svg" />
                         </div>
                       </div>
                     </div>
-                    <div class="cell-editor-container editor-collapsed" id="74848503-d570-417b-97a1-fbd16664feb9" data-jscall-id="31">
-                      <div class=" style_5" style="" data-jscall-id="32" id="74848503-d570-417b-97a1-fbd16664feb9-container" tabindex="0">
-                        <div class=" style_5" style="" data-jscall-id="33">
-                          <div class="hover-buttons" id="74848503-d570-417b-97a1-fbd16664feb9-hover" data-jscall-id="34">
-                            <button onclick="" class="small-button toggle-button" data-jscall-id="35">
-                              <img class="codicon  style_4" style="" data-jscall-id="36" src="../../bonito/svg/code18139302498156533340.svg" />
+                    <div class="cell-editor-container editor-collapsed" id="5e531c68-6df1-4b1a-88f5-eef0cceeee43" data-jscall-id="30">
+                      <div class=" style_8" style="" data-jscall-id="31" id="5e531c68-6df1-4b1a-88f5-eef0cceeee43-container" tabindex="0">
+                        <div class=" style_8" style="" data-jscall-id="32">
+                          <div class="hover-buttons" id="5e531c68-6df1-4b1a-88f5-eef0cceeee43-hover" data-jscall-id="33">
+                            <button onclick="" class="small-button toggle-button" data-jscall-id="34">
+                              <img class="codicon  style_4" style="" data-jscall-id="35" src="../../bonito/svg/code18139302498156533340.svg" />
                             </button>
-                            <button onclick="" class="small-button toggle-button" data-jscall-id="37">
-                              <img class="codicon  style_4" style="" data-jscall-id="38" src="../../bonito/svg/terminal3126302118537120484.svg" />
+                            <button onclick="" class="small-button toggle-button" data-jscall-id="36">
+                              <img class="codicon  style_4" style="" data-jscall-id="37" src="../../bonito/svg/terminal3126302118537120484.svg" />
                             </button>
-                            <button onclick="" class="small-button toggle-button active" data-jscall-id="39">
-                              <img class="codicon  style_4" style="" data-jscall-id="40" src="../../bonito/svg/graph187889671474048740.svg" />
+                            <button onclick="" class="small-button toggle-button active" data-jscall-id="38">
+                              <img class="codicon  style_4" style="" data-jscall-id="39" src="../../bonito/svg/graph187889671474048740.svg" />
                             </button>
-                            <button onclick="" class="small-button" data-jscall-id="41">
-                              <img class="codicon  style_8" style="" data-jscall-id="42" src="../../bonito/svg/close17235711529866555203.svg" />
+                            <button onclick="" class="small-button" data-jscall-id="40">
+                              <img class="codicon  style_5" style="" data-jscall-id="41" src="../../bonito/svg/close17235711529866555203.svg" />
                             </button>
                           </div>
-                          <div class="cell-editor hide-vertical" id="74848503-d570-417b-97a1-fbd16664feb9-card-content" data-jscall-id="43" style="position: relative;">
-                            <div data-jscall-id="44">
-                              <div class="monaco-editor-div language-markdown hide-horizontal" data-jscall-id="45"></div>
+                          <div class="cell-editor hide-vertical" id="5e531c68-6df1-4b1a-88f5-eef0cceeee43-card-content" data-jscall-id="42" style="position: relative;">
+                            <div data-jscall-id="43">
+                              <div class="monaco-editor-div language-markdown hide-horizontal" data-jscall-id="44"></div>
                             </div>
-                            <div data-jscall-id="47">
-                              <div class="hide-horizontal" data-jscall-id="48">
-                                <span data-jscall-id="49"></span>
+                            <div data-jscall-id="46">
+                              <div class="hide-horizontal" data-jscall-id="47">
+                                <span data-jscall-id="48"></span>
                               </div>
                             </div>
-                            <img class="codicon small-language-icon style_6" style="" data-jscall-id="50" src="../../bonito/svg/markdown5122053856860942473.svg" />
+                            <img class="codicon small-language-icon style_6" style="" data-jscall-id="49" src="../../bonito/svg/markdown5122053856860942473.svg" />
                           </div>
-                          <div data-jscall-id="51" tabindex="0">
-                            <div class="cell-output cell-output-markdown " data-jscall-id="46">
-                              <div data-jscall-id="102">
-                                <div class="bonito-fragment" id="88ed36ac-4def-414b-b89c-bae6ad703b5e" data-jscall-id="subsession-application-dom">
-                                  <div data-jscall-id="103">
-                                    <style data-jscall-id="104">.style_2 {
+                          <div data-jscall-id="50" tabindex="0">
+                            <div class="cell-output cell-output-markdown " data-jscall-id="45">
+                              <div data-jscall-id="101">
+                                <div class="bonito-fragment" id="ca60718e-3919-41cc-aaeb-02e29877b58b" data-jscall-id="subsession-application-dom">
+                                  <div data-jscall-id="102">
+                                    <style data-jscall-id="103">.style_2 {
   list-style-type: disc;
 }
 </style>
                                   </div>
-                                  <div data-jscall-id="105">
-                                    <script data-jscall-id="106" type="module">Bonito.init_session("88ed36ac-4def-414b-b89c-bae6ad703b5e", Bonito.fetch_binary('../../bonito/bin/4a7b99ba7cb57473d34d36200c17ba5d66dd30c1-11668615682699805505.bin'), "sub", false);
+                                  <div data-jscall-id="104">
+                                    <script data-jscall-id="105" type="module">Bonito.init_session("ca60718e-3919-41cc-aaeb-02e29877b58b", Bonito.fetch_binary('../../bonito/bin/c5003c2c00947c7349d7961e99219904095cc729-11325103518902666344.bin'), "sub", false);
 </script>
-                                    <span data-jscall-id="52">
-                                      <div class="markdown-body" data-jscall-id="53">
-                                        <h1 id="How to Create a Language Evaluator" data-jscall-id="54">How to Create a Language Evaluator</h1>
-                                        <p data-jscall-id="55">Add support for new programming languages in BonitoBook by creating a custom language evaluator.</p>
-                                        <h2 id="Implementation" data-jscall-id="56">Implementation</h2>
-                                        <p data-jscall-id="57">Create an extension module that defines:</p>
-                                        <ol class=" style_2" style="" data-jscall-id="58">
-                                          <li data-jscall-id="59">
-                                            <p data-jscall-id="60">
-                                              <strong data-jscall-id="61">Evaluator struct</strong> inheriting from 
-                                              <code data-jscall-id="62">LanguageEval</code>
+                                    <span data-jscall-id="51">
+                                      <div class="markdown-body" data-jscall-id="52">
+                                        <h1 id="How to Create a Language Evaluator" data-jscall-id="53">How to Create a Language Evaluator</h1>
+                                        <p data-jscall-id="54">Add support for new programming languages in BonitoBook by creating a custom language evaluator.</p>
+                                        <h2 id="Implementation" data-jscall-id="55">Implementation</h2>
+                                        <p data-jscall-id="56">Create an extension module that defines:</p>
+                                        <ol class=" style_2" style="" data-jscall-id="57">
+                                          <li data-jscall-id="58">
+                                            <p data-jscall-id="59">
+                                              <strong data-jscall-id="60">Evaluator struct</strong> inheriting from 
+                                              <code data-jscall-id="61">LanguageEval</code>
                                             </p>
                                           </li>
-                                          <li data-jscall-id="63">
-                                            <p data-jscall-id="64">
-                                              <strong data-jscall-id="65">eval_code method</strong> that executes code
+                                          <li data-jscall-id="62">
+                                            <p data-jscall-id="63">
+                                              <strong data-jscall-id="64">eval_code method</strong> that executes code
                                             </p>
                                           </li>
-                                          <li data-jscall-id="66">
-                                            <p data-jscall-id="67">
-                                              <strong data-jscall-id="68">get
-                                                <em data-jscall-id="69">language</em>evaluator function
+                                          <li data-jscall-id="65">
+                                            <p data-jscall-id="66">
+                                              <strong data-jscall-id="67">get
+                                                <em data-jscall-id="68">language</em>evaluator function
                                               </strong> that returns the evaluator
                                             </p>
                                           </li>
                                         </ol>
-                                        <h2 id="Example: Shell Evaluator" data-jscall-id="70">Example: Shell Evaluator</h2>
-                                        <div data-jscall-id="71">
-                                          <div class="monaco-editor-div markdown-inline-code language-julia" data-jscall-id="72"></div>
+                                        <h2 id="Example: Shell Evaluator" data-jscall-id="69">Example: Shell Evaluator</h2>
+                                        <div data-jscall-id="70">
+                                          <div class="monaco-editor-div markdown-inline-code language-julia" data-jscall-id="71"></div>
                                         </div>
-                                        <h2 id="Register Language" data-jscall-id="73">Register Language</h2>
-                                        <p data-jscall-id="74">Add your language to 
-                                          <code data-jscall-id="75">ALL_LANGUAGES</code> in 
-                                          <code data-jscall-id="76">src/BonitoBook.jl</code>:
+                                        <h2 id="Register Language" data-jscall-id="72">Register Language</h2>
+                                        <p data-jscall-id="73">Add your language to 
+                                          <code data-jscall-id="74">ALL_LANGUAGES</code> in 
+                                          <code data-jscall-id="75">src/BonitoBook.jl</code>:
                                         </p>
-                                        <div data-jscall-id="77">
-                                          <div class="monaco-editor-div markdown-inline-code language-julia" data-jscall-id="78"></div>
+                                        <div data-jscall-id="76">
+                                          <div class="monaco-editor-div markdown-inline-code language-julia" data-jscall-id="77"></div>
                                         </div>
-                                        <h2 id="Real Example: Python" data-jscall-id="79">Real Example: Python</h2>
-                                        <p data-jscall-id="80">The Python evaluator shows the full pattern:</p>
-                                        <div data-jscall-id="81">
-                                          <div class="monaco-editor-div markdown-inline-code language-julia" data-jscall-id="82"></div>
+                                        <h2 id="Real Example: Python" data-jscall-id="78">Real Example: Python</h2>
+                                        <p data-jscall-id="79">The Python evaluator shows the full pattern:</p>
+                                        <div data-jscall-id="80">
+                                          <div class="monaco-editor-div markdown-inline-code language-julia" data-jscall-id="81"></div>
                                         </div>
-                                        <h2 id="Key Points" data-jscall-id="83">Key Points</h2>
-                                        <ul class=" style_2" style="" data-jscall-id="84">
-                                          <li data-jscall-id="85">
-                                            <p data-jscall-id="86">
-                                              <strong data-jscall-id="87">Extension loading</strong>: BonitoBook uses 
-                                              <code data-jscall-id="88">Base.get_extension&#40;&#41;</code> to load evaluators
+                                        <h2 id="Key Points" data-jscall-id="82">Key Points</h2>
+                                        <ul class=" style_2" style="" data-jscall-id="83">
+                                          <li data-jscall-id="84">
+                                            <p data-jscall-id="85">
+                                              <strong data-jscall-id="86">Extension loading</strong>: BonitoBook uses 
+                                              <code data-jscall-id="87">Base.get_extension&#40;&#41;</code> to load evaluators
                                             </p>
                                           </li>
-                                          <li data-jscall-id="89">
-                                            <p data-jscall-id="90">
-                                              <strong data-jscall-id="91">Thread safety</strong>: Code runs in 
-                                              <code data-jscall-id="92">spawnat&#40;1&#41;</code> for thread safety &#40;e.g. for PythonCall&#41;
+                                          <li data-jscall-id="88">
+                                            <p data-jscall-id="89">
+                                              <strong data-jscall-id="90">Thread safety</strong>: Code runs in 
+                                              <code data-jscall-id="91">spawnat&#40;1&#41;</code> for thread safety &#40;e.g. for PythonCall&#41;
                                             </p>
                                           </li>
-                                          <li data-jscall-id="93">
-                                            <p data-jscall-id="94">
-                                              <strong data-jscall-id="95">Variable sharing</strong>: Transfer variables between language and Julia using the 
-                                              <code data-jscall-id="96">mod</code> parameter
+                                          <li data-jscall-id="92">
+                                            <p data-jscall-id="93">
+                                              <strong data-jscall-id="94">Variable sharing</strong>: Transfer variables between language and Julia using the 
+                                              <code data-jscall-id="95">mod</code> parameter
                                             </p>
                                           </li>
-                                          <li data-jscall-id="97">
-                                            <p data-jscall-id="98">
-                                              <strong data-jscall-id="99">Error handling</strong>: Wrap execution in try-catch, BonitoBook handles display
+                                          <li data-jscall-id="96">
+                                            <p data-jscall-id="97">
+                                              <strong data-jscall-id="98">Error handling</strong>: Wrap execution in try-catch, BonitoBook handles display
                                             </p>
                                           </li>
                                         </ul>
-                                        <p data-jscall-id="100">That&#39;s it&#33; The 
-                                          <code data-jscall-id="101">AsyncRunner</code> handles the rest automatically.
+                                        <p data-jscall-id="99">That&#39;s it&#33; The 
+                                          <code data-jscall-id="100">AsyncRunner</code> handles the rest automatically.
                                         </p>
                                       </div>
                                     </span>
@@ -2025,7 +2055,7 @@ body.bonito-export-mode .hover-buttons, body.bonito-export-mode .cell-menu-proxi
                             </div>
                           </div>
                         </div>
-                        <div class="cell-menu-proximity-area" data-jscall-id="107"></div>
+                        <div class="cell-menu-proximity-area" data-jscall-id="106"></div>
                       </div>
                     </div>
                   </div>

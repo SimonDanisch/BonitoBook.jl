@@ -118,16 +118,10 @@ pre code {
   color: white;
   font-family: inherit;
 }
-.bonitobook-navbar {
-  align-items: center;
-  height: var(--navbar-height);
-  display: flex;
-  background-color: var(--site-bg-primary);
+.hero-section {
+  padding: 60px 0;
   border-bottom: 1px solid var(--site-border-primary);
-  top: 0;
-  position: sticky;
-  z-index: 100;
-  justify-content: center;
+  text-align: center;
 }
 .bonitobook-header::before {
   left: 0;
@@ -139,11 +133,6 @@ pre code {
   position: absolute;
   opacity: 0.03;
   background: var(--site-animation-glow);
-}
-.hero-section {
-  padding: 60px 0;
-  border-bottom: 1px solid var(--site-border-primary);
-  text-align: center;
 }
 @media (prefers-color-scheme: light), (prefers-color-scheme: no-preference) {
   :root {
@@ -171,14 +160,43 @@ pre code {
 ::-webkit-scrollbar-thumb:hover {
   background-color: var(--site-scrollbar-thumb-hover);
 }
+.bonitobook-navbar {
+  z-index: 100;
+  align-items: center;
+  height: var(--navbar-height);
+  display: flex;
+  padding: 0 40px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  position: sticky;
+  justify-content: center;
+  background-color: var(--site-bg-primary);
+  top: 0;
+  border-bottom: 1px solid var(--site-border-primary);
+}
 .example-description {
   color: var(--site-text-secondary);
   margin: 0 0 20px 0;
   line-height: 1.6;
 }
+.blog-list {
+  margin-top: 40px;
+  display: flex;
+  gap: 24px;
+  width: 100%;
+  flex-direction: column;
+}
 .nav-item:hover {
   background-color: var(--site-hover-bg);
   color: var(--site-accent-blue);
+}
+.blog-card {
+  border: 1px solid var(--site-border-primary);
+  background-color: var(--site-bg-primary);
+  box-shadow: var(--site-shadow-soft);
+  padding: 24px;
+  width: 100%;
+  border-radius: 10px;
+  transition: all 0.2s ease;
 }
 .hero-button-secondary:hover {
   border-color: var(--site-accent-blue);
@@ -195,6 +213,10 @@ pre code {
   box-shadow: 0 4px 12px rgba(3, 102, 214, 0.3);
   color: white;
   transform: translateY(-1px);
+}
+.blog-card:hover {
+  border-color: var(--site-accent-blue);
+  box-shadow: var(--site-animation-glow);
 }
 .example-card::before {
   left: -100%;
@@ -367,6 +389,15 @@ a {
 .getting-started-inline .hover-buttons {
   display: none !important;
 }
+.nav-item {
+  font-weight: 500;
+  padding: 10px 16px;
+  text-decoration: none;
+  white-space: nowrap;
+  color: var(--site-text-primary);
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
 @media (max-width: 480px) {
   .getting-started-inline .cell-editor {
     padding: 5px !important;
@@ -375,19 +406,20 @@ a {
     padding: 10px !important;
   }
 }
+.blog-content {
+  align-items: center;
+  max-width: 800px;
+  display: flex;
+  padding: var(--content-padding);
+  margin: 0 auto;
+  flex-direction: column;
+}
 .section {
   margin: 60px 0;
 }
 html {
   background-color: var(--site-bg-primary);
   color: var(--site-text-primary);
-}
-.nav-item {
-  font-weight: 500;
-  text-decoration: none;
-  color: var(--site-text-primary);
-  border-radius: 6px;
-  transition: all 0.2s ease;
 }
 .hero-subtitle {
   max-width: 600px;
@@ -404,9 +436,9 @@ html {
 </style>
   </head>
   <body>
-    <script type="module">Bonito.init_session("27b75aa7-3ecd-4dab-9185-1eadfbb8f039", null, "root", false);
+    <script type="module">Bonito.init_session("d37909d4-2d36-4ab3-af6f-278ccb540806", null, "root", false);
 </script>
-    <div id="27b75aa7-3ecd-4dab-9185-1eadfbb8f039" data-jscall-id="root">
+    <div id="d37909d4-2d36-4ab3-af6f-278ccb540806" data-jscall-id="root">
       <div class="bonitobook-page" data-jscall-id="1">
         <header class="bonitobook-header" data-jscall-id="2">
           <div class="header-content" data-jscall-id="3">
@@ -414,34 +446,32 @@ html {
           </div>
         </header>
         <nav class="bonitobook-navbar" data-jscall-id="5">
-          <div class="nav-items" data-jscall-id="6">
-            <a class="nav-item" href="../" data-jscall-id="7">Home</a>
-            <a class="nav-item" href="../examples" data-jscall-id="8">Examples</a>
-            <a class="nav-item" href="../howto" data-jscall-id="9">How-To</a>
-            <a class="nav-item" href="../blog" data-jscall-id="10">Blog</a>
-          </div>
+          <a class="nav-item" href="../" data-jscall-id="6">Home</a>
+          <a class="nav-item" href="../examples" data-jscall-id="7">Examples</a>
+          <a class="nav-item" href="../howto" data-jscall-id="8">How-To</a>
+          <a class="nav-item" href="../blog" data-jscall-id="9">Blog</a>
         </nav>
-        <main class="main-content" data-jscall-id="11">
-          <div class="example-content" data-jscall-id="12">
-            <section data-jscall-id="13">
-              <h1 class="section-title" data-jscall-id="14">How-To Guides</h1>
-              <p class="section-content" data-jscall-id="15">Learn how to extend and customize BonitoBook with these step-by-step guides.</p>
+        <main class="main-content" data-jscall-id="10">
+          <div class="example-content" data-jscall-id="11">
+            <section data-jscall-id="12">
+              <h1 class="section-title" data-jscall-id="13">How-To Guides</h1>
+              <p class="section-content" data-jscall-id="14">Learn how to extend and customize BonitoBook with these step-by-step guides.</p>
             </section>
-            <div class="examples-grid" data-jscall-id="16">
-              <div class="example-card" data-jscall-id="17">
-                <h3 class="example-title" data-jscall-id="18">Language-Evaluator</h3>
-                <p class="example-description" data-jscall-id="19">Learn how to create a custom language evaluator to run code in your preferred language.</p>
-                <a class="example-link" href="../howto/language-evaluator" data-jscall-id="20">Open Example</a>
+            <div class="examples-grid" data-jscall-id="15">
+              <div class="example-card" data-jscall-id="16">
+                <h3 class="example-title" data-jscall-id="17">Language-Evaluator</h3>
+                <p class="example-description" data-jscall-id="18">Learn how to create a custom language evaluator to run code in your preferred language.</p>
+                <a class="example-link" href="../howto/language-evaluator" data-jscall-id="19">Open Example</a>
               </div>
-              <div class="example-card" data-jscall-id="21">
-                <h3 class="example-title" data-jscall-id="22">Bonitobook-Plugin</h3>
-                <p class="example-description" data-jscall-id="23">Step-by-step guide to creating BonitoBook plugins like slideshow, draggable layouts, and custom book formats.</p>
-                <a class="example-link" href="../howto/bonitobook-plugin" data-jscall-id="24">Open Example</a>
+              <div class="example-card" data-jscall-id="20">
+                <h3 class="example-title" data-jscall-id="21">Bonitobook-Plugin</h3>
+                <p class="example-description" data-jscall-id="22">Step-by-step guide to creating BonitoBook plugins like slideshow, draggable layouts, and custom book formats.</p>
+                <a class="example-link" href="../howto/bonitobook-plugin" data-jscall-id="23">Open Example</a>
               </div>
-              <div class="example-card" data-jscall-id="25">
-                <h3 class="example-title" data-jscall-id="26">Slideshow-Presentation</h3>
-                <p class="example-description" data-jscall-id="27">Learn how to create engaging presentations using the slideshow plugin with navigation and styling tips.</p>
-                <a class="example-link" href="../howto/slideshow-presentation" data-jscall-id="28">Open Example</a>
+              <div class="example-card" data-jscall-id="24">
+                <h3 class="example-title" data-jscall-id="25">Slideshow-Presentation</h3>
+                <p class="example-description" data-jscall-id="26">Learn how to create engaging presentations using the slideshow plugin with navigation and styling tips.</p>
+                <a class="example-link" href="../howto/slideshow-presentation" data-jscall-id="27">Open Example</a>
               </div>
             </div>
           </div>
