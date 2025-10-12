@@ -1,0 +1,58 @@
+’Ç-j“Ù$43e5dae0-e36a-43a6-85fc-6732cb9d454b€¤root“ÈVk’Ç\j“Ù$43e5dae0-e36a-43a6-85fc-6732cb9d454b¥28000Ç&e’¥28000¾cell-output cell-output-julia ¤rootƒ£obsÇh¥28000§payloadÇÒf“€Ùwreturn value => {
+    Bonito.update_node_attribute(document.querySelector('[data-jscall-id="105"]'), 'class', value);
+}ÙU/home/runner/.julia/packages/Bonito/tWcqJ/src/rendering/hyperscript_integration.jl:92¨msg_type¡1ÈLk’ÇSj“Ù$43e5dae0-e36a-43a6-85fc-6732cb9d454b¥28001Çe’¥28001µcell-editor-container¤rootƒ£obsÇh¥28001§payloadÇÑf“€Ùvreturn value => {
+    Bonito.update_node_attribute(document.querySelector('[data-jscall-id="90"]'), 'class', value);
+}ÙU/home/runner/.julia/packages/Bonito/tWcqJ/src/rendering/hyperscript_integration.jl:92¨msg_type¡1Èák’Ç-j“Ù$43e5dae0-e36a-43a6-85fc-6732cb9d454b€¤root‚§payloadÈ˜f“€Ú1    (function() {
+        const cell = document.querySelector('[data-jscall-id="88"]');
+        const handle = document.querySelector('[data-jscall-id="89"]');
+        let isDragging = false;
+        let startX, startY, initialX, initialY;
+
+        function onMouseDown(e) {
+            // Only allow dragging when clicking the drag handle
+            if (e.target !== handle && !handle.contains(e.target)) return;
+
+            isDragging = true;
+            cell.classList.add('dragging');
+            handle.classList.add('dragging');
+
+            startX = e.clientX;
+            startY = e.clientY;
+
+            // Get current position more reliably
+            const rect = cell.getBoundingClientRect();
+            const containerRect = cell.parentElement.getBoundingClientRect();
+            initialX = rect.left - containerRect.left;
+            initialY = rect.top - containerRect.top;
+
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        function onMouseMove(e) {
+            if (!isDragging) return;
+
+            const deltaX = e.clientX - startX;
+            const deltaY = e.clientY - startY;
+
+            const newX = Math.max(0, initialX + deltaX);
+            const newY = Math.max(20, initialY + deltaY); // Ensure handle stays visible
+
+            cell.style.left = newX + 'px';
+            cell.style.top = newY + 'px';
+        }
+
+        function onMouseUp() {
+            if (isDragging) {
+                isDragging = false;
+                cell.classList.remove('dragging');
+                handle.classList.remove('dragging');
+            }
+        }
+
+        // Only attach mousedown to the handle
+        handle.addEventListener('mousedown', onMouseDown);
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
+    })();
+Ù`/home/runner/work/BonitoBook.jl/BonitoBook.jl/docs/examples/.draggable_example-bbook/book.jl:143¨msg_type¡2
