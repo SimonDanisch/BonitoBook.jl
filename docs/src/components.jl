@@ -15,7 +15,7 @@ function Header(title::String)
 end
 
 # Navigation bar component
-function NavBar(items::Vector{Pair{String, String}})
+function NavBar(items::Vector{Pair{String,String}})
     nav_items = map(items) do (label, href)
         DOM.a(
             label,
@@ -489,9 +489,7 @@ const PageStyles = Styles(
         "color" => "var(--site-text-secondary)",
         "line-height" => "1.8",
         "font-size" => "1.1rem"
-    ),
-
-    CSS(
+    ), CSS(
         "code",
         "font-family" => "'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', monospace",
         "font-size" => "0.9em",
