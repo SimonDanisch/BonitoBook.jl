@@ -212,3 +212,48 @@ function create_book_structure(bookfile::String; replace_style=false)
 
     return folder
 end
+
+# ============================================================================
+# Cell ID Management
+# ============================================================================
+
+"""
+    assign_cell_ids!(cells::Vector)
+
+Assign IDs to cells that don't have them (uuid == 0), using the highest existing ID + 1 as the starting point.
+Returns the next available ID counter.
+"""
+function assign_cell_ids!(cells::Vector)
+    max_id = 0
+
+    # Find the highest existing ID
+    for cell in cells
+        if cell.uuid > 0
+            max_id = max(max_id, cell.uuid)
+        end
+    end
+
+    # Start counter after the highest ID
+    counter = Ref(max_id + 1)
+
+    # Assign IDs to cells without them (uuid == 0)
+    for (i, cell) in enumerate(cells)
+        if cell.uuid == 0
+            # Create new cell with assigned ID
+            cells[i] = CellEditor(
+                cell.editor.source[],
+                cell.language,
+                cell.editor.runner;
+                show_editor = cell.editor.show_editor[],
+                show_logging = cell.editor.show_logging[],
+                show_output = cell.editor.show_output[],
+                theme = cell.editor.editor.theme,
+                metadata = cell.metadata,
+                id = counter[]
+            )
+            counter[] += 1
+        end
+    end
+
+    return counter
+end

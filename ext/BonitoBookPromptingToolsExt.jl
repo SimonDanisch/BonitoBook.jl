@@ -5,7 +5,7 @@ using PromptingTools
 using Bonito
 using Markdown
 using TOML
-using JSON
+using JSON3
 using Bonito.HTTP
 
 """
@@ -143,7 +143,7 @@ function julia_exec_tool(agent::PromptingToolsAgent, code::String)
         response = HTTP.post(
             agent.mcp_server_url,
             ["Content-Type" => "application/json"],
-            JSON.json(mcp_request)
+            JSON3.write(mcp_request)
         )
 
         if response.status == 200
@@ -243,7 +243,7 @@ function BonitoBook.prompt(agent::PromptingToolsAgent, question::String)
                     break
                 end
                 try
-                    mcp_call = JSON.parse(strip(response.content))
+                    mcp_call = JSON3.read(strip(response.content))
                     if haskey(mcp_call, "method") && mcp_call["method"] == "julia_exec" &&
                         haskey(mcp_call, "params") && haskey(mcp_call["params"], "code")
                         # This is an MCP call, execute it
@@ -404,6 +404,114 @@ const SettingsStyles = BonitoBook.Styles(
         "gap" => "8px"
     )
 )
+
+"""
+    stream_response(agent::PromptingToolsAgent, messages::Vector, tools::Vector)
+
+Implement LLMChat plugin interface for streaming responses.
+"""
+function BonitoBook.LLMChatBooks.stream_response(
+    agent::PromptingToolsAgent,
+    messages::Vector{BonitoBook.LLMChatBooks.AgentMessage},
+    tools::Vector
+)
+    # Create a channel for streaming responses
+    response_channel = Channel{Any}(100)
+
+    # Start async task to generate response
+    @async try
+        # Clear conversation history except system message and rebuild from messages
+        system_msg = agent.conversation_history[1]  # Keep system message
+        agent.conversation_history = PromptingTools.AbstractMessage[system_msg]
+
+        # Convert AgentMessage to PromptingTools format
+        for msg in messages
+            if msg.role == :user
+                push!(agent.conversation_history, PromptingTools.UserMessage(string(msg.content)))
+            elseif msg.role == :assistant
+                push!(agent.conversation_history, PromptingTools.AIMessage(string(msg.content)))
+            end
+        end
+
+        # Conversation loop with tool support
+        iteration = 0
+        while iteration < 10
+            iteration += 1
+
+            # Generate response using full conversation history
+            response = PromptingTools.aigenerate(
+                agent.conversation_history;
+                model = agent.model,
+                return_all = false,
+            )
+
+            # Add AI response to conversation history
+            push!(agent.conversation_history, response)
+
+            if isa(response, PromptingTools.AIMessage)
+                # Check if the response is a pure JSON MCP call
+                if isempty(strip(response.content))
+                    break
+                end
+
+                try
+                    mcp_call = JSON3.read(strip(response.content))
+                    if haskey(mcp_call, "method") && mcp_call["method"] == "julia_exec" &&
+                        haskey(mcp_call, "params") && haskey(mcp_call["params"], "code")
+                        # This is an MCP call - yield it as a cell request
+                        code = mcp_call["params"]["code"]
+
+                        # Yield cell creation request
+                        put!(response_channel, Dict(
+                            :type => :cell,
+                            :content => code,
+                            :language => "julia",
+                            :metadata => Dict{Symbol, Any}(:from => :agent)
+                        ))
+
+                        # Execute and get result
+                        result = julia_exec_tool(agent, code)
+
+                        # Add the result as a user message
+                        result_message = PromptingTools.UserMessage(result)
+                        push!(agent.conversation_history, result_message)
+
+                        continue  # Continue loop to get next response
+                    else
+                        # Not a tool call, just regular text
+                        put!(response_channel, response.content)
+                        break
+                    end
+                catch e
+                    # Not JSON, treat as regular text
+                    put!(response_channel, response.content)
+                    break
+                end
+            end
+        end
+
+        if iteration >= 10
+            put!(response_channel, "Conversation loop reached maximum iterations")
+        end
+    catch e
+        # Send error message
+        error_msg = "Error: $(string(e))"
+        put!(response_channel, error_msg)
+    finally
+        close(response_channel)
+    end
+
+    return response_channel
+end
+
+"""
+    create_llm_chat_agent(book::BonitoBook.Book)
+
+Create a PromptingTools agent for LLMChat plugin.
+"""
+function BonitoBook.LLMChatBooks.create_llm_chat_agent(book::BonitoBook.Book)
+    return PromptingToolsAgent(book)
+end
 
 # Export the agent and helper functions
 export PromptingToolsAgent, update_model!, save_config_to_toml

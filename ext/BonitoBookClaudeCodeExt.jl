@@ -110,6 +110,56 @@ end
 
 BonitoBook.create_claude_agent(book::BonitoBook.Book) = ClaudeAgent(book)
 
+# LLM Chat Agent support
+"""
+    ClaudeChatAgent <: LLMChatAgent
+
+Adapter for using ClaudeAgent with the LLM Chat plugin.
+"""
+struct ClaudeChatAgent
+    claude_agent::ClaudeAgent
+end
+
+# Check if LLMChatAgent is defined (plugin is loaded)
+function __init__()
+    if isdefined(BonitoBook, :LLMChatAgent)
+        # Make ClaudeChatAgent a subtype
+        @eval ClaudeChatAgent <: BonitoBook.LLMChatAgent
+    end
+end
+
+"""
+    stream_response(agent::ClaudeChatAgent, messages::Vector, tools::Vector)
+
+Stream response from Claude for LLM Chat.
+"""
+function stream_response(agent::ClaudeChatAgent, messages, tools)
+    # Convert messages to Claude format
+    # For now, just take the last user message
+    user_message = ""
+    for msg in reverse(messages)
+        if msg.role == :user
+            user_message = msg.content
+            break
+        end
+    end
+
+    if isempty(user_message)
+        user_message = "Hello"
+    end
+
+    # Stream from Claude
+    return BonitoBook.prompt(agent.claude_agent, user_message)
+end
+
+# Override create_chat_agent if LLMChatAgent is available
+if isdefined(BonitoBook, :LLMChatAgent)
+    function BonitoBook.create_llm_chat_agent(book::BonitoBook.Book)
+        claude_agent = ClaudeAgent(book)
+        return ClaudeChatAgent(claude_agent)
+    end
+end
+
 """
     update_options(options::ClaudeCodeOptions, config::Dict)
 

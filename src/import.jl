@@ -2,6 +2,7 @@
     parse_cell_options(options_str)
 
 Parse cell options from named tuple or legacy format.
+Returns (show_editor, show_logging, show_output, id, metadata_dict)
 
 - `options_str::String`: Options string
 """
@@ -19,36 +20,65 @@ function parse_cell_options(options_str)
             editor = true
             logging = false
             output = true
+            id = nothing
+            metadata = Dict{Symbol, Any}()
 
             for pair in pairs
-                key_val = split(strip(pair), "=")
+                key_val = split(strip(pair), "=", limit=2)
                 if length(key_val) == 2
                     key = strip(key_val[1])
-                    val = parse(Bool, strip(key_val[2]))
+                    val_str = strip(key_val[2])
+
+                    # Try to parse the value appropriately
+                    val = try
+                        # Try boolean first
+                        if val_str in ("true", "false")
+                            parse(Bool, val_str)
+                        # Try integer
+                        elseif occursin(r"^\d+$", val_str)
+                            parse(Int, val_str)
+                        # Try symbol (starts with :)
+                        elseif startswith(val_str, ":")
+                            Symbol(val_str[2:end])
+                        # Otherwise keep as string (remove quotes if present)
+                        else
+                            strip(val_str, ['"', '\''])
+                        end
+                    catch
+                        val_str
+                    end
+
                     if key == "editor"
                         editor = val
                     elseif key == "logging"
                         logging = val
                     elseif key == "output"
                         output = val
+                    elseif key == "id"
+                        id = val
+                    else
+                        # Store additional metadata
+                        metadata[Symbol(key)] = val
                     end
                 end
             end
 
-            return (editor, logging, output)
-        catch
+            return (editor, logging, output, id, metadata)
+        catch e
             # Fall back to legacy format if parsing fails
+            @debug "Failed to parse cell options as named tuple: $e"
         end
     end
 
     # Legacy format: space-separated booleans
     parts = split(options_str)
     if length(parts) == 3
-        return parse.(Bool, parts)
+        parsed = parse.(Bool, parts)
+        return (parsed[1], parsed[2], parsed[3], nothing, Dict{Symbol, Any}())
     end
 
     # Default fallback
-    return (true, false, true)
+    return (true, false, true, nothing, Dict{Symbol, Any}())
 end
 
 """
@@ -62,10 +92,14 @@ Parse markdown document into book cells.
 function markdown2book(md; all_blocks_as_cell = false)
     cells = Cell[]
     last_md = nothing
+    fallback_counter = Ref(1)  # Fallback counter for cells without id
+
     function append_last_md()
         if !isnothing(last_md) && !isempty(last_md)
             parsed = Markdown.MD(last_md, md.meta)
-            push!(cells, Cell("markdown", string(parsed)))
+            id = fallback_counter[]
+            fallback_counter[] += 1
+            push!(cells, Cell("markdown", string(parsed), nothing, false, false, true, id, Dict{Symbol, Any}()))
             last_md = nothing
         end
         return
@@ -83,12 +117,19 @@ function markdown2book(md; all_blocks_as_cell = false)
 
                     if has_options
                         options_str = strip(code_parts[2])
-                        show_fields = parse_cell_options(options_str)
+                        show_editor, show_logging, show_output, id, metadata = parse_cell_options(options_str)
                     else
                         # Default show fields for all_blocks_as_cell mode
-                        show_fields = (true, false, true)
+                        show_editor, show_logging, show_output, id, metadata = (true, false, true, nothing, Dict{Symbol, Any}())
                     end
-                    push!(cells, Cell(language, content.code, nothing, show_fields...))
+
+                    # Use fallback counter if no id provided
+                    if isnothing(id)
+                        id = fallback_counter[]
+                        fallback_counter[] += 1
+                    end
+
+                    push!(cells, Cell(language, content.code, nothing, show_editor, show_logging, show_output, id, metadata))
                 else
                     # Otherwise we treat it as inline markdown code block
                     isnothing(last_md) && (last_md = [])
@@ -123,6 +164,8 @@ function ipynb2book(json_path::String)
     # Read the json file
     json_content = JSON3.read(read(json_path))
     cells = Cell[]
+    fallback_counter = Ref(1)  # Fallback counter for cells without id
+
     for cell in json_content["cells"]
         cell_type = cell["cell_type"]
         if cell_type == "code"
@@ -134,16 +177,38 @@ function ipynb2book(json_path::String)
                     haskey(json_content["metadata"]["kernelspec"], "language")
                 language = json_content["metadata"]["kernelspec"]["language"]
             end
-            if language == "markdown"
-                fields = (false, false, true)
-            else
-                fields = (true, false, true)
+
+            # Extract metadata from cell metadata if present
+            metadata = Dict{Symbol, Any}()
+            id = nothing
+            if haskey(cell, "metadata") && haskey(cell["metadata"], "bonitobook")
+                bb_meta = cell["metadata"]["bonitobook"]
+                for (k, v) in pairs(bb_meta)
+                    if k == "id"
+                        id = v
+                    elseif k != "show_editor" && k != "show_output" && k != "show_logging"
+                        metadata[Symbol(k)] = v
+                    end
+                end
             end
-            isempty(source) || push!(cells, Cell(language, source, nothing, fields...))
+
+            # Use fallback counter if no id
+            if isnothing(id)
+                id = fallback_counter[]
+                fallback_counter[] += 1
+            end
+
+            if language == "markdown"
+                show_editor, show_logging, show_output = (false, false, true)
+            else
+                show_editor, show_logging, show_output = (true, false, true)
+            end
+            isempty(source) || push!(cells, Cell(language, source, nothing, show_editor, show_logging, show_output, id, metadata))
         elseif cell_type == "markdown"
             source = join(cell["source"], "")
-
-            isempty(source) || push!(cells, Cell("markdown", source))
+            id = fallback_counter[]
+            fallback_counter[] += 1
+            isempty(source) || push!(cells, Cell("markdown", source, nothing, false, false, true, id, Dict{Symbol, Any}()))
         end
     end
     return cells
@@ -194,7 +259,9 @@ function cells2editors(cells, runner, theme = Observable("default"))
             show_editor = cell.show_editor,
             show_logging = cell.show_logging,
             show_output = cell.show_output,
-            theme = theme
+            theme = theme,
+            metadata = cell.metadata,
+            id = cell.id
         )
     end
 end

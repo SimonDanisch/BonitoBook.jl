@@ -17,6 +17,7 @@ mutable struct Book <: AbstractBook
     current_cell::Observable{Union{CellEditor,Nothing}}
     theme_preference::Observable{String}
     monaco_theme::Observable{String}
+    cell_id_counter::Ref{Int}  # Counter for assigning unique cell IDs
 end
 
 
@@ -84,6 +85,9 @@ function Book(user_file::String; folder=nothing, replace_style=false, all_blocks
     editors = cells2editors(cells, runner, monaco_theme)
     progress = Observable((false, 0.0))
 
+    # Assign IDs to all cells and get the next counter value
+    cell_id_counter = assign_cell_ids!(editors)
+
     # Activate the project in the parent directory (where Project.toml is)
     # Load required packages
     Core.eval(runner.mod, :(using BonitoBook, BonitoBook.Bonito, BonitoBook.Markdown))
@@ -106,7 +110,8 @@ function Book(user_file::String; folder=nothing, replace_style=false, all_blocks
     theme_preference = Observable{String}("auto")
     book = Book(
         markdown_file, folder, editors, runner, progress, nothing, nothing, Dict{String,Any}(),
-        global_logging_widget, style_eval, spinner, current_cell, theme_preference, monaco_theme
+        global_logging_widget, style_eval, spinner, current_cell, theme_preference, monaco_theme,
+        cell_id_counter
     )
     Core.eval(runner.mod, :(current_book() = $(book)))
     # Add data string macro for convenient data folder access
@@ -178,9 +183,11 @@ struct Cell
     show_editor::Bool
     show_logging::Bool
     show_output::Bool
+
+    id::Int
+    metadata::Dict{Symbol, Any}
 end
 
-Cell(language, source) = Cell(language, source, nothing, false, false, true)
 
 function download_file_js(session, file)
     return js"""
@@ -781,11 +788,12 @@ function book(path::AbstractString;
     folder=nothing,
     port=8773,
     proxy_url="",
-    openbrowser=true
+    openbrowser=true,
+    plugin_args...
 )
     name = splitext(basename(path))[1]
     app = App(title=name) do
-        return create_book(path; replace_style=replace_style, all_blocks_as_cell=all_blocks_as_cell, folder=folder)
+        return create_book(path; replace_style=replace_style, all_blocks_as_cell=all_blocks_as_cell, folder=folder, plugin_args...)
     end
     server = get_server(url, port, proxy_url)
     route!(server, "/$(name)" => app)

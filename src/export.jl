@@ -130,10 +130,31 @@ function export_md(file::AbstractString, book::Book)
             show_editor = editor.show_editor[]
             show_logging = editor.show_logging[]
             show_output = editor.show_output[]
+            metadata = cell_editor.metadata
+
             if language == "markdown"
                 println(io, content)
             else
-                println(io, "```$language (editor=$show_editor, logging=$show_logging, output=$show_output)")
+                # Build options string with metadata
+                opts = ["editor=$show_editor", "logging=$show_logging", "output=$show_output"]
+
+                # Add uuid as id
+                push!(opts, "id=$(cell_editor.uuid)")
+
+                # Add metadata fields
+                for (key, val) in metadata
+                    val_str = if val isa Symbol
+                        ":$val"
+                    elseif val isa String
+                        "\"$val\""
+                    else
+                        string(val)
+                    end
+                    push!(opts, "$key=$val_str")
+                end
+
+                opts_str = join(opts, ", ")
+                println(io, "```$language ($opts_str)")
                 println(io, content)
                 println(io, "```")
             end
@@ -204,6 +225,7 @@ function export_ipynb(file::AbstractString, book::Book)
         content = editor.source[]
         show_editor = editor.show_editor[]
         show_output = editor.show_output[]
+        metadata = cell_editor.metadata
 
         # Split content into lines for Jupyter format
         source_lines = split(content, '\n', keepempty=true)
@@ -220,14 +242,21 @@ function export_ipynb(file::AbstractString, book::Book)
             # Map language names to Jupyter kernel names
             _ = language == "julia" ? "julia" : language  # Not used currently
 
+            # Build bonitobook metadata including cell metadata
+            bb_meta = Dict(
+                "show_editor" => show_editor,
+                "show_output" => show_output
+            )
+            # Add additional metadata
+            for (k, v) in metadata
+                bb_meta[string(k)] = v
+            end
+
             cell = Dict(
                 "cell_type" => "code",
                 "execution_count" => nothing,
                 "metadata" => Dict(
-                    "bonitobook" => Dict(
-                        "show_editor" => show_editor,
-                        "show_output" => show_output
-                    )
+                    "bonitobook" => bb_meta
                 ),
                 "outputs" => [],
                 "source" => source_array

@@ -1,0 +1,5 @@
+model = "claude-sonnet-4-20250514"
+max_tokens = 4096
+temperature = 0.7
+tool_choice = "auto"
+tools = ["bash", "file_read", "file_write", "file_edit", "http_get", "add_cell"]

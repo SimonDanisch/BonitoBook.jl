@@ -363,20 +363,23 @@ Interactive cell for code editing and execution.
 # Fields
 - `language::String`: Programming language ("julia", "markdown", "python", etc.)
 - `editor::EvalEditor`: Main code editor
-- `uuid::String`: Unique identifier for the cell
+- `uuid::Int`: Unique counter-based identifier for the cell
 - `delete_self::Observable{Bool}`: Signal for cell deletion
+- `focused::Observable{Bool}`: Whether the cell is currently focused
+- `metadata::Dict{Symbol, Any}`: Plugin-specific metadata (e.g., from=:user)
 """
 struct CellEditor
     language::String
     editor::EvalEditor
-    uuid::String
+    uuid::Int
     delete_self::Observable{Bool}
     focused::Observable{Bool}
+    metadata::Dict{Symbol, Any}
 end
 
 
 """
-    CellEditor(content, language, runner; show_editor=true, show_logging=false, show_output=true)
+    CellEditor(content, language, runner; show_editor=true, show_logging=false, show_output=true, metadata=Dict{Symbol,Any}())
 
 Create an interactive cell editor with code execution capabilities.
 
@@ -387,13 +390,15 @@ Create an interactive cell editor with code execution capabilities.
 - `show_editor`: Whether to show the code editor initially
 - `show_logging`: Whether to show execution logs initially
 - `show_output`: Whether to show execution output initially
+- `metadata`: Plugin-specific metadata dictionary
 
 # Returns
 Configured `CellEditor` instance ready for interactive use.
 """
-function CellEditor(content, language, runner; show_editor = true, show_logging = false, show_output = true, theme = Observable("default"))
+function CellEditor(content, language, runner; show_editor = true, show_logging = false, show_output = true, theme = Observable("default"), metadata = Dict{Symbol, Any}(), id::Int = 0)
     runner = language == "markdown" ? MarkdownRunner() : runner
-    uuid = string(UUIDs.uuid4())
+    # Use provided id or 0 as placeholder (will be replaced by assign_cell_ids!)
+    uuid = id
 
     jleditor = EvalEditor(
         content, runner;
@@ -414,7 +419,7 @@ function CellEditor(content, language, runner; show_editor = true, show_logging 
     focused = Observable(false)
     return CellEditor(
         language, jleditor,
-        uuid, Observable(false), focused
+        uuid, Observable(false), focused, metadata
     )
 end
 
