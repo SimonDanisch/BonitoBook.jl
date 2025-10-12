@@ -174,12 +174,20 @@ If asked something simple, give the simplest version. For example, if asked for 
 # ============================================================================
 
 """
-    prompt(agent::HTTPAgent, messages::Vector{AgentMessage}, tools::Vector)
+    prompt(agent::HTTPAgent, messages::Vector{AgentMessage}, tools::Vector;
+           spinner=nothing,
+           stop_flag::Union{Nothing, Threads.Atomic{Bool}}=nothing)
 
 Call the HTTP agent with streaming and return a Channel that yields complete content blocks (tools and text).
 The Channel is closed after all items are yielded.
+
+# Optional Arguments
+- `spinner`: LLMChatSpinner to show during HTTP request
+- `stop_flag`: Atomic bool for cancellation support
 """
-function prompt(agent::HTTPAgent, messages::Vector{AgentMessage}, tools::Vector)
+function prompt(agent::HTTPAgent, messages::Vector{AgentMessage}, tools::Vector;
+                spinner=nothing,
+                stop_flag::Union{Nothing, Threads.Atomic{Bool}}=nothing)
     config = agent.config
     # Convert messages to API format
     api_messages = [
@@ -199,6 +207,11 @@ function prompt(agent::HTTPAgent, messages::Vector{AgentMessage}, tools::Vector)
 
     @async begin
         try
+            # Show spinner if provided
+            if spinner !== nothing
+                spinner.visible[] = true
+            end
+
             # Use HTTP.request with response_stream to handle streaming
             response = HTTP.request(
                 "POST",
@@ -208,11 +221,22 @@ function prompt(agent::HTTPAgent, messages::Vector{AgentMessage}, tools::Vector)
                 response_stream = IOBuffer()
             )
 
+            # Hide HTTP spinner once we have response
+            if spinner !== nothing
+                spinner.visible[] = false
+            end
+
             # Get the response body
             response_body = String(take!(response.body))
 
             # Split into SSE lines and process
             for line in split(response_body, '\n')
+                # Check stop flag during parsing
+                if stop_flag !== nothing && stop_flag[]
+                    @info "HTTP response parsing cancelled by stop flag"
+                    break
+                end
+
                 # Skip empty lines
                 if isempty(strip(line))
                     continue
@@ -237,8 +261,14 @@ function prompt(agent::HTTPAgent, messages::Vector{AgentMessage}, tools::Vector)
                 end
             end
         catch e
-            @error "Streaming error" exception=(e, catch_backtrace())
+            if !isa(e, InterruptException)
+                @error "Streaming error" exception=(e, catch_backtrace())
+            end
         finally
+            # Always hide spinner and close channel
+            if spinner !== nothing
+                spinner.visible[] = false
+            end
             close(output_channel)
         end
     end
