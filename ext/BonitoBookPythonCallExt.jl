@@ -3,6 +3,7 @@ module BonitoBookPythonCallExt
 using BonitoBook
 using PythonCall
 using CondaPkg
+using Bonito
 
 """
     PythonEval <: LanguageEval
@@ -87,6 +88,16 @@ function transfer_python_vars(python_dict::Py, julia_module, var_type::String)
     return
 end
 
+function render_python(value)
+    mime = Bonito.richest_mime(value)
+    # This is not ideal, but we need a session for rendering
+    # It should be fine (besides performance), since the session should be unused for python values!
+    # If someone would overwrite jsrender(session::Session, p::PyObject), this could break though...
+    # This shouldnt be done and rather be overloaded for the converted Julia type.
+    session = Bonito.Session()
+    return Bonito.render_mime(session, mime, value)
+end
+
 """
     eval_code(evaluator::PythonEval, mod::Module, file::String, line::Int, source::String)
 
@@ -103,7 +114,10 @@ function BonitoBook.eval_code(evaluator::PythonEval, mod::Module, ::String, ::In
         result = eval_py(source, evaluator.globals, evaluator.locals)
         transfer_python_vars(evaluator.globals, mod, "global")
         transfer_python_vars(evaluator.locals, mod, "local")
-        return result
+        # We need to render the result immediately, to not pass around the python obbject
+        # Which can easily segfault if rendered on a different thread, or for whatever other reason
+        # PythonCall segfaults
+        return render_python(result)
     end
 end
 
