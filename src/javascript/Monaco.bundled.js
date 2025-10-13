@@ -704,6 +704,88 @@ function register_cell_editor(eval_editor, uuid1) {
         });
     });
 }
+class MonacoDiffEditor {
+    constructor(editor_div, original_obs, modified_obs, language, options, theme){
+        this.editor_div = editor_div;
+        this.options = options;
+        this.language = language;
+        this.theme = theme.value;
+        this.original_obs = original_obs;
+        this.modified_obs = modified_obs;
+        theme.on((new_theme)=>{
+            this.set_theme(new_theme);
+        });
+        this.editor = monaco.then((m)=>{
+            const diffEditor = m.editor.createDiffEditor(editor_div, {
+                ...options,
+                language: language
+            });
+            this.set_theme(this.theme);
+            const originalModel = m.editor.createModel(original_obs.value, language);
+            const modifiedModel = m.editor.createModel(modified_obs.value, language);
+            diffEditor.setModel({
+                original: originalModel,
+                modified: modifiedModel
+            });
+            const originalLineCount = originalModel.getLineCount();
+            const modifiedLineCount = modifiedModel.getLineCount();
+            const maxLines = Math.max(originalLineCount, modifiedLineCount);
+            const lineHeight = 19;
+            const minHeight = 100;
+            const maxHeight = 600;
+            const contentHeight = Math.min(Math.max(maxLines * lineHeight + 20, minHeight), maxHeight);
+            editor_div.style.height = `${contentHeight}px`;
+            editor_div.style.width = '100%';
+            diffEditor.layout();
+            const editorDomNode = diffEditor.getContainerDomNode();
+            if (editorDomNode) {
+                editorDomNode.addEventListener('wheel', (e)=>{
+                    e.stopPropagation();
+                    e.preventDefault();
+                    const scrollParent = document.querySelector(".book-cells-area") || document.querySelector(".llm-chat-messages");
+                    if (scrollParent) {
+                        scrollParent.scrollBy({
+                            top: e.deltaY,
+                            left: e.deltaX,
+                            behavior: 'auto'
+                        });
+                    } else {
+                        window.scrollBy(e.deltaX, e.deltaY);
+                    }
+                }, {
+                    passive: false
+                });
+            }
+            original_obs.on((text)=>{
+                originalModel.setValue(text);
+                this.updateHeight(diffEditor, originalModel, modifiedModel);
+            });
+            modified_obs.on((text)=>{
+                modifiedModel.setValue(text);
+                this.updateHeight(diffEditor, originalModel, modifiedModel);
+            });
+            return diffEditor;
+        });
+    }
+    updateHeight(diffEditor, originalModel, modifiedModel) {
+        const originalLineCount = originalModel.getLineCount();
+        const modifiedLineCount = modifiedModel.getLineCount();
+        const maxLines = Math.max(originalLineCount, modifiedLineCount);
+        const contentHeight = Math.min(Math.max(maxLines * 19 + 20, 100), 600);
+        this.editor_div.style.height = `${contentHeight}px`;
+        diffEditor.layout();
+    }
+    set_theme(theme) {
+        this.theme = theme;
+        monaco.then((m)=>{
+            let effectiveTheme = theme;
+            if (theme === "default") {
+                effectiveTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'vs-dark' : 'vs';
+            }
+            m.editor.setTheme(effectiveTheme);
+        });
+    }
+}
 export { MonacoEditor as MonacoEditor };
 export { EvalEditor as EvalEditor };
 export { BOOK as BOOK };
@@ -715,4 +797,5 @@ export { toggle_elem as toggle_elem };
 export { setup_cell_editor as setup_cell_editor };
 export { register_completions as register_completions };
 export { register_cell_editor as register_cell_editor };
+export { MonacoDiffEditor as MonacoDiffEditor };
 

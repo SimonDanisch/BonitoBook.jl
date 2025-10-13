@@ -9,86 +9,7 @@ The loop continues until:
 """
 
 """
-    run_with_spinner!(func, spinner, stop_flag::Threads.Atomic{Bool};
-                      timeout=300.0, poll_interval=0.1)
-
-Run a function with a spinner and proper cancellation support.
-Uses polling to check stop_flag and timeout while task runs.
-
-# Arguments
-- `func`: Function to run (should be interruptible)
-- `spinner`: Spinner to show during execution
-- `stop_flag`: Atomic bool for cancellation
-- `timeout`: Maximum execution time in seconds (default 300s = 5min)
-- `poll_interval`: How often to check stop_flag in seconds (default 0.1s)
-
-# Returns
-The result of `func()` or `nothing` if stopped/timed out
-
-# Throws
-- `TaskFailedException`: If the task errors
-- `TimeoutError`: If timeout is reached
-"""
-function run_with_spinner!(func, spinner, stop_flag::Threads.Atomic{Bool};
-                           timeout=300.0, poll_interval=0.1)
-    # Show spinner
-    spinner.visible[] = true
-
-    # Start the task
-    task = @async func()
-
-    result = nothing
-    start_time = time()
-
-    try
-        # Poll until task completes, stop_flag is set, or timeout
-        while !istaskdone(task)
-            # Check stop flag
-            if stop_flag[]
-                @info "Task cancelled by stop flag"
-                # Try to interrupt the task
-                try
-                    Base.schedule(task, InterruptException(); error=true)
-                catch
-                end
-                break
-            end
-
-            # Check timeout
-            if time() - start_time > timeout
-                @warn "Task timed out after $(timeout)s"
-                try
-                    Base.schedule(task, InterruptException(); error=true)
-                catch
-                end
-                throw(ErrorException("Task timed out after $(timeout)s"))
-            end
-
-            # Sleep briefly before checking again
-            sleep(poll_interval)
-        end
-
-        # If task completed naturally, get the result
-        if istaskdone(task) && !stop_flag[]
-            result = fetch(task)
-        end
-
-    catch e
-        if !isa(e, InterruptException)
-            @error "Error in run_with_spinner!" exception=(e, catch_backtrace())
-            rethrow(e)
-        end
-    finally
-        # Always hide spinner
-        spinner.visible[] = false
-    end
-
-    return result
-end
-
-"""
-    run_agent_loop!(book, agent, user_message::String, config::AgentConfig, stop_flag::Threads.Atomic{Bool};
-                    http_spinner=nothing, channel_spinner=nothing, loop_spinner=nothing)
+    run_agent_loop!(book, agent, user_message::String, config::AgentConfig, task_spinner::TaskSpinner)
 
 Main agent loop that:
 1. Adds user message as a cell
@@ -96,102 +17,50 @@ Main agent loop that:
 3. Processes each item from the Channel (allowing multiple tools/text per response)
 4. Stops when text is encountered or stop_flag is set
 
-Optional spinner arguments for visual feedback at different levels.
+Uses TaskSpinner for visual feedback at different levels.
 
 Returns a Channel for any UI updates (currently unused but kept for future extensions).
 """
-function run_agent_loop!(book, agent::Any, user_message::String, config::AgentConfig, stop_flag::Threads.Atomic{Bool};
-                         http_spinner=nothing, channel_spinner=nothing, loop_spinner=nothing)
-    output_channel = Channel{Any}(100)
+function run_agent_loop!(book, agent::Any, user_message::String, config::AgentConfig, task_spinner::TaskSpinner)
     # Add user message cell as Julia code with Markdown.parse
-    user_markdown_code = "Markdown.parse(\"\"\"$user_message\"\"\")"
+    user_markdown_code = "Markdown.parse($(repr(user_message)))"
     add_cell!(book, user_markdown_code, "julia", Dict{Symbol, Any}(:from => :user))
-    # Run agent loop in background
-    @async begin
-        try
-            broke = false
-            for i in 1:20
-                # Show loop spinner for this iteration
-                if loop_spinner !== nothing
-                    loop_spinner.visible[] = true
-                end
-
-                # Check stop flag
-                if stop_flag[]
-                    @info "Agent loop stopped by stop flag"
-                    break
-                end
-
-                # Get current conversation
-                messages = cells_to_messages(book.cells)
-
-                # Call agent with HTTP spinner - returns Channel with multiple items (tools and text)
-                result_channel = prompt(agent, messages, config.tools;
-                                       spinner=http_spinner, stop_flag=stop_flag)
-
-                # Show channel spinner while processing results
-                if channel_spinner !== nothing
-                    channel_spinner.visible[] = true
-                end
-
-                # Process all items from the channel
-                last_item = nothing
-                for item in result_channel
-                    # Check stop flag while processing
-                    if stop_flag[]
-                        @info "Channel processing stopped by stop flag"
-                        break
-                    end
-
-                    # Process each item
-                    process_item!(book, item)
-                    put!(output_channel, item)
-                    last_item = item
-                end
-
-                # Hide channel spinner after processing
-                if channel_spinner !== nothing
-                    channel_spinner.visible[] = false
-                end
-
-                # Hide loop spinner after iteration
-                if loop_spinner !== nothing
-                    loop_spinner.visible[] = false
-                end
-
-                # If we got text, break the loop
-                if last_item isa AbstractString
-                    broke = true
-                    break
-                end
-
-                # Check stop flag before next iteration
-                if stop_flag[]
-                    break
-                end
-            end
-        catch e
-            if !isa(e, InterruptException)
-                @error "Agent loop error" exception=(e, catch_backtrace())
-                error_msg = "Error: $(sprint(showerror, e))"
-                add_cell!(book, error_msg, "markdown", Dict{Symbol, Any}(:from => :error))
-            end
-        finally
-            # Hide all spinners
-            if http_spinner !== nothing
-                http_spinner.visible[] = false
-            end
-            if channel_spinner !== nothing
-                channel_spinner.visible[] = false
-            end
-            if loop_spinner !== nothing
-                loop_spinner.visible[] = false
-            end
-            close(output_channel)
+    async_spinner!(task_spinner, "agent loop", 1:50) do i
+        # Get current conversation
+        messages = cells_to_messages(book.cells)
+        # Call agent with nested spinner - returns Channel with multiple items (tools and text)
+        result_channel = async_spinner!(task_spinner, "asking") do
+            prompt(agent, messages, config.tools; spinner=task_spinner)
         end
+        # Process all items from the channel
+        async_spinner!(task_spinner, "processing ai", result_channel) do item
+            process_item!(book, agent, item)
+        end
+        # Return true for stopping early
+        isdone(agent) && return true
     end
+    return
+end
 
-    return output_channel
+function isdone(agent::HTTPAgent)
+    if !isempty(agent.needs_to_be_done)
+        finished = all(isdone, values(agent.needs_to_be_done))
+        if finished
+            empty!(agent.needs_to_be_done)
+        end
+        return finished
+    end
+    return agent.last_item[] isa String
+end
+
+multi_task_tool(item) = false
+
+function process_item!(book, agent::HTTPAgent, item)
+    agent.last_item[] = item
+    if multi_task_tool(item)
+        agent.needs_to_be_done[typeof(item)] = item
+    end
+    process_item!(book, item)
 end
 
 """
@@ -202,7 +71,7 @@ Uses multiple dispatch to handle different item types.
 """
 function process_item!(book, item::String)
     # Text content - create Julia code cell with Markdown.parse
-    markdown_code = "Markdown.parse(\"\"\"$item\"\"\")"
+    markdown_code = "Markdown.parse($(repr(item)))"
     add_cell!(book, markdown_code, "julia", Dict{Symbol, Any}(:from => :agent))
 end
 
@@ -248,6 +117,7 @@ function process_item!(book, tool::AbstractTool)
     # Add as Julia code cell (will be executed and rendered)
     cell = add_cell!(book, tool_code, "julia", Dict{Symbol, Any}(:from => :tool, :tool => tool_name(tool_type)))
 
+    return cell  # Return the cell for TodoList tracking
 end
 
 # Fallback for other types (DOM elements, etc.) - ignore

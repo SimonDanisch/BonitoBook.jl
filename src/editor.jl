@@ -535,6 +535,70 @@ struct FileEditor
     end
 end
 
+"""
+    DiffEditor
+
+Monaco diff editor for comparing original and modified text.
+
+# Fields
+- `original::Observable{String}`: Original text content
+- `modified::Observable{String}`: Modified text content
+- `language::String`: Programming language for syntax highlighting
+- `options::Dict{Symbol, Any}`: Editor configuration options
+- `theme::Observable{String}`: Editor theme
+"""
+struct DiffEditor
+    original::Observable{String}
+    modified::Observable{String}
+    language::String
+    options::Dict{Symbol, Any}
+    theme::Observable{String}
+end
+
+function DiffEditor(original::String, modified::String; language="julia", theme=Observable("default"), options...)
+    defaults = Dict{Symbol, Any}(
+        :readOnly => true,
+        :renderSideBySide => true,
+        :minimap => Dict(:enabled => false),
+        :scrollBeyondLastLine => false,
+        :automaticLayout => true,
+        :renderOverviewRuler => false,
+        :scrollbar => Dict(:vertical => "auto", :horizontal => "auto"),
+    )
+    opts = merge!(defaults, Dict{Symbol, Any}(options))
+    
+    return DiffEditor(
+        Observable(original),
+        Observable(modified),
+        language,
+        opts,
+        theme
+    )
+end
+
+function Bonito.jsrender(session::Session, diff_editor::DiffEditor)
+    editor_div = DOM.div(class="monaco-diff-editor-div")
+    
+    return Bonito.jsrender(
+        session, DOM.div(
+            editor_div,
+            js"""
+            $(Monaco).then(mod => {
+                const diffEditor = new mod.MonacoDiffEditor(
+                    $(editor_div),
+                    $(diff_editor.original),
+                    $(diff_editor.modified),
+                    $(diff_editor.language),
+                    $(diff_editor.options),
+                    $(diff_editor.theme)
+                );
+                return diffEditor.editor;
+            })
+            """
+        )
+    )
+end
+
 function open_file!(editor::FileEditor, filepath::String; line::Union{Int, Nothing} = nothing)
     if isfile(filepath)
         # Switch to new file

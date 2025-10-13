@@ -769,3 +769,116 @@ export function register_cell_editor(eval_editor, uuid) {
         });
     });
 }
+
+export class MonacoDiffEditor {
+    constructor(editor_div, original_obs, modified_obs, language, options, theme) {
+        this.editor_div = editor_div;
+        this.options = options;
+        this.language = language;
+        this.theme = theme.value;
+        this.original_obs = original_obs;
+        this.modified_obs = modified_obs;
+        
+        theme.on((new_theme) => {
+            this.set_theme(new_theme);
+        });
+
+        this.editor = monaco.then((m) => {
+            const diffEditor = m.editor.createDiffEditor(editor_div, {
+                ...options,
+                language: language,
+            });
+
+            // Set initial theme
+            this.set_theme(this.theme);
+
+            // Set the original and modified models
+            const originalModel = m.editor.createModel(original_obs.value, language);
+            const modifiedModel = m.editor.createModel(modified_obs.value, language);
+
+            diffEditor.setModel({
+                original: originalModel,
+                modified: modifiedModel
+            });
+
+            // Calculate height based on content
+            const originalLineCount = originalModel.getLineCount();
+            const modifiedLineCount = modifiedModel.getLineCount();
+            const maxLines = Math.max(originalLineCount, modifiedLineCount);
+            const lineHeight = 19; // Monaco's default line height
+            const minHeight = 100;
+            const maxHeight = 600;
+            const contentHeight = Math.min(Math.max(maxLines * lineHeight + 20, minHeight), maxHeight);
+            
+            editor_div.style.height = `${contentHeight}px`;
+            editor_div.style.width = '100%';
+            
+            // Layout the editor
+            diffEditor.layout();
+
+            // Prevent scroll events from being captured by the diff editor
+            // This allows page scrolling to work when mouse is over the editor
+            const editorDomNode = diffEditor.getContainerDomNode();
+            if (editorDomNode) {
+                editorDomNode.addEventListener('wheel', (e) => {
+                    // Prevent Monaco from handling the wheel event
+                    e.stopPropagation();
+                    e.preventDefault();
+
+                    // Find the scrollable parent (could be book-cells-area, llm-chat-messages, or window)
+                    const scrollParent = document.querySelector(".book-cells-area") || 
+                                       document.querySelector(".llm-chat-messages");
+
+                    if (scrollParent) {
+                        // Use scrollBy for smoother scrolling with proper delta handling
+                        scrollParent.scrollBy({
+                            top: e.deltaY,
+                            left: e.deltaX,
+                            behavior: 'auto' // Use 'auto' for immediate scrolling like native
+                        });
+                    } else {
+                        // Fallback to window scrolling
+                        window.scrollBy(e.deltaX, e.deltaY);
+                    }
+                }, { passive: false });
+            }
+
+            // Update models when observables change
+            original_obs.on((text) => {
+                originalModel.setValue(text);
+                this.updateHeight(diffEditor, originalModel, modifiedModel);
+            });
+
+            modified_obs.on((text) => {
+                modifiedModel.setValue(text);
+                this.updateHeight(diffEditor, originalModel, modifiedModel);
+            });
+
+            return diffEditor;
+        });
+    }
+
+    updateHeight(diffEditor, originalModel, modifiedModel) {
+        const originalLineCount = originalModel.getLineCount();
+        const modifiedLineCount = modifiedModel.getLineCount();
+        const maxLines = Math.max(originalLineCount, modifiedLineCount);
+        const lineHeight = 19;
+        const minHeight = 100;
+        const maxHeight = 600;
+        const contentHeight = Math.min(Math.max(maxLines * lineHeight + 20, minHeight), maxHeight);
+        
+        this.editor_div.style.height = `${contentHeight}px`;
+        diffEditor.layout();
+    }
+
+    set_theme(theme) {
+        this.theme = theme;
+        monaco.then((m) => {
+            let effectiveTheme = theme;
+            if (theme === "default") {
+                effectiveTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'vs-dark' : 'vs';
+            }
+            m.editor.setTheme(effectiveTheme);
+        });
+    }
+}

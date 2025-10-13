@@ -222,13 +222,14 @@ using BonitoBook.LLMChatBooks
         @test result_md["language"] == "markdown"
     end
 
-    @testset "TodoTool" begin
+    @testset "TodoList" begin
         # Test JSON deserialization
-        tool_json = """{"title":"Test Plan","items":["Step 1","Step 2","Step 3"],"result":null}"""
-        tool = JSON3.read(tool_json, TodoTool)
-        @test tool isa TodoTool
+        tool_json = """{"title":"Test Plan","items":["Step 1","Step 2","Step 3"],"status":[false,false,false],"result":null}"""
+        tool = JSON3.read(tool_json, TodoList)
+        @test tool isa TodoList
         @test tool.title == "Test Plan"
         @test tool.items == ["Step 1", "Step 2", "Step 3"]
+        @test tool.status == [false, false, false]
 
         # Test execution
         result = execute_tool!(tool)
@@ -236,6 +237,8 @@ using BonitoBook.LLMChatBooks
         @test result["success"] == true
         @test result["title"] == "Test Plan"
         @test result["items"] == ["Step 1", "Step 2", "Step 3"]
+        @test result["status"] == [false, false, false]
+        @test result["done"] == false
         @test occursin("## Test Plan", result["markdown"])
         @test occursin("- [ ] Step 1", result["markdown"])
         @test occursin("- [ ] Step 2", result["markdown"])
@@ -250,10 +253,104 @@ using BonitoBook.LLMChatBooks
         @test occursin("todo-container", string(rendered))
     end
 
+    @testset "FileTool" begin
+        # Test JSON deserialization - pwd
+        tool_json = """{"operation":"pwd","path":null,"pattern":null,"destination":null,"recursive":false,"result":null}"""
+        tool = JSON3.read(tool_json, FileTool)
+        @test tool isa FileTool
+        @test tool.operation == "pwd"
+
+        # Test pwd execution
+        result = execute_tool!(tool)
+        @test result isa Dict
+        @test result["success"] == true
+        @test result["operation"] == "pwd"
+        @test result["result"] isa String
+        @test !isempty(result["result"])
+
+        # Test ls operation
+        tool_ls = FileTool("ls", ".", nothing, nothing, false, nothing)
+        result_ls = execute_tool!(tool_ls)
+        @test result_ls["success"] == true
+        @test result_ls["result"] isa Vector
+
+        # Test glob operation
+        tool_glob = FileTool("glob", ".", "*.jl", nothing, false, nothing)
+        result_glob = execute_tool!(tool_glob)
+        @test result_glob["success"] == true
+        @test result_glob["result"] isa Vector
+        @test all(endswith.(result_glob["result"], ".jl"))
+
+        # Test find operation
+        test_dir = mktempdir()
+        write(joinpath(test_dir, "test_file.txt"), "test")
+        tool_find = FileTool("find", test_dir, "test", nothing, false, nothing)
+        result_find = execute_tool!(tool_find)
+        @test result_find["success"] == true
+        @test length(result_find["result"]) == 1
+        @test occursin("test_file.txt", result_find["result"][1])
+
+        # Test mkdir operation
+        test_mkdir = joinpath(test_dir, "new_dir")
+        tool_mkdir = FileTool("mkdir", test_mkdir, nothing, nothing, false, nothing)
+        result_mkdir = execute_tool!(tool_mkdir)
+        @test result_mkdir["success"] == true
+        @test isdir(test_mkdir)
+
+        # Test readdir operation
+        tool_readdir = FileTool("readdir", test_dir, nothing, nothing, false, nothing)
+        result_readdir = execute_tool!(tool_readdir)
+        @test result_readdir["success"] == true
+        @test result_readdir["result"] isa Vector
+        @test all(x -> x isa Dict, result_readdir["result"])
+        @test all(x -> haskey(x, "name"), result_readdir["result"])
+        @test all(x -> haskey(x, "type"), result_readdir["result"])
+
+        # Test cp operation
+        src_file = joinpath(test_dir, "source.txt")
+        dst_file = joinpath(test_dir, "dest.txt")
+        write(src_file, "copy test")
+        tool_cp = FileTool("cp", src_file, nothing, dst_file, false, nothing)
+        result_cp = execute_tool!(tool_cp)
+        @test result_cp["success"] == true
+        @test isfile(dst_file)
+        @test read(dst_file, String) == "copy test"
+
+        # Test mv operation
+        mv_dst = joinpath(test_dir, "moved.txt")
+        tool_mv = FileTool("mv", dst_file, nothing, mv_dst, false, nothing)
+        result_mv = execute_tool!(tool_mv)
+        @test result_mv["success"] == true
+        @test isfile(mv_dst)
+        @test !isfile(dst_file)
+
+        # Test rm operation
+        tool_rm = FileTool("rm", mv_dst, nothing, nothing, false, nothing)
+        result_rm = execute_tool!(tool_rm)
+        @test result_rm["success"] == true
+        @test !isfile(mv_dst)
+
+        # Test jsrender
+        session = Session()
+        rendered = Bonito.jsrender(session, tool_readdir)
+        @test rendered isa Hyperscript.Node
+        @test occursin("readdir", string(rendered))
+        @test occursin("file-item", string(rendered))
+
+        # Test error handling
+        tool_bad = FileTool("ls", "/nonexistent_path_xyz", nothing, nothing, false, nothing)
+        result_bad = execute_tool!(tool_bad)
+        @test result_bad["success"] == false
+        @test haskey(result_bad, "error")
+
+        # Cleanup
+        rm(test_dir, recursive=true, force=true)
+    end
+
     @testset "Tool Metadata" begin
         # Test tool_name, tool_description, tool_input_schema for all tools
         for ToolType in [BashTool, FileReadTool, FileWriteTool, FileEditTool,
-                         HttpGetTool, AddCellTool, TodoTool]
+                         FileTool, HttpGetTool, AddCellTool, TodoList]
             @test tool_name(ToolType) isa String
             @test !isempty(tool_name(ToolType))
             @test tool_description(ToolType) isa String
@@ -350,15 +447,28 @@ using BonitoBook.LLMChatBooks
             @test occursin("roundtrip", string(rendered))
         end
 
-        @testset "TodoTool roundtrip" begin
-            tool = TodoTool("Roundtrip Plan", ["Task A", "Task B"])
+        @testset "TodoList roundtrip" begin
+            tool = TodoList("Roundtrip Plan", ["Task A", "Task B"])
             execute_tool!(tool)
             json = JSON3.write(tool)
-            deserialized = JSON3.read(json, TodoTool)
+            deserialized = JSON3.read(json, TodoList)
             @test deserialized.result["success"] == true
+            @test deserialized.result["done"] == false
             rendered = Bonito.jsrender(session, deserialized)
             @test occursin("Roundtrip Plan", string(rendered))
             @test occursin("Task A", string(rendered))
+        end
+
+        @testset "FileTool roundtrip" begin
+            test_dir = mktempdir()
+            tool = FileTool("readdir", test_dir, nothing, nothing, false, nothing)
+            execute_tool!(tool)
+            json = JSON3.write(tool)
+            deserialized = JSON3.read(json, FileTool)
+            @test deserialized.result["success"] == true
+            rendered = Bonito.jsrender(session, deserialized)
+            @test occursin("readdir", string(rendered))
+            rm(test_dir, recursive=true, force=true)
         end
     end
 

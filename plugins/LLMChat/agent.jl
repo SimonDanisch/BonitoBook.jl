@@ -158,8 +158,10 @@ function parse_tool_names(names::Vector{String})
         "file_read" => FileReadTool,
         "file_write" => FileWriteTool,
         "file_edit" => FileEditTool,
+        "file_tool" => FileTool,
         "http_get" => HttpGetTool,
-        "add_cell" => AddCellTool
+        "add_cell" => AddCellTool,
+        "todo_list" => TodoList
     )
 
     tools = Type{<:AbstractTool}[]
@@ -175,9 +177,30 @@ function parse_tool_names(names::Vector{String})
 end
 
 """
+    extract_markdown_content(source::String)
+
+Extract content from Markdown.parse(\"\"\"...\"\"\") wrapper.
+Returns the inner content or the original string if not wrapped.
+"""
+function extract_markdown_content(source::String)
+    source = strip(source)
+
+    # Match Markdown.parse("...") - extract content from quotes
+    pattern = r"^Markdown\.parse\(\s*\"(.*)\"\s*\)\s*$"s
+    m = match(pattern, source)
+
+    if m !== nothing
+        return strip(m.captures[1])
+    end
+
+    return source
+end
+
+"""
     cells_to_messages(cells::Vector{CellEditor})
 
 Convert notebook cells to agent messages.
+Smartly extracts content from Markdown.parse wrappers and filters out add_cell tool cells.
 """
 function cells_to_messages(cells::Vector)
     messages = AgentMessage[]
@@ -185,22 +208,31 @@ function cells_to_messages(cells::Vector)
     for cell in cells
         role = get(cell.metadata, :from, :user)
         cell_id = get(cell.metadata, :id, nothing)
+        tool_type = get(cell.metadata, :tool, nothing)
 
-        # For user/assistant messages, use source
-        # For tool results, use the output (which will be the tool with result field)
+        # For user/assistant messages, extract content smartly
         if role == :user
             content = cell.editor.source[]
+            # Remove Markdown.parse wrapper if present
+            content = extract_markdown_content(content)
             push!(messages, AgentMessage(:user, content, cell_id))
-        elseif role == :assistant || role == :agent
+        elseif role == :assistant || role == :agent && isnothing(tool_type)
             content = cell.editor.source[]
+            # Remove Markdown.parse wrapper if present
+            content = extract_markdown_content(content)
             push!(messages, AgentMessage(:assistant, content, cell_id))
-        elseif role == :tool || role == :tool_result
+        else
             # Tool results: get the executed cell output and use repr
             output = cell.editor.output[]
-            if !isnothing(output)
-                content = repr(output)
-                push!(messages, AgentMessage(:tool_result, content, cell_id))
-            end
+            content = """
+                source:
+                $(cell.editor.source[])
+                output:
+                $(repr(output))
+                logging:
+                $(cell.editor.logging_html[])
+            """
+            push!(messages, AgentMessage(:tool_result, content, cell_id))
         end
     end
 

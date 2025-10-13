@@ -1,4 +1,5 @@
 using JSON3
+using Glob
 
 """
     AbstractTool
@@ -309,46 +310,258 @@ function execute_tool(tool::AddCellTool)
 end
 
 """
-    TodoTool <: AbstractTool
+    TodoList <: AbstractTool
 
 Create a TODO list/plan for the task. Useful for breaking down complex tasks into steps.
 """
-mutable struct TodoTool <: AbstractTool
+mutable struct TodoList <: AbstractTool
     title::String
     items::Vector{String}
+    status::Vector{Bool}  # Track completion status of each item
     result::Union{Nothing, Any}
 end
 
-TodoTool(title::String, items::Vector{String}) = TodoTool(title, items, nothing)
+TodoList(title::String, items::Vector{String}) = TodoList(title, items, fill(false, length(items)), nothing)
+TodoList(title::String, items::Vector{String}, status::Vector{Bool}) = TodoList(title, items, status, nothing)
 
-tool_name(::Type{TodoTool}) = "todo"
-tool_description(::Type{TodoTool}) = "Create a TODO list or plan. Use this to break down complex tasks into manageable steps before starting implementation."
-tool_input_schema(::Type{TodoTool}) = Dict(
+tool_name(::Type{TodoList}) = "todo_list"
+tool_description(::Type{TodoList}) = """Create or update a TODO list to track task progress.
+
+IMPORTANT: Once you create a TODO list, you MUST complete ALL items before responding with text.
+After completing each task, return an updated TODO list with the same title to mark items as done.
+
+The loop will continue until all TODO items are marked complete."""
+
+tool_input_schema(::Type{TodoList}) = Dict(
     "type" => "object",
     "properties" => Dict(
         "title" => Dict(
             "type" => "string",
-            "description" => "Title of the TODO list (e.g., 'Plan for implementing feature X')"
+            "description" => "Title of the TODO list (e.g., 'Plan for implementing feature X'). Keep the same title when updating."
         ),
         "items" => Dict(
             "type" => "array",
-            "description" => "List of TODO items/steps",
+            "description" => "List of TODO items/steps. When updating, include ALL items with the same text.",
             "items" => Dict("type" => "string")
+        ),
+        "status" => Dict(
+            "type" => "array",
+            "description" => "Completion status for each item (true=done, false=pending). Must match items length.",
+            "items" => Dict("type" => "boolean")
         )
     ),
-    "required" => ["title", "items"]
+    "required" => ["title", "items", "status"]
 )
 
-function execute_tool(tool::TodoTool)
-    # Format as markdown checklist
-    formatted_items = ["- [ ] $item" for item in tool.items]
+"""
+    isdone(tool::TodoList)
+
+Check if all TODO items are completed.
+"""
+function isdone(tool::TodoList)
+    return !isempty(tool.status) && all(tool.status)
+end
+
+multi_task_tool(item::TodoList) = true
+
+function execute_tool(tool::TodoList)
+    # Ensure status matches items length
+    if length(tool.status) != length(tool.items)
+        tool.status = fill(false, length(tool.items))
+    end
+
+    # Format as markdown checklist with status
+    formatted_items = [
+        (tool.status[i] ? "- [x] " : "- [ ] ") * item
+        for (i, item) in enumerate(tool.items)
+    ]
     markdown_content = "## $(tool.title)\n\n" * join(formatted_items, "\n")
+
+    # Count completed items
+    completed = count(tool.status)
+    total = length(tool.items)
 
     return Dict(
         "success" => true,
         "title" => tool.title,
         "items" => tool.items,
+        "status" => tool.status,
+        "completed" => completed,
+        "total" => total,
+        "done" => isdone(tool),
         "markdown" => markdown_content
+    )
+end
+
+"""
+    FileTool <: AbstractTool
+
+Perform file system operations safely without bash.
+Supports: ls, glob, find, pwd, cp, mv, rm, mkdir, readdir
+"""
+mutable struct FileTool <: AbstractTool
+    command::String  # ls, glob, find, pwd, cp, mv, rm, mkdir, readdir
+    arguments::Dict{String, Any}
+    result::Union{Nothing, Any}
+end
+
+FileTool(command::String, arguments::Dict{String, Any}) = FileTool(command, arguments, nothing)
+
+tool_name(::Type{FileTool}) = "file_tool"
+tool_description(::Type{FileTool}) = """Perform file system operations safely. Use this instead of bash for file operations.
+
+Commands:
+- pwd: Get current directory
+- ls: List files in directory
+- readdir: List files with size/type details
+- glob: Find files matching glob pattern (e.g., "*.jl", "test_*.txt")
+- find: Search for files by name substring
+- mkdir: Create directory (creates parent dirs if needed)
+- cp: Copy file or directory
+- mv: Move/rename file or directory
+- rm: Remove file or directory"""
+
+tool_input_schema(::Type{FileTool}) = Dict(
+    "type" => "object",
+    "properties" => Dict(
+        "command" => Dict(
+            "type" => "string",
+            "enum" => ["ls", "glob", "find", "pwd", "cp", "mv", "rm", "mkdir", "readdir"],
+            "description" => "File system operation to perform"
+        ),
+        "arguments" => Dict(
+            "type" => "object",
+            "description" => """Arguments for the command:
+- pwd: {} (no arguments)
+- ls: {path: "/path/to/dir"} (defaults to ".")
+- readdir: {path: "/path/to/dir"} (returns detailed info)
+- glob: {pattern: "*.jl", path: "/search/here"} (path defaults to ".")
+- find: {pattern: "test", path: "/search/here", recursive: true}
+- mkdir: {path: "/new/directory"}
+- cp: {path: "/source", destination: "/dest", recursive: true}
+- mv: {path: "/source", destination: "/dest"}
+- rm: {path: "/to/remove", recursive: true}""",
+            "properties" => Dict(
+                "path" => Dict("type" => "string"),
+                "pattern" => Dict("type" => "string"),
+                "destination" => Dict("type" => "string"),
+                "recursive" => Dict("type" => "boolean")
+            )
+        )
+    ),
+    "required" => ["command", "arguments"]
+)
+
+function execute_tool(tool::FileTool)
+    args = tool.arguments
+    result = if tool.command == "pwd"
+        pwd()
+    elseif tool.command == "ls"
+        path = get(args, "path", ".")
+        readdir(path)
+    elseif tool.command == "readdir"
+        path = get(args, "path", ".")
+        entries = readdir(path; join=false)
+        # Get detailed info for each entry
+        details = map(entries) do entry
+            fullpath = joinpath(path, entry)
+            stat_info = try
+                s = stat(fullpath)
+                Dict(
+                    "name" => entry,
+                    "type" => isdir(s) ? "directory" : isfile(s) ? "file" : "other",
+                    "size" => s.size,
+                    "modified" => s.mtime
+                )
+            catch e
+                Dict("name" => entry, "type" => "unknown", "error" => string(e))
+            end
+        end
+        details
+    elseif tool.command == "glob"
+        pattern = get(args, "pattern", nothing)
+        if pattern === nothing
+            return Dict("success" => false, "error" => "Pattern required for glob")
+        end
+        path = get(args, "path", ".")
+        pattern_path = joinpath(path, pattern)
+        matches = glob(pattern_path)
+        matches
+    elseif tool.command == "find"
+        pattern = get(args, "pattern", nothing)
+        if pattern === nothing
+            return Dict("success" => false, "error" => "Pattern required for find")
+        end
+        path = get(args, "path", ".")
+        recursive = get(args, "recursive", false)
+        matches = String[]
+
+        function search_dir(dir)
+            try
+                for entry in readdir(dir)
+                    fullpath = joinpath(dir, entry)
+                    if occursin(pattern, entry)
+                        push!(matches, fullpath)
+                    end
+                    if recursive && isdir(fullpath)
+                        search_dir(fullpath)
+                    end
+                end
+            catch e
+                # Skip directories we can't read
+            end
+        end
+
+        search_dir(path)
+        matches
+    elseif tool.command == "mkdir"
+        path = get(args, "path", nothing)
+        if path === nothing
+            return Dict("success" => false, "error" => "Path required for mkdir")
+        end
+        mkpath(path)
+        "Directory created: $(path)"
+    elseif tool.command == "cp"
+        path = get(args, "path", nothing)
+        destination = get(args, "destination", nothing)
+        if path === nothing || destination === nothing
+            return Dict("success" => false, "error" => "Path and destination required for cp")
+        end
+        recursive = get(args, "recursive", false)
+        if recursive
+            cp(path, destination; force=true)
+        else
+            cp(path, destination)
+        end
+        "Copied $(path) to $(destination)"
+    elseif tool.command == "mv"
+        path = get(args, "path", nothing)
+        destination = get(args, "destination", nothing)
+        if path === nothing || destination === nothing
+            return Dict("success" => false, "error" => "Path and destination required for mv")
+        end
+        mv(path, destination; force=true)
+        "Moved $(path) to $(destination)"
+    elseif tool.command == "rm"
+        path = get(args, "path", nothing)
+        if path === nothing
+            return Dict("success" => false, "error" => "Path required for rm")
+        end
+        recursive = get(args, "recursive", false)
+        if recursive
+            rm(path; recursive=true, force=true)
+        else
+            rm(path)
+        end
+        "Removed: $(path)"
+    else
+        return Dict("success" => false, "error" => "Unknown command: $(tool.command)")
+    end
+
+    return Dict(
+        "success" => true,
+        "command" => tool.command,
+        "result" => result
     )
 end
 
@@ -358,14 +571,16 @@ const DEFAULT_TOOLS = [
     FileReadTool,
     FileWriteTool,
     FileEditTool,
+    FileTool,
     HttpGetTool,
     AddCellTool,
-    TodoTool
+    TodoList
 ]
 export BashTool,
     FileReadTool,
     FileWriteTool,
     FileEditTool,
+    FileTool,
     HttpGetTool,
     AddCellTool,
-    TodoTool
+    TodoList

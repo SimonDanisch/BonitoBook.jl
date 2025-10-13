@@ -10,9 +10,9 @@ using Bonito.HTTP
 include("tools.jl")
 include("rendering.jl")
 include("agent.jl")
+include("spinner.jl")       # Must come before http_agent.jl and agent_loop.jl (defines TaskSpinner)
 include("http_agent.jl")
 include("agent_loop.jl")
-include("spinner.jl")
 include("styles.jl")
 
 # Export main types
@@ -29,9 +29,7 @@ An interactive LLM chat notebook where cells represent the conversation history.
 - `config::AgentConfig`: Agent configuration
 - `is_streaming::Observable{Bool}`: Whether agent is currently streaming
 - `current_task::Base.RefValue{Union{Task, Nothing}}`: Current streaming task
-- `http_spinner::LLMChatSpinner`: Spinner for HTTP requests
-- `channel_spinner::LLMChatSpinner`: Spinner for channel processing
-- `loop_spinner::LLMChatSpinner`: Spinner for agent loop iterations
+- `task_spinner::TaskSpinner`: Unified spinner for all operations
 """
 mutable struct LLMChatBook <: BonitoBook.AbstractBook
     book::BonitoBook.Book
@@ -39,10 +37,7 @@ mutable struct LLMChatBook <: BonitoBook.AbstractBook
     config::AgentConfig
     is_streaming::Observable{Bool}
     current_task::Base.RefValue{Union{Task, Nothing}}
-    stop_flag::Threads.Atomic{Bool}
-    http_spinner::LLMChatSpinner
-    channel_spinner::LLMChatSpinner
-    loop_spinner::LLMChatSpinner
+    task_spinner::TaskSpinner
 end
 
 """
@@ -73,27 +68,26 @@ function create_book(book::BonitoBook.Book; agent=nothing, config=nothing, kwarg
         end
     end
 
-    # Create LLM chat book with custom spinners
+    # Create LLM chat book with TaskSpinner
     return LLMChatBook(
         book,
         agent,
         config,
         Observable(false),
         Ref{Union{Task, Nothing}}(nothing),
-        Threads.Atomic{Bool}(false),
-        LLMChatSpinner("requesting"),    # http_spinner
-        LLMChatSpinner("processing"),    # channel_spinner
-        LLMChatSpinner("thinking")       # loop_spinner
+        TaskSpinner()
     )
 end
 
 """
     send_message!(chat_book::LLMChatBook, message::String)
 
-Send a message to the LLM and stream the response with multi-level spinners.
+Send a message to the LLM and stream the response with TaskSpinner.
 """
 function send_message!(chat_book::LLMChatBook, message::String)
-    if isempty(strip(message)) || chat_book.is_streaming[]
+    if isempty(strip(message)) ||
+            chat_book.is_streaming[] ||
+            (chat_book.current_task[] !== nothing && !istaskdone(chat_book.current_task[]))
         return
     end
 
@@ -103,32 +97,19 @@ function send_message!(chat_book::LLMChatBook, message::String)
     end
 
     # Reset stop flag and set streaming state
-    chat_book.stop_flag[] = false
+    chat_book.task_spinner.stop[] = false
     chat_book.is_streaming[] = true
 
-    # Run agent loop with spinners
-    response_channel = run_agent_loop!(
-        chat_book.book,
-        chat_book.agent,
-        message,
-        chat_book.config,
-        chat_book.stop_flag;
-        http_spinner=chat_book.http_spinner,
-        channel_spinner=chat_book.channel_spinner,
-        loop_spinner=chat_book.loop_spinner
-    )
-
     # Create streaming display task
-    task = @async begin
+    chat_book.current_task[] = @async begin
         try
-            for item in response_channel
-                # Check stop flag while consuming output
-                if chat_book.stop_flag[]
-                    break
-                end
-                # Items are already being added to cells by agent_loop
-                # This is just for any additional UI updates
-            end
+            run_agent_loop!(
+                chat_book.book,
+                chat_book.agent,
+                message,
+                chat_book.config,
+                chat_book.task_spinner
+            )
         catch e
             if !isa(e, InterruptException)
                 @error "Streaming error" exception=(e, catch_backtrace())
@@ -137,17 +118,10 @@ function send_message!(chat_book::LLMChatBook, message::String)
             @info "Agent loop completed, resetting streaming state"
             chat_book.is_streaming[] = false
             chat_book.current_task[] = nothing
-            # Ensure all spinners are hidden
-            chat_book.http_spinner.visible[] = false
-            chat_book.channel_spinner.visible[] = false
-            chat_book.loop_spinner.visible[] = false
+            # Clear spinner text
+            chat_book.task_spinner.text[] = ""
         end
     end
-
-    chat_book.current_task[] = task
-
-    # Ensure task is running
-    yield()
 
     return
 end
@@ -159,12 +133,11 @@ Stop the current streaming response immediately at any level.
 """
 function stop_streaming!(chat_book::LLMChatBook)
     # Set atomic stop flag (checked at all levels)
-    chat_book.stop_flag[] = true
+    chat_book.task_spinner.stop[] = true
 
-    # Hide all spinners immediately
-    chat_book.http_spinner.visible[] = false
-    chat_book.channel_spinner.visible[] = false
-    chat_book.loop_spinner.visible[] = false
+    # Clear spinner text immediately
+    chat_book.task_spinner.text[] = ""
+
     # Reset state
     chat_book.is_streaming[] = false
     chat_book.current_task[] = nothing
@@ -213,24 +186,25 @@ function Bonito.jsrender(session::Session, chat_book::LLMChatBook)
         disabled=map(!, chat_book.is_streaming)
     )
 
-    # Spinner indicators with individual classes for colors
-    http_spinner_div = DOM.div(chat_book.http_spinner, class="llm-spinner-http")
-    channel_spinner_div = DOM.div(chat_book.channel_spinner, class="llm-spinner-channel")
-    loop_spinner_div = DOM.div(chat_book.loop_spinner, class="llm-spinner-loop")
-
+    # Single spinner with dynamic text
+    task_spinner_component = LLMChatSpinner(chat_book.task_spinner.text)
     spinner_container = DOM.div(
-        http_spinner_div,
-        channel_spinner_div,
-        loop_spinner_div,
+        task_spinner_component,
         class="llm-chat-spinners"
+    )
+
+    # Input row with field and buttons
+    input_row = DOM.div(
+        input_field,
+        send_button,
+        stop_button,
+        class="llm-chat-input-row"
     )
 
     # Input container
     input_container = DOM.div(
         spinner_container,
-        input_field,
-        send_button,
-        stop_button,
+        input_row,
         class="llm-chat-input-container"
     )
 
@@ -250,13 +224,18 @@ function Bonito.jsrender(session::Session, chat_book::LLMChatBook)
         const stopBtn = $(stop_button);
         const container = $(chat_container).querySelector('.llm-chat-messages');
 
-        // Auto-resize textarea
+        // Auto-resize textarea with better sizing
         function resizeTextarea() {
-            input.style.height = 'auto';
-            input.style.height = Math.min(input.scrollHeight, 120) + 'px';
+            input.style.height = '36px'; // Reset to min height
+            const scrollHeight = input.scrollHeight;
+            const newHeight = Math.min(Math.max(scrollHeight, 36), 120);
+            input.style.height = newHeight + 'px';
         }
 
         input.addEventListener('input', resizeTextarea);
+
+        // Initial resize
+        resizeTextarea();
 
         // Handle Enter key for sending
         input.addEventListener('keydown', (event) => {

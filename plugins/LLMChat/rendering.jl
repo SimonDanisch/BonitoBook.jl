@@ -152,9 +152,49 @@ function Bonito.jsrender(session::Session, tool::FileEditTool)
         ))
     end
 
-    info = DOM.div("✓ File edited successfully", class="tool-info")
+    # Detect language from file extension
+    ext = lowercase(splitext(path)[2])
+    language = if ext == ".jl"
+        "julia"
+    elseif ext in [".py", ".pyw"]
+        "python"
+    elseif ext in [".js", ".mjs"]
+        "javascript"
+    elseif ext in [".md", ".markdown"]
+        "markdown"
+    elseif ext in [".html", ".htm"]
+        "html"
+    elseif ext == ".css"
+        "css"
+    elseif ext == ".json"
+        "json"
+    elseif ext in [".yml", ".yaml"]
+        "yaml"
+    elseif ext == ".toml"
+        "toml"
+    else
+        "text"
+    end
 
-    return Bonito.jsrender(session, DOM.div(header, info, class="tool-container"))
+    # Create diff editor showing the changes
+    diff_editor = BonitoBook.DiffEditor(
+        tool.old_text,
+        tool.new_text;
+        language=language,
+        renderSideBySide=false,  # Inline diff view
+        readOnly=true
+    )
+
+    info = DOM.div("✓ File edited successfully", class="tool-info")
+    
+    # Use collapsible for the diff view
+    diff_display = BonitoBook.Collapsible(
+        "Show changes",
+        diff_editor;
+        expanded=true
+    )
+
+    return Bonito.jsrender(session, DOM.div(header, info, diff_display, class="tool-container"))
 end
 
 # ============================================================================
@@ -250,10 +290,86 @@ function Bonito.jsrender(session::Session, tool::AddCellTool)
 end
 
 # ============================================================================
-# TodoTool Rendering
+# FileTool Rendering
 # ============================================================================
 
-function Bonito.jsrender(session::Session, tool::TodoTool)
+function Bonito.jsrender(session::Session, tool::FileTool)
+    if isnothing(tool.result)
+        args_preview = join(["$(k)=$(v)" for (k,v) in tool.arguments], ", ")
+        return Bonito.jsrender(session, DOM.div(
+            "📁 $(tool.command) $args_preview",
+            class="tool-executing"
+        ))
+    end
+
+    success = get(tool.result, "success", false)
+    command = get(tool.result, "command", tool.command)
+
+    if !success
+        error_msg = get(tool.result, "error", "Unknown error")
+        return Bonito.jsrender(session, DOM.div(
+            DOM.div(
+                DOM.span("📁"),
+                DOM.span("file_tool: $command", class="tool-name"),
+                DOM.span("❌", class="tool-status tool-error"),
+                class="tool-header tool-error-header"
+            ),
+            DOM.div(error_msg, class="tool-error-message"),
+            class="tool-container tool-error-container"
+        ))
+    end
+
+    result_data = get(tool.result, "result", nothing)
+
+    # Format result based on command
+    result_display = if result_data isa Vector && !isempty(result_data)
+        # List of files/matches
+        if result_data[1] isa Dict
+            # Detailed readdir output
+            items = [
+                DOM.div(
+                    DOM.span(get(item, "type", "unknown") == "directory" ? "📁" : "📄"),
+                    DOM.span(get(item, "name", ""), class="file-name"),
+                    DOM.span("($(get(item, "size", 0)) bytes)", class="file-size"),
+                    class="file-item"
+                )
+                for item in result_data[1:min(50, length(result_data))]
+            ]
+            if length(result_data) > 50
+                push!(items, DOM.div("... and $(length(result_data) - 50) more", class="file-more"))
+            end
+            DOM.div(items..., class="file-list")
+        else
+            # Simple list of paths
+            items = [DOM.div("  $item", class="file-item") for item in result_data[1:min(50, length(result_data))]]
+            if length(result_data) > 50
+                push!(items, DOM.div("... and $(length(result_data) - 50) more", class="file-more"))
+            end
+            DOM.div(items..., class="file-list")
+        end
+    elseif result_data isa String
+        # Single result string
+        DOM.div(result_data, class="file-result")
+    else
+        # Other result types
+        DOM.div(repr(result_data), class="file-result")
+    end
+
+    header = DOM.div(
+        DOM.span("📁"),
+        DOM.span("file_tool: $command", class="tool-name"),
+        DOM.span("✓", class="tool-status tool-success"),
+        class="tool-header tool-success-header"
+    )
+
+    return Bonito.jsrender(session, DOM.div(header, result_display, class="tool-container"))
+end
+
+# ============================================================================
+# TodoList Rendering
+# ============================================================================
+
+function Bonito.jsrender(session::Session, tool::TodoList)
     if isnothing(tool.result)
         return Bonito.jsrender(session, DOM.div(
             "📋 Creating TODO: $(tool.title)",

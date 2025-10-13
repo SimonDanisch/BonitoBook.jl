@@ -33,6 +33,13 @@ Generic HTTP-based agent that works with OpenAI, Claude, Ollama, and compatible 
 """
 struct HTTPAgent <: LLMChatAgent
     config::HTTPAgentConfig
+    # TodoList or other tools implementing multi-step tasks
+    needs_to_be_done::Dict{DataType, AbstractTool}
+    last_item::Base.RefValue{Union{AbstractTool, String}}
+end
+
+function HTTPAgent(config::HTTPAgentConfig)
+    return HTTPAgent(config, Dict{DataType, AbstractTool}(), Ref{Union{AbstractTool, String}}(""))
 end
 
 # ============================================================================
@@ -130,43 +137,62 @@ You are a helpful AI assistant integrated into a Julia notebook.
 
 # Available Tools
 You have access to the following tools:
-- **bash**: Execute shell commands (args: command)
-- **file_read**: Read file contents (args: path)
-- **file_write**: Write content to file (args: path, content)
-- **file_edit**: Edit file by replacing text (args: path, old_text, new_text)
-- **http_get**: Fetch URL content (args: url)
-- **add_cell**: Add a julia code/markdown cell which gets executed immediately. Use this if asked to execute julia code (args: language, content, metadata)
-- **todo**: Add a todo item (args: description)
+- **file_tool**: File system operations (ls, glob, find, pwd, cp, mv, rm, mkdir, readdir) - **ALWAYS USE THIS for file operations!**
+- **file_read**: Read file contents
+- **file_write**: Write content to a file
+- **file_edit**: Edit existing file with search/replace
+- **bash**: Execute shell commands - Only use when file_tool can't do it (e.g., git, package managers)
+- **http_get**: Fetch content from URLs
+- **add_cell**: Add new code/markdown cells to the notebook
+- **todo_list**: Create and track multi-step task lists
 
 # Tool Usage
 Use tools via the standard API tool calling mechanism (function calling for OpenAI/Ollama, tools for Claude).
 The tools will be executed automatically and results will be shown in the notebook.
 
+**IMPORTANT**: Always prefer file_tool over bash for file system operations (listing files, searching, copying, etc.)
+
 # Agent Loop Behavior
 - If you respond with a tool, the loop will execute it and show the result and continue.
-- If you respond with text, the loop will stop and show your message.
+- If you respond with text AND there's no active TODO, the loop will stop and show your message.
 - You can call multiple tools in sequence if needed.
 - You can use tools, provide explanations, add cells, etc.
 - The loop allows iterative work: respond → see results → respond again
+- Don't hesitate to use tools to inspect files, run code, and perform actions
 
+
+# TODO Tool - IMPORTANT
+When you create a TODO list, the loop will CONTINUE until ALL items are marked complete:
+1. Create a TODO list with a plan for your task
+2. Complete each task step by step
+3. Every time you check off an item, return the updated TODO list as a tool
+4. The loop will ONLY stop once all status values are true
+
+**Use TODO for any multi-step task!** It helps track progress and ensures nothing is missed.
 
 # Guidelines
-1. Break complex tasks into steps
-2. Use tools to inspect files, run code, and perform actions
-4. When the task is complete, call `end_loop` tool
-5. Keep things concise and to the point
-6. Dont do more than the user asked for
-7. Start with the todo tool, if there are multiple steps.
-8. If the user asks for code, always use the add_cell tool to add a new cell with the julia code.
-9. Dont ever use println if not explicitely asked for. You're in a notebook, every last line will get visualized as a cell output.
+1. **CREATE A TODO FIRST** - For ANY task with 2+ steps, start with a TODO list before doing anything else
+2. Use tools to inspect files, run code, and perform actions - **prefer file_tool for file operations**
+3. Keep things concise and to the point
+4. Don't do more than the user asked for
+5. If the user asks for code, always use the add_cell tool to add a new cell with the julia code
+6. Don't ever use println if not explicitly asked for - you're in a notebook, every last line gets visualized as cell output
+
+# When to use TODO (very important!)
+- User asks to "implement", "create", "build", "fix", or "add" something → CREATE TODO
+- Task involves multiple files or steps → CREATE TODO
+- Task requires planning or has dependencies → CREATE TODO
+- You're unsure of the steps → CREATE TODO to think through it
+- Simple single-step tasks (e.g., "what is 2+2?") → No TODO needed
+- Rather execute a tool than announcing what you want to do!
 
 # Julia specific tips:
-- Use `@doc(sym_or_var)` to get documentation for a function or package.
-- Use `names(PackageName)` to get a list of functions in a package.
-- Use `using PackageName` to load a package.
-- Pkg.status() to see installed packages - never install a package if its already in the env.
-If asked for code or commands, you only answer the requested command/code without any explanation!
-If asked something simple, give the simplest version. For example, if asked for a slider, give a simple slider without any additional options, but assign it to a variable.
+- Use `@doc(sym_or_var)` to get documentation for a function or package
+- Use `names(PackageName)` to get a list of functions in a package
+- Use `using PackageName` to load a package
+- Pkg.status() to see installed packages - never install a package if it's already in the env
+- If asked for code or commands, only answer the requested command/code without explanation
+- If asked something simple, give the simplest version (e.g., for a slider, give a simple slider assigned to a variable)
 """
 
 # ============================================================================
@@ -175,19 +201,16 @@ If asked something simple, give the simplest version. For example, if asked for 
 
 """
     prompt(agent::HTTPAgent, messages::Vector{AgentMessage}, tools::Vector;
-           spinner=nothing,
-           stop_flag::Union{Nothing, Threads.Atomic{Bool}}=nothing)
+           spinner::Union{TaskSpinner, Nothing}=nothing)
 
 Call the HTTP agent with streaming and return a Channel that yields complete content blocks (tools and text).
 The Channel is closed after all items are yielded.
 
 # Optional Arguments
-- `spinner`: LLMChatSpinner to show during HTTP request
-- `stop_flag`: Atomic bool for cancellation support
+- `spinner`: TaskSpinner for operation tracking and cancellation
 """
 function prompt(agent::HTTPAgent, messages::Vector{AgentMessage}, tools::Vector;
-                spinner=nothing,
-                stop_flag::Union{Nothing, Threads.Atomic{Bool}}=nothing)
+                spinner::Union{TaskSpinner, Nothing}=nothing)
     config = agent.config
     # Convert messages to API format
     api_messages = [
@@ -203,60 +226,73 @@ function prompt(agent::HTTPAgent, messages::Vector{AgentMessage}, tools::Vector;
     headers = config.api_key !== nothing ? config.headers_fn(config.api_key) : config.headers_fn(nothing)
 
     # Create output channel for complete tools and strings
-    output_channel = Channel{Union{AbstractTool, String}}(100)
-
-    @async begin
+    output_channel = Channel{Union{AbstractTool, String}}(100) do channel
         try
-            # Show spinner if provided
-            if spinner !== nothing
-                spinner.visible[] = true
-            end
+            async_spinner!(spinner, "http request") do
+                # Use HTTP.open for true streaming
+                HTTP.open("POST", config.endpoint, headers) do io
+                    # Write request body
+                    JSON3.write(io, request_body)
+                    closewrite(io)
 
-            # Use HTTP.request with response_stream to handle streaming
-            response = HTTP.request(
-                "POST",
-                config.endpoint,
-                headers,
-                JSON3.write(request_body);
-                response_stream = IOBuffer()
-            )
+                    # Start reading response
+                    startread(io)
 
-            # Hide HTTP spinner once we have response
-            if spinner !== nothing
-                spinner.visible[] = false
-            end
+                    # Buffer for accumulating incomplete lines
+                    line_buffer = ""
 
-            # Get the response body
-            response_body = String(take!(response.body))
+                    # Read response stream chunk by chunk
+                    while !eof(io)
+                        # Check stop flag
+                        if spinner !== nothing && spinner.stop[]
+                            @info "HTTP streaming cancelled by stop flag"
+                            break
+                        end
 
-            # Split into SSE lines and process
-            for line in split(response_body, '\n')
-                # Check stop flag during parsing
-                if stop_flag !== nothing && stop_flag[]
-                    @info "HTTP response parsing cancelled by stop flag"
-                    break
-                end
+                        # Read available data
+                        chunk = String(readavailable(io))
+                        line_buffer *= chunk
 
-                # Skip empty lines
-                if isempty(strip(line))
-                    continue
-                end
+                        # Process complete lines
+                        while contains(line_buffer, '\n')
+                            line, line_buffer = split(line_buffer, '\n', limit=2)
 
-                # Parse SSE format: "data: {...}" or just "event: ..."
-                if startswith(line, "data: ")
-                    data_str = strip(line[7:end])
+                            # Skip empty lines
+                            if isempty(strip(line))
+                                continue
+                            end
 
-                    # Skip SSE control messages
-                    if data_str == "[DONE]" || isempty(data_str)
-                        continue
+                            # Parse SSE format: "data: {...}"
+                            if startswith(line, "data: ")
+                                data_str = strip(line[7:end])
+
+                                # Skip SSE control messages
+                                if data_str == "[DONE]" || isempty(data_str)
+                                    continue
+                                end
+
+                                try
+                                    parsed_chunk = JSON3.read(data_str)
+                                    # Pass chunk to response parser which accumulates and emits complete items
+                                    config.response_fn(parsed_chunk, channel)
+                                catch e
+                                    @debug "Failed to parse streaming chunk" exception=e data=data_str
+                                end
+                            end
+                        end
                     end
 
-                    try
-                        chunk = JSON3.read(data_str)
-                        # Pass chunk to response parser which accumulates and emits complete items
-                        config.response_fn(chunk, output_channel)
-                    catch e
-                        @debug "Failed to parse streaming chunk" exception=e data=data_str
+                    # Process any remaining data in buffer
+                    if !isempty(strip(line_buffer)) && startswith(line_buffer, "data: ")
+                        data_str = strip(line_buffer[7:end])
+                        if data_str != "[DONE]" && !isempty(data_str)
+                            try
+                                parsed_chunk = JSON3.read(data_str)
+                                config.response_fn(parsed_chunk, channel)
+                            catch e
+                                @debug "Failed to parse final chunk" exception=e data=data_str
+                            end
+                        end
                     end
                 end
             end
@@ -264,12 +300,6 @@ function prompt(agent::HTTPAgent, messages::Vector{AgentMessage}, tools::Vector;
             if !isa(e, InterruptException)
                 @error "Streaming error" exception=(e, catch_backtrace())
             end
-        finally
-            # Always hide spinner and close channel
-            if spinner !== nothing
-                spinner.visible[] = false
-            end
-            close(output_channel)
         end
     end
 
@@ -452,9 +482,10 @@ function tool_name_to_type(name::String)
         "file_read" => FileReadTool,
         "file_write" => FileWriteTool,
         "file_edit" => FileEditTool,
+        "file_tool" => FileTool,
         "http_get" => HttpGetTool,
         "add_cell" => AddCellTool,
-        "todo" => TodoTool
+        "todo_list" => TodoList
     )
     return get(tool_map, name, nothing)
 end

@@ -14,60 +14,45 @@ const ChatStyles = Styles(
         "position" => "relative"
     ),
 
-    # Messages area - scrollable with custom scrollbar
+    # Messages area - scrollable with hidden scrollbar
     CSS(
         ".llm-chat-messages",
         "flex" => "1 1 auto",
         "overflow-y" => "auto",
-        "padding" => "24px",
-        "padding-bottom" => "120px",  # Space for fixed input
+        "padding" => "12px",
+        "padding-bottom" => "90px",  # Space for flexible input height
         "scroll-behavior" => "smooth",
-        "scrollbar-width" => "thin",
-        "scrollbar-color" => "var(--border-secondary) transparent"
+        "scrollbar-width" => "none"
     ),
 
     CSS(
         ".llm-chat-messages::-webkit-scrollbar",
-        "width" => "8px"
-    ),
-
-    CSS(
-        ".llm-chat-messages::-webkit-scrollbar-track",
-        "background" => "transparent"
-    ),
-
-    CSS(
-        ".llm-chat-messages::-webkit-scrollbar-thumb",
-        "background-color" => "var(--border-secondary)",
-        "border-radius" => "4px",
-        "transition" => "background-color 0.2s"
-    ),
-
-    CSS(
-        ".llm-chat-messages::-webkit-scrollbar-thumb:hover",
-        "background-color" => "var(--border-primary)"
+        "display" => "none"
     ),
 
     # User cell styling - message bubbles on the right
     CSS(
         ".cell-from-user",
+        "display" => "flex",
+        "justify-content" => "flex-end",
         "margin-left" => "auto",
         "margin-right" => "0",
         "max-width" => "75%",
-        "margin-bottom" => "16px",
-        "animation" => "slideInRight 0.3s ease-out"
+        "margin-bottom" => "8px",
+        "animation" => "slideInRight 0.2s ease-out"
     ),
 
     CSS(
         ".cell-from-user .cell-output",
-        "background" => "linear-gradient(135deg, var(--accent-blue) 0%, #1976d2 100%)",
+        "background" => "var(--accent-blue)",
         "color" => "white",
-        "border-radius" => "18px 18px 4px 18px",
-        "padding" => "14px 18px",
+        "border-radius" => "4px",
+        "padding" => "8px 12px",
         "margin" => "0",
-        "box-shadow" => "0 2px 8px rgba(33, 150, 243, 0.3)",
+        "box-shadow" => "0 1px 2px rgba(0, 0, 0, 0.1)",
         "word-wrap" => "break-word",
-        "line-height" => "1.5"
+        "line-height" => "1.5",
+        "text-align" => "left"
     ),
 
     # Agent cell styling - message bubbles on the left
@@ -76,18 +61,18 @@ const ChatStyles = Styles(
         "margin-left" => "0",
         "margin-right" => "auto",
         "max-width" => "75%",
-        "margin-bottom" => "16px",
-        "animation" => "slideInLeft 0.3s ease-out"
+        "margin-bottom" => "8px",
+        "animation" => "slideInLeft 0.2s ease-out"
     ),
 
     CSS(
         ".cell-from-agent .cell-output",
         "background-color" => "var(--hover-bg)",
-        "border-radius" => "18px 18px 18px 4px",
-        "padding" => "14px 18px",
+        "border-radius" => "4px",
+        "padding" => "8px 12px",
         "margin" => "0",
-        "border-left" => "4px solid var(--accent-blue)",
-        "box-shadow" => "0 1px 4px rgba(0, 0, 0, 0.1)",
+        "border-left" => "2px solid var(--border-secondary)",
+        "box-shadow" => "0 1px 2px rgba(0, 0, 0, 0.05)",
         "word-wrap" => "break-word",
         "line-height" => "1.5"
     ),
@@ -99,40 +84,56 @@ const ChatStyles = Styles(
         "bottom" => "0",
         "left" => "0",
         "right" => "0",
-        "background" => "linear-gradient(to top, var(--bg-primary) 85%, transparent)",
-        "border-top" => "1px solid var(--border-primary)",
-        "padding" => "20px 24px 24px",
+        "background" => "var(--bg-primary)",
+        "border-top" => "1px solid var(--border-secondary)",
+        "padding" => "8px 12px 12px",
+        "display" => "flex",
+        "flex-direction" => "column",
+        "gap" => "6px",
+        "z-index" => "1000",
+        "box-shadow" => "0 -1px 3px rgba(0, 0, 0, 0.03)"
+    ),
+
+    # Container for input field and buttons
+    CSS(
+        ".llm-chat-input-row",
         "display" => "flex",
         "align-items" => "flex-end",
-        "gap" => "12px",
-        "z-index" => "1000",
-        "box-shadow" => "0 -4px 16px rgba(0, 0, 0, 0.08)",
-        "backdrop-filter" => "blur(8px)"
+        "gap" => "6px",
+        "width" => "100%"
     ),
 
     CSS(
         ".llm-chat-input",
         "flex" => "1",
-        "border" => "2px solid var(--border-secondary)",
-        "border-radius" => "24px",
-        "padding" => "12px 20px",
-        "font-size" => "15px",
+        "border" => "1px solid var(--border-secondary)",
+        "border-radius" => "4px",
+        "padding" => "8px 12px",
+        "font-size" => "14px",
         "background-color" => "var(--bg-primary)",
         "color" => "var(--text-primary)",
         "outline" => "none",
         "resize" => "none",
-        "min-height" => "48px",
-        "max-height" => "150px",
-        "overflow-y" => "auto",
+        "min-height" => "36px",
+        "max-height" => "120px",
+        "overflow-y" => "auto !important",
+        "overflow-x" => "hidden",
         "font-family" => "inherit",
-        "line-height" => "1.5",
-        "transition" => "border-color 0.2s, box-shadow 0.2s"
+        "line-height" => "1.4",
+        "transition" => "border-color 0.15s, box-shadow 0.15s",
+        "box-sizing" => "border-box",
+        "scrollbar-width" => "none"
+    ),
+
+    CSS(
+        ".llm-chat-input::-webkit-scrollbar",
+        "display" => "none"
     ),
 
     CSS(
         ".llm-chat-input:focus",
         "border-color" => "var(--accent-blue)",
-        "box-shadow" => "0 0 0 3px rgba(33, 150, 243, 0.12)"
+        "box-shadow" => "0 0 0 2px rgba(33, 150, 243, 0.08)"
     ),
 
     CSS(
@@ -151,36 +152,36 @@ const ChatStyles = Styles(
     # Send button - improved with icon support
     CSS(
         ".llm-chat-send-button",
-        "background" => "linear-gradient(135deg, var(--accent-blue) 0%, #1976d2 100%)",
+        "background" => "var(--accent-blue)",
         "color" => "white",
         "border" => "none",
-        "border-radius" => "50%",
-        "width" => "48px",
-        "height" => "48px",
+        "border-radius" => "4px",
+        "width" => "36px",
+        "height" => "36px",
         "display" => "flex",
         "align-items" => "center",
         "justify-content" => "center",
         "cursor" => "pointer",
-        "transition" => "all 0.2s ease",
+        "transition" => "all 0.15s ease",
         "flex-shrink" => "0",
-        "box-shadow" => "0 2px 8px rgba(33, 150, 243, 0.3)",
-        "font-size" => "20px"
+        "box-shadow" => "0 1px 2px rgba(0, 0, 0, 0.1)",
+        "font-size" => "16px"
     ),
 
     CSS(
         ".llm-chat-send-button:hover:not(:disabled)",
-        "transform" => "scale(1.08) translateY(-1px)",
-        "box-shadow" => "0 4px 12px rgba(33, 150, 243, 0.4)"
+        "opacity" => "0.9",
+        "box-shadow" => "0 2px 4px rgba(0, 0, 0, 0.15)"
     ),
 
     CSS(
         ".llm-chat-send-button:active:not(:disabled)",
-        "transform" => "scale(0.96)"
+        "transform" => "scale(0.98)"
     ),
 
     CSS(
         ".llm-chat-send-button:disabled",
-        "opacity" => "0.4",
+        "opacity" => "0.3",
         "cursor" => "not-allowed",
         "transform" => "none",
         "box-shadow" => "none"
@@ -189,36 +190,36 @@ const ChatStyles = Styles(
     # Stop button - warning style
     CSS(
         ".llm-chat-stop-button",
-        "background" => "linear-gradient(135deg, #f44336 0%, #d32f2f 100%)",
+        "background" => "#f44336",
         "color" => "white",
         "border" => "none",
-        "border-radius" => "50%",
-        "width" => "48px",
-        "height" => "48px",
+        "border-radius" => "4px",
+        "width" => "36px",
+        "height" => "36px",
         "display" => "flex",
         "align-items" => "center",
         "justify-content" => "center",
         "cursor" => "pointer",
-        "transition" => "all 0.2s ease",
+        "transition" => "all 0.15s ease",
         "flex-shrink" => "0",
-        "box-shadow" => "0 2px 8px rgba(244, 67, 54, 0.3)",
-        "font-size" => "20px"
+        "box-shadow" => "0 1px 2px rgba(0, 0, 0, 0.1)",
+        "font-size" => "16px"
     ),
 
     CSS(
         ".llm-chat-stop-button:hover:not(:disabled)",
-        "transform" => "scale(1.08) translateY(-1px)",
-        "box-shadow" => "0 4px 12px rgba(244, 67, 54, 0.4)"
+        "opacity" => "0.9",
+        "box-shadow" => "0 2px 4px rgba(0, 0, 0, 0.15)"
     ),
 
     CSS(
         ".llm-chat-stop-button:active:not(:disabled)",
-        "transform" => "scale(0.96)"
+        "transform" => "scale(0.98)"
     ),
 
     CSS(
         ".llm-chat-stop-button:disabled",
-        "opacity" => "0.4",
+        "opacity" => "0.3",
         "cursor" => "not-allowed"
     ),
 
@@ -227,13 +228,13 @@ const ChatStyles = Styles(
         ".llm-chat-streaming",
         "display" => "flex",
         "align-items" => "center",
-        "gap" => "10px",
+        "gap" => "6px",
         "color" => "var(--text-secondary)",
-        "font-size" => "13px",
-        "padding" => "12px 18px",
-        "margin" => "8px 0 16px 0",
+        "font-size" => "12px",
+        "padding" => "6px 10px",
+        "margin" => "4px 0 6px 0",
         "background-color" => "var(--hover-bg)",
-        "border-radius" => "12px",
+        "border-radius" => "4px",
         "width" => "fit-content"
     ),
 
@@ -278,10 +279,10 @@ const ChatStyles = Styles(
     CSS(
         ".cell-output pre",
         "background-color" => "rgba(0, 0, 0, 0.05)",
-        "border-radius" => "8px",
-        "padding" => "12px",
+        "border-radius" => "4px",
+        "padding" => "6px 8px",
         "overflow-x" => "auto",
-        "margin" => "8px 0"
+        "margin" => "4px 0"
     ),
 
     CSS(
@@ -294,21 +295,21 @@ const ChatStyles = Styles(
     CSS(
         ".llm-chat-scroll-hint",
         "position" => "fixed",
-        "bottom" => "100px",
-        "right" => "24px",
-        "background" => "linear-gradient(135deg, var(--accent-blue) 0%, #1976d2 100%)",
+        "bottom" => "80px",
+        "right" => "20px",
+        "background" => "var(--accent-blue)",
         "color" => "white",
-        "border-radius" => "28px",
-        "padding" => "10px 18px",
-        "font-size" => "14px",
+        "border-radius" => "4px",
+        "padding" => "8px 14px",
+        "font-size" => "13px",
         "font-weight" => "500",
         "cursor" => "pointer",
-        "box-shadow" => "0 4px 16px rgba(33, 150, 243, 0.3)",
+        "box-shadow" => "0 2px 8px rgba(33, 150, 243, 0.3)",
         "transition" => "all 0.3s ease",
         "z-index" => "999",
         "display" => "flex",
         "align-items" => "center",
-        "gap" => "8px"
+        "gap" => "6px"
     ),
 
     CSS(
@@ -355,15 +356,15 @@ const ChatStyles = Styles(
     # Tool rendering styles
     CSS(
         ".tool-container",
-        "margin" => "8px 0"
+        "margin" => "6px 0"
     ),
 
     CSS(
         ".tool-header",
         "display" => "flex",
         "align-items" => "center",
-        "margin-bottom" => "8px",
-        "gap" => "8px"
+        "margin-bottom" => "6px",
+        "gap" => "6px"
     ),
 
     CSS(
@@ -374,8 +375,8 @@ const ChatStyles = Styles(
     CSS(
         ".tool-path",
         "background" => "var(--hover-bg)",
-        "padding" => "2px 8px",
-        "border-radius" => "4px",
+        "padding" => "2px 6px",
+        "border-radius" => "3px",
         "font-size" => "0.9em",
         "color" => "var(--accent-blue)",
         "font-family" => "monospace",
@@ -385,8 +386,8 @@ const ChatStyles = Styles(
     CSS(
         ".tool-command",
         "background" => "var(--hover-bg)",
-        "padding" => "2px 8px",
-        "border-radius" => "4px",
+        "padding" => "2px 6px",
+        "border-radius" => "3px",
         "font-size" => "0.9em",
         "font-family" => "monospace"
     ),
@@ -406,17 +407,17 @@ const ChatStyles = Styles(
     CSS(
         ".tool-output",
         "background-color" => "var(--hover-bg)",
-        "padding" => "12px",
-        "border-radius" => "6px",
+        "padding" => "6px 8px",
+        "border-radius" => "4px",
         "font-family" => "'Fira Code', 'Consolas', monospace",
         "font-size" => "11px",
         "margin" => "0",
         "overflow-x" => "auto",
-        "max-height" => "400px",
+        "max-height" => "250px",
         "overflow-y" => "auto",
         "white-space" => "pre-wrap",
         "word-wrap" => "break-word",
-        "line-height" => "1.4"
+        "line-height" => "1.3"
     ),
 
     CSS(
@@ -461,21 +462,21 @@ const ChatStyles = Styles(
     CSS(
         ".todo-container",
         "background-color" => "var(--hover-bg)",
-        "padding" => "16px",
-        "border-radius" => "8px",
-        "border-left" => "4px solid var(--accent-blue)",
-        "margin" => "8px 0"
+        "padding" => "6px 8px",
+        "border-radius" => "4px",
+        "border-left" => "3px solid var(--accent-blue)",
+        "margin" => "6px 0"
     ),
 
     CSS(
         ".todo-title",
         "font-weight" => "600",
         "color" => "var(--accent-blue)",
-        "margin-bottom" => "12px",
-        "font-size" => "14px",
+        "margin-bottom" => "6px",
+        "font-size" => "13px",
         "display" => "flex",
         "align-items" => "center",
-        "gap" => "8px"
+        "gap" => "6px"
     ),
 
     CSS(
@@ -502,6 +503,18 @@ const ChatStyles = Styles(
         "color" => "var(--text-primary)"
     ),
 
+    # Spinner container styling - horizontal row, centered
+    CSS(
+        ".llm-chat-spinners",
+        "display" => "flex",
+        "flex-direction" => "row",
+        "gap" => "12px",
+        "align-items" => "center",
+        "justify-content" => "center",
+        "min-height" => "20px",
+        "padding" => "4px 0"
+    ),
+
     # Responsive adjustments for mobile
     CSS(
         "@media (max-width: 768px)",
@@ -516,16 +529,23 @@ const ChatStyles = Styles(
         CSS(
             ".llm-chat-messages",
             "padding" => "16px",
-            "padding-bottom" => "100px"
+            "padding-bottom" => "140px"
         ),
         CSS(
             ".llm-chat-input-container",
-            "padding" => "16px"
+            "padding" => "12px 16px 16px"
         ),
         CSS(
             ".llm-chat-send-button, .llm-chat-stop-button",
             "width" => "44px",
-            "height" => "44px"
+            "height" => "44px",
+            "font-size" => "18px"
+        ),
+        CSS(
+            ".llm-chat-input",
+            "font-size" => "14px",
+            "padding" => "10px 16px",
+            "max-height" => "150px"
         ),
         CSS(
             ".tool-output",
