@@ -65,8 +65,7 @@ function feature_cards()
                 )),
                 DOM.p(desc, style=Styles(
                     "margin" => "0",
-                    "color" => "var(--text-secondary)",
-                    "line-height" => "1.6"
+                    "color" => "var(--text-secondary)"
                 )),
                 style=Styles("text-align" => "center")
             ),

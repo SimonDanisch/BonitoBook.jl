@@ -63,18 +63,19 @@ function blog()
 
     entries = all_posts()
     blog_cards = map(entries) do (dir, entry)
-        DOM.div(entry; class = "example-card")
+        DOM.div(entry; class = "blog-card")
     end
 
-    blog_grid = DOM.div(
-        blog_cards,
+    blog_list = DOM.div(
+        blog_cards;
+        class="blog-list"
     )
 
     content = DOM.div(
         rss_link,
         intro,
-        blog_grid;
-        class="example-content"
+        blog_list;
+        class="blog-content"
     )
 
     return Page(content, "BonitoBook Blog")

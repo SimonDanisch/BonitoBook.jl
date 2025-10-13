@@ -34,6 +34,11 @@ end
 dir = joinpath(@__DIR__, "build")
 !isdir(dir) && mkdir(dir)
 Bonito.export_static(dir, create_routes())
+# using Revise
+# routes, task, server = interactive_server(["src/"]) do
+#     return create_routes()
+# end
+
 using BonitoSites
 
 # Generate RSS feed
