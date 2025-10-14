@@ -92,12 +92,11 @@ function process_item!(book, tool::AddCellTool)
     metadata = merge(Dict{Symbol,Any}(:from => :agent, :tool => "add_cell"), metadata)
     cell = add_cell!(book, tool.content, tool.language, metadata; editor_visible=true)
     val = cell.editor.output[]
-    tool.result = Dict("success" => true, "result" => extract_output(val))
-end
+    result = ToolResult(repr(extract_output(val)))
 
-function process_item!(book, tool::AbstractTool)
-    # Execute the tool
-    execute_tool!(tool)
+    # Create ToolExecution and serialize it
+    tool_execution = ToolExecution(tool, result)
+
     # Get next cell ID
     cell_id = book.cell_id_counter[]
     # Create data/tools directory if needed
@@ -105,14 +104,43 @@ function process_item!(book, tool::AbstractTool)
     if !isdir(tools_dir)
         mkpath(tools_dir)
     end
-    # Write tool to JSON file
+    # Write ToolExecution to JSON file
     tool_type = typeof(tool)
     tool_file = joinpath(tools_dir, "$(tool_name(tool_type))-$(cell_id).json")
-    write(tool_file, JSON3.write(tool))
+    write(tool_file, JSON3.write(tool_execution))
 
-    # Generate Julia code that reads the tool from the JSON file
+    # Generate Julia code that reads the ToolExecution from the JSON file
     name = "$(tool_name(tool_type))-$(cell_id).json"
-    tool_code = """JSON3.read(read(data"tools/$name", String), $(nameof(tool_type)))"""
+    tool_code = """open(io -> JSON3.read(io, ToolExecution{$(nameof(tool_type))}), data"tools/$name")"""
+
+    # Add as Julia code cell (will be executed and rendered)
+    cell = add_cell!(book, tool_code, "julia", Dict{Symbol, Any}(:from => :tool, :tool => tool_name(tool_type)))
+
+    return cell
+end
+
+function process_item!(book, tool::AbstractTool)
+    # Execute the tool and get result
+    result = execute_tool!(tool)
+
+    # Create ToolExecution
+    tool_execution = ToolExecution(tool, result)
+
+    # Get next cell ID
+    cell_id = book.cell_id_counter[]
+    # Create data/tools directory if needed
+    tools_dir = joinpath(book.folder, "data", "tools")
+    if !isdir(tools_dir)
+        mkpath(tools_dir)
+    end
+    # Write ToolExecution to JSON file
+    tool_type = typeof(tool)
+    tool_file = joinpath(tools_dir, "$(tool_name(tool_type))-$(cell_id).json")
+    write(tool_file, JSON3.write(tool_execution))
+
+    # Generate Julia code that reads the ToolExecution from the JSON file
+    name = "$(tool_name(tool_type))-$(cell_id).json"
+    tool_code = """open(io -> JSON3.read(io, ToolExecution{$(nameof(tool_type))}), data"tools/$name")"""
 
     # Add as Julia code cell (will be executed and rendered)
     cell = add_cell!(book, tool_code, "julia", Dict{Symbol, Any}(:from => :tool, :tool => tool_name(tool_type)))

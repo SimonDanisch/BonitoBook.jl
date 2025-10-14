@@ -9,16 +9,17 @@ Custom rendering for LLM Chat tools using CSS classes from ChatStyles.
 # ============================================================================
 
 """
-    get_error(tool::AbstractTool)
+    get_error(execution::ToolExecution)
 
 Returns the error message if the tool result contains an error, otherwise returns nothing.
 """
-function get_error(tool::AbstractTool)
-    if isnothing(tool.result)
-        return nothing
+function get_error(execution::ToolExecution)
+    result = execution.result
+    if !result.success && result.result isa Exception
+        return string(result.result)
     end
-    if tool.result isa Dict && haskey(tool.result, "error")
-        return tool.result["error"]
+    if result.result isa Dict && haskey(result.result, "error")
+        return result.result["error"]
     end
     return nothing
 end
@@ -66,22 +67,20 @@ end
 # BashTool Rendering
 # ============================================================================
 
-function Bonito.jsrender(session::Session, tool::BashTool)
+function Bonito.jsrender(session::Session, execution::ToolExecution{BashTool})
+    tool = execution.tool
+    result = execution.result
     tool_name = "bash"
     args_display = tool.command
 
-    if isnothing(tool.result)
-        return Bonito.jsrender(session, render_executing(tool_name, args_display))
-    end
-
     # Check for error
-    error_msg = get_error(tool)
+    error_msg = get_error(execution)
     if !isnothing(error_msg)
         return Bonito.jsrender(session, render_error(tool_name, args_display, error_msg))
     end
 
     # Output is the result string
-    output = tool.result
+    output = result.result
     lines = split(output, '\n')
 
     # Header with info
@@ -109,22 +108,20 @@ end
 # FileReadTool Rendering
 # ============================================================================
 
-function Bonito.jsrender(session::Session, tool::FileReadTool)
+function Bonito.jsrender(session::Session, execution::ToolExecution{FileReadTool})
+    tool = execution.tool
+    result = execution.result
     tool_name = "file_read"
     args_display = tool.path
 
-    if isnothing(tool.result)
-        return Bonito.jsrender(session, render_executing(tool_name, args_display))
-    end
-
     # Check for error
-    error_msg = get_error(tool)
+    error_msg = get_error(execution)
     if !isnothing(error_msg)
         return Bonito.jsrender(session, render_error(tool_name, args_display, error_msg))
     end
 
     # Content is the result string
-    content = tool.result
+    content = result.result
     lines = split(content, '\n')
 
     # Header with info
@@ -152,22 +149,20 @@ end
 # FileWriteTool Rendering
 # ============================================================================
 
-function Bonito.jsrender(session::Session, tool::FileWriteTool)
+function Bonito.jsrender(session::Session, execution::ToolExecution{FileWriteTool})
+    tool = execution.tool
+    result = execution.result
     tool_name = "file_write"
     args_display = tool.path
 
-    if isnothing(tool.result)
-        return Bonito.jsrender(session, render_executing(tool_name, args_display))
-    end
-
     # Check for error
-    error_msg = get_error(tool)
+    error_msg = get_error(execution)
     if !isnothing(error_msg)
         return Bonito.jsrender(session, render_error(tool_name, args_display, error_msg))
     end
 
     # Result is the number of bytes written
-    bytes_written = tool.result
+    bytes_written = result.result
 
     # Header with info
     header = DOM.div(
@@ -184,11 +179,13 @@ end
 # FileEditTool Rendering
 # ============================================================================
 
-function Bonito.jsrender(session::Session, tool::FileEditTool)
+function Bonito.jsrender(session::Session, execution::ToolExecution{FileEditTool})
+    tool = execution.tool
+    result = execution.result
     tool_name = "file_edit"
     args_display = tool.path
     # Check for error
-    error_msg = get_error(tool)
+    error_msg = get_error(execution)
     if !isnothing(error_msg)
         return Bonito.jsrender(session, render_error(tool_name, args_display, error_msg))
     end
@@ -248,23 +245,21 @@ end
 # HttpGetTool Rendering
 # ============================================================================
 
-function Bonito.jsrender(session::Session, tool::HttpGetTool)
+function Bonito.jsrender(session::Session, execution::ToolExecution{HttpGetTool})
+    tool = execution.tool
+    result = execution.result
     tool_name = "http_get"
     args_display = tool.url
 
-    if isnothing(tool.result)
-        return Bonito.jsrender(session, render_executing(tool_name, args_display))
-    end
-
     # Check for error
-    error_msg = get_error(tool)
+    error_msg = get_error(execution)
     if !isnothing(error_msg)
         return Bonito.jsrender(session, render_error(tool_name, args_display, error_msg))
     end
 
     # Result is a dict with status and content
-    status = tool.result["status"]
-    content = tool.result["content"]
+    status = result.result["status"]
+    content = result.result["content"]
 
     # Header with status
     header = DOM.div(
@@ -290,16 +285,14 @@ end
 # AddCellTool Rendering
 # ============================================================================
 
-function Bonito.jsrender(session::Session, tool::AddCellTool)
+function Bonito.jsrender(session::Session, execution::ToolExecution{AddCellTool})
+    tool = execution.tool
+    result = execution.result
     tool_name = "add_cell"
     args_display = "$(tool.language)"
 
-    if isnothing(tool.result)
-        return Bonito.jsrender(session, render_executing(tool_name, args_display))
-    end
-
     # Check for error
-    error_msg = get_error(tool)
+    error_msg = get_error(execution)
     if !isnothing(error_msg)
         return Bonito.jsrender(session, render_error(tool_name, args_display, error_msg))
     end
@@ -329,23 +322,21 @@ end
 # FileTool Rendering
 # ============================================================================
 
-function Bonito.jsrender(session::Session, tool::FileTool)
+function Bonito.jsrender(session::Session, execution::ToolExecution{FileTool})
+    tool = execution.tool
+    result = execution.result
     tool_name = "file_tool"
     args_preview = join(["$(k)=$(v)" for (k,v) in tool.arguments], ", ")
     args_display = "$(tool.command) $(args_preview)"
 
-    if isnothing(tool.result)
-        return Bonito.jsrender(session, render_executing(tool_name, args_display))
-    end
-
     # Check for error
-    error_msg = get_error(tool)
+    error_msg = get_error(execution)
     if !isnothing(error_msg)
         return Bonito.jsrender(session, render_error(tool_name, args_display, error_msg))
     end
 
     # Result data
-    result_data = tool.result
+    result_data = result.result
 
     # Format result based on type
     if result_data isa Vector && !isempty(result_data)
@@ -414,7 +405,9 @@ end
 # TodoList Rendering
 # ============================================================================
 
-function Bonito.jsrender(session::Session, tool::TodoList)
+function Bonito.jsrender(session::Session, execution::ToolExecution{TodoList})
+    tool = execution.tool
+    result = execution.result
     tool_name = "todo_list"
     # Create checklist items with status
     checklist_items = [
@@ -447,23 +440,21 @@ end
 # Generic fallback for unhandled tool types
 # ============================================================================
 
-function Bonito.jsrender(session::Session, tool::AbstractTool)
+function Bonito.jsrender(session::Session, execution::ToolExecution{T}) where T <: AbstractTool
+    tool = execution.tool
+    result = execution.result
     tool_type = typeof(tool)
     tool_name = string(nameof(tool_type))
     args_display = "unknown"
 
-    if isnothing(tool.result)
-        return Bonito.jsrender(session, render_executing(tool_name, args_display))
-    end
-
     # Check for error
-    error_msg = get_error(tool)
+    error_msg = get_error(execution)
     if !isnothing(error_msg)
         return Bonito.jsrender(session, render_error(tool_name, args_display, error_msg))
     end
 
     # Generic result display
-    result_json = JSON3.pretty(tool.result)
+    result_json = JSON3.pretty(result.result)
     result_preview = DOM.pre(result_json, class="tool-output")
 
     header = DOM.div(

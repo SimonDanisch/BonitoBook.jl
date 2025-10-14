@@ -197,10 +197,14 @@ function extract_markdown_content(source::String)
 end
 
 function represent_tool(::Type{<:AbstractTool}, cell)
-    tool = extract_output(cell.editor.output[])
+    # Extract ToolExecution from cell output
+    execution = extract_output(cell.editor.output[])
+    tool = execution.tool
+    result = execution.result
+
     id = cell.uuid
     tool_id = "tool_$(id)"
-    fields = [f => getfield(tool, f) for f in propertynames(tool) if f !== :result]
+    fields = [f => getfield(tool, f) for f in propertynames(tool)]
 
     # Tool call (assistant message with content array)
     tool_call = AgentMessage(:assistant, [Dict(
@@ -211,11 +215,13 @@ function represent_tool(::Type{<:AbstractTool}, cell)
         )], id)
 
     # Tool result (user message with content array)
-    # Convert result to string for Claude API
-    result_str = if tool.result isa Dict && haskey(tool.result, "error")
-        "Error: $(tool.result["error"])"
+    # Convert result to string for API
+    result_str = if !result.success && result.result isa Exception
+        "Error: $(string(result.result))"
+    elseif result.result isa Dict && haskey(result.result, "error")
+        "Error: $(result.result["error"])"
     else
-        repr(tool.result)
+        repr(result.result)
     end
 
     tool_result = AgentMessage(:user, [Dict(
@@ -228,30 +234,42 @@ function represent_tool(::Type{<:AbstractTool}, cell)
 end
 
 function represent_tool(::Type{AddCellTool}, cell)
+    # Extract ToolExecution from cell output
+    execution = extract_output(cell.editor.output[])
+    tool = execution.tool
+    result = execution.result
+
     # AddCellTool: show full output/logging
-    content = cell.editor.source[]
-    output = extract_output(cell.editor.output[])
+    content = tool.content
     logging = cell.editor.logging_html[]
     tool_id = "tool_$(cell.uuid)"
+
     # Tool call (assistant message with content array)
     tool_call = AgentMessage(:assistant, [Dict(
         "type" => "tool_use",
         "id" => tool_id,
         "name" => "add_cell",
         "input" => Dict(
-            "language" => cell.language,
+            "language" => tool.language,
             "content" => content,
             "metadata" => Dict()
         )
     )], cell.uuid)
 
+    # Tool result with actual result
+    result_str = if !result.success && result.result isa Exception
+        "Error: $(string(result.result))"
+    else
+        """
+        result: $(repr(result.result))
+        logs: $(logging)
+        """
+    end
+
     tool_result = AgentMessage(:user, [Dict(
         "type" => "tool_result",
         "tool_use_id" => tool_id,
-        "content" => """
-        result: $(output)
-        logs: $(logging)
-        """
+        "content" => result_str
     )], cell.uuid)
 
     return [tool_call, tool_result]
@@ -268,7 +286,7 @@ function cells_to_messages(cells::Vector)
     messages = AgentMessage[]
     for cell in cells
         role = get(cell.metadata, :from, :assistant)
-        cell_id = get(cell.metadata, :id, nothing)
+        cell_id = cell.uuid
         tool_type = get(cell.metadata, :tool, nothing)
         # For user/assistant messages, extract content smartly
         if isnothing(tool_type)

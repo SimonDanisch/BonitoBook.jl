@@ -3,26 +3,61 @@ using JSON3
 using Bonito.Base64
 
 """
-    HTTPAgentConfig
+    AbstractApi
 
-Configuration for HTTP-based LLM agents (OpenAI, Claude, Ollama, etc.)
+Base type for all HTTP API implementations (OpenAI, Claude, Ollama, etc.)
+"""
+abstract type AbstractApi end
+
+"""
+    OpenAIApi <: AbstractApi
+
+Configuration for OpenAI API.
 
 # Fields
 - `endpoint::String`: API endpoint URL
 - `model::String`: Model identifier
-- `api_key::Union{String, Nothing}`: API key (not needed for Ollama)
-- `headers_fn::Function`: Function that returns request headers
-- `request_fn::Function`: Function that builds request body
-- `response_fn::Function`: Function that parses streaming response chunks
+- `api_key::String`: API key
 - `system_prompt::String`: System prompt for the agent
 """
-struct HTTPAgentConfig
+struct OpenAIApi <: AbstractApi
     endpoint::String
     model::String
-    api_key::Union{String, Nothing}
-    headers_fn::Function
-    request_fn::Function
-    response_fn::Function
+    api_key::String
+    system_prompt::String
+end
+
+"""
+    ClaudeApi <: AbstractApi
+
+Configuration for Claude/Anthropic API.
+
+# Fields
+- `endpoint::String`: API endpoint URL
+- `model::String`: Model identifier
+- `api_key::String`: API key
+- `system_prompt::String`: System prompt for the agent
+"""
+struct ClaudeApi <: AbstractApi
+    endpoint::String
+    model::String
+    api_key::String
+    system_prompt::String
+end
+
+"""
+    OllamaApi <: AbstractApi
+
+Configuration for Ollama (local) API.
+
+# Fields
+- `endpoint::String`: API endpoint URL
+- `model::String`: Model identifier
+- `system_prompt::String`: System prompt for the agent
+"""
+struct OllamaApi <: AbstractApi
+    endpoint::String
+    model::String
     system_prompt::String
 end
 
@@ -32,14 +67,110 @@ end
 Generic HTTP-based agent that works with OpenAI, Claude, Ollama, and compatible APIs.
 """
 struct HTTPAgent <: LLMChatAgent
-    config::HTTPAgentConfig
+    api::AbstractApi
     # TodoList or other tools implementing multi-step tasks
     needs_to_be_done::Dict{DataType, AbstractTool}
     last_item::Base.RefValue{Union{AbstractTool, String}}
 end
 
-function HTTPAgent(config::HTTPAgentConfig)
-    return HTTPAgent(config, Dict{DataType, AbstractTool}(), Ref{Union{AbstractTool, String}}(""))
+function HTTPAgent(api::AbstractApi)
+    return HTTPAgent(api, Dict{DataType, AbstractTool}(), Ref{Union{AbstractTool, String}}(""))
+end
+
+# ============================================================================
+# API Methods
+# ============================================================================
+
+"""
+    headers(api::AbstractApi)
+
+Get HTTP headers for the API request.
+"""
+function headers(api::OpenAIApi)
+    return [
+        "Content-Type" => "application/json",
+        "Authorization" => "Bearer $(api.api_key)"
+    ]
+end
+
+function headers(api::ClaudeApi)
+    return [
+        "Content-Type" => "application/json",
+        "x-api-key" => api.api_key,
+        "anthropic-version" => "2023-06-01"
+    ]
+end
+
+function headers(api::OllamaApi)
+    return ["Content-Type" => "application/json"]
+end
+
+"""
+    base_url(api::AbstractApi)
+
+Get the base URL/endpoint for the API.
+"""
+base_url(api::AbstractApi) = api.endpoint
+
+"""
+    model_name(api::AbstractApi)
+
+Get the model name for the API.
+"""
+model_name(api::AbstractApi) = api.model
+
+"""
+    system_prompt(api::AbstractApi)
+
+Get the system prompt for the API.
+"""
+system_prompt(api::AbstractApi) = api.system_prompt
+
+"""
+    request_body(api::AbstractApi, messages::Vector, tools::Vector)
+
+Build the request body for the API.
+"""
+function request_body(api::OpenAIApi, messages::Vector, tools::Vector)
+    body = Dict(
+        "model" => api.model,
+        "messages" => messages,
+        "stream" => true
+    )
+    if !isempty(tools)
+        body["tools"] = [tool_to_openai(T) for T in tools]
+    end
+    return body
+end
+
+function request_body(api::ClaudeApi, messages::Vector, tools::Vector)
+    # Extract system message (Claude handles it separately)
+    system_msg = api.system_prompt
+    user_messages = filter(m -> m["role"] != "system", messages)
+
+    body = Dict(
+        "model" => api.model,
+        "messages" => user_messages,
+        "system" => system_msg,
+        "stream" => true,
+        "max_tokens" => 4096
+    )
+    if !isempty(tools)
+        body["tools"] = [tool_to_claude(T) for T in tools]
+    end
+    return body
+end
+
+function request_body(api::OllamaApi, messages::Vector, tools::Vector)
+    body = Dict(
+        "model" => api.model,
+        "messages" => messages,
+        "stream" => true
+    )
+    if !isempty(tools)
+        body["tools"] = [tool_to_openai(T) for T in tools]  # Ollama uses OpenAI format
+    end
+    return body
 end
 
 # ============================================================================
@@ -53,22 +184,7 @@ Create configuration for OpenAI API.
 """
 function openai_config(model::String; api_key=nothing, endpoint="https://api.openai.com/v1/chat/completions")
     api_key = something(api_key, get(ENV, "OPENAI_API_KEY", nothing))
-
-    headers_fn = (key) -> [
-        "Content-Type" => "application/json",
-        "Authorization" => "Bearer $key"
-    ]
-
-    request_fn = (messages, tools, model) -> Dict(
-        "model" => model,
-        "messages" => messages,
-        "stream" => true,
-        "tools" => isempty(tools) ? nothing : [tool_to_openai(T) for T in tools]
-    )
-
-    response_fn = parse_openai_response
-
-    return HTTPAgentConfig(endpoint, model, api_key, headers_fn, request_fn, response_fn, DEFAULT_SYSTEM_PROMPT)
+    return OpenAIApi(endpoint, model, api_key, DEFAULT_SYSTEM_PROMPT)
 end
 
 """
@@ -78,38 +194,7 @@ Create configuration for Claude API.
 """
 function claude_config(model::String; api_key=nothing, endpoint="https://api.anthropic.com/v1/messages")
     api_key = something(api_key, get(ENV, "CLAUDE_API_KEY", nothing))
-
-    headers_fn = (key) -> [
-        "Content-Type" => "application/json",
-        "x-api-key" => key,
-        "anthropic-version" => "2023-06-01"
-    ]
-
-    request_fn = (messages, tools, model) -> begin
-        # Extract system message
-        system_msg = ""
-        user_messages = []
-        for msg in messages
-            if msg["role"] == "system"
-                system_msg = msg["content"]
-            else
-                push!(user_messages, msg)
-            end
-        end
-
-        Dict(
-            "model" => model,
-            "messages" => user_messages,
-            "system" => system_msg,
-            "stream" => true,
-            "max_tokens" => 4096,
-            "tools" => isempty(tools) ? nothing : [tool_to_claude(T) for T in tools]
-        )
-    end
-
-    response_fn = parse_claude_response
-
-    return HTTPAgentConfig(endpoint, model, api_key, headers_fn, request_fn, response_fn, DEFAULT_SYSTEM_PROMPT)
+    return ClaudeApi(endpoint, model, api_key, DEFAULT_SYSTEM_PROMPT)
 end
 
 """
@@ -118,18 +203,7 @@ end
 Create configuration for Ollama.
 """
 function ollama_config(model::String; endpoint="http://localhost:11434/api/chat")
-    headers_fn = (_) -> ["Content-Type" => "application/json"]
-
-    request_fn = (messages, tools, model) -> Dict(
-        "model" => model,
-        "messages" => messages,
-        "stream" => true,
-        "tools" => isempty(tools) ? nothing : [tool_to_openai(T) for T in tools]  # Ollama uses OpenAI format
-    )
-
-    response_fn = parse_ollama_response
-
-    return HTTPAgentConfig(endpoint, model, nothing, headers_fn, request_fn, response_fn, DEFAULT_SYSTEM_PROMPT)
+    return OllamaApi(endpoint, model, DEFAULT_SYSTEM_PROMPT)
 end
 
 const DEFAULT_SYSTEM_PROMPT = """
@@ -242,27 +316,28 @@ The Channel is closed after all items are yielded.
 """
 function prompt(agent::HTTPAgent, messages::Vector{AgentMessage}, tools::Vector;
                 spinner::Union{TaskSpinner, Nothing}=nothing)
-    config = agent.config
+    api = agent.api
+
     # Convert messages to API format
     api_messages = [
-        Dict("role" => "system", "content" => config.system_prompt),
+        Dict("role" => "system", "content" => system_prompt(api)),
         [message_to_api(msg) for msg in messages]...
     ]
 
     # Build request with streaming enabled
-    request_body = config.request_fn(api_messages, tools, config.model)
+    body = request_body(api, api_messages, tools)
 
     # Remove null fields
-    filter!(p -> p.second !== nothing, request_body)
-    headers = config.headers_fn(config.api_key)
+    filter!(p -> p.second !== nothing, body)
+    req_headers = headers(api)
 
     # Create output channel for complete tools and strings
     output_channel = Channel{Union{AbstractTool, String}}(100; spawn=true) do channel
         # Use HTTP.open for true streaming, disable automatic status exceptions
-        HTTP.open("POST", config.endpoint, headers; status_exception=false) do io
+        HTTP.open("POST", base_url(api), req_headers; status_exception=false) do io
             async_spinner!(spinner, "http request") do
                 # Write request body
-                JSON3.write(io, request_body)
+                JSON3.write(io, body)
                 closewrite(io)
 
                 # Start reading response
@@ -283,7 +358,7 @@ function prompt(agent::HTTPAgent, messages::Vector{AgentMessage}, tools::Vector;
 
                 # Parse SSE stream and pass chunks to response parser
                 parse_sse(io, spinner=spinner) do parsed_chunk
-                    config.response_fn(parsed_chunk, channel)
+                    parse_response(api, parsed_chunk, channel)
                 end
             end
         end
@@ -315,7 +390,6 @@ function message_to_api(msg::AgentMessage)
         return Dict("role" => role, "content" => content)
     end
 
-    # Fallback: convert to string
     return Dict("role" => role, "content" => content)
 end
 
@@ -501,7 +575,7 @@ Accumulates partial data and only emits when complete.
 """
 const openai_state = Ref{Union{OpenAIStreamState, Nothing}}(nothing)
 
-function parse_openai_response(chunk, output_channel::Channel)
+function parse_response(api::OpenAIApi, chunk, output_channel::Channel)
     # Initialize state on first chunk
     if openai_state[] === nothing
         openai_state[] = OpenAIStreamState()
@@ -588,14 +662,14 @@ end
 ClaudeStreamState() = ClaudeStreamState(-1, "", "", "", "")
 
 """
-    parse_claude_response(chunk, output_channel::Channel)
+    parse_response(api::ClaudeApi, chunk, output_channel::Channel)
 
 Parse Claude streaming chunk and emit complete tools/text to output_channel.
 Claude streams with events: content_block_start, content_block_delta, content_block_stop
 """
 const claude_state = Ref{Union{ClaudeStreamState, Nothing}}(nothing)
 
-function parse_claude_response(chunk, output_channel::Channel)
+function parse_response(api::ClaudeApi, chunk, output_channel::Channel)
     # Initialize state on first chunk
     if claude_state[] === nothing
         claude_state[] = ClaudeStreamState()
@@ -669,7 +743,7 @@ Ollama uses OpenAI-compatible format with deltas.
 """
 const ollama_state = Ref{Union{OpenAIStreamState, Nothing}}(nothing)
 
-function parse_ollama_response(chunk, output_channel::Channel)
+function parse_response(api::OllamaApi, chunk, output_channel::Channel)
     # Ollama uses OpenAI format, so reuse OpenAI state structure
     if ollama_state[] === nothing
         ollama_state[] = OpenAIStreamState()
@@ -763,7 +837,7 @@ function create_http_agent(; provider=:auto)
         end
     end
 
-    config = if provider == :openai
+    api = if provider == :openai
         openai_config("gpt-4")
     elseif provider == :claude
         claude_config("sonnet")
@@ -773,7 +847,7 @@ function create_http_agent(; provider=:auto)
         error("Unknown provider: $provider")
     end
 
-    return HTTPAgent(config)
+    return HTTPAgent(api)
 end
 
 """

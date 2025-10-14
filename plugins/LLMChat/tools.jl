@@ -11,9 +11,44 @@ To create a custom tool:
 2. Implement `tool_name(::Type{YourTool})` to return the tool name
 3. Implement `tool_description(::Type{YourTool})` to describe what it does
 4. Implement `tool_input_schema(::Type{YourTool})` to define input parameters
-5. Implement `execute_tool(tool::YourTool, book)` to perform the action
+5. Implement `execute_tool(tool::YourTool)` to perform the action
 """
 abstract type AbstractTool end
+
+"""
+    ToolResult
+
+Result of executing a tool. Contains the result data and whether it succeeded.
+
+# Fields
+- `result::Any`: The result data (can be string, dict, array, etc.)
+- `success::Bool`: Whether the tool execution succeeded (auto-set from result type)
+"""
+struct ToolResult
+    result::Any
+    success::Bool
+end
+
+# Constructor that auto-detects success from Exception
+function ToolResult(result)
+    success = !(result isa Exception)
+    return ToolResult(result, success)
+end
+
+"""
+    ToolExecution{T<:AbstractTool}
+
+Represents a tool execution with its tool and result.
+Used for serialization and message conversion.
+
+# Fields
+- `tool::T`: The tool that was executed
+- `result::ToolResult`: The result of the execution
+"""
+struct ToolExecution{T<:AbstractTool}
+    tool::T
+    result::ToolResult
+end
 
 """
     tool_name(::Type{<:AbstractTool})
@@ -55,16 +90,16 @@ end
 """
     execute_tool!(tool::AbstractTool)
 
-Execute the tool with error handling, mutate its result field, and return the result.
+Execute the tool with error handling and return a ToolResult.
 This is a generic wrapper that calls execute_tool(tool) and handles exceptions.
 """
 function execute_tool!(tool::AbstractTool)
     try
-        tool.result = execute_tool(tool)
+        result = execute_tool(tool)
+        return ToolResult(result)
     catch e
-        tool.result = Dict("error" => sprint(showerror, e))
+        return ToolResult(e)
     end
-    return tool.result
 end
 
 
@@ -77,12 +112,9 @@ end
 
 Execute bash commands in the shell.
 """
-mutable struct BashTool <: AbstractTool
+struct BashTool <: AbstractTool
     command::String
-    result::Union{Nothing, Any}
 end
-
-BashTool(command::String) = BashTool(command, nothing)
 
 tool_name(::Type{BashTool}) = "bash"
 tool_description(::Type{BashTool}) = "Execute bash commands in the shell. Use for file operations, running scripts, etc."
@@ -106,12 +138,9 @@ end
 
 Read contents of a file.
 """
-mutable struct FileReadTool <: AbstractTool
+struct FileReadTool <: AbstractTool
     path::String
-    result::Union{Nothing, Any}
 end
-
-FileReadTool(path::String) = FileReadTool(path, nothing)
 
 tool_name(::Type{FileReadTool}) = "file_read"
 tool_description(::Type{FileReadTool}) = "Read the contents of a file from the filesystem."
@@ -138,13 +167,10 @@ end
 
 Write content to a file.
 """
-mutable struct FileWriteTool <: AbstractTool
+struct FileWriteTool <: AbstractTool
     path::String
     content::String
-    result::Union{Nothing, Any}
 end
-
-FileWriteTool(path::String, content::String) = FileWriteTool(path, content, nothing)
 
 tool_name(::Type{FileWriteTool}) = "file_write"
 tool_description(::Type{FileWriteTool}) = "Write content to a file. Creates the file if it doesn't exist, overwrites if it does."
@@ -179,14 +205,11 @@ end
 
 Edit a file by replacing old content with new content.
 """
-mutable struct FileEditTool <: AbstractTool
+struct FileEditTool <: AbstractTool
     path::String
     old_text::String
     new_text::String
-    result::Union{Nothing, Any}
 end
-
-FileEditTool(path::String, old_text::String, new_text::String) = FileEditTool(path, old_text, new_text, nothing)
 
 tool_name(::Type{FileEditTool}) = "file_edit"
 tool_description(::Type{FileEditTool}) = "Edit a file by replacing specific text. Finds and replaces the old_text with new_text."
@@ -227,12 +250,9 @@ end
 
 Fetch content from a URL via HTTP GET.
 """
-mutable struct HttpGetTool <: AbstractTool
+struct HttpGetTool <: AbstractTool
     url::String
-    result::Union{Nothing, Any}
 end
-
-HttpGetTool(url::String) = HttpGetTool(url, nothing)
 
 tool_name(::Type{HttpGetTool}) = "http_get"
 tool_description(::Type{HttpGetTool}) = "Fetch content from a URL via HTTP GET request."
@@ -257,14 +277,13 @@ end
 
 Add a new cell to the notebook.
 """
-mutable struct AddCellTool <: AbstractTool
+struct AddCellTool <: AbstractTool
     language::String
     content::String
     metadata::Union{Nothing, Dict{Symbol, Any}}
-    result::Union{Nothing, Any}
 end
 
-AddCellTool(language::String, content::String, metadata::Union{Nothing, Dict{Symbol, Any}}=nothing) = AddCellTool(language, content, metadata, nothing)
+AddCellTool(language::String, content::String) = AddCellTool(language, content, nothing)
 
 tool_name(::Type{AddCellTool}) = "add_cell"
 tool_description(::Type{AddCellTool}) = "Add a new cell to the notebook. Can be used to add code or markdown cells."
@@ -299,15 +318,13 @@ end
 
 Create a TODO list/plan for the task. Useful for breaking down complex tasks into steps.
 """
-mutable struct TodoList <: AbstractTool
+struct TodoList <: AbstractTool
     title::String
     items::Vector{String}
     status::Vector{Bool}  # Track completion status of each item
-    result::Union{Nothing, Any}
 end
 
-TodoList(title::String, items::Vector{String}) = TodoList(title, items, fill(false, length(items)), nothing)
-TodoList(title::String, items::Vector{String}, status::Vector{Bool}) = TodoList(title, items, status, nothing)
+TodoList(title::String, items::Vector{String}) = TodoList(title, items, fill(false, length(items)))
 
 tool_name(::Type{TodoList}) = "todo_list"
 tool_description(::Type{TodoList}) = """Create or update a TODO list to track task progress.
@@ -358,19 +375,22 @@ execute_tool(tool::TodoList) = nothing
 Perform file system operations safely without bash.
 Supports: ls, glob, find, pwd, cp, mv, rm, mkdir, readdir
 """
-mutable struct FileTool <: AbstractTool
+struct FileTool <: AbstractTool
     command::String  # ls, glob, find, pwd, cp, mv, rm, mkdir, readdir
     arguments::Dict{String, Any}
-    result::Union{Nothing, Any}
 end
 
-FileTool(command::String, arguments::Dict{String, Any}) = FileTool(command, arguments, nothing)
-
-function FileTool(command::String, arguments::Union{Nothing, Dict{String, Any}}, result=nothing)
+# Custom constructor for JSON3 deserialization - handles both formats:
+# 1. {"command": "pwd", "arguments": {}} - correct format
+# 2. {"command": "pwd", "path": "."} - flattened format from OpenAI
+function FileTool(;command::String, arguments::Union{Nothing, Dict{String, Any}}=nothing, kwargs...)
     # If arguments is provided, use it
-    _args = isnothing(arguments) ? Dict{String, Any}() : arguments
+    if arguments !== nothing
+        return FileTool(command, arguments)
+    end
     # Otherwise, collect kwargs as arguments
-    return FileTool(command, _args, nothing)
+    args_dict = Dict{String, Any}(String(k) => v for (k, v) in kwargs)
+    return FileTool(command, args_dict)
 end
 
 tool_name(::Type{FileTool}) = "file_tool"
@@ -542,4 +562,6 @@ export BashTool,
     FileTool,
     HttpGetTool,
     AddCellTool,
-    TodoList
+    TodoList,
+    ToolExecution,
+    ToolResult
