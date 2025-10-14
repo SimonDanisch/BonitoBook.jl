@@ -280,15 +280,16 @@ const ChatStyles = Styles(
         ".cell-output pre",
         "background-color" => "rgba(0, 0, 0, 0.05)",
         "border-radius" => "4px",
-        "padding" => "6px 8px",
+        "padding" => "8px 10px",
         "overflow-x" => "auto",
-        "margin" => "4px 0"
+        "margin" => "6px 0",
+        "font-size" => "14px"
     ),
 
     CSS(
         ".cell-output code",
         "font-family" => "monospace",
-        "font-size" => "0.9em"
+        "font-size" => "14px"
     ),
 
     # Scroll to bottom hint - improved design

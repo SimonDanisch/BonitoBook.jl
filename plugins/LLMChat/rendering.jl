@@ -5,34 +5,99 @@ Custom rendering for LLM Chat tools using CSS classes from ChatStyles.
 """
 
 # ============================================================================
+# Helper Functions
+# ============================================================================
+
+"""
+    get_error(tool::AbstractTool)
+
+Returns the error message if the tool result contains an error, otherwise returns nothing.
+"""
+function get_error(tool::AbstractTool)
+    if isnothing(tool.result)
+        return nothing
+    end
+    if tool.result isa Dict && haskey(tool.result, "error")
+        return tool.result["error"]
+    end
+    return nothing
+end
+
+"""
+    render_tool_header(tool_name::String, args_display::String)
+
+Renders a standard tool header with the tool name and arguments.
+"""
+function render_tool_header(tool_name::String, args_display::String)
+    return DOM.div(
+        DOM.span(tool_name, class="tool-name"),
+        DOM.span(args_display, class="tool-args"),
+        class="tool-header"
+    )
+end
+
+"""
+    render_executing(tool_name::String, args_display::String)
+
+Renders the executing state for a tool.
+"""
+function render_executing(tool_name::String, args_display::String)
+    return DOM.div(
+        "$(tool_name): $(args_display)",
+        class="tool-executing"
+    )
+end
+
+"""
+    render_error(tool_name::String, args_display::String, error_msg::String)
+
+Renders an error state for a tool.
+"""
+function render_error(tool_name::String, args_display::String, error_msg::String)
+    header = render_tool_header(tool_name, args_display)
+    return DOM.div(
+        header,
+        DOM.div(error_msg, class="tool-error"),
+        class="tool-container tool-error-container"
+    )
+end
+
+# ============================================================================
 # BashTool Rendering
 # ============================================================================
 
 function Bonito.jsrender(session::Session, tool::BashTool)
+    tool_name = "bash"
+    args_display = tool.command
+
     if isnothing(tool.result)
-        return Bonito.jsrender(session, DOM.div(
-            "💻 bash: $(tool.command)",
-            class="tool-executing"
-        ))
+        return Bonito.jsrender(session, render_executing(tool_name, args_display))
     end
 
-    success = get(tool.result, "success", false)
-    output = get(tool.result, "output", "")
+    # Check for error
+    error_msg = get_error(tool)
+    if !isnothing(error_msg)
+        return Bonito.jsrender(session, render_error(tool_name, args_display, error_msg))
+    end
 
-    # Command header
+    # Output is the result string
+    output = tool.result
+    lines = split(output, '\n')
+
+    # Header with info
     header = DOM.div(
-        DOM.span("💻", class="tool-icon"),
-        DOM.code(tool.command, class="tool-command"),
+        DOM.span(tool_name, class="tool-name"),
+        DOM.code(args_display, class="tool-args"),
+        DOM.span("$(length(lines)) lines", class="tool-info"),
         class="tool-header"
     )
 
-    # Output content
-    output_class = success ? "tool-output tool-output-success" : "tool-output tool-output-error"
-    output_content = DOM.pre(output, class=output_class)
+    # Detailed output
+    output_content = DOM.pre(output, class="tool-output")
 
-    # Use collapsible if output is long
-    result_display = if length(output) > 200
-        BonitoBook.Collapsible("Output ($(length(output)) bytes)", output_content; expanded=false)
+    # Use collapsible for long output
+    result_display = if length(lines) > 3
+        BonitoBook.Collapsible("Output", output_content; expanded=false)
     else
         output_content
     end
@@ -45,42 +110,39 @@ end
 # ============================================================================
 
 function Bonito.jsrender(session::Session, tool::FileReadTool)
+    tool_name = "file_read"
+    args_display = tool.path
+
     if isnothing(tool.result)
-        return Bonito.jsrender(session, DOM.div(
-            "📖 Reading: $(tool.path)",
-            class="tool-executing"
-        ))
+        return Bonito.jsrender(session, render_executing(tool_name, args_display))
     end
 
-    success = get(tool.result, "success", false)
-    path = get(tool.result, "path", tool.path)
+    # Check for error
+    error_msg = get_error(tool)
+    if !isnothing(error_msg)
+        return Bonito.jsrender(session, render_error(tool_name, args_display, error_msg))
+    end
 
-    # Header with path
+    # Content is the result string
+    content = tool.result
+    lines = split(content, '\n')
+
+    # Header with info
     header = DOM.div(
-        DOM.span("📖", class="tool-icon"),
-        DOM.code(path, class="tool-path"),
+        DOM.span(tool_name, class="tool-name"),
+        DOM.code(args_display, class="tool-args"),
+        DOM.span("$(length(content)) bytes, $(length(lines)) lines", class="tool-info"),
         class="tool-header"
     )
 
-    if !success
-        error_msg = get(tool.result, "error", "Unknown error")
-        return Bonito.jsrender(session, DOM.div(
-            header,
-            DOM.div(error_msg, class="tool-error"),
-            class="tool-container"
-        ))
-    end
+    # Detailed content
+    content_preview = DOM.pre(content, class="tool-output")
 
-    content = get(tool.result, "content", "")
-
-    # Content preview
-    content_preview = DOM.pre(content, class="tool-output tool-output-success")
-
-    # Always use collapsible for file contents
+    # Use collapsible for file contents
     result_display = BonitoBook.Collapsible(
-        "Content ($(length(content)) bytes, $(length(split(content, '\n'))) lines)",
+        "Content",
         content_preview;
-        expanded=length(content) < 500
+        expanded=length(lines) <= 3
     )
 
     return Bonito.jsrender(session, DOM.div(header, result_display, class="tool-container"))
@@ -91,35 +153,31 @@ end
 # ============================================================================
 
 function Bonito.jsrender(session::Session, tool::FileWriteTool)
+    tool_name = "file_write"
+    args_display = tool.path
+
     if isnothing(tool.result)
-        return Bonito.jsrender(session, DOM.div(
-            "✏️ Writing to: $(tool.path)",
-            class="tool-executing"
-        ))
+        return Bonito.jsrender(session, render_executing(tool_name, args_display))
     end
 
-    success = get(tool.result, "success", false)
-    path = get(tool.result, "path", tool.path)
+    # Check for error
+    error_msg = get_error(tool)
+    if !isnothing(error_msg)
+        return Bonito.jsrender(session, render_error(tool_name, args_display, error_msg))
+    end
 
+    # Result is the number of bytes written
+    bytes_written = tool.result
+
+    # Header with info
     header = DOM.div(
-        DOM.span("✏️", class="tool-icon"),
-        DOM.code(path, class="tool-path"),
+        DOM.span(tool_name, class="tool-name"),
+        DOM.code(args_display, class="tool-args"),
+        DOM.span("$(bytes_written) bytes written", class="tool-info"),
         class="tool-header"
     )
 
-    if !success
-        error_msg = get(tool.result, "error", "Unknown error")
-        return Bonito.jsrender(session, DOM.div(
-            header,
-            DOM.div(error_msg, class="tool-error"),
-            class="tool-container"
-        ))
-    end
-
-    bytes = get(tool.result, "bytes_written", 0)
-    info = DOM.div("✓ Written $(bytes) bytes", class="tool-info")
-
-    return Bonito.jsrender(session, DOM.div(header, info, class="tool-container"))
+    return Bonito.jsrender(session, DOM.div(header, class="tool-container"))
 end
 
 # ============================================================================
@@ -127,33 +185,16 @@ end
 # ============================================================================
 
 function Bonito.jsrender(session::Session, tool::FileEditTool)
-    if isnothing(tool.result)
-        return Bonito.jsrender(session, DOM.div(
-            "📝 Editing: $(tool.path)",
-            class="tool-executing"
-        ))
-    end
-
-    success = get(tool.result, "success", false)
-    path = get(tool.result, "path", tool.path)
-
-    header = DOM.div(
-        DOM.span("📝", class="tool-icon"),
-        DOM.code(path, class="tool-path"),
-        class="tool-header"
-    )
-
-    if !success
-        error_msg = get(tool.result, "error", "Unknown error")
-        return Bonito.jsrender(session, DOM.div(
-            header,
-            DOM.div(error_msg, class="tool-error"),
-            class="tool-container"
-        ))
+    tool_name = "file_edit"
+    args_display = tool.path
+    # Check for error
+    error_msg = get_error(tool)
+    if !isnothing(error_msg)
+        return Bonito.jsrender(session, render_error(tool_name, args_display, error_msg))
     end
 
     # Detect language from file extension
-    ext = lowercase(splitext(path)[2])
+    ext = lowercase(splitext(tool.path)[2])
     language = if ext == ".jl"
         "julia"
     elseif ext in [".py", ".pyw"]
@@ -176,25 +217,31 @@ function Bonito.jsrender(session::Session, tool::FileEditTool)
         "text"
     end
 
+    # Header
+    header = DOM.div(
+        DOM.span(tool_name, class="tool-name"),
+        DOM.code(args_display, class="tool-args"),
+        DOM.span("edited", class="tool-info"),
+        class="tool-header"
+    )
+
     # Create diff editor showing the changes
     diff_editor = BonitoBook.DiffEditor(
         tool.old_text,
         tool.new_text;
         language=language,
-        renderSideBySide=false,  # Inline diff view
+        renderSideBySide=false,
         readOnly=true
     )
 
-    info = DOM.div("✓ File edited successfully", class="tool-info")
-    
     # Use collapsible for the diff view
     diff_display = BonitoBook.Collapsible(
-        "Show changes",
+        "Changes",
         diff_editor;
         expanded=true
     )
 
-    return Bonito.jsrender(session, DOM.div(header, info, diff_display, class="tool-container"))
+    return Bonito.jsrender(session, DOM.div(header, diff_display, class="tool-container"))
 end
 
 # ============================================================================
@@ -202,44 +249,41 @@ end
 # ============================================================================
 
 function Bonito.jsrender(session::Session, tool::HttpGetTool)
+    tool_name = "http_get"
+    args_display = tool.url
+
     if isnothing(tool.result)
-        return Bonito.jsrender(session, DOM.div(
-            "🌐 Fetching: $(tool.url)",
-            class="tool-executing"
-        ))
+        return Bonito.jsrender(session, render_executing(tool_name, args_display))
     end
 
-    success = get(tool.result, "success", false)
-    url = get(tool.result, "url", tool.url)
+    # Check for error
+    error_msg = get_error(tool)
+    if !isnothing(error_msg)
+        return Bonito.jsrender(session, render_error(tool_name, args_display, error_msg))
+    end
 
+    # Result is a dict with status and content
+    status = tool.result["status"]
+    content = tool.result["content"]
+
+    # Header with status
     header = DOM.div(
-        DOM.span("🌐", class="tool-icon"),
-        DOM.a(url, href=url, target="_blank", class="tool-url"),
+        DOM.span(tool_name, class="tool-name"),
+        DOM.a(args_display, href=tool.url, target="_blank", class="tool-args"),
+        DOM.span("status: $status, $(length(content)) bytes", class="tool-info"),
         class="tool-header"
     )
 
-    if !success
-        error_msg = get(tool.result, "error", "Unknown error")
-        return Bonito.jsrender(session, DOM.div(
-            header,
-            DOM.div(error_msg, class="tool-error"),
-            class="tool-container"
-        ))
-    end
-
-    status = get(tool.result, "status", 0)
-    content = get(tool.result, "content", "")
-
-    status_display = DOM.div("Status: $status", class="tool-status")
-    content_preview = DOM.pre(content, class="tool-output tool-output-success")
+    # Content preview
+    content_preview = DOM.pre(content, class="tool-output")
 
     result_display = BonitoBook.Collapsible(
-        "Response ($(length(content)) bytes)",
+        "Response",
         content_preview;
         expanded=false
     )
 
-    return Bonito.jsrender(session, DOM.div(header, status_display, result_display, class="tool-container"))
+    return Bonito.jsrender(session, DOM.div(header, result_display, class="tool-container"))
 end
 
 # ============================================================================
@@ -247,41 +291,33 @@ end
 # ============================================================================
 
 function Bonito.jsrender(session::Session, tool::AddCellTool)
+    tool_name = "add_cell"
+    args_display = "$(tool.language)"
+
     if isnothing(tool.result)
-        return Bonito.jsrender(session, DOM.div(
-            "➕ Adding cell: $(tool.language)",
-            class="tool-executing"
-        ))
+        return Bonito.jsrender(session, render_executing(tool_name, args_display))
     end
 
-    success = get(tool.result, "success", false)
-
-    if !success
-        error_msg = get(tool.result, "error", "Unknown error")
-        return Bonito.jsrender(session, DOM.div(
-            DOM.div(
-                DOM.span("➕", class="tool-icon"),
-                DOM.span("Add Cell", class="tool-header"),
-                class="tool-header"
-            ),
-            DOM.div(error_msg, class="tool-error"),
-            class="tool-container"
-        ))
+    # Check for error
+    error_msg = get_error(tool)
+    if !isnothing(error_msg)
+        return Bonito.jsrender(session, render_error(tool_name, args_display, error_msg))
     end
 
-    language = get(tool.result, "language", tool.language)
-    content = get(tool.result, "content", tool.content)
+    lines = split(tool.content, '\n')
 
+    # Header
     header = DOM.div(
-        DOM.span("➕", class="tool-icon"),
-        DOM.span("Added $(language) cell", class="tool-path"),
+        DOM.span(tool_name, class="tool-name"),
+        DOM.span(args_display, class="tool-args"),
+        DOM.span("$(length(lines)) lines", class="tool-info"),
         class="tool-header"
     )
 
     # Show preview of content
-    content_preview = DOM.pre(content, class="tool-output tool-output-success")
-    result_display = if length(content) > 200
-        BonitoBook.Collapsible("Cell content ($(length(content)) chars)", content_preview; expanded=false)
+    content_preview = DOM.pre(tool.content, class="tool-output")
+    result_display = if length(lines) > 3
+        BonitoBook.Collapsible("Content", content_preview; expanded=false)
     else
         content_preview
     end
@@ -294,41 +330,31 @@ end
 # ============================================================================
 
 function Bonito.jsrender(session::Session, tool::FileTool)
+    tool_name = "file_tool"
+    args_preview = join(["$(k)=$(v)" for (k,v) in tool.arguments], ", ")
+    args_display = "$(tool.command) $(args_preview)"
+
     if isnothing(tool.result)
-        args_preview = join(["$(k)=$(v)" for (k,v) in tool.arguments], ", ")
-        return Bonito.jsrender(session, DOM.div(
-            "📁 $(tool.command) $args_preview",
-            class="tool-executing"
-        ))
+        return Bonito.jsrender(session, render_executing(tool_name, args_display))
     end
 
-    success = get(tool.result, "success", false)
-    command = get(tool.result, "command", tool.command)
-
-    if !success
-        error_msg = get(tool.result, "error", "Unknown error")
-        return Bonito.jsrender(session, DOM.div(
-            DOM.div(
-                DOM.span("📁"),
-                DOM.span("file_tool: $command", class="tool-name"),
-                DOM.span("❌", class="tool-status tool-error"),
-                class="tool-header tool-error-header"
-            ),
-            DOM.div(error_msg, class="tool-error-message"),
-            class="tool-container tool-error-container"
-        ))
+    # Check for error
+    error_msg = get_error(tool)
+    if !isnothing(error_msg)
+        return Bonito.jsrender(session, render_error(tool_name, args_display, error_msg))
     end
 
-    result_data = get(tool.result, "result", nothing)
+    # Result data
+    result_data = tool.result
 
-    # Format result based on command
-    result_display = if result_data isa Vector && !isempty(result_data)
+    # Format result based on type
+    if result_data isa Vector && !isempty(result_data)
         # List of files/matches
         if result_data[1] isa Dict
             # Detailed readdir output
             items = [
                 DOM.div(
-                    DOM.span(get(item, "type", "unknown") == "directory" ? "📁" : "📄"),
+                    DOM.span(get(item, "type", "unknown") == "directory" ? "[D]" : "[F]", class="file-type"),
                     DOM.span(get(item, "name", ""), class="file-name"),
                     DOM.span("($(get(item, "size", 0)) bytes)", class="file-size"),
                     class="file-item"
@@ -338,29 +364,48 @@ function Bonito.jsrender(session::Session, tool::FileTool)
             if length(result_data) > 50
                 push!(items, DOM.div("... and $(length(result_data) - 50) more", class="file-more"))
             end
-            DOM.div(items..., class="file-list")
+            list_content = DOM.div(items..., class="file-list")
         else
             # Simple list of paths
-            items = [DOM.div("  $item", class="file-item") for item in result_data[1:min(50, length(result_data))]]
+            items = [DOM.div(item, class="file-item") for item in result_data[1:min(50, length(result_data))]]
             if length(result_data) > 50
                 push!(items, DOM.div("... and $(length(result_data) - 50) more", class="file-more"))
             end
-            DOM.div(items..., class="file-list")
+            list_content = DOM.div(items..., class="file-list")
         end
-    elseif result_data isa String
-        # Single result string
-        DOM.div(result_data, class="file-result")
+
+        # Header
+        header = DOM.div(
+            DOM.span(tool_name, class="tool-name"),
+            DOM.code(args_display, class="tool-args"),
+            DOM.span("$(length(result_data)) items", class="tool-info"),
+            class="tool-header"
+        )
+
+        result_display = if length(result_data) > 3
+            BonitoBook.Collapsible("Results", list_content; expanded=false)
+        else
+            list_content
+        end
+    elseif result_data isa String || result_data === nothing
+        # Single result string or nothing
+        info_text = isnothing(result_data) ? "done" : result_data
+        header = DOM.div(
+            DOM.span(tool_name, class="tool-name"),
+            DOM.code(args_display, class="tool-args"),
+            DOM.span(info_text, class="tool-info"),
+            class="tool-header"
+        )
+        result_display = DOM.div()
     else
         # Other result types
-        DOM.div(repr(result_data), class="file-result")
+        header = DOM.div(
+            DOM.span(tool_name, class="tool-name"),
+            DOM.code(args_display, class="tool-args"),
+            class="tool-header"
+        )
+        result_display = DOM.pre(repr(result_data), class="tool-output")
     end
-
-    header = DOM.div(
-        DOM.span("📁"),
-        DOM.span("file_tool: $command", class="tool-name"),
-        DOM.span("✓", class="tool-status tool-success"),
-        class="tool-header tool-success-header"
-    )
 
     return Bonito.jsrender(session, DOM.div(header, result_display, class="tool-container"))
 end
@@ -370,34 +415,31 @@ end
 # ============================================================================
 
 function Bonito.jsrender(session::Session, tool::TodoList)
-    if isnothing(tool.result)
-        return Bonito.jsrender(session, DOM.div(
-            "📋 Creating TODO: $(tool.title)",
-            class="tool-executing"
-        ))
-    end
-
-    title = get(tool.result, "title", tool.title)
-    items = get(tool.result, "items", tool.items)
-
-    # Create checklist items
+    tool_name = "todo_list"
+    # Create checklist items with status
     checklist_items = [
         DOM.div(
-            DOM.span("☐", class="todo-checkbox"),
+            DOM.span(tool.status[i] ? "[✓]" : "[ ]", class="todo-checkbox"),
             DOM.span(item, class="todo-text"),
             class="todo-item"
         )
-        for item in items
+        for (i, item) in enumerate(tool.items)
     ]
 
+    # Header
+    completed = count(tool.status)
+    total = length(tool.items)
+    header = DOM.div(
+        DOM.span(tool_name, class="tool-name"),
+        DOM.span(tool.title, class="tool-args"),
+        DOM.span("$completed/$total", class="tool-info"),
+        class="tool-header"
+    )
+
     return Bonito.jsrender(session, DOM.div(
-        DOM.div(
-            DOM.span("📋"),
-            DOM.span(title),
-            class="todo-title"
-        ),
+        header,
         DOM.div(checklist_items..., class="todo-items"),
-        class="todo-container"
+        class="tool-container todo-container"
     ))
 end
 
@@ -406,22 +448,27 @@ end
 # ============================================================================
 
 function Bonito.jsrender(session::Session, tool::AbstractTool)
+    tool_type = typeof(tool)
+    tool_name = string(nameof(tool_type))
+    args_display = "unknown"
+
     if isnothing(tool.result)
-        tool_type = typeof(tool)
-        return Bonito.jsrender(session, DOM.div(
-            "🔧 $(nameof(tool_type)) executing...",
-            class="tool-executing"
-        ))
+        return Bonito.jsrender(session, render_executing(tool_name, args_display))
+    end
+
+    # Check for error
+    error_msg = get_error(tool)
+    if !isnothing(error_msg)
+        return Bonito.jsrender(session, render_error(tool_name, args_display, error_msg))
     end
 
     # Generic result display
     result_json = JSON3.pretty(tool.result)
     result_preview = DOM.pre(result_json, class="tool-output")
 
-    tool_type = typeof(tool)
     header = DOM.div(
-        DOM.span("🔧", class="tool-icon"),
-        DOM.span(nameof(tool_type)),
+        DOM.span(tool_name, class="tool-name"),
+        DOM.span(args_display, class="tool-args"),
         class="tool-header"
     )
 

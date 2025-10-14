@@ -62,7 +62,7 @@ function execute_tool!(tool::AbstractTool)
     try
         tool.result = execute_tool(tool)
     catch e
-        tool.result = Dict("success" => false, "error" => sprint(showerror, e))
+        tool.result = Dict("error" => sprint(showerror, e))
     end
     return tool.result
 end
@@ -98,8 +98,7 @@ tool_input_schema(::Type{BashTool}) = Dict(
 )
 
 function execute_tool(tool::BashTool)
-    output = read(Cmd(split(tool.command, " "; keepempty=false)), String)
-    return Dict("output" => output, "success" => true)
+    return read(Cmd(split(tool.command, " "; keepempty=false)), String)
 end
 
 """
@@ -129,11 +128,9 @@ tool_input_schema(::Type{FileReadTool}) = Dict(
 
 function execute_tool(tool::FileReadTool)
     if !isfile(tool.path)
-        return Dict("content" => "", "success" => false, "error" => "File not found: $(tool.path)")
-    else
-        content = read(tool.path, String)
-        return Dict("content" => content, "success" => true, "path" => tool.path)
+        error("File not found: $(tool.path)")
     end
+    return read(tool.path, String)
 end
 
 """
@@ -173,8 +170,8 @@ function execute_tool(tool::FileWriteTool)
         mkpath(parent_dir)
     end
 
-    write(tool.path, tool.content)
-    return Dict("success" => true, "path" => tool.path, "bytes_written" => length(tool.content))
+    bytes_written = write(tool.path, tool.content)
+    return bytes_written
 end
 
 """
@@ -214,15 +211,15 @@ tool_input_schema(::Type{FileEditTool}) = Dict(
 
 function execute_tool(tool::FileEditTool)
     if !isfile(tool.path)
-        return Dict("success" => false, "error" => "File not found: $(tool.path)")
-    elseif !occursin(tool.old_text, read(tool.path, String))
-        return Dict("success" => false, "error" => "Old text not found in file")
-    else
-        content = read(tool.path, String)
-        new_content = replace(content, tool.old_text => tool.new_text)
-        write(tool.path, new_content)
-        return Dict("success" => true, "path" => tool.path)
+        error("File not found: $(tool.path)")
     end
+    content = read(tool.path, String)
+    if !occursin(tool.old_text, content)
+        error("Old text not found in file")
+    end
+    new_content = replace(content, tool.old_text => tool.new_text)
+    write(tool.path, new_content)
+    return "success"
 end
 
 """
@@ -252,12 +249,7 @@ tool_input_schema(::Type{HttpGetTool}) = Dict(
 
 function execute_tool(tool::HttpGetTool)
     response = HTTP.get(tool.url)
-    return Dict(
-        "success" => true,
-        "status" => response.status,
-        "content" => String(response.body),
-        "url" => tool.url
-    )
+    return Dict("status" => response.status, "content" => String(response.body))
 end
 
 """
@@ -299,14 +291,7 @@ tool_input_schema(::Type{AddCellTool}) = Dict(
 
 function execute_tool(tool::AddCellTool)
     # This will be handled by the agent loop directly
-    # Return the cell data to be added
-    metadata = something(tool.metadata, Dict{Symbol, Any}())
-    return Dict(
-        "success" => true,
-        "language" => tool.language,
-        "content" => tool.content,
-        "metadata" => metadata
-    )
+    return nothing
 end
 
 """
@@ -364,34 +349,8 @@ end
 
 multi_task_tool(item::TodoList) = true
 
-function execute_tool(tool::TodoList)
-    # Ensure status matches items length
-    if length(tool.status) != length(tool.items)
-        tool.status = fill(false, length(tool.items))
-    end
-
-    # Format as markdown checklist with status
-    formatted_items = [
-        (tool.status[i] ? "- [x] " : "- [ ] ") * item
-        for (i, item) in enumerate(tool.items)
-    ]
-    markdown_content = "## $(tool.title)\n\n" * join(formatted_items, "\n")
-
-    # Count completed items
-    completed = count(tool.status)
-    total = length(tool.items)
-
-    return Dict(
-        "success" => true,
-        "title" => tool.title,
-        "items" => tool.items,
-        "status" => tool.status,
-        "completed" => completed,
-        "total" => total,
-        "done" => isdone(tool),
-        "markdown" => markdown_content
-    )
-end
+# Nothing needs to be done
+execute_tool(tool::TodoList) = nothing
 
 """
     FileTool <: AbstractTool
@@ -406,6 +365,13 @@ mutable struct FileTool <: AbstractTool
 end
 
 FileTool(command::String, arguments::Dict{String, Any}) = FileTool(command, arguments, nothing)
+
+function FileTool(command::String, arguments::Union{Nothing, Dict{String, Any}}, result=nothing)
+    # If arguments is provided, use it
+    _args = isnothing(arguments) ? Dict{String, Any}() : arguments
+    # Otherwise, collect kwargs as arguments
+    return FileTool(command, _args, nothing)
+end
 
 tool_name(::Type{FileTool}) = "file_tool"
 tool_description(::Type{FileTool}) = """Perform file system operations safely. Use this instead of bash for file operations.
@@ -454,11 +420,11 @@ tool_input_schema(::Type{FileTool}) = Dict(
 
 function execute_tool(tool::FileTool)
     args = tool.arguments
-    result = if tool.command == "pwd"
-        pwd()
+    if tool.command == "pwd"
+        return pwd()
     elseif tool.command == "ls"
         path = get(args, "path", ".")
-        readdir(path)
+        return readdir(path)
     elseif tool.command == "readdir"
         path = get(args, "path", ".")
         entries = readdir(path; join=false)
@@ -477,20 +443,19 @@ function execute_tool(tool::FileTool)
                 Dict("name" => entry, "type" => "unknown", "error" => string(e))
             end
         end
-        details
+        return details
     elseif tool.command == "glob"
         pattern = get(args, "pattern", nothing)
         if pattern === nothing
-            return Dict("success" => false, "error" => "Pattern required for glob")
+            error("Pattern required for glob")
         end
         path = get(args, "path", ".")
         pattern_path = joinpath(path, pattern)
-        matches = glob(pattern_path)
-        matches
+        return glob(pattern_path)
     elseif tool.command == "find"
         pattern = get(args, "pattern", nothing)
         if pattern === nothing
-            return Dict("success" => false, "error" => "Pattern required for find")
+            error("Pattern required for find")
         end
         path = get(args, "path", ".")
         recursive = get(args, "recursive", false)
@@ -513,19 +478,19 @@ function execute_tool(tool::FileTool)
         end
 
         search_dir(path)
-        matches
+        return matches
     elseif tool.command == "mkdir"
         path = get(args, "path", nothing)
         if path === nothing
-            return Dict("success" => false, "error" => "Path required for mkdir")
+            error("Path required for mkdir")
         end
         mkpath(path)
-        "Directory created: $(path)"
+        return nothing
     elseif tool.command == "cp"
         path = get(args, "path", nothing)
         destination = get(args, "destination", nothing)
         if path === nothing || destination === nothing
-            return Dict("success" => false, "error" => "Path and destination required for cp")
+            error("Path and destination required for cp")
         end
         recursive = get(args, "recursive", false)
         if recursive
@@ -533,19 +498,19 @@ function execute_tool(tool::FileTool)
         else
             cp(path, destination)
         end
-        "Copied $(path) to $(destination)"
+        return nothing
     elseif tool.command == "mv"
         path = get(args, "path", nothing)
         destination = get(args, "destination", nothing)
         if path === nothing || destination === nothing
-            return Dict("success" => false, "error" => "Path and destination required for mv")
+            error("Path and destination required for mv")
         end
         mv(path, destination; force=true)
-        "Moved $(path) to $(destination)"
+        return nothing
     elseif tool.command == "rm"
         path = get(args, "path", nothing)
         if path === nothing
-            return Dict("success" => false, "error" => "Path required for rm")
+            error("Path required for rm")
         end
         recursive = get(args, "recursive", false)
         if recursive
@@ -553,16 +518,10 @@ function execute_tool(tool::FileTool)
         else
             rm(path)
         end
-        "Removed: $(path)"
+        return nothing
     else
-        return Dict("success" => false, "error" => "Unknown command: $(tool.command)")
+        error("Unknown command: $(tool.command)")
     end
-
-    return Dict(
-        "success" => true,
-        "command" => tool.command,
-        "result" => result
-    )
 end
 
 # Export all tools

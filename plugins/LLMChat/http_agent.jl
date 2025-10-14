@@ -135,56 +135,19 @@ end
 const DEFAULT_SYSTEM_PROMPT = """
 You are a helpful AI assistant integrated into a Julia notebook.
 
-# Available Tools
-You have access to the following tools:
-- **file_tool**: File system operations (ls, glob, find, pwd, cp, mv, rm, mkdir, readdir) - **ALWAYS USE THIS for file operations!**
-- **file_read**: Read file contents
-- **file_write**: Write content to a file
-- **file_edit**: Edit existing file with search/replace
-- **bash**: Execute shell commands - Only use when file_tool can't do it (e.g., git, package managers)
-- **http_get**: Fetch content from URLs
-- **add_cell**: Add new code/markdown cells to the notebook
-- **todo_list**: Create and track multi-step task lists
-
-# Tool Usage
-Use tools via the standard API tool calling mechanism (function calling for OpenAI/Ollama, tools for Claude).
-The tools will be executed automatically and results will be shown in the notebook.
-
-**IMPORTANT**: Always prefer file_tool over bash for file system operations (listing files, searching, copying, etc.)
-
 # Agent Loop Behavior
-- If you respond with a tool, the loop will execute it and show the result and continue.
+- If you respond with a tool, the loop will execute it and show the result, add it to the message history and continue.
 - If you respond with text AND there's no active TODO, the loop will stop and show your message.
 - You can call multiple tools in sequence if needed.
-- You can use tools, provide explanations, add cells, etc.
 - The loop allows iterative work: respond → see results → respond again
 - Don't hesitate to use tools to inspect files, run code, and perform actions
 
-
-# TODO Tool - IMPORTANT
-When you create a TODO list, the loop will CONTINUE until ALL items are marked complete:
-1. Create a TODO list with a plan for your task
-2. Complete each task step by step
-3. Every time you check off an item, return the updated TODO list as a tool
-4. The loop will ONLY stop once all status values are true
-
-**Use TODO for any multi-step task!** It helps track progress and ensures nothing is missed.
-
 # Guidelines
-1. **CREATE A TODO FIRST** - For ANY task with 2+ steps, start with a TODO list before doing anything else
-2. Use tools to inspect files, run code, and perform actions - **prefer file_tool for file operations**
-3. Keep things concise and to the point
-4. Don't do more than the user asked for
-5. If the user asks for code, always use the add_cell tool to add a new cell with the julia code
-6. Don't ever use println if not explicitly asked for - you're in a notebook, every last line gets visualized as cell output
-
-# When to use TODO (very important!)
-- User asks to "implement", "create", "build", "fix", or "add" something → CREATE TODO
-- Task involves multiple files or steps → CREATE TODO
-- Task requires planning or has dependencies → CREATE TODO
-- You're unsure of the steps → CREATE TODO to think through it
-- Simple single-step tasks (e.g., "what is 2+2?") → No TODO needed
-- Rather execute a tool than announcing what you want to do!
+* Keep things concise and to the point
+* Don't do more than the user asked for
+* If the user asks for code, always use the add_cell tool to add a new cell with the julia code
+* Don't ever use println if not explicitly asked for - you're in a notebook, every last line gets visualized as cell output
+* Always use WGLMakie for plotting unless explicitly asked for another library
 
 # Julia specific tips:
 - Use `@doc(sym_or_var)` to get documentation for a function or package
@@ -198,6 +161,74 @@ When you create a TODO list, the loop will CONTINUE until ALL items are marked c
 # ============================================================================
 # Core implementation
 # ============================================================================
+
+"""
+    parse_sse(io::IO, callback::Function; spinner::Union{TaskSpinner, Nothing}=nothing)
+
+Parse Server-Sent Events (SSE) from an IO stream and call callback with each parsed JSON chunk.
+Handles line buffering and SSE format ("data: {...}").
+
+# Arguments
+- `io`: The IO stream to read from
+- `callback`: Function to call with each parsed JSON chunk
+- `spinner`: Optional TaskSpinner for cancellation
+"""
+function parse_sse(callback::Function, io::IO; spinner::Union{TaskSpinner,Nothing}=nothing)
+    line_buffer = ""
+
+    # Read response stream chunk by chunk
+    while !eof(io)
+        # Check stop flag
+        if spinner !== nothing && spinner.stop[]
+            @info "SSE parsing cancelled by stop flag"
+            break
+        end
+
+        # Read available data
+        chunk = String(readavailable(io))
+        line_buffer *= chunk
+
+        # Process complete lines
+        while contains(line_buffer, '\n')
+            line, line_buffer = split(line_buffer, '\n', limit=2)
+
+            # Skip empty lines
+            if isempty(strip(line))
+                continue
+            end
+
+            # Parse SSE format: "data: {...}"
+            if startswith(line, "data: ")
+                data_str = strip(line[7:end])
+
+                # Skip SSE control messages
+                if data_str == "[DONE]" || isempty(data_str)
+                    continue
+                end
+
+                try
+                    parsed_chunk = JSON3.read(data_str)
+                    callback(parsed_chunk)
+                catch e
+                    @debug "Failed to parse streaming chunk" exception=e data=data_str
+                end
+            end
+        end
+    end
+
+    # Process any remaining data in buffer
+    if !isempty(strip(line_buffer)) && startswith(line_buffer, "data: ")
+        data_str = strip(line_buffer[7:end])
+        if data_str != "[DONE]" && !isempty(data_str)
+            try
+                parsed_chunk = JSON3.read(data_str)
+                callback(parsed_chunk)
+            catch e
+                @debug "Failed to parse final chunk" exception=e data=data_str
+            end
+        end
+    end
+end
 
 """
     prompt(agent::HTTPAgent, messages::Vector{AgentMessage}, tools::Vector;
@@ -217,92 +248,46 @@ function prompt(agent::HTTPAgent, messages::Vector{AgentMessage}, tools::Vector;
         Dict("role" => "system", "content" => config.system_prompt),
         [message_to_api(msg) for msg in messages]...
     ]
+
     # Build request with streaming enabled
     request_body = config.request_fn(api_messages, tools, config.model)
 
     # Remove null fields
     filter!(p -> p.second !== nothing, request_body)
-
-    headers = config.api_key !== nothing ? config.headers_fn(config.api_key) : config.headers_fn(nothing)
+    headers = config.headers_fn(config.api_key)
 
     # Create output channel for complete tools and strings
-    output_channel = Channel{Union{AbstractTool, String}}(100) do channel
-        try
+    output_channel = Channel{Union{AbstractTool, String}}(100; spawn=true) do channel
+        # Use HTTP.open for true streaming, disable automatic status exceptions
+        HTTP.open("POST", config.endpoint, headers; status_exception=false) do io
             async_spinner!(spinner, "http request") do
-                # Use HTTP.open for true streaming
-                HTTP.open("POST", config.endpoint, headers) do io
-                    # Write request body
-                    JSON3.write(io, request_body)
-                    closewrite(io)
+                # Write request body
+                JSON3.write(io, request_body)
+                closewrite(io)
 
-                    # Start reading response
-                    startread(io)
-
-                    # Buffer for accumulating incomplete lines
-                    line_buffer = ""
-
-                    # Read response stream chunk by chunk
-                    while !eof(io)
-                        # Check stop flag
-                        if spinner !== nothing && spinner.stop[]
-                            @info "HTTP streaming cancelled by stop flag"
-                            break
-                        end
-
-                        # Read available data
-                        chunk = String(readavailable(io))
-                        line_buffer *= chunk
-
-                        # Process complete lines
-                        while contains(line_buffer, '\n')
-                            line, line_buffer = split(line_buffer, '\n', limit=2)
-
-                            # Skip empty lines
-                            if isempty(strip(line))
-                                continue
-                            end
-
-                            # Parse SSE format: "data: {...}"
-                            if startswith(line, "data: ")
-                                data_str = strip(line[7:end])
-
-                                # Skip SSE control messages
-                                if data_str == "[DONE]" || isempty(data_str)
-                                    continue
-                                end
-
-                                try
-                                    parsed_chunk = JSON3.read(data_str)
-                                    # Pass chunk to response parser which accumulates and emits complete items
-                                    config.response_fn(parsed_chunk, channel)
-                                catch e
-                                    @debug "Failed to parse streaming chunk" exception=e data=data_str
-                                end
-                            end
-                        end
+                # Start reading response
+                resp = startread(io)
+                # Check response status
+                if resp.status >= 400
+                    # Read error response body
+                    error_body = read(io, String)
+                    error_msg = try
+                        # Try to parse as JSON for more detailed error
+                        error_json = JSON3.read(error_body)
+                        get(error_json, :error, get(error_json, :message, error_body))
+                    catch
+                        error_body
                     end
-
-                    # Process any remaining data in buffer
-                    if !isempty(strip(line_buffer)) && startswith(line_buffer, "data: ")
-                        data_str = strip(line_buffer[7:end])
-                        if data_str != "[DONE]" && !isempty(data_str)
-                            try
-                                parsed_chunk = JSON3.read(data_str)
-                                config.response_fn(parsed_chunk, channel)
-                            catch e
-                                @debug "Failed to parse final chunk" exception=e data=data_str
-                            end
-                        end
-                    end
+                    error("HTTP $(resp.status): $error_msg")
                 end
-            end
-        catch e
-            if !isa(e, InterruptException)
-                @error "Streaming error" exception=(e, catch_backtrace())
+
+                # Parse SSE stream and pass chunks to response parser
+                parse_sse(io, spinner=spinner) do parsed_chunk
+                    config.response_fn(parsed_chunk, channel)
+                end
             end
         end
     end
-
     return output_channel
 end
 
@@ -313,12 +298,11 @@ end
 """
     message_to_api(msg::AgentMessage)
 
-Convert AgentMessage to API format with support for text, images, and files.
+Convert AgentMessage to API format with support for text, images, files, and tool calls/results.
 """
 function message_to_api(msg::AgentMessage)
-    role = msg.role == :assistant ? "assistant" : "user"
     content = msg.content
-
+    role = msg.role == :user ? "user" : "assistant"
     # Check if content contains image or file references
     # Format: ![image](path/to/image.png) or [file](path/to/file.txt)
     if content isa String
@@ -327,10 +311,12 @@ function message_to_api(msg::AgentMessage)
             # Multi-part message with images/files
             return Dict("role" => role, "content" => content_parts)
         end
+        # Simple text message
+        return Dict("role" => role, "content" => content)
     end
 
-    # Simple text message
-    return Dict("role" => role, "content" => string(content))
+    # Fallback: convert to string
+    return Dict("role" => role, "content" => content)
 end
 
 """
@@ -522,72 +508,67 @@ function parse_openai_response(chunk, output_channel::Channel)
     end
     state = openai_state[]
 
-    try
-        if haskey(chunk, :choices) && !isempty(chunk.choices)
-            choice = chunk.choices[1]
-            delta = get(choice, :delta, nothing)
+    if haskey(chunk, :choices) && !isempty(chunk.choices)
+        choice = chunk.choices[1]
+        delta = get(choice, :delta, nothing)
 
-            if delta !== nothing
-                # Handle tool calls (accumulate arguments)
-                if haskey(delta, :tool_calls)
-                    for tool_delta in delta.tool_calls
-                        idx = tool_delta.index
+        if delta !== nothing
+            # Handle tool calls (accumulate arguments)
+            if haskey(delta, :tool_calls)
+                for tool_delta in delta.tool_calls
+                    idx = tool_delta.index
 
-                        if !haskey(state.tool_calls, idx)
-                            state.tool_calls[idx] = Dict("name" => "", "arguments" => "")
-                        end
-
-                        # Accumulate function name
-                        if haskey(tool_delta, :function) && haskey(tool_delta.function, :name)
-                            state.tool_calls[idx]["name"] = tool_delta.function.name
-                        end
-
-                        # Accumulate arguments
-                        if haskey(tool_delta, :function) && haskey(tool_delta.function, :arguments)
-                            state.tool_calls[idx]["arguments"] *= tool_delta.function.arguments
-                        end
+                    if !haskey(state.tool_calls, idx)
+                        state.tool_calls[idx] = Dict("name" => "", "arguments" => "")
                     end
-                end
 
-                # Handle text content (accumulate)
-                if haskey(delta, :content) && delta.content !== nothing
-                    state.text_buffer *= delta.content
+                    # Accumulate function name
+                    if haskey(tool_delta, :function) && haskey(tool_delta.function, :name)
+                        state.tool_calls[idx]["name"] = tool_delta.function.name
+                    end
+
+                    # Accumulate arguments
+                    if haskey(tool_delta, :function) && haskey(tool_delta.function, :arguments)
+                        state.tool_calls[idx]["arguments"] *= tool_delta.function.arguments
+                    end
                 end
             end
 
-            # Check if this is the final chunk
-            finish_reason = get(choice, :finish_reason, nothing)
-            if finish_reason !== nothing && finish_reason != "null"
-                # Emit all accumulated tools
-                for (idx, tool_data) in sort(collect(state.tool_calls), by=first)
-                    tool_name = tool_data["name"]
-                    args_json = tool_data["arguments"]
-
-                    if !isempty(tool_name) && !isempty(args_json)
-                        tool_type = tool_name_to_type(tool_name)
-                        if tool_type !== nothing
-                            try
-                                tool = JSON3.read(args_json, tool_type)
-                                put!(output_channel, tool)
-                            catch e
-                                @warn "Failed to parse tool arguments" tool_name args_json exception=e
-                            end
-                        end
-                    end
-                end
-
-                # Emit accumulated text if present
-                if !isempty(strip(state.text_buffer))
-                    put!(output_channel, state.text_buffer)
-                end
-
-                # Reset state for next request
-                openai_state[] = nothing
+            # Handle text content (accumulate)
+            if haskey(delta, :content) && delta.content !== nothing
+                state.text_buffer *= delta.content
             end
         end
-    catch e
-        @warn "Failed to parse OpenAI streaming chunk" exception=e
-        openai_state[] = nothing
+
+        # Check if this is the final chunk
+        finish_reason = get(choice, :finish_reason, nothing)
+        if finish_reason !== nothing && finish_reason != "null"
+            # Emit all accumulated tools
+            for (idx, tool_data) in sort(collect(state.tool_calls), by=first)
+                tool_name = tool_data["name"]
+                args_json = tool_data["arguments"]
+
+                if !isempty(tool_name) && !isempty(args_json)
+                    tool_type = tool_name_to_type(tool_name)
+                    if tool_type !== nothing
+                        try
+                            tool = JSON3.read(args_json, tool_type)
+                            put!(output_channel, tool)
+                        catch e
+                            @warn "Failed to parse tool arguments" tool_name args_json exception=e
+                        end
+                    end
+                end
+            end
+
+            # Emit accumulated text if present
+            if !isempty(strip(state.text_buffer))
+                put!(output_channel, state.text_buffer)
+            end
+
+            # Reset state for next request
+            openai_state[] = nothing
+        end
     end
 end
 

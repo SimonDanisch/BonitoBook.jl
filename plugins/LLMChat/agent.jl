@@ -196,6 +196,68 @@ function extract_markdown_content(source::String)
     return source
 end
 
+function represent_tool(::Type{<:AbstractTool}, cell)
+    tool = extract_output(cell.editor.output[])
+    id = cell.uuid
+    tool_id = "tool_$(id)"
+    fields = [f => getfield(tool, f) for f in propertynames(tool) if f !== :result]
+
+    # Tool call (assistant message with content array)
+    tool_call = AgentMessage(:assistant, [Dict(
+        "type" => "tool_use",
+        "id" => tool_id,
+        "name" => tool_name(typeof(tool)),
+        "input" => Dict(fields)
+        )], id)
+
+    # Tool result (user message with content array)
+    # Convert result to string for Claude API
+    result_str = if tool.result isa Dict && haskey(tool.result, "error")
+        "Error: $(tool.result["error"])"
+    else
+        repr(tool.result)
+    end
+
+    tool_result = AgentMessage(:user, [Dict(
+        "type" => "tool_result",
+        "tool_use_id" => tool_id,
+        "content" => result_str
+        )], id)
+
+    return [tool_call, tool_result]
+end
+
+function represent_tool(::Type{AddCellTool}, cell)
+    # AddCellTool: show full output/logging
+    content = cell.editor.source[]
+    output = extract_output(cell.editor.output[])
+    logging = cell.editor.logging_html[]
+    tool_id = "tool_$(cell.uuid)"
+    # Tool call (assistant message with content array)
+    tool_call = AgentMessage(:assistant, [Dict(
+        "type" => "tool_use",
+        "id" => tool_id,
+        "name" => "add_cell",
+        "input" => Dict(
+            "language" => cell.language,
+            "content" => content,
+            "metadata" => Dict()
+        )
+    )], cell.uuid)
+
+    tool_result = AgentMessage(:user, [Dict(
+        "type" => "tool_result",
+        "tool_use_id" => tool_id,
+        "content" => """
+        result: $(output)
+        logs: $(logging)
+        """
+    )], cell.uuid)
+
+    return [tool_call, tool_result]
+end
+
+
 """
     cells_to_messages(cells::Vector{CellEditor})
 
@@ -204,38 +266,22 @@ Smartly extracts content from Markdown.parse wrappers and filters out add_cell t
 """
 function cells_to_messages(cells::Vector)
     messages = AgentMessage[]
-
     for cell in cells
-        role = get(cell.metadata, :from, :user)
+        role = get(cell.metadata, :from, :assistant)
         cell_id = get(cell.metadata, :id, nothing)
         tool_type = get(cell.metadata, :tool, nothing)
-
         # For user/assistant messages, extract content smartly
-        if role == :user
+        if isnothing(tool_type)
             content = cell.editor.source[]
             # Remove Markdown.parse wrapper if present
             content = extract_markdown_content(content)
-            push!(messages, AgentMessage(:user, content, cell_id))
-        elseif role == :assistant || role == :agent && isnothing(tool_type)
-            content = cell.editor.source[]
-            # Remove Markdown.parse wrapper if present
-            content = extract_markdown_content(content)
-            push!(messages, AgentMessage(:assistant, content, cell_id))
+            push!(messages, AgentMessage(role, content, cell_id))
         else
-            # Tool results: get the executed cell output and use repr
-            output = cell.editor.output[]
-            content = """
-                source:
-                $(cell.editor.source[])
-                output:
-                $(repr(output))
-                logging:
-                $(cell.editor.logging_html[])
-            """
-            push!(messages, AgentMessage(:tool_result, content, cell_id))
+            TT = tool_name_to_type(string(tool_type))
+            # Tool results: different formats based on tool type
+            append!(messages, represent_tool(TT, cell))
         end
     end
-
     return messages
 end
 

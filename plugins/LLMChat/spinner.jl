@@ -108,11 +108,11 @@ const LLMSpinnerStyles = Styles(
         "opacity" => "0.7"
     ), CSS(
         ".llm-spinner-dot",
-        "width" => "4px",
-        "height" => "4px",
+        "width" => "6px",
+        "height" => "6px",
         "border-radius" => "50%",
         "background-color" => "var(--accent-blue, #4a9eff)",
-        "animation" => "pulse 1.4s ease-in-out infinite",
+        "animation" => "spinnerPulse 1.4s ease-in-out infinite",
         "opacity" => "0.5"
     ), CSS(
         ".llm-spinner-dot:nth-child(1)",
@@ -125,18 +125,18 @@ const LLMSpinnerStyles = Styles(
         "animation-delay" => "0.4s"
     ), CSS(
         ".llm-spinner-text",
-        "margin-left" => "2px",
-        "font-size" => "10px",
+        "margin-left" => "4px",
+        "font-size" => "13px",
         "color" => "var(--text-secondary)",
         "opacity" => "0.7"
     ), CSS(
-        "@keyframes pulse",
-        "0%, 100%" => Dict("opacity" => "0.3", "transform" => "scale(0.9)"),
-        "50%" => Dict("opacity" => "0.8", "transform" => "scale(1.1)")
+        "@keyframes spinnerPulse",
+        "0%, 100%" => "opacity: 0.3; transform: scale(0.9);",
+        "50%" => "opacity: 0.9; transform: scale(1.2);"
     ), CSS(
         "@keyframes fadeIn",
-        "from" => Dict("opacity" => "0"),
-        "to" => Dict("opacity" => "0.7")
+        "from" => "opacity: 0;",
+        "to" => "opacity: 0.7;"
     )
 )
 
@@ -156,5 +156,5 @@ function Bonito.jsrender(session::Session, spinner::LLMChatSpinner)
         end
     end
 
-    return Bonito.jsrender(session, spinner_content)
+    return Bonito.jsrender(session, DOM.div(LLMSpinnerStyles, spinner_content))
 end

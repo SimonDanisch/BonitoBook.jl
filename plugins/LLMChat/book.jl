@@ -155,8 +155,12 @@ function Bonito.jsrender(session::Session, chat_book::LLMChatBook)
     end
     # Render all cells
     cells = map(book.cells) do cell
-        from = get(cell.metadata, :from, :user)
-        cell_class = "cell-from-$from"
+        from = get(cell.metadata, :from, nothing)
+        if from === nothing
+            cell_class = "cell-centered"
+        else
+            cell_class = "cell-from-$from"
+        end
         return DOM.div(cell, class=cell_class)
     end
     cells_container = DOM.div(cells, class="llm-chat-messages", id="chat-messages")
@@ -277,13 +281,38 @@ function Bonito.jsrender(session::Session, chat_book::LLMChatBook)
         });
 
         // Auto-scroll to bottom when new messages arrive
+        let lastScrollHeight = container.scrollHeight;
+        let isUserScrolling = false;
+        let scrollTimeout = null;
+
         function scrollToBottom() {
             container.scrollTop = container.scrollHeight;
+            lastScrollHeight = container.scrollHeight;
         }
 
-        // Observe cells changes for auto-scroll
-        const observer = new MutationObserver(scrollToBottom);
-        observer.observe(container, { childList: true, subtree: true });
+        // Check if user is near bottom (within 100px)
+        function isNearBottom() {
+            return container.scrollHeight - container.scrollTop - container.clientHeight < 100;
+        }
+
+        // Track user scrolling
+        container.addEventListener('scroll', () => {
+            isUserScrolling = !isNearBottom();
+            clearTimeout(scrollTimeout);
+            scrollTimeout = setTimeout(() => {
+                isUserScrolling = false;
+            }, 1000);
+        });
+
+        // Observe cells changes for auto-scroll - only on childList changes (new messages)
+        const observer = new MutationObserver((mutations) => {
+            // Only scroll if content actually grew and user is near bottom
+            const hasNewContent = container.scrollHeight > lastScrollHeight;
+            if (hasNewContent && (!isUserScrolling || isNearBottom())) {
+                scrollToBottom();
+            }
+        });
+        observer.observe(container, { childList: true, subtree: false });
 
         // Auto-focus input when not streaming
         $(chat_book.is_streaming).on((streaming) => {
