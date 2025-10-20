@@ -1,12 +1,12 @@
 <!doctype html>
 <html class="bonito-fragment">
   <head>
-    <script src="../../bonito/js/Bonito.bundled13389133706764782584.js" type="module"></script>
+    <script src="../../bonito/js/Bonito.bundled7457269554592506375.js" type="module"></script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta charset="UTF-8" />
     <title>book-example</title>
     <style>.style_4 {
-  position: relative;
+  width: 1.2em;
 }
 .style_5 {
   color: red;
@@ -16,10 +16,357 @@
   width: 10px;
 }
 .style_7 {
-  width: 1.2em;
+  position: relative;
 }
 </style>
-    <style>code {
+    <style>:root {
+  --card-gap: 20px;
+  --max-content-width: 1200px;
+  --navbar-height: 50px;
+  --header-height: 80px;
+  --content-padding: 40px;
+}
+@media (prefers-color-scheme: light), (prefers-color-scheme: no-preference) {
+  :root {
+    --site-border-primary: rgba(0, 0, 0, 0.1);
+    --site-border-secondary: #ccc;
+    --site-hover-bg: #ddd;
+    --site-text-secondary: #555555;
+    --site-icon-color: #666666;
+    --site-scrollbar-thumb: #c1c1c1;
+    --site-accent-blue: #0366d6;
+    --site-menu-hover-bg: rgba(0, 0, 0, 0.05);
+    --site-icon-filter: none;
+    --site-shadow-button: 0 2px 4px rgba(0, 0, 0, 0.2);
+    --site-icon-hover-color: #333333;
+    --site-scrollbar-thumb-hover: #a8a8a8;
+    --site-scrollbar-track: #f1f1f1;
+    --site-shadow-inset: inset 2px 2px 5px rgba(0, 0, 0, 0.5);
+    --site-text-primary: #24292e;
+    --site-animation-glow: 0 0 20px rgba(0, 150, 51, 0.8);
+    --site-icon-hover-filter: brightness(0.7);
+    --site-bg-primary: #ffffff;
+    --site-shadow-soft: 0 4px 8px rgba(0, 0, 51, 0.2);
+  }
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --site-border-primary: rgba(255, 255, 255, 0.1);
+    --site-border-secondary: rgba(255, 255, 255, 0.1);
+    --site-hover-bg: rgba(255, 255, 255, 0.1);
+    --site-text-secondary: rgb(212, 212, 212);
+    --site-icon-color: #cccccc;
+    --site-scrollbar-thumb: #555555;
+    --site-accent-blue: #0366d6;
+    --site-menu-hover-bg: rgba(255, 255, 255, 0.05);
+    --site-icon-filter: invert(1);
+    --site-shadow-button: 0 2px 4px rgba(255, 255, 255, 0.2);
+    --site-icon-hover-color: #ffffff;
+    --site-scrollbar-thumb-hover: #777777;
+    --site-scrollbar-track: #2d2d2d;
+    --site-shadow-inset: inset 2px 2px 3px rgba(0, 0, 0, 0.5);
+    --site-text-primary: rgb(212, 212, 212);
+    --site-animation-glow: 0 0 20px rgba(10, 155, 55, 0.5);
+    --site-icon-hover-filter: invert(1) brightness(1.2);
+    --site-bg-primary: #1e1e1e;
+    --site-shadow-soft: 0 4px 8px rgba(255, 255, 255, 0.2);
+  }
+  code {
+    background-color: var(--site-menu-hover-bg);
+    color: var(--site-text-primary);
+  }
+}
+* {
+  scrollbar-color: var(--site-scrollbar-thumb) var(--site-scrollbar-track);
+  color: inherit;
+  box-sizing: border-box;
+  scrollbar-width: thin;
+}
+html {
+  background-color: var(--site-bg-primary);
+  color: var(--site-text-primary);
+}
+body {
+  padding: 0;
+  background-color: var(--site-bg-primary);
+  color: var(--site-text-primary);
+  font-family: 'Inter', 'Roboto', 'Arial', sans-serif;
+  margin: 0;
+  line-height: 1.6;
+}
+a {
+  text-decoration: none;
+  color: inherit;
+}
+::-webkit-scrollbar {
+  width: 12px;
+}
+::-webkit-scrollbar-track {
+  background: var(--site-scrollbar-track);
+}
+::-webkit-scrollbar-thumb {
+  border: 2px solid var(--site-scrollbar-track);
+  background-color: var(--site-scrollbar-thumb);
+  border-radius: 6px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--site-scrollbar-thumb-hover);
+}
+.bonitobook-header {
+  justify-content: center;
+  align-items: center;
+  height: var(--header-height);
+  display: flex;
+  backdrop-filter: blur(10px);
+  box-shadow: var(--site-shadow-soft);
+  border-bottom: 1px solid var(--site-border-primary);
+  position: relative;
+  background: linear-gradient(135deg, var(--site-bg-primary) 0%, var(--site-menu-hover-bg) 100%);
+}
+.bonitobook-header::before {
+  left: 0;
+  bottom: 0;
+  content: '';
+  right: 0;
+  top: 0;
+  pointer-events: none;
+  position: absolute;
+  opacity: 0.03;
+  background: var(--site-animation-glow);
+}
+.header-content {
+  max-width: var(--max-content-width);
+  padding: 0 var(--content-padding);
+  width: 100%;
+}
+.header-title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: var(--site-text-primary);
+  margin: 0;
+}
+.bonitobook-navbar {
+  z-index: 100;
+  align-items: center;
+  height: var(--navbar-height);
+  display: flex;
+  padding: 0 40px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  position: sticky;
+  justify-content: center;
+  background-color: var(--site-bg-primary);
+  top: 0;
+  border-bottom: 1px solid var(--site-border-primary);
+}
+.nav-items {
+  display: flex;
+  width: 100%;
+}
+.nav-item {
+  font-weight: 500;
+  padding: 10px 16px;
+  text-decoration: none;
+  white-space: nowrap;
+  color: var(--site-text-primary);
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+.nav-item:hover {
+  background-color: var(--site-hover-bg);
+  color: var(--site-accent-blue);
+}
+.bonitobook-page {
+  background-color: var(--site-bg-primary);
+  color: var(--site-text-primary);
+  min-height: 100vh;
+  width: 100%;
+}
+.main-content {
+  margin: 0 auto;
+}
+.hero-section {
+  padding: 60px 0;
+  border-bottom: 1px solid var(--site-border-primary);
+  text-align: center;
+}
+.hero-title {
+  font-size: 3rem;
+  font-weight: 700;
+  color: var(--site-text-primary);
+  margin-bottom: 20px;
+}
+.hero-subtitle {
+  max-width: 600px;
+  font-size: 1.25rem;
+  color: var(--site-text-secondary);
+  margin: 0 auto 40px;
+}
+.hero-buttons {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+}
+.hero-button {
+  min-width: 120px;
+  font-weight: 500;
+  align-items: center;
+  display: inline-flex;
+  padding: 12px 24px;
+  box-shadow: var(--site-shadow-button);
+  border-radius: 8px;
+  justify-content: center;
+  border: none;
+  background-color: var(--site-accent-blue);
+  font-size: 16px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  text-decoration: none;
+  color: white;
+  font-family: inherit;
+}
+.hero-button:hover {
+  background-color: var(--site-hover-bg);
+  box-shadow: 0 4px 12px rgba(3, 102, 214, 0.3);
+  color: var(--site-accent-blue);
+  transform: translateY(-1px);
+}
+.hero-button:active {
+  box-shadow: var(--site-shadow-inset);
+  transform: translateY(0px);
+}
+.hero-button-secondary {
+  border: 1px solid var(--site-border-secondary);
+  background-color: var(--site-bg-primary);
+  box-shadow: var(--site-shadow-button);
+  color: var(--site-text-primary);
+}
+.hero-button-secondary:hover {
+  border-color: var(--site-accent-blue);
+  background-color: var(--site-hover-bg);
+  color: var(--site-accent-blue);
+  transform: translateY(-1px);
+}
+.examples-grid {
+  margin-top: 40px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: var(--card-gap);
+}
+.example-content {
+  max-width: 1200px;
+  padding: var(--content-padding);
+  margin: 0 auto;
+}
+.example-card {
+  max-width: 400px;
+  border: 1px solid var(--site-border-primary);
+  background-color: var(--site-bg-primary);
+  box-shadow: var(--site-shadow-soft);
+  padding: 24px;
+  position: relative;
+  width: fit-content;
+  border-radius: 10px;
+  transition: all 0.2s ease-out;
+  overflow: hidden;
+}
+.example-card:hover {
+  border-color: var(--site-accent-blue);
+  box-shadow: var(--site-animation-glow);
+  transform: translateY(-2px);
+}
+.example-card::before {
+  left: -100%;
+  height: 2px;
+  content: '';
+  top: 0;
+  position: absolute;
+  width: 100%;
+  transition: left 0.5s ease;
+  background: linear-gradient(90deg, transparent, var(--site-accent-blue), transparent);
+}
+.example-card:hover::before {
+  left: 100%;
+}
+.example-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--site-text-primary);
+  margin: 0 0 12px 0;
+}
+.example-description {
+  color: var(--site-text-secondary);
+  margin: 0 0 20px 0;
+  line-height: 1.6;
+}
+.example-link {
+  min-width: 100px;
+  font-weight: 500;
+  align-items: center;
+  display: inline-flex;
+  padding: 8px 16px;
+  box-shadow: var(--site-shadow-button);
+  border-radius: 8px;
+  justify-content: center;
+  border: 1px solid var(--site-accent-blue);
+  background-color: var(--site-bg-primary);
+  font-size: 14px;
+  transition: all 0.2s ease;
+  text-decoration: none;
+  color: var(--site-accent-blue);
+}
+.example-link:hover {
+  background-color: var(--site-accent-blue);
+  box-shadow: 0 4px 12px rgba(3, 102, 214, 0.3);
+  color: white;
+  transform: translateY(-1px);
+}
+.example-link:active {
+  box-shadow: var(--site-shadow-inset);
+  transform: translateY(0px);
+}
+.blog-content {
+  align-items: center;
+  max-width: 800px;
+  display: flex;
+  padding: var(--content-padding);
+  margin: 0 auto;
+  flex-direction: column;
+}
+.blog-list {
+  margin-top: 40px;
+  display: flex;
+  gap: 24px;
+  width: 100%;
+  flex-direction: column;
+}
+.blog-card {
+  border: 1px solid var(--site-border-primary);
+  background-color: var(--site-bg-primary);
+  box-shadow: var(--site-shadow-soft);
+  padding: 24px;
+  width: 100%;
+  border-radius: 10px;
+  transition: all 0.2s ease;
+}
+.blog-card:hover {
+  border-color: var(--site-accent-blue);
+  box-shadow: var(--site-animation-glow);
+}
+.section {
+  margin: 60px 0;
+}
+.section-title {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--site-text-primary);
+  margin-bottom: 20px;
+}
+.section-content {
+  font-size: 1.1rem;
+  color: var(--site-text-secondary);
+  line-height: 1.8;
+}
+code {
   border: 1px solid var(--site-border-primary);
   background-color: var(--site-menu-hover-bg);
   font-size: 0.9em;
@@ -27,10 +374,43 @@
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', monospace;
   border-radius: 4px;
 }
-.example-card:hover {
-  border-color: var(--site-accent-blue);
-  box-shadow: var(--site-animation-glow);
-  transform: translateY(-2px);
+pre code {
+  border: none;
+  background-color: transparent;
+  padding: 0;
+}
+.getting-started-inline {
+  margin-top: 20px;
+  border: 1px solid var(--site-border-primary);
+  background-color: var(--site-bg-primary);
+  box-shadow: var(--site-shadow-soft);
+  padding: 30px;
+  border-radius: 10px;
+}
+.getting-started-inline .cell-editor-container {
+  min-width: 0 !important;
+  max-width: 100% !important;
+  width: 100% !important;
+  margin-bottom: 20px;
+}
+.getting-started-inline .cell-editor {
+  max-width: 100% !important;
+  width: 100% !important;
+}
+.getting-started-inline .book-cells-area .fit-content {
+  max-width: 100% !important;
+  width: 100% !important;
+}
+.getting-started-inline .cell-output {
+  border: 1px solid var(--site-border-primary);
+  background-color: var(--site-menu-hover-bg);
+  border-radius: 6px;
+}
+.getting-started-inline .hover-buttons {
+  display: none !important;
+}
+.getting-started-inline .new-cell-menu {
+  display: none !important;
 }
 @media (max-width: 768px) {
   .hero-title {
@@ -60,290 +440,6 @@
     font-size: 1rem !important;
   }
 }
-::-webkit-scrollbar {
-  width: 12px;
-}
-.bonitobook-header {
-  justify-content: center;
-  align-items: center;
-  height: var(--header-height);
-  display: flex;
-  backdrop-filter: blur(10px);
-  box-shadow: var(--site-shadow-soft);
-  border-bottom: 1px solid var(--site-border-primary);
-  position: relative;
-  background: linear-gradient(135deg, var(--site-bg-primary) 0%, var(--site-menu-hover-bg) 100%);
-}
-.header-content {
-  max-width: var(--max-content-width);
-  padding: 0 var(--content-padding);
-  width: 100%;
-}
-.section-title {
-  font-size: 2rem;
-  font-weight: 700;
-  color: var(--site-text-primary);
-  margin-bottom: 20px;
-}
-* {
-  scrollbar-color: var(--site-scrollbar-thumb) var(--site-scrollbar-track);
-  color: inherit;
-  box-sizing: border-box;
-  scrollbar-width: thin;
-}
-.example-card {
-  max-width: 400px;
-  border: 1px solid var(--site-border-primary);
-  background-color: var(--site-bg-primary);
-  box-shadow: var(--site-shadow-soft);
-  padding: 24px;
-  position: relative;
-  width: fit-content;
-  border-radius: 10px;
-  transition: all 0.2s ease-out;
-  overflow: hidden;
-}
-.section-content {
-  font-size: 1.1rem;
-  color: var(--site-text-secondary);
-  line-height: 1.8;
-}
-pre code {
-  border: none;
-  background-color: transparent;
-  padding: 0;
-}
-.hero-button {
-  min-width: 120px;
-  font-weight: 500;
-  align-items: center;
-  display: inline-flex;
-  padding: 12px 24px;
-  box-shadow: var(--site-shadow-button);
-  border-radius: 8px;
-  justify-content: center;
-  border: none;
-  background-color: var(--site-accent-blue);
-  font-size: 16px;
-  transition: all 0.2s ease;
-  cursor: pointer;
-  text-decoration: none;
-  color: white;
-  font-family: inherit;
-}
-.hero-section {
-  padding: 60px 0;
-  border-bottom: 1px solid var(--site-border-primary);
-  text-align: center;
-}
-.bonitobook-header::before {
-  left: 0;
-  bottom: 0;
-  content: '';
-  right: 0;
-  top: 0;
-  pointer-events: none;
-  position: absolute;
-  opacity: 0.03;
-  background: var(--site-animation-glow);
-}
-@media (prefers-color-scheme: light), (prefers-color-scheme: no-preference) {
-  :root {
-    --site-border-primary: rgba(0, 0, 0, 0.1);
-    --site-border-secondary: #ccc;
-    --site-hover-bg: #ddd;
-    --site-text-secondary: #555555;
-    --site-icon-color: #666666;
-    --site-scrollbar-thumb: #c1c1c1;
-    --site-accent-blue: #0366d6;
-    --site-menu-hover-bg: rgba(0, 0, 0, 0.05);
-    --site-icon-filter: none;
-    --site-shadow-button: 0 2px 4px rgba(0, 0, 0, 0.2);
-    --site-icon-hover-color: #333333;
-    --site-scrollbar-thumb-hover: #a8a8a8;
-    --site-scrollbar-track: #f1f1f1;
-    --site-shadow-inset: inset 2px 2px 5px rgba(0, 0, 0, 0.5);
-    --site-text-primary: #24292e;
-    --site-animation-glow: 0 0 20px rgba(0, 150, 51, 0.8);
-    --site-icon-hover-filter: brightness(0.7);
-    --site-bg-primary: #ffffff;
-    --site-shadow-soft: 0 4px 8px rgba(0, 0, 51, 0.2);
-  }
-}
-::-webkit-scrollbar-thumb:hover {
-  background-color: var(--site-scrollbar-thumb-hover);
-}
-.bonitobook-navbar {
-  z-index: 100;
-  align-items: center;
-  height: var(--navbar-height);
-  display: flex;
-  padding: 0 40px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-  position: sticky;
-  justify-content: center;
-  background-color: var(--site-bg-primary);
-  top: 0;
-  border-bottom: 1px solid var(--site-border-primary);
-}
-.example-description {
-  color: var(--site-text-secondary);
-  margin: 0 0 20px 0;
-  line-height: 1.6;
-}
-.blog-list {
-  margin-top: 40px;
-  display: flex;
-  gap: 24px;
-  width: 100%;
-  flex-direction: column;
-}
-.nav-item:hover {
-  background-color: var(--site-hover-bg);
-  color: var(--site-accent-blue);
-}
-.blog-card {
-  border: 1px solid var(--site-border-primary);
-  background-color: var(--site-bg-primary);
-  box-shadow: var(--site-shadow-soft);
-  padding: 24px;
-  width: 100%;
-  border-radius: 10px;
-  transition: all 0.2s ease;
-}
-.hero-button-secondary:hover {
-  border-color: var(--site-accent-blue);
-  background-color: var(--site-hover-bg);
-  color: var(--site-accent-blue);
-  transform: translateY(-1px);
-}
-.nav-items {
-  display: flex;
-  width: 100%;
-}
-.example-link:hover {
-  background-color: var(--site-accent-blue);
-  box-shadow: 0 4px 12px rgba(3, 102, 214, 0.3);
-  color: white;
-  transform: translateY(-1px);
-}
-.blog-card:hover {
-  border-color: var(--site-accent-blue);
-  box-shadow: var(--site-animation-glow);
-}
-.example-card::before {
-  left: -100%;
-  height: 2px;
-  content: '';
-  top: 0;
-  position: absolute;
-  width: 100%;
-  transition: left 0.5s ease;
-  background: linear-gradient(90deg, transparent, var(--site-accent-blue), transparent);
-}
-.example-link {
-  min-width: 100px;
-  font-weight: 500;
-  align-items: center;
-  display: inline-flex;
-  padding: 8px 16px;
-  box-shadow: var(--site-shadow-button);
-  border-radius: 8px;
-  justify-content: center;
-  border: 1px solid var(--site-accent-blue);
-  background-color: var(--site-bg-primary);
-  font-size: 14px;
-  transition: all 0.2s ease;
-  text-decoration: none;
-  color: var(--site-accent-blue);
-}
-body {
-  padding: 0;
-  background-color: var(--site-bg-primary);
-  color: var(--site-text-primary);
-  font-family: 'Inter', 'Roboto', 'Arial', sans-serif;
-  margin: 0;
-  line-height: 1.6;
-}
-.getting-started-inline .cell-editor {
-  max-width: 100% !important;
-  width: 100% !important;
-}
-.hero-title {
-  font-size: 3rem;
-  font-weight: 700;
-  color: var(--site-text-primary);
-  margin-bottom: 20px;
-}
-.example-title {
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: var(--site-text-primary);
-  margin: 0 0 12px 0;
-}
-.hero-button:active {
-  box-shadow: var(--site-shadow-inset);
-  transform: translateY(0px);
-}
-.example-link:active {
-  box-shadow: var(--site-shadow-inset);
-  transform: translateY(0px);
-}
-.getting-started-inline .cell-output {
-  border: 1px solid var(--site-border-primary);
-  background-color: var(--site-menu-hover-bg);
-  border-radius: 6px;
-}
-.getting-started-inline .new-cell-menu {
-  display: none !important;
-}
-.main-content {
-  margin: 0 auto;
-}
-.hero-buttons {
-  display: flex;
-  gap: 20px;
-  justify-content: center;
-}
-.hero-button:hover {
-  background-color: var(--site-hover-bg);
-  box-shadow: 0 4px 12px rgba(3, 102, 214, 0.3);
-  color: var(--site-accent-blue);
-  transform: translateY(-1px);
-}
-.bonitobook-page {
-  background-color: var(--site-bg-primary);
-  color: var(--site-text-primary);
-  min-height: 100vh;
-  width: 100%;
-}
-::-webkit-scrollbar-thumb {
-  border: 2px solid var(--site-scrollbar-track);
-  background-color: var(--site-scrollbar-thumb);
-  border-radius: 6px;
-}
-.getting-started-inline {
-  margin-top: 20px;
-  border: 1px solid var(--site-border-primary);
-  background-color: var(--site-bg-primary);
-  box-shadow: var(--site-shadow-soft);
-  padding: 30px;
-  border-radius: 10px;
-}
-::-webkit-scrollbar-track {
-  background: var(--site-scrollbar-track);
-}
-:root {
-  --card-gap: 20px;
-  --max-content-width: 1200px;
-  --navbar-height: 50px;
-  --header-height: 80px;
-  --content-padding: 40px;
-}
-.getting-started-inline .book-cells-area .fit-content {
-  max-width: 100% !important;
-  width: 100% !important;
-}
 @media (max-width: 480px) {
   .getting-started-inline .cell-editor {
     padding: 5px !important;
@@ -351,102 +447,6 @@ body {
   .getting-started-inline .book-cells-area {
     padding: 10px !important;
   }
-}
-.header-title {
-  font-size: 2.5rem;
-  font-weight: 700;
-  color: var(--site-text-primary);
-  margin: 0;
-}
-.example-content {
-  max-width: 1200px;
-  padding: var(--content-padding);
-  margin: 0 auto;
-}
-.examples-grid {
-  margin-top: 40px;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: var(--card-gap);
-}
-a {
-  text-decoration: none;
-  color: inherit;
-}
-.example-card:hover::before {
-  left: 100%;
-}
-.hero-button-secondary {
-  border: 1px solid var(--site-border-secondary);
-  background-color: var(--site-bg-primary);
-  box-shadow: var(--site-shadow-button);
-  color: var(--site-text-primary);
-}
-@media (prefers-color-scheme: dark) {
-  :root {
-    --site-border-primary: rgba(255, 255, 255, 0.1);
-    --site-border-secondary: rgba(255, 255, 255, 0.1);
-    --site-hover-bg: rgba(255, 255, 255, 0.1);
-    --site-text-secondary: rgb(212, 212, 212);
-    --site-icon-color: #cccccc;
-    --site-scrollbar-thumb: #555555;
-    --site-accent-blue: #0366d6;
-    --site-menu-hover-bg: rgba(255, 255, 255, 0.05);
-    --site-icon-filter: invert(1);
-    --site-shadow-button: 0 2px 4px rgba(255, 255, 255, 0.2);
-    --site-icon-hover-color: #ffffff;
-    --site-scrollbar-thumb-hover: #777777;
-    --site-scrollbar-track: #2d2d2d;
-    --site-shadow-inset: inset 2px 2px 3px rgba(0, 0, 0, 0.5);
-    --site-text-primary: rgb(212, 212, 212);
-    --site-animation-glow: 0 0 20px rgba(10, 155, 55, 0.5);
-    --site-icon-hover-filter: invert(1) brightness(1.2);
-    --site-bg-primary: #1e1e1e;
-    --site-shadow-soft: 0 4px 8px rgba(255, 255, 255, 0.2);
-  }
-  code {
-    background-color: var(--site-menu-hover-bg);
-    color: var(--site-text-primary);
-  }
-}
-.nav-item {
-  font-weight: 500;
-  padding: 10px 16px;
-  text-decoration: none;
-  white-space: nowrap;
-  color: var(--site-text-primary);
-  border-radius: 6px;
-  transition: all 0.2s ease;
-}
-.getting-started-inline .hover-buttons {
-  display: none !important;
-}
-.blog-content {
-  align-items: center;
-  max-width: 800px;
-  display: flex;
-  padding: var(--content-padding);
-  margin: 0 auto;
-  flex-direction: column;
-}
-.section {
-  margin: 60px 0;
-}
-html {
-  background-color: var(--site-bg-primary);
-  color: var(--site-text-primary);
-}
-.hero-subtitle {
-  max-width: 600px;
-  font-size: 1.25rem;
-  color: var(--site-text-secondary);
-  margin: 0 auto 40px;
-}
-.getting-started-inline .cell-editor-container {
-  min-width: 0 !important;
-  max-width: 100% !important;
-  width: 100% !important;
-  margin-bottom: 20px;
 }
 </style>
     <style>@font-face {
@@ -456,104 +456,7 @@ html {
   font-style: normal;
 }
 </style>
-    <style>span.sgr46 {
-  background-color: var(--ansi-cyan);
-}
-span.sgr3 {
-  font-style: italic;
-}
-span.sgr90 {
-  color: var(--ansi-bright-black);
-}
-span.sgr91 {
-  color: var(--ansi-bright-red);
-}
-span.sgr40 {
-  background-color: var(--ansi-black);
-}
-span.sgr7 {
-  background-color: var(--text-primary);
-  color: var(--bg-primary);
-}
-span.sgr104 {
-  background-color: var(--ansi-bright-blue);
-}
-span.sgr105 {
-  background-color: var(--ansi-bright-magenta);
-}
-span.sgr44 {
-  background-color: var(--ansi-blue);
-}
-span.sgr42 {
-  background-color: var(--ansi-green);
-}
-span.sgr37 {
-  color: var(--ansi-white);
-}
-.logging-widget {
-  white-space: pre-wrap;
-}
-span.sgr36 {
-  color: var(--ansi-cyan);
-}
-span.sgr107 {
-  background-color: var(--ansi-bright-white);
-}
-span.sgr1 {
-  font-weight: bolder;
-}
-span.sgr4 {
-  text-decoration: underline;
-}
-span.sgr93 {
-  color: var(--ansi-bright-yellow);
-}
-span.sgr102 {
-  background-color: var(--ansi-bright-green);
-}
-span.sgr106 {
-  background-color: var(--ansi-bright-cyan);
-}
-span.sgr33 {
-  color: var(--ansi-yellow);
-}
-span.sgr100 {
-  background-color: var(--ansi-bright-black);
-}
-span.sgr32 {
-  color: var(--ansi-green);
-}
-span.sgr101 {
-  background-color: var(--ansi-bright-red);
-}
-span.sgr2 {
-  font-weight: lighter;
-}
-span.sgr30 {
-  color: var(--ansi-black);
-}
-span.sgr9 {
-  text-decoration: line-through;
-}
-span.sgr96 {
-  color: var(--ansi-bright-cyan);
-}
-span.sgr95 {
-  color: var(--ansi-bright-magenta);
-}
-span.sgr103 {
-  background-color: var(--ansi-bright-yellow);
-}
-span.sgr45 {
-  background-color: var(--ansi-magenta);
-}
-span.sgr35 {
-  color: var(--ansi-magenta);
-}
-span.sgr8, span.sgr8 span, span span.sgr8 {
-  color: transparent;
-}
-@media (prefers-color-scheme: light), (prefers-color-scheme: no-preference) {
+    <style>@media (prefers-color-scheme: light), (prefers-color-scheme: no-preference) {
   :root {
     --ansi-bright-cyan: #55ffff;
     --ansi-bright-white: #ffffff;
@@ -572,12 +475,6 @@ span.sgr8, span.sgr8 span, span span.sgr8 {
     --ansi-bright-red: #ff5555;
     --ansi-blue: #0451a5;
   }
-}
-span.sgr41 {
-  background-color: var(--ansi-red);
-}
-span.sgr47 {
-  background-color: var(--ansi-white);
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -599,30 +496,133 @@ span.sgr47 {
     --ansi-blue: #569cd6;
   }
 }
-span.sgr94 {
-  color: var(--ansi-bright-blue);
+span.sgr1 {
+  font-weight: bolder;
 }
-span.sgr92 {
-  color: var(--ansi-bright-green);
+span.sgr2 {
+  font-weight: lighter;
+}
+span.sgr3 {
+  font-style: italic;
+}
+span.sgr4 {
+  text-decoration: underline;
+}
+span.sgr7 {
+  background-color: var(--text-primary);
+  color: var(--bg-primary);
+}
+span.sgr8, span.sgr8 span, span span.sgr8 {
+  color: transparent;
+}
+span.sgr9 {
+  text-decoration: line-through;
+}
+span.sgr30 {
+  color: var(--ansi-black);
 }
 span.sgr31 {
   color: var(--ansi-red);
 }
+span.sgr32 {
+  color: var(--ansi-green);
+}
+span.sgr33 {
+  color: var(--ansi-yellow);
+}
 span.sgr34 {
   color: var(--ansi-blue);
+}
+span.sgr35 {
+  color: var(--ansi-magenta);
+}
+span.sgr36 {
+  color: var(--ansi-cyan);
+}
+span.sgr37 {
+  color: var(--ansi-white);
+}
+span.sgr40 {
+  background-color: var(--ansi-black);
+}
+span.sgr41 {
+  background-color: var(--ansi-red);
+}
+span.sgr42 {
+  background-color: var(--ansi-green);
 }
 span.sgr43 {
   background-color: var(--ansi-yellow);
 }
+span.sgr44 {
+  background-color: var(--ansi-blue);
+}
+span.sgr45 {
+  background-color: var(--ansi-magenta);
+}
+span.sgr46 {
+  background-color: var(--ansi-cyan);
+}
+span.sgr47 {
+  background-color: var(--ansi-white);
+}
+span.sgr90 {
+  color: var(--ansi-bright-black);
+}
+span.sgr91 {
+  color: var(--ansi-bright-red);
+}
+span.sgr92 {
+  color: var(--ansi-bright-green);
+}
+span.sgr93 {
+  color: var(--ansi-bright-yellow);
+}
+span.sgr94 {
+  color: var(--ansi-bright-blue);
+}
+span.sgr95 {
+  color: var(--ansi-bright-magenta);
+}
+span.sgr96 {
+  color: var(--ansi-bright-cyan);
+}
 span.sgr97 {
   color: var(--ansi-bright-white);
+}
+span.sgr100 {
+  background-color: var(--ansi-bright-black);
+}
+span.sgr101 {
+  background-color: var(--ansi-bright-red);
+}
+span.sgr102 {
+  background-color: var(--ansi-bright-green);
+}
+span.sgr103 {
+  background-color: var(--ansi-bright-yellow);
+}
+span.sgr104 {
+  background-color: var(--ansi-bright-blue);
+}
+span.sgr105 {
+  background-color: var(--ansi-bright-magenta);
+}
+span.sgr106 {
+  background-color: var(--ansi-bright-cyan);
+}
+span.sgr107 {
+  background-color: var(--ansi-bright-white);
+}
+.logging-widget {
+  white-space: pre-wrap;
 }
 </style>
   </head>
   <body>
-    <script type="module">Bonito.init_session("906ae798-65ba-4a0d-9fe1-d24ddf339b86", Bonito.fetch_binary('../../bonito/bin/33691f33f8d7ff619b6ceeca13b79080fce05dc6-5627935496084792943.bin'), "root", false);
+    <script type="module">Bonito.init_session("9cbbba28-1207-4498-b4d6-122d0fad0e64", Bonito.fetch_binary('../../bonito/bin/e0ee35796ee3fb1eb4f4efd7b062a2a311c2c243-5406239467879085359.bin'), "root", false);
 </script>
-    <div id="906ae798-65ba-4a0d-9fe1-d24ddf339b86" data-jscall-id="root">
+    <div id="9cbbba28-1207-4498-b4d6-122d0fad0e64" data-jscall-id="root">
       <div class="bonitobook-page" data-jscall-id="1">
         <header class="bonitobook-header" data-jscall-id="2">
           <div class="header-content" data-jscall-id="3">
@@ -638,7 +638,7 @@ span.sgr97 {
         <main class="main-content" data-jscall-id="10">
           <div class="real-book-container" data-jscall-id="11">
             <div data-jscall-id="13">
-              <div class="bonito-fragment" id="c4d36953-c7cb-4fbf-8f91-c45f49fd976b" data-jscall-id="subsession-application-dom">
+              <div class="bonito-fragment" id="0c7680ef-c997-4eb4-9a11-35ddcaa7f531" data-jscall-id="subsession-application-dom">
                 <div data-jscall-id="14">
                   <style data-jscall-id="15"></style>
                   <style data-jscall-id="16">:root {
@@ -684,12 +684,10 @@ span.sgr97 {
   --z-behind: -1;
   --z-overlay: 50;
 }
-mjx-container[jax='CHTML'][display='true'] {
-  display: inline;
-}
-pre {
-  margin-block: var(--spacing-xs) 0px;
-  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+* {
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+  box-sizing: border-box;
+  scrollbar-width: thin;
 }
 html {
   background-color: var(--bg-primary);
@@ -698,13 +696,15 @@ html {
 body {
   margin: 0;
 }
+pre {
+  margin-block: var(--spacing-xs) 0px;
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
 li p {
   display: inline;
 }
-* {
-  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
-  box-sizing: border-box;
-  scrollbar-width: thin;
+mjx-container[jax='CHTML'][display='true'] {
+  display: inline;
 }
 @media screen {
   .bonitobook-dropdown {
@@ -812,6 +812,14 @@ li p {
 body.bonito-export-mode .hover-buttons, body.bonito-export-mode .cell-menu-proximity-area, body.bonito-export-mode .new-cell-menu {
   display: none !important;
 }
+.quick-input-widget, .find-widget {
+  top: 10px !important;
+  position: fixed !important;
+}
+.monaco-list {
+  max-height: var(--max-height-medium);
+  overflow-y: auto !important;
+}
 .monaco-editor-div {
   padding: 0;
   width: var(--editor-width);
@@ -820,107 +828,18 @@ body.bonito-export-mode .hover-buttons, body.bonito-export-mode .cell-menu-proxi
 .sidebar-widget-content .monaco-editor-div.hide-horizontal {
   display: block !important;
 }
-.monaco-list {
-  max-height: var(--max-height-medium);
-  overflow-y: auto !important;
-}
-.quick-input-widget, .find-widget {
-  top: 10px !important;
-  position: fixed !important;
-}
-.cell-editor.focused {
-  box-shadow: var(--shadow-glow);
-}
-.hover-buttons {
-  right: -10px;
-  top: -23px;
-  pointer-events: auto;
-  position: absolute;
-  z-index: var(--z-overlay);
-  opacity: 0.0;
-}
-.hide-horizontal {
-  height: 6px;
-  position: relative;
-  overflow: hidden;
-}
-.small-language-icon {
-  bottom: 4px;
-  right: 8px;
-  filter: var(--icon-filter);
-  color: var(--icon-color);
-  pointer-events: none;
-  position: absolute;
-  opacity: 0.8;
-}
 .cell-editor-container {
   position: relative;
 }
-.cell-output-markdown.cell-output {
-  max-height: none;
-  overflow-y: visible;
-}
-.show-horizontal {
-  display: block;
-}
-.loading-cell {
-  animation: shadow-pulse 1.5s ease-in-out infinite;
-  box-shadow: var(--shadow-soft);
-}
-.logging-widget {
-  height: 100%;
-  font-size: var(--font-size-xs);
-  padding: var(--spacing-sm);
-  white-space: pre-wrap;
-  word-wrap: break-word;
-  font-family: monospace;
-  overflow-y: auto;
-  margin: 0;
-  line-height: 1.4;
+.cell-menu-proximity-area {
+  left: 0;
+  height: 20px;
+  background-color: transparent;
+  top: -20px;
+  pointer-events: auto;
+  position: absolute;
   width: 100%;
-}
-.cell-output {
-  max-height: 1000px;
-  overflow-y: auto;
-  margin: var(--spacing-xs);
-  overflow-x: visible;
-  width: var(--editor-width);
-}
-.hide-vertical {
-  display: none;
-}
-@keyframes shadow-pulse {
-  0% {
-    box-shadow: var(--shadow-soft);
-  }
-  50% {
-    box-shadow: var(--shadow-glow-animation);
-  }
-  100% {
-    box-shadow: var(--shadow-soft);
-  }
-}
-.cell-logging {
-  height: auto;
-  max-width: var(--editor-width);
-  padding: 0;
-  white-space: pre-wrap;
-  max-height: 500px;
-  word-wrap: break-word;
-  min-height: 0;
-  overflow-y: auto;
-  margin: 0;
-  flex: 0 0 auto;
-}
-.logging-widget pre {
-  padding: 0;
-  white-space: pre-wrap;
-  font: inherit;
-  word-wrap: break-word;
-  margin: 0;
-}
-.show-vertical {
-  display: block;
+  z-index: var(--z-behind);
 }
 .cell-editor-container.editor-collapsed .cell-menu-proximity-area {
   left: 0;
@@ -949,32 +868,96 @@ body.bonito-export-mode .hover-buttons, body.bonito-export-mode .cell-menu-proxi
   width: fit-content;
   border-radius: var(--border-radius-large);
 }
-.cell-menu-proximity-area {
-  left: 0;
-  height: 20px;
-  background-color: transparent;
-  top: -20px;
+.cell-editor.focused {
+  box-shadow: var(--shadow-glow);
+}
+.cell-logging {
+  height: auto;
+  max-width: var(--editor-width);
+  padding: 0;
+  white-space: pre-wrap;
+  max-height: 500px;
+  word-wrap: break-word;
+  min-height: 0;
+  overflow-y: auto;
+  margin: 0;
+  flex: 0 0 auto;
+}
+.logging-widget {
+  height: 100%;
+  font-size: var(--font-size-xs);
+  padding: var(--spacing-sm);
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  font-family: monospace;
+  overflow-y: auto;
+  margin: 0;
+  line-height: 1.4;
+  width: 100%;
+}
+.logging-widget pre {
+  padding: 0;
+  white-space: pre-wrap;
+  font: inherit;
+  word-wrap: break-word;
+  margin: 0;
+}
+.hover-buttons {
+  right: -10px;
+  top: -23px;
   pointer-events: auto;
   position: absolute;
-  width: 100%;
-  z-index: var(--z-behind);
+  z-index: var(--z-overlay);
+  opacity: 0.0;
 }
-.small-button:hover img:not([src*='python-logo']):not([src*='julia-logo']), .small-button:hover svg {
-  filter: var(--icon-hover-filter);
+.cell-output {
+  max-height: 1000px;
+  overflow-y: auto;
+  margin: var(--spacing-xs);
+  overflow-x: visible;
+  width: var(--editor-width);
 }
-.codicon:hover {
-  filter: var(--icon-hover-filter);
-  color: var(--icon-hover-color);
+.cell-output-markdown.cell-output {
+  max-height: none;
+  overflow-y: visible;
 }
-.codicon svg {
+.hide-vertical {
+  display: none;
+}
+.show-vertical {
   display: block;
-  fill: currentColor;
 }
-.codicon svg, .small-language-icon svg, .codicon img {
-  filter: var(--icon-filter);
+.hide-horizontal {
+  height: 6px;
+  position: relative;
+  overflow: hidden;
 }
-.small-button img:not([src*='python-logo']):not([src*='julia-logo']), .small-button svg {
+.show-horizontal {
+  display: block;
+}
+.loading-cell {
+  animation: shadow-pulse 1.5s ease-in-out infinite;
+  box-shadow: var(--shadow-soft);
+}
+@keyframes shadow-pulse {
+  0% {
+    box-shadow: var(--shadow-soft);
+  }
+  50% {
+    box-shadow: var(--shadow-glow-animation);
+  }
+  100% {
+    box-shadow: var(--shadow-soft);
+  }
+}
+.small-language-icon {
+  bottom: 4px;
+  right: 8px;
   filter: var(--icon-filter);
+  color: var(--icon-color);
+  pointer-events: none;
+  position: absolute;
+  opacity: 0.8;
 }
 .codicon {
   filter: var(--icon-filter);
@@ -990,54 +973,22 @@ body.bonito-export-mode .hover-buttons, body.bonito-export-mode .cell-menu-proxi
   -webkit-font-smoothing: antialiased;
   color: var(--icon-color);
 }
-.markdown-body strong {
-  font-weight: 600;
-}
-.markdown-body a {
-  text-decoration: none;
-  color: var(--accent-blue);
-}
-.markdown-body blockquote {
-  padding: 0 1em;
-  color: #6a737d;
-  border-left: .25em solid #dfe2e5;
-}
-.markdown-body h2 {
-  font-size: 24px;
-  font-weight: 600;
-}
-.markdown-body h3 {
-  font-size: 20px;
-  font-weight: 600;
-}
-.markdown-body h6 {
-  font-size: 12px;
-  font-weight: 600;
-}
-.markdown-body code, .markdown-body pre {
-  font-size: 12px;
-  font-family: SFMono-Regular,Consolas,Liberation Mono,Menlo,Courier,monospace;
-}
-.markdown-body pre {
-  margin-top: 0;
-  margin-bottom: 0;
-}
-.markdown-body input {
-  font: inherit;
-  overflow: visible;
-}
-.markdown-body .octicon {
-  display: inline-block;
-  vertical-align: text-bottom;
+.codicon svg {
+  display: block;
   fill: currentColor;
 }
-.markdown-body h1 {
-  font-size: 32px;
-  font-weight: 600;
+.codicon:hover {
+  filter: var(--icon-hover-filter);
+  color: var(--icon-hover-color);
 }
-.markdown-body h5 {
-  font-size: 14px;
-  font-weight: 600;
+.small-button img:not([src*='python-logo']):not([src*='julia-logo']), .small-button svg {
+  filter: var(--icon-filter);
+}
+.small-button:hover img:not([src*='python-logo']):not([src*='julia-logo']), .small-button:hover svg {
+  filter: var(--icon-hover-filter);
+}
+.codicon svg, .small-language-icon svg, .codicon img {
+  filter: var(--icon-filter);
 }
 .markdown-body {
   font-size: 16px;
@@ -1048,6 +999,58 @@ body.bonito-export-mode .hover-buttons, body.bonito-export-mode .cell-menu-proxi
   word-wrap: break-word;
   line-height: 1.5;
 }
+.markdown-body .octicon {
+  display: inline-block;
+  vertical-align: text-bottom;
+  fill: currentColor;
+}
+.markdown-body .anchor {
+  padding-right: 4px;
+  float: left;
+  line-height: 1;
+  margin-left: -20px;
+}
+.markdown-body .anchor:focus {
+  outline: none;
+}
+.markdown-body h1, .markdown-body h2, .markdown-body h3, .markdown-body h4, .markdown-body h5, .markdown-body h6 {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+.markdown-body h1 {
+  font-size: 32px;
+  font-weight: 600;
+}
+.markdown-body h2 {
+  font-size: 24px;
+  font-weight: 600;
+}
+.markdown-body h3 {
+  font-size: 20px;
+  font-weight: 600;
+}
+.markdown-body h4 {
+  font-size: 16px;
+  font-weight: 600;
+}
+.markdown-body h5 {
+  font-size: 14px;
+  font-weight: 600;
+}
+.markdown-body h6 {
+  font-size: 12px;
+  font-weight: 600;
+}
+.markdown-body a {
+  text-decoration: none;
+  color: var(--accent-blue);
+}
+.markdown-body a:hover {
+  text-decoration: underline;
+}
+.markdown-body strong {
+  font-weight: 600;
+}
 .markdown-body hr {
   overflow: hidden;
   height: 0;
@@ -1056,50 +1059,32 @@ body.bonito-export-mode .hover-buttons, body.bonito-export-mode .cell-menu-proxi
   margin: var(--spacing-lg) 0;
   background: transparent;
 }
-.markdown-body h1, .markdown-body h2, .markdown-body h3, .markdown-body h4, .markdown-body h5, .markdown-body h6 {
-  margin-top: 0;
-  margin-bottom: 0;
-}
-.markdown-body a:hover {
-  text-decoration: underline;
-}
-.markdown-body h4 {
-  font-size: 16px;
-  font-weight: 600;
-}
-.markdown-body td, .markdown-body th {
-  padding: 0;
-}
-.markdown-body img {
-  border-style: none;
-}
 .markdown-body table {
   border-collapse: collapse;
   border-spacing: 0;
 }
-.markdown-body .anchor:focus {
-  outline: none;
+.markdown-body td, .markdown-body th {
+  padding: 0;
 }
-.markdown-body .anchor {
-  padding-right: 4px;
-  float: left;
-  line-height: 1;
-  margin-left: -20px;
+.markdown-body blockquote {
+  padding: 0 1em;
+  color: #6a737d;
+  border-left: .25em solid #dfe2e5;
 }
-.data-frame td {
-  padding: 6px 12px;
-  border-bottom: 1px solid var(--border-primary);
+.markdown-body code, .markdown-body pre {
+  font-size: 12px;
+  font-family: SFMono-Regular,Consolas,Liberation Mono,Menlo,Courier,monospace;
 }
-.data-frame th {
-  font-weight: 500;
-  background-color: var(--hover-bg);
-  padding: 8px 12px;
-  border-bottom: 1px solid var(--border-primary);
+.markdown-body pre {
+  margin-top: 0;
+  margin-bottom: 0;
 }
-.data-frame .rowLabel {
-  background-color: var(--hover-bg);
-  font-family: monospace;
-  text-align: right;
+.markdown-body img {
+  border-style: none;
+}
+.markdown-body input {
+  font: inherit;
+  overflow: visible;
 }
 .data-frame {
   margin: 1rem 0;
@@ -1108,69 +1093,112 @@ body.bonito-export-mode .hover-buttons, body.bonito-export-mode .cell-menu-proxi
   font-size: 13px;
   border-collapse: collapse;
 }
-.bonitobook-card {
-  border: 1px solid var(--border-secondary);
-  background-color: var(--bg-primary);
-  box-shadow: var(--shadow-soft);
-  padding: var(--spacing-sm);
-  color: var(--text-primary);
-  border-radius: var(--spacing-sm);
-  margin: var(--spacing-sm);
-  overflow: hidden;
-}
-.manipulate-label {
-  min-width: 120px;
-  font-size: var(--font-size-sm);
+.data-frame th {
   font-weight: 500;
-  flex-shrink: 0;
-  color: var(--text-secondary);
-  text-align: left;
+  background-color: var(--hover-bg);
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-primary);
+}
+.data-frame td {
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--border-primary);
+}
+.data-frame .rowLabel {
+  background-color: var(--hover-bg);
+  font-family: monospace;
+  text-align: right;
+}
+.flex-row {
+  display: flex;
+  flex-direction: row;
+}
+.flex-column {
+  display: flex;
+  flex-direction: column;
+}
+.center-content {
+  align-items: center;
+  justify-content: center;
+}
+.inline-block {
+  display: inline-block;
+}
+.fit-content {
+  width: fit-content;
+}
+.max-width-90ch {
+  max-width: 90ch;
+}
+.gap-10 {
+  gap: 10px;
+}
+.full-width {
+  width: 100%;
 }
 ::-webkit-scrollbar {
   width: 12px;
 }
-.bonitobook-slider:focus::-webkit-slider-thumb {
-  box-shadow: var(--shadow-focus), 0 var(--spacing-xxs) 6px 0 var(--shadow-color-button);
+::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
 }
-.manipulate-control-row {
+::-webkit-scrollbar-thumb {
+  border: 2px solid var(--scrollbar-track);
+  background-color: var(--scrollbar-thumb);
+  border-radius: 6px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--scrollbar-thumb-hover);
+}
+.small-menu-bar {
   align-items: center;
   display: flex;
-  gap: var(--spacing-md);
+  border: 1px solid var(--border-primary);
+  padding: 6px;
+  box-shadow: var(--shadow-soft);
+  gap: 4px;
+  z-index: var(--z-menu);
+  border-radius: var(--spacing-sm);
 }
-.sidebar-resize-handle:hover {
-  background-color: var(--accent-blue);
+.small-button.toggled {
+  border: none;
+  box-shadow: var(--shadow-inset);
+  filter: grayscale(100%);
+  color: var(--text-primary);
   opacity: 0.5;
 }
-.new-cell-menu:hover .new-cell-plus {
-  opacity: 1;
+.small-button {
+  align-items: center;
+  display: inline-flex;
+  padding: var(--spacing-sm);
+  box-shadow: var(--shadow-button);
+  border-radius: var(--spacing-sm);
+  justify-content: center;
+  margin-right: var(--spacing-xs);
+  border: none;
+  background-color: var(--bg-primary);
+  transition: background-color var(--transition-slow);
+  cursor: pointer;
+  color: var(--text-secondary);
 }
 .toggle-button.active {
   box-shadow: var(--shadow-inset);
   color: var(--text-primary);
 }
-.sidebar-tab {
-  position: relative;
+.small-button:hover {
+  background-color: var(--hover-bg);
 }
-.bonitobook-checkbox:hover {
-  border-color: var(--accent-blue);
+.small-button.inactive {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
-.sidebar-content-container.horizontal.collapsed {
-  visibility: hidden;
-  height: 0;
-  opacity: 0;
+.small-button.inactive:hover {
+  background-color: inherit;
 }
-.book-spinner {
-  height: 8px;
-  display: block;
-  box-shadow: 0 0 var(--spacing-sm) 0 var(--shadow-color-soft);
-  position: relative;
-  border-radius: 4px;
-  animation: spinner-stripes 1.5s linear infinite;
-  width: 100%;
-  overflow: hidden;
-  background-size: 40px 100%;
-  pointer-events: none;
-  background: repeating-linear-gradient(45deg, var(--accent-blue) 0px, var(--accent-blue) 10px, var(--border-primary) 10px, var(--border-primary) 20px);
+.file-tabs-container {
+  display: flex;
+  border-bottom: 1px solid var(--border-primary);
+  flex-shrink: 0;
+  overflow-x: auto;
 }
 .file-tab {
   align-items: center;
@@ -1184,111 +1212,26 @@ body.bonito-export-mode .hover-buttons, body.bonito-export-mode .cell-menu-proxi
   transition: all var(--transition-slow);
   cursor: pointer;
 }
+.file-tab:hover {
+  background-color: var(--hover-bg);
+  color: var(--text-primary);
+}
 .file-tab.active {
   font-weight: 500;
   border-bottom-color: var(--accent-blue);
   color: var(--text-primary);
 }
-.small-button.inactive:hover {
-  background-color: inherit;
-}
-.file-tab-add {
+.file-tab-content {
   align-items: center;
   display: flex;
-  padding: 8px 12px;
-  border-radius: 6px;
-  justify-content: center;
-  border: none;
-  background-color: transparent;
-  font-size: 16px;
-  line-height: 1;
-  transition: all var(--transition-slow);
-  cursor: pointer;
-  color: var(--text-secondary);
+  gap: 6px;
 }
-.new-cell-menu:hover .new-cell-buttons {
-  visibility: visible;
-  opacity: 1;
-}
-.sidebar-main-container.horizontal {
-  left: 0;
-  align-items: flex-end;
-  bottom: 0;
-  display: flex;
-  height: auto;
-  right: 0;
-  position: relative;
-  width: 100%;
-  flex-direction: column-reverse;
-}
-.bonitobook-button:hover {
-  border-color: var(--accent-blue);
-  background-color: var(--hover-bg);
-}
-.interactive-error-widget span[style*='font-weight: bold'] {
-  font-weight: 600;
-  color: var(--text-primary);
-}
-.sidebar-tabs {
-  align-items: center;
-  height: fit-content;
-  display: flex;
-  border-radius: 0 8px 8px 0;
-  flex-direction: column;
-  flex-shrink: 0;
-  width: 48px;
-  padding-top: var(--spacing-sm);
-  gap: var(--spacing-xs);
-  pointer-events: auto;
-  border-left: 1px solid var(--border-primary);
-}
-.book-cells {
-  width: fit-content;
-}
-.file-tab:hover {
-  background-color: var(--hover-bg);
-  color: var(--text-primary);
-}
-.bonitobook-button {
-  min-width: 80px;
-  font-weight: 500;
-  align-items: center;
-  display: inline-flex;
-  padding: var(--spacing-sm) var(--spacing-lg);
-  box-shadow: var(--shadow-button);
-  border-radius: var(--spacing-xs);
-  justify-content: center;
-  border: 1px solid var(--border-secondary);
-  background-color: var(--bg-primary);
-  font-size: var(--font-size-base);
-  transition: all var(--transition-slow);
-  cursor: pointer;
-  color: var(--text-primary);
-}
-.manipulate-output {
-  align-items: center;
-  display: flex;
-  padding: var(--spacing-md);
-  min-height: 100px;
-  border-radius: var(--spacing-xs);
-  justify-content: center;
-}
-.bonitobook-input:disabled {
-  background-color: var(--hover-bg);
-  color: var(--text-secondary);
-  cursor: not-allowed;
-}
-.bonitobook-checkbox:focus {
-  border-color: var(--accent-blue);
-  box-shadow: var(--shadow-focus);
-  outline: none;
-}
-.bonitobook-dropdown:focus {
-  border-color: var(--accent-blue);
-  box-shadow: var(--shadow-focus);
-}
-.gap-10 {
-  gap: 10px;
+.file-tab-name {
+  max-width: 150px;
+  font-size: var(--font-size-sm);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
 }
 .file-tab-close {
   align-items: center;
@@ -1305,23 +1248,88 @@ body.bonito-export-mode .hover-buttons, body.bonito-export-mode .cell-menu-proxi
   cursor: pointer;
   color: var(--text-secondary);
 }
-.center-content {
-  align-items: center;
-  justify-content: center;
+.file-tab-close:hover {
+  background-color: var(--hover-bg);
+  color: var(--text-primary);
 }
-.small-button {
+.file-tab-add {
   align-items: center;
-  display: inline-flex;
-  padding: var(--spacing-sm);
-  box-shadow: var(--shadow-button);
-  border-radius: var(--spacing-sm);
+  display: flex;
+  padding: 8px 12px;
+  border-radius: 6px;
   justify-content: center;
-  margin-right: var(--spacing-xs);
   border: none;
-  background-color: var(--bg-primary);
-  transition: background-color var(--transition-slow);
+  background-color: transparent;
+  font-size: 16px;
+  line-height: 1;
+  transition: all var(--transition-slow);
   cursor: pointer;
   color: var(--text-secondary);
+}
+.file-tab-add:hover {
+  background-color: var(--hover-bg);
+  color: var(--text-primary);
+}
+.file-editor {
+  min-width: var(--editor-width);
+  height: calc(100vh - 20px);
+  padding: 0;
+  width: 100%;
+  margin: 0;
+}
+.new-cell-menu {
+  align-items: center;
+  height: 0.5rem;
+  display: flex;
+  position: relative;
+  width: 100%;
+  padding-left: 0;
+  justify-content: center;
+}
+.new-cell-plus {
+  left: -1rem;
+  font-weight: 1000;
+  opacity: 0.3;
+  align-items: center;
+  display: flex;
+  position: absolute;
+  justify-content: center;
+  font-size: 1.2em;
+  top: 0;
+  transition: opacity 0.2s;
+  cursor: pointer;
+  transform: translate(0, -50%);
+}
+.new-cell-menu:hover .new-cell-plus {
+  opacity: 1;
+}
+.new-cell-buttons {
+  left: 0;
+  visibility: hidden;
+  display: flex;
+  padding: 4px 4px;
+  top: 0;
+  position: absolute;
+  z-index: var(--z-modal);
+  transform: translate(0, -50%);
+  opacity: 0;
+  transition: opacity 0.2s, visibility 0.2s;
+}
+.new-cell-menu:hover .new-cell-buttons {
+  visibility: visible;
+  opacity: 1;
+}
+.popup-overlay {
+  left: 0;
+  align-items: center;
+  height: 100vh;
+  display: flex;
+  background-color: rgba(0, 0, 0, 0.5);
+  top: 0;
+  position: fixed;
+  width: 100vw;
+  z-index: var(--z-popup);
+  justify-content: center;
 }
 .popup-content {
   max-height: 90vh;
@@ -1337,111 +1345,6 @@ body.bonito-export-mode .hover-buttons, body.bonito-export-mode .cell-menu-proxi
   max-width: 90vw;
   color: var(--text-primary);
   margin: 20px;
-}
-.book-content {
-  height: 100%;
-  display: flex;
-  position: relative;
-  width: 100%;
-  flex-direction: row;
-  overflow: hidden;
-}
-.sidebar-content-container.horizontal {
-  transition: height 0.3s ease, opacity 0.3s ease;
-  visibility: visible;
-  border-top: 1px solid var(--border-primary);
-  width: 100%;
-  opacity: 1;
-  overflow: hidden;
-}
-.sidebar-content-container.expanded {
-  visibility: visible;
-  opacity: 1;
-}
-.sidebar-widget-content.hide {
-  display: none;
-}
-.book-main-menu .file-tabs-container {
-  border-bottom: none;
-  justify-content: center;
-}
-.bonitobook-input {
-  border: 1px solid var(--border-secondary);
-  background-color: var(--bg-primary);
-  font-size: var(--font-size-base);
-  padding: var(--spacing-sm) var(--spacing-md);
-  color: var(--text-primary);
-  outline: none;
-  width: 100%;
-  border-radius: var(--spacing-xs);
-  transition: all var(--transition-slow);
-}
-.bonitobook-slider::-moz-range-track {
-  height: 6px;
-  border: none;
-  width: 100%;
-  border-radius: var(--spacing-xxs);
-  background: var(--border-secondary);
-}
-.popup-overlay {
-  left: 0;
-  align-items: center;
-  height: 100vh;
-  display: flex;
-  background-color: rgba(0, 0, 0, 0.5);
-  top: 0;
-  position: fixed;
-  width: 100vw;
-  z-index: var(--z-popup);
-  justify-content: center;
-}
-.file-tab-add:hover {
-  background-color: var(--hover-bg);
-  color: var(--text-primary);
-}
-.bonitobook-slider::-webkit-slider-thumb:hover {
-  box-shadow: 0 var(--spacing-xxs) var(--spacing-xs) 0 var(--shadow-color-button);
-  transform: scale(1.1);
-}
-::-webkit-scrollbar-thumb:hover {
-  background-color: var(--scrollbar-thumb-hover);
-}
-.book-document {
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-.fit-content {
-  width: fit-content;
-}
-.full-width {
-  width: 100%;
-}
-.sidebar-content-container.vertical {
-  height: fit-content;
-  display: flex;
-  box-shadow: -var(--spacing-xs) 0 var(--spacing-sm) 0 var(--shadow-color-soft);
-  max-height: 80vh;
-  border-left: 1px solid var(--border-primary);
-  border-radius: 8px 0 0 8px;
-  flex-direction: column;
-}
-.interactive-error-widget h4 {
-  font-size: 1.1em;
-  font-weight: 600;
-  color: #dc3545;
-  margin: 0 0 var(--spacing-sm) 0;
-}
-.file-editor {
-  min-width: var(--editor-width);
-  height: calc(100vh - 20px);
-  padding: 0;
-  width: 100%;
-  margin: 0;
-}
-.bonitobook-dropdown:hover {
-  border-color: var(--accent-blue);
 }
 .popup-close-button {
   z-index: var(--z-popup-close);
@@ -1463,22 +1366,58 @@ body.bonito-export-mode .hover-buttons, body.bonito-export-mode .cell-menu-proxi
   color: var(--text-secondary);
   background: none;
 }
-.sidebar-toggle-button.hidden {
-  display: none;
+.popup-close-button:hover {
+  background-color: var(--hover-bg);
+  color: var(--text-primary);
 }
-::-webkit-scrollbar-thumb {
-  border: 2px solid var(--scrollbar-track);
-  background-color: var(--scrollbar-thumb);
-  border-radius: 6px;
-}
-.new-cell-menu {
-  align-items: center;
-  height: 0.5rem;
+.book-main-menu {
   display: flex;
   position: relative;
   width: 100%;
-  padding-left: 0;
+  flex-direction: row;
   justify-content: center;
+}
+.book-main-menu .file-tabs-container {
+  border-bottom: none;
+  justify-content: center;
+}
+.book-content {
+  height: 100%;
+  display: flex;
+  position: relative;
+  width: 100%;
+  flex-direction: row;
+  overflow: hidden;
+}
+.book-cells {
+  width: fit-content;
+}
+.book-cells-area {
+  display: grid;
+  place-items: center;
+  overflow-y: auto;
+  width: 100%;
+  overflow-x: hidden;
+}
+.book-main-content {
+  overflow: hidden;
+}
+.book-document {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.book-wrapper {
+  height: 100vh;
+  overflow: hidden;
+}
+.book-bottom-panel {
+  left: 0;
+  bottom: 0;
+  right: 0;
+  position: fixed;
+  z-index: var(--z-modal);
 }
 .sidebar-main-container {
   display: flex;
@@ -1486,6 +1425,262 @@ body.bonito-export-mode .hover-buttons, body.bonito-export-mode .cell-menu-proxi
   pointer-events: none;
   position: fixed;
   z-index: var(--z-sidebar);
+}
+.sidebar-main-container.vertical {
+  align-items: center;
+  height: fit-content;
+  max-height: 90vh;
+  top: 50%;
+  transform: translateY(-50%);
+  flex-direction: row-reverse;
+}
+.sidebar-main-container.horizontal {
+  left: 0;
+  align-items: flex-end;
+  bottom: 0;
+  display: flex;
+  height: auto;
+  right: 0;
+  position: relative;
+  width: 100%;
+  flex-direction: column-reverse;
+}
+.sidebar-content-container {
+  pointer-events: auto;
+  transition: width 0.3s ease, opacity 0.3s ease;
+  overflow: hidden;
+}
+.sidebar-content-container.vertical {
+  height: fit-content;
+  display: flex;
+  box-shadow: -var(--spacing-xs) 0 var(--spacing-sm) 0 var(--shadow-color-soft);
+  max-height: 80vh;
+  border-left: 1px solid var(--border-primary);
+  border-radius: 8px 0 0 8px;
+  flex-direction: column;
+}
+.sidebar-content-container.collapsed {
+  visibility: hidden;
+  width: 0;
+  opacity: 0;
+}
+.sidebar-content-container.expanded {
+  visibility: visible;
+  opacity: 1;
+}
+.sidebar-content-container.vertical.expanded {
+  width: var(--sidebar-width, 400px);
+}
+.sidebar-content-container.horizontal.expanded {
+  visibility: visible;
+  height: var(--sidebar-height, 300px);
+  opacity: 1;
+}
+.sidebar-content-container.horizontal {
+  transition: height 0.3s ease, opacity 0.3s ease;
+  visibility: visible;
+  border-top: 1px solid var(--border-primary);
+  width: 100%;
+  opacity: 1;
+  overflow: hidden;
+}
+.sidebar-content-container.horizontal.collapsed {
+  visibility: hidden;
+  height: 0;
+  opacity: 0;
+}
+.sidebar-tabs.horizontal {
+  height: auto;
+  display: flex;
+  padding: var(--spacing-xs);
+  background-color: var(--bg-primary);
+  border-top: 1px solid var(--border-primary);
+  width: 100%;
+  flex-direction: row;
+  justify-content: center;
+}
+.sidebar-tabs {
+  align-items: center;
+  height: fit-content;
+  display: flex;
+  border-radius: 0 8px 8px 0;
+  flex-direction: column;
+  flex-shrink: 0;
+  width: 48px;
+  padding-top: var(--spacing-sm);
+  gap: var(--spacing-xs);
+  pointer-events: auto;
+  border-left: 1px solid var(--border-primary);
+}
+.sidebar-tab {
+  position: relative;
+}
+.sidebar-tab.active::before {
+  left: 0;
+  height: 18px;
+  content: '';
+  background-color: var(--accent-blue);
+  top: 50%;
+  position: absolute;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  transform: translateY(-50%);
+}
+.sidebar-toggle-button {
+  align-items: center;
+  height: var(--width-md);
+  display: flex;
+  border-radius: var(--spacing-xs);
+  justify-content: center;
+  margin-top: auto;
+  border: none;
+  background-color: transparent;
+  width: var(--width-md);
+  transition: all var(--transition-slow);
+  margin-bottom: var(--spacing-sm);
+  cursor: pointer;
+  color: var(--icon-color);
+}
+.sidebar-toggle-button:hover {
+  background-color: var(--hover-bg);
+  color: var(--icon-hover-color);
+}
+.sidebar-toggle-button.hidden {
+  display: none;
+}
+.sidebar-content {
+  height: 100%;
+  padding: 0;
+  position: relative;
+  overflow-y: auto;
+  width: 100%;
+  overflow-x: hidden;
+}
+.sidebar-content-container.vertical .sidebar-content {
+  height: fit-content;
+  min-height: 200px;
+  overflow-y: visible;
+}
+.sidebar-widget-content {
+  height: fit-content;
+  width: 100%;
+}
+.sidebar-widget-content.hide {
+  display: none;
+}
+.sidebar-widget-content.show {
+  display: block;
+}
+.sidebar-resize-handle {
+  background-color: transparent;
+  position: absolute;
+  z-index: var(--z-dropdown);
+  transition: background-color 0.2s ease;
+}
+.sidebar-resize-handle:hover {
+  background-color: var(--accent-blue);
+  opacity: 0.5;
+}
+.sidebar-resize-handle.vertical {
+  left: 0;
+  bottom: 0;
+  top: 0;
+  width: 4px;
+  cursor: ew-resize;
+}
+.sidebar-resize-handle.horizontal {
+  left: 0;
+  height: 4px;
+  right: 0;
+  top: 0;
+  cursor: ns-resize;
+}
+.bonitobook-button {
+  min-width: 80px;
+  font-weight: 500;
+  align-items: center;
+  display: inline-flex;
+  padding: var(--spacing-sm) var(--spacing-lg);
+  box-shadow: var(--shadow-button);
+  border-radius: var(--spacing-xs);
+  justify-content: center;
+  border: 1px solid var(--border-secondary);
+  background-color: var(--bg-primary);
+  font-size: var(--font-size-base);
+  transition: all var(--transition-slow);
+  cursor: pointer;
+  color: var(--text-primary);
+}
+.bonitobook-button:hover {
+  border-color: var(--accent-blue);
+  background-color: var(--hover-bg);
+}
+.bonitobook-button:focus {
+  border-color: var(--accent-blue);
+  box-shadow: var(--shadow-focus);
+  outline: none;
+}
+.bonitobook-button:active {
+  box-shadow: 0 var(--spacing-xs) var(--spacing-sm) 0 var(--shadow-color-button);
+  transform: translateY(1px);
+}
+.bonitobook-input {
+  border: 1px solid var(--border-secondary);
+  background-color: var(--bg-primary);
+  font-size: var(--font-size-base);
+  padding: var(--spacing-sm) var(--spacing-md);
+  color: var(--text-primary);
+  outline: none;
+  width: 100%;
+  border-radius: var(--spacing-xs);
+  transition: all var(--transition-slow);
+}
+.bonitobook-input:hover {
+  border-color: var(--accent-blue);
+}
+.bonitobook-input:focus {
+  border-color: var(--accent-blue);
+  box-shadow: var(--shadow-focus);
+}
+.bonitobook-input:disabled {
+  background-color: var(--hover-bg);
+  color: var(--text-secondary);
+  cursor: not-allowed;
+}
+.bonitobook-checkbox {
+  appearance: none;
+  -webkit-appearance: none;
+  height: var(--width-xs);
+  position: relative;
+  border-radius: var(--spacing-xxs);
+  border: 1px solid var(--border-secondary);
+  flex-shrink: 0;
+  width: var(--width-xs);
+  transition: all var(--transition-slow);
+  cursor: pointer;
+  margin: 0 var(--spacing-sm) 0 0;
+}
+.bonitobook-checkbox:hover {
+  border-color: var(--accent-blue);
+}
+.bonitobook-checkbox:focus {
+  border-color: var(--accent-blue);
+  box-shadow: var(--shadow-focus);
+  outline: none;
+}
+.bonitobook-checkbox:checked {
+  border-color: var(--accent-blue);
+  background-color: var(--accent-blue);
+}
+.bonitobook-checkbox:checked::after {
+  left: 50%;
+  content: "✓";
+  font-size: var(--font-size-xs);
+  top: 50%;
+  color: white;
+  position: absolute;
+  line-height: 1;
+  transform: translate(-50%, -50%);
 }
 .bonitobook-dropdown {
   appearance: none;
@@ -1505,198 +1700,22 @@ body.bonito-export-mode .hover-buttons, body.bonito-export-mode .cell-menu-proxi
   background-size: var(--spacing-md);
   color: var(--text-primary);
 }
-.bonitobook-input:hover {
+.bonitobook-dropdown:hover {
   border-color: var(--accent-blue);
 }
-.sidebar-widget-content {
-  height: fit-content;
-  width: 100%;
+.bonitobook-dropdown:focus {
+  border-color: var(--accent-blue);
+  box-shadow: var(--shadow-focus);
 }
-.bonitobook-slider:focus {
-  outline: none;
-}
-.sidebar-content {
-  height: 100%;
-  padding: 0;
-  position: relative;
-  overflow-y: auto;
-  width: 100%;
-  overflow-x: hidden;
-}
-.interactive-error-widget .collapsible-content > div > div {
-  transition: background-color 0.2s ease;
-  font-size: var(--font-size-xs);
-  padding: 4px 8px;
-  font-family: SFMono-Regular, Consolas, Liberation Mono, Menlo, Courier, monospace;
-  border-left: 3px solid var(--border-primary);
-  border-radius: 0 4px 4px 0;
-  line-height: 1.4;
-  margin: 2px 0;
-}
-.error-file-link:hover {
-  background-color: rgba(3, 102, 214, 0.1);
-  text-decoration: underline;
-}
-.sidebar-resize-handle.horizontal {
-  left: 0;
-  height: 4px;
-  right: 0;
-  top: 0;
-  cursor: ns-resize;
-}
-::-webkit-scrollbar-track {
-  background: var(--scrollbar-track);
-}
-.sidebar-content-container.horizontal.expanded {
-  visibility: visible;
-  height: var(--sidebar-height, 300px);
-  opacity: 1;
-}
-.sidebar-resize-handle.vertical {
-  left: 0;
-  bottom: 0;
-  top: 0;
-  width: 4px;
-  cursor: ew-resize;
-}
-.sidebar-main-container.vertical {
-  align-items: center;
-  height: fit-content;
-  max-height: 90vh;
-  top: 50%;
-  transform: translateY(-50%);
-  flex-direction: row-reverse;
-}
-.sidebar-tabs.horizontal {
-  height: auto;
-  display: flex;
-  padding: var(--spacing-xs);
+.bonitobook-card {
+  border: 1px solid var(--border-secondary);
   background-color: var(--bg-primary);
-  border-top: 1px solid var(--border-primary);
-  width: 100%;
-  flex-direction: row;
-  justify-content: center;
-}
-.small-button.inactive {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-.new-cell-buttons {
-  left: 0;
-  visibility: hidden;
-  display: flex;
-  padding: 4px 4px;
-  top: 0;
-  position: absolute;
-  z-index: var(--z-modal);
-  transform: translate(0, -50%);
-  opacity: 0;
-  transition: opacity 0.2s, visibility 0.2s;
-}
-.sidebar-tab.active::before {
-  left: 0;
-  height: 18px;
-  content: '';
-  background-color: var(--accent-blue);
-  top: 50%;
-  position: absolute;
-  width: 3px;
-  border-radius: 0 3px 3px 0;
-  transform: translateY(-50%);
-}
-.sidebar-content-container.collapsed {
-  visibility: hidden;
-  width: 0;
-  opacity: 0;
-}
-.file-tab-content {
-  align-items: center;
-  display: flex;
-  gap: 6px;
-}
-.small-button:hover {
-  background-color: var(--hover-bg);
-}
-.sidebar-content-container.vertical .sidebar-content {
-  height: fit-content;
-  min-height: 200px;
-  overflow-y: visible;
-}
-.new-cell-plus {
-  left: -1rem;
-  font-weight: 1000;
-  opacity: 0.3;
-  align-items: center;
-  display: flex;
-  position: absolute;
-  justify-content: center;
-  font-size: 1.2em;
-  top: 0;
-  transition: opacity 0.2s;
-  cursor: pointer;
-  transform: translate(0, -50%);
-}
-.popup-close-button:hover {
-  background-color: var(--hover-bg);
+  box-shadow: var(--shadow-soft);
+  padding: var(--spacing-sm);
   color: var(--text-primary);
-}
-.error-file-link {
-  padding: 1px 3px;
-  text-decoration: none;
-  color: var(--accent-blue);
-  font-family: SFMono-Regular, Consolas, Liberation Mono, Menlo, Courier, monospace;
-  border-radius: 3px;
-  transition: all var(--transition-slow);
-  cursor: pointer;
-}
-.flex-column {
-  display: flex;
-  flex-direction: column;
-}
-.bonitobook-slider::-moz-range-thumb {
-  cursor: pointer;
-  height: var(--width-sm);
-  border: 2px solid var(--bg-primary);
-  box-shadow: 0 var(--spacing-xxs) 6px 0 var(--shadow-color-button);
-  width: var(--width-sm);
-  border-radius: 50%;
-  transition: all 0.2s ease;
-  background: var(--accent-blue);
-}
-.file-tab-close:hover {
-  background-color: var(--hover-bg);
-  color: var(--text-primary);
-}
-.book-main-content {
-  overflow: hidden;
-}
-.book-wrapper {
-  height: 100vh;
-  overflow: hidden;
-}
-.bonitobook-checkbox:checked {
-  border-color: var(--accent-blue);
-  background-color: var(--accent-blue);
-}
-.bonitobook-checkbox:checked::after {
-  left: 50%;
-  content: "✓";
-  font-size: var(--font-size-xs);
-  top: 50%;
-  color: white;
-  position: absolute;
-  line-height: 1;
-  transform: translate(-50%, -50%);
-}
-.interactive-error-widget {
-  border: 1px solid #dc3545;
-  padding: var(--spacing-lg);
-  box-shadow: 0 var(--spacing-xxs) var(--spacing-sm) 0 var(--shadow-color-soft);
   border-radius: var(--spacing-sm);
-  margin: var(--spacing-sm) 0;
-}
-.book-spinner.hidden {
-  opacity: 0;
+  margin: var(--spacing-sm);
+  overflow: hidden;
 }
 .bonitobook-slider {
   cursor: pointer;
@@ -1708,47 +1727,6 @@ body.bonito-export-mode .hover-buttons, body.bonito-export-mode .cell-menu-proxi
   border-radius: var(--spacing-xxs);
   transition: all 0.2s ease;
   background: var(--border-secondary);
-}
-.interactive-error-widget pre {
-  border: 1px solid rgba(220, 53, 69, 0.2);
-  font-size: var(--font-size-sm);
-  padding: var(--spacing-md);
-  white-space: pre-wrap;
-  word-wrap: break-word;
-  font-family: SFMono-Regular, Consolas, Liberation Mono, Menlo, Courier, monospace;
-  border-radius: var(--spacing-xs);
-  line-height: 1.4;
-  margin: var(--spacing-sm) 0;
-}
-.manipulate-controls {
-  display: flex;
-  padding: var(--spacing-md);
-  gap: var(--spacing-md);
-  flex-direction: column;
-}
-.book-main-menu {
-  display: flex;
-  position: relative;
-  width: 100%;
-  flex-direction: row;
-  justify-content: center;
-}
-.sidebar-resize-handle {
-  background-color: transparent;
-  position: absolute;
-  z-index: var(--z-dropdown);
-  transition: background-color 0.2s ease;
-}
-@keyframes spinner-stripes {
-  0% {
-    background-position: 0 0;
-  }
-  100% {
-    background-position: 40px 0;
-  }
-}
-.inline-block {
-  display: inline-block;
 }
 .bonitobook-slider::-webkit-slider-thumb {
   cursor: pointer;
@@ -1762,87 +1740,32 @@ body.bonito-export-mode .hover-buttons, body.bonito-export-mode .cell-menu-proxi
   transition: all 0.2s ease;
   background: var(--accent-blue);
 }
-.sidebar-widget-content.show {
-  display: block;
+.bonitobook-slider::-webkit-slider-thumb:hover {
+  box-shadow: 0 var(--spacing-xxs) var(--spacing-xs) 0 var(--shadow-color-button);
+  transform: scale(1.1);
 }
-.max-width-90ch {
-  max-width: 90ch;
+.bonitobook-slider::-moz-range-thumb {
+  cursor: pointer;
+  height: var(--width-sm);
+  border: 2px solid var(--bg-primary);
+  box-shadow: 0 var(--spacing-xxs) 6px 0 var(--shadow-color-button);
+  width: var(--width-sm);
+  border-radius: 50%;
+  transition: all 0.2s ease;
+  background: var(--accent-blue);
 }
-.manipulate-widget {
-  min-width: 0;
-  flex: 1;
-}
-.bonitobook-button:active {
-  box-shadow: 0 var(--spacing-xs) var(--spacing-sm) 0 var(--shadow-color-button);
-  transform: translateY(1px);
-}
-.bonitobook-checkbox {
-  appearance: none;
-  -webkit-appearance: none;
-  height: var(--width-xs);
-  position: relative;
+.bonitobook-slider::-moz-range-track {
+  height: 6px;
+  border: none;
+  width: 100%;
   border-radius: var(--spacing-xxs);
-  border: 1px solid var(--border-secondary);
-  flex-shrink: 0;
-  width: var(--width-xs);
-  transition: all var(--transition-slow);
-  cursor: pointer;
-  margin: 0 var(--spacing-sm) 0 0;
+  background: var(--border-secondary);
 }
-.small-button.toggled {
-  border: none;
-  box-shadow: var(--shadow-inset);
-  filter: grayscale(100%);
-  color: var(--text-primary);
-  opacity: 0.5;
+.bonitobook-slider:focus {
+  outline: none;
 }
-.sidebar-toggle-button {
-  align-items: center;
-  height: var(--width-md);
-  display: flex;
-  border-radius: var(--spacing-xs);
-  justify-content: center;
-  margin-top: auto;
-  border: none;
-  background-color: transparent;
-  width: var(--width-md);
-  transition: all var(--transition-slow);
-  margin-bottom: var(--spacing-sm);
-  cursor: pointer;
-  color: var(--icon-color);
-}
-.sidebar-content-container {
-  pointer-events: auto;
-  transition: width 0.3s ease, opacity 0.3s ease;
-  overflow: hidden;
-}
-.file-tab-name {
-  max-width: 150px;
-  font-size: var(--font-size-sm);
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  overflow: hidden;
-}
-.sidebar-toggle-button:hover {
-  background-color: var(--hover-bg);
-  color: var(--icon-hover-color);
-}
-.book-bottom-panel {
-  left: 0;
-  bottom: 0;
-  right: 0;
-  position: fixed;
-  z-index: var(--z-modal);
-}
-.small-menu-bar {
-  align-items: center;
-  display: flex;
-  border: 1px solid var(--border-primary);
-  padding: 6px;
-  box-shadow: var(--shadow-soft);
-  gap: 4px;
-  z-index: var(--z-menu);
-  border-radius: var(--spacing-sm);
+.bonitobook-slider:focus::-webkit-slider-thumb {
+  box-shadow: var(--shadow-focus), 0 var(--spacing-xxs) 6px 0 var(--shadow-color-button);
 }
 .manipulate-container {
   display: flex;
@@ -1853,34 +1776,116 @@ body.bonito-export-mode .hover-buttons, body.bonito-export-mode .cell-menu-proxi
   margin: var(--spacing-lg) 0;
   flex-direction: column;
 }
-.bonitobook-button:focus {
-  border-color: var(--accent-blue);
-  box-shadow: var(--shadow-focus);
-  outline: none;
-}
-.file-tabs-container {
+.manipulate-controls {
   display: flex;
-  border-bottom: 1px solid var(--border-primary);
+  padding: var(--spacing-md);
+  gap: var(--spacing-md);
+  flex-direction: column;
+}
+.manipulate-control-row {
+  align-items: center;
+  display: flex;
+  gap: var(--spacing-md);
+}
+.manipulate-label {
+  min-width: 120px;
+  font-size: var(--font-size-sm);
+  font-weight: 500;
   flex-shrink: 0;
-  overflow-x: auto;
+  color: var(--text-secondary);
+  text-align: left;
 }
-.bonitobook-input:focus {
-  border-color: var(--accent-blue);
-  box-shadow: var(--shadow-focus);
+.manipulate-widget {
+  min-width: 0;
+  flex: 1;
 }
-.book-cells-area {
-  display: grid;
-  place-items: center;
-  overflow-y: auto;
-  width: 100%;
-  overflow-x: hidden;
-}
-.flex-row {
+.manipulate-output {
+  align-items: center;
   display: flex;
-  flex-direction: row;
+  padding: var(--spacing-md);
+  min-height: 100px;
+  border-radius: var(--spacing-xs);
+  justify-content: center;
 }
-.sidebar-content-container.vertical.expanded {
-  width: var(--sidebar-width, 400px);
+.book-spinner {
+  height: 8px;
+  display: block;
+  box-shadow: 0 0 var(--spacing-sm) 0 var(--shadow-color-soft);
+  position: relative;
+  border-radius: 4px;
+  animation: spinner-stripes 1.5s linear infinite;
+  width: 100%;
+  overflow: hidden;
+  background-size: 40px 100%;
+  pointer-events: none;
+  background: repeating-linear-gradient(45deg, var(--accent-blue) 0px, var(--accent-blue) 10px, var(--border-primary) 10px, var(--border-primary) 20px);
+}
+@keyframes spinner-stripes {
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: 40px 0;
+  }
+}
+.book-spinner.hidden {
+  opacity: 0;
+}
+.interactive-error-widget {
+  border: 1px solid #dc3545;
+  padding: var(--spacing-lg);
+  box-shadow: 0 var(--spacing-xxs) var(--spacing-sm) 0 var(--shadow-color-soft);
+  border-radius: var(--spacing-sm);
+  margin: var(--spacing-sm) 0;
+}
+.interactive-error-widget h4 {
+  font-size: 1.1em;
+  font-weight: 600;
+  color: #dc3545;
+  margin: 0 0 var(--spacing-sm) 0;
+}
+.interactive-error-widget pre {
+  border: 1px solid rgba(220, 53, 69, 0.2);
+  font-size: var(--font-size-sm);
+  padding: var(--spacing-md);
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  font-family: SFMono-Regular, Consolas, Liberation Mono, Menlo, Courier, monospace;
+  border-radius: var(--spacing-xs);
+  line-height: 1.4;
+  margin: var(--spacing-sm) 0;
+}
+.interactive-error-widget .collapsible-content > div > div {
+  transition: background-color 0.2s ease;
+  font-size: var(--font-size-xs);
+  padding: 4px 8px;
+  font-family: SFMono-Regular, Consolas, Liberation Mono, Menlo, Courier, monospace;
+  border-left: 3px solid var(--border-primary);
+  border-radius: 0 4px 4px 0;
+  line-height: 1.4;
+  margin: 2px 0;
+}
+.error-file-link {
+  padding: 1px 3px;
+  text-decoration: none;
+  color: var(--accent-blue);
+  font-family: SFMono-Regular, Consolas, Liberation Mono, Menlo, Courier, monospace;
+  border-radius: 3px;
+  transition: all var(--transition-slow);
+  cursor: pointer;
+}
+.error-file-link:hover {
+  background-color: rgba(3, 102, 214, 0.1);
+  text-decoration: underline;
+}
+.interactive-error-widget span[style*='font-weight: bold'] {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+@media (max-width: 768px) {
+  :root {
+    --editor-width: 95vw;
+  }
 }
 @media (max-width: 480px) {
   :root {
@@ -1898,20 +1903,6 @@ body.bonito-export-mode .hover-buttons, body.bonito-export-mode .cell-menu-proxi
     left: -0.5rem;
   }
 }
-@media (max-width: 768px) {
-  :root {
-    --editor-width: 95vw;
-  }
-}
-.book-footer {
-  margin-top: 60px;
-  font-size: 0.85em;
-  padding: 30px 0;
-  border-top: 2px solid var(--border-primary);
-  color: var(--text-secondary);
-  text-align: center;
-  background: linear-gradient(0deg, rgba(249,250,251,0.3) 0%, var(--bg-primary) 100%);
-}
 .real-book-container {
   max-width: 1400px;
   display: flex;
@@ -1924,10 +1915,79 @@ body.bonito-export-mode .hover-buttons, body.bonito-export-mode .cell-menu-proxi
   margin: 20px auto;
   overflow: visible;
 }
+.book-toc-sidebar {
+  border-bottom-left-radius: 12px;
+  padding: 20px;
+  border-right: 2px solid var(--border-primary);
+  flex-shrink: 0;
+  position: relative;
+  overflow-y: auto;
+  border-top-left-radius: 12px;
+  width: 280px;
+  align-self: stretch;
+  background: linear-gradient(180deg, var(--bg-primary) 0%, rgba(249,250,251,0.6) 100%);
+}
+.toc-header {
+  font-size: 1.1em;
+  font-weight: 700;
+  padding-bottom: 8px;
+  border-bottom: 3px solid var(--accent-blue);
+  text-transform: uppercase;
+  color: var(--text-primary);
+  letter-spacing: 0.025em;
+  position: relative;
+  margin: 0 0 24px 0;
+}
+.toc-header::after {
+  left: 0;
+  bottom: -2px;
+  height: 2px;
+  content: '';
+  position: absolute;
+  width: 30%;
+  background: linear-gradient(90deg, var(--accent-blue), transparent);
+}
+.toc-link {
+  display: block;
+  font-weight: 400;
+  padding: 8px 12px;
+  text-decoration: none;
+  color: var(--text-primary);
+  border-left: 3px solid transparent;
+  border-radius: 6px;
+  line-height: 1.4;
+  transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+}
+.toc-link.level-1 {
+  margin-top: 16px;
+  font-size: 1.0em;
+  font-weight: 600;
+  color: var(--accent-blue);
+}
+.toc-link.level-2 {
+  margin-top: 8px;
+  font-size: 0.95em;
+  font-weight: 500;
+}
 .toc-link.level-3, .toc-link.level-4, .toc-link.level-5, .toc-link.level-6 {
   font-size: 0.9em;
   font-weight: 400;
   opacity: 0.85;
+}
+.toc-link:hover {
+  background-color: rgba(59, 130, 246, 0.08);
+  border-left-color: var(--accent-blue);
+  color: var(--accent-blue);
+  transform: translateX(4px);
+}
+.toc-item {
+  margin-bottom: 4px;
+}
+.toc-no-headings {
+  padding: 20px;
+  color: var(--text-secondary);
+  text-align: center;
+  font-style: italic;
 }
 .academic-content {
   align-items: center;
@@ -1947,6 +2007,23 @@ body.bonito-export-mode .hover-buttons, body.bonito-export-mode .cell-menu-proxi
   flex-direction: column;
   justify-content: flex-start;
 }
+.book-footer {
+  margin-top: 60px;
+  font-size: 0.85em;
+  padding: 30px 0;
+  border-top: 2px solid var(--border-primary);
+  color: var(--text-secondary);
+  text-align: center;
+  background: linear-gradient(0deg, rgba(249,250,251,0.3) 0%, var(--bg-primary) 100%);
+}
+.book-footer p:first-child {
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+.book-footer p:last-child {
+  opacity: 0.8;
+  font-style: italic;
+}
 @media (max-width: 900px) {
   .book-main-area {
     padding: 20px 30px !important;
@@ -1954,51 +2031,6 @@ body.bonito-export-mode .hover-buttons, body.bonito-export-mode .cell-menu-proxi
   .book-toc-sidebar {
     width: 220px !important;
   }
-}
-.toc-item {
-  margin-bottom: 4px;
-}
-.toc-header::after {
-  left: 0;
-  bottom: -2px;
-  height: 2px;
-  content: '';
-  position: absolute;
-  width: 30%;
-  background: linear-gradient(90deg, var(--accent-blue), transparent);
-}
-.toc-no-headings {
-  padding: 20px;
-  color: var(--text-secondary);
-  text-align: center;
-  font-style: italic;
-}
-.book-footer p:last-child {
-  opacity: 0.8;
-  font-style: italic;
-}
-.book-toc-sidebar {
-  border-bottom-left-radius: 12px;
-  padding: 20px;
-  border-right: 2px solid var(--border-primary);
-  flex-shrink: 0;
-  position: relative;
-  overflow-y: auto;
-  border-top-left-radius: 12px;
-  width: 280px;
-  align-self: stretch;
-  background: linear-gradient(180deg, var(--bg-primary) 0%, rgba(249,250,251,0.6) 100%);
-}
-.toc-link {
-  display: block;
-  font-weight: 400;
-  padding: 8px 12px;
-  text-decoration: none;
-  color: var(--text-primary);
-  border-left: 3px solid transparent;
-  border-radius: 6px;
-  line-height: 1.4;
-  transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
 }
 @media (prefers-color-scheme: dark) {
   .book-footer {
@@ -2008,42 +2040,10 @@ body.bonito-export-mode .hover-buttons, body.bonito-export-mode .cell-menu-proxi
     background: linear-gradient(180deg, var(--bg-primary) 0%, rgba(30,30,30,0.6) 100%);
   }
 }
-.toc-header {
-  font-size: 1.1em;
-  font-weight: 700;
-  padding-bottom: 8px;
-  border-bottom: 3px solid var(--accent-blue);
-  text-transform: uppercase;
-  color: var(--text-primary);
-  letter-spacing: 0.025em;
-  position: relative;
-  margin: 0 0 24px 0;
-}
-.book-footer p:first-child {
-  font-weight: 500;
-  margin-bottom: 8px;
-}
-.toc-link.level-2 {
-  margin-top: 8px;
-  font-size: 0.95em;
-  font-weight: 500;
-}
-.toc-link.level-1 {
-  margin-top: 16px;
-  font-size: 1.0em;
-  font-weight: 600;
-  color: var(--accent-blue);
-}
-.toc-link:hover {
-  background-color: rgba(59, 130, 246, 0.08);
-  border-left-color: var(--accent-blue);
-  color: var(--accent-blue);
-  transform: translateX(4px);
-}
 </style>
                 </div>
                 <div data-jscall-id="17">
-                  <script data-jscall-id="18" type="module">Bonito.init_session("c4d36953-c7cb-4fbf-8f91-c45f49fd976b", null, "sub", false);
+                  <script data-jscall-id="18" type="module">Bonito.init_session("0c7680ef-c997-4eb4-9a11-35ddcaa7f531", null, "sub", false);
 </script>
                   <span data-jscall-id="12"></span>
                 </div>
@@ -2124,24 +2124,24 @@ body.bonito-export-mode .hover-buttons, body.bonito-export-mode .cell-menu-proxi
             </div>
             <div class="book-main-area" data-jscall-id="67">
               <div class="book-main-content academic-content" data-jscall-id="68">
-                <div class="cell-editor-container editor-collapsed" id="4272b9a7-5941-40a7-8e73-eb7ef74e1541" data-jscall-id="69">
-                  <div class=" style_4" style="" data-jscall-id="70" id="4272b9a7-5941-40a7-8e73-eb7ef74e1541-container" tabindex="0">
-                    <div class=" style_4" style="" data-jscall-id="71">
-                      <div class="hover-buttons" id="4272b9a7-5941-40a7-8e73-eb7ef74e1541-hover" data-jscall-id="72">
+                <div class="cell-editor-container editor-collapsed" id="4346e202-4b8c-4fbd-9a5c-55ce6172a1ab" data-jscall-id="69">
+                  <div class=" style_7" style="" data-jscall-id="70" id="4346e202-4b8c-4fbd-9a5c-55ce6172a1ab-container" tabindex="0">
+                    <div class=" style_7" style="" data-jscall-id="71">
+                      <div class="hover-buttons" id="4346e202-4b8c-4fbd-9a5c-55ce6172a1ab-hover" data-jscall-id="72">
                         <button onclick="" class="small-button toggle-button" data-jscall-id="73">
-                          <img class="codicon  style_7" style="" data-jscall-id="74" src="../../bonito/svg/code18139302498156533340.svg" />
+                          <img class="codicon  style_4" style="" data-jscall-id="74" src="../../bonito/svg/code18139302498156533340.svg" />
                         </button>
                         <button onclick="" class="small-button toggle-button" data-jscall-id="75">
-                          <img class="codicon  style_7" style="" data-jscall-id="76" src="../../bonito/svg/terminal3126302118537120484.svg" />
+                          <img class="codicon  style_4" style="" data-jscall-id="76" src="../../bonito/svg/terminal3126302118537120484.svg" />
                         </button>
                         <button onclick="" class="small-button toggle-button active" data-jscall-id="77">
-                          <img class="codicon  style_7" style="" data-jscall-id="78" src="../../bonito/svg/graph187889671474048740.svg" />
+                          <img class="codicon  style_4" style="" data-jscall-id="78" src="../../bonito/svg/graph187889671474048740.svg" />
                         </button>
                         <button onclick="" class="small-button" data-jscall-id="79">
                           <img class="codicon  style_5" style="" data-jscall-id="80" src="../../bonito/svg/close17235711529866555203.svg" />
                         </button>
                       </div>
-                      <div class="cell-editor hide-vertical" id="4272b9a7-5941-40a7-8e73-eb7ef74e1541-card-content" data-jscall-id="81" style="position: relative;">
+                      <div class="cell-editor hide-vertical" id="4346e202-4b8c-4fbd-9a5c-55ce6172a1ab-card-content" data-jscall-id="81" style="position: relative;">
                         <div data-jscall-id="82">
                           <div class="monaco-editor-div language-markdown hide-horizontal" data-jscall-id="83"></div>
                         </div>
@@ -2155,7 +2155,7 @@ body.bonito-export-mode .hover-buttons, body.bonito-export-mode .cell-menu-proxi
                       <div data-jscall-id="89" tabindex="0">
                         <div class="cell-output cell-output-markdown " data-jscall-id="84">
                           <div data-jscall-id="141">
-                            <div class="bonito-fragment" id="b2be4475-025c-4356-8a64-8dbf075bf202" data-jscall-id="subsession-application-dom">
+                            <div class="bonito-fragment" id="3678130a-94e8-46a9-b239-9ecaf48fa64d" data-jscall-id="subsession-application-dom">
                               <div data-jscall-id="142">
                                 <style data-jscall-id="143">.style_2 {
   list-style-type: disc;
@@ -2164,7 +2164,7 @@ body.bonito-export-mode .hover-buttons, body.bonito-export-mode .cell-menu-proxi
                                 <link href="../../bonito/css/katex.min6751968427317360032.css" data-jscall-id="144" rel="stylesheet" type="text/css" />
                               </div>
                               <div data-jscall-id="145">
-                                <script data-jscall-id="146" type="module">Bonito.init_session("b2be4475-025c-4356-8a64-8dbf075bf202", Bonito.fetch_binary('../../bonito/bin/6d525736522d9e767a4bfd3d7b027e9520fabb76-11629750433298645702.bin'), "sub", false);
+                                <script data-jscall-id="146" type="module">Bonito.init_session("3678130a-94e8-46a9-b239-9ecaf48fa64d", Bonito.fetch_binary('../../bonito/bin/7d2c5e5101ef84acda074529be54406b1d2046a9-12560948194917256094.bin'), "sub", false);
 </script>
                                 <span data-jscall-id="90">
                                   <div class="markdown-body" data-jscall-id="91">
@@ -2246,24 +2246,24 @@ body.bonito-export-mode .hover-buttons, body.bonito-export-mode .cell-menu-proxi
                     <div class="cell-menu-proximity-area" data-jscall-id="147"></div>
                   </div>
                 </div>
-                <div class="cell-editor-container" id="e20df381-3758-49d2-b727-59bf76cc036f" data-jscall-id="148">
-                  <div class=" style_4" style="" data-jscall-id="149" id="e20df381-3758-49d2-b727-59bf76cc036f-container" tabindex="0">
-                    <div class=" style_4" style="" data-jscall-id="150">
-                      <div class="hover-buttons" id="e20df381-3758-49d2-b727-59bf76cc036f-hover" data-jscall-id="151">
+                <div class="cell-editor-container" id="69f62c0d-f3d5-49cf-83a8-d4e0e69348bc" data-jscall-id="148">
+                  <div class=" style_7" style="" data-jscall-id="149" id="69f62c0d-f3d5-49cf-83a8-d4e0e69348bc-container" tabindex="0">
+                    <div class=" style_7" style="" data-jscall-id="150">
+                      <div class="hover-buttons" id="69f62c0d-f3d5-49cf-83a8-d4e0e69348bc-hover" data-jscall-id="151">
                         <button onclick="" class="small-button toggle-button active" data-jscall-id="152">
-                          <img class="codicon  style_7" style="" data-jscall-id="153" src="../../bonito/svg/code18139302498156533340.svg" />
+                          <img class="codicon  style_4" style="" data-jscall-id="153" src="../../bonito/svg/code18139302498156533340.svg" />
                         </button>
                         <button onclick="" class="small-button toggle-button" data-jscall-id="154">
-                          <img class="codicon  style_7" style="" data-jscall-id="155" src="../../bonito/svg/terminal3126302118537120484.svg" />
+                          <img class="codicon  style_4" style="" data-jscall-id="155" src="../../bonito/svg/terminal3126302118537120484.svg" />
                         </button>
                         <button onclick="" class="small-button toggle-button active" data-jscall-id="156">
-                          <img class="codicon  style_7" style="" data-jscall-id="157" src="../../bonito/svg/graph187889671474048740.svg" />
+                          <img class="codicon  style_4" style="" data-jscall-id="157" src="../../bonito/svg/graph187889671474048740.svg" />
                         </button>
                         <button onclick="" class="small-button" data-jscall-id="158">
                           <img class="codicon  style_5" style="" data-jscall-id="159" src="../../bonito/svg/close17235711529866555203.svg" />
                         </button>
                       </div>
-                      <div class="cell-editor " id="e20df381-3758-49d2-b727-59bf76cc036f-card-content" data-jscall-id="160" style="position: relative;">
+                      <div class="cell-editor " id="69f62c0d-f3d5-49cf-83a8-d4e0e69348bc-card-content" data-jscall-id="160" style="position: relative;">
                         <div data-jscall-id="161">
                           <div class="monaco-editor-div language-julia" data-jscall-id="162"></div>
                         </div>
@@ -2277,12 +2277,12 @@ body.bonito-export-mode .hover-buttons, body.bonito-export-mode .cell-menu-proxi
                       <div data-jscall-id="168" tabindex="0">
                         <div class="cell-output cell-output-julia " data-jscall-id="163">
                           <div data-jscall-id="177">
-                            <div class="bonito-fragment" id="f2a9b807-b1e8-47e5-99fb-4e44e13432eb" data-jscall-id="subsession-application-dom">
+                            <div class="bonito-fragment" id="a43a9e32-54b3-4399-8c60-f47f1abf4405" data-jscall-id="subsession-application-dom">
                               <div data-jscall-id="178">
                                 <style data-jscall-id="179"></style>
                               </div>
                               <div data-jscall-id="180">
-                                <script data-jscall-id="181" type="module">Bonito.init_session("f2a9b807-b1e8-47e5-99fb-4e44e13432eb", Bonito.fetch_binary('../../bonito/bin/36652b25046f261907b43afe8158b4fa8a668dcd-1280557033522069277.bin'), "sub", false);
+                                <script data-jscall-id="181" type="module">Bonito.init_session("a43a9e32-54b3-4399-8c60-f47f1abf4405", Bonito.fetch_binary('../../bonito/bin/b566c419c0f97ae598caf7b114c4b59518ece0d0-13253141691990904097.bin'), "sub", false);
 </script>
                                 <span data-jscall-id="169">
                                   <div style="font-family: monospace;" data-jscall-id="170">
@@ -2303,24 +2303,24 @@ body.bonito-export-mode .hover-buttons, body.bonito-export-mode .cell-menu-proxi
                     <div class="cell-menu-proximity-area" data-jscall-id="182"></div>
                   </div>
                 </div>
-                <div class="cell-editor-container editor-collapsed" id="21a5d01b-8288-48e6-b96b-231fd1b6d263" data-jscall-id="183">
-                  <div class=" style_4" style="" data-jscall-id="184" id="21a5d01b-8288-48e6-b96b-231fd1b6d263-container" tabindex="0">
-                    <div class=" style_4" style="" data-jscall-id="185">
-                      <div class="hover-buttons" id="21a5d01b-8288-48e6-b96b-231fd1b6d263-hover" data-jscall-id="186">
+                <div class="cell-editor-container editor-collapsed" id="52f9044d-1580-432e-93c3-702782b3b469" data-jscall-id="183">
+                  <div class=" style_7" style="" data-jscall-id="184" id="52f9044d-1580-432e-93c3-702782b3b469-container" tabindex="0">
+                    <div class=" style_7" style="" data-jscall-id="185">
+                      <div class="hover-buttons" id="52f9044d-1580-432e-93c3-702782b3b469-hover" data-jscall-id="186">
                         <button onclick="" class="small-button toggle-button" data-jscall-id="187">
-                          <img class="codicon  style_7" style="" data-jscall-id="188" src="../../bonito/svg/code18139302498156533340.svg" />
+                          <img class="codicon  style_4" style="" data-jscall-id="188" src="../../bonito/svg/code18139302498156533340.svg" />
                         </button>
                         <button onclick="" class="small-button toggle-button" data-jscall-id="189">
-                          <img class="codicon  style_7" style="" data-jscall-id="190" src="../../bonito/svg/terminal3126302118537120484.svg" />
+                          <img class="codicon  style_4" style="" data-jscall-id="190" src="../../bonito/svg/terminal3126302118537120484.svg" />
                         </button>
                         <button onclick="" class="small-button toggle-button active" data-jscall-id="191">
-                          <img class="codicon  style_7" style="" data-jscall-id="192" src="../../bonito/svg/graph187889671474048740.svg" />
+                          <img class="codicon  style_4" style="" data-jscall-id="192" src="../../bonito/svg/graph187889671474048740.svg" />
                         </button>
                         <button onclick="" class="small-button" data-jscall-id="193">
                           <img class="codicon  style_5" style="" data-jscall-id="194" src="../../bonito/svg/close17235711529866555203.svg" />
                         </button>
                       </div>
-                      <div class="cell-editor hide-vertical" id="21a5d01b-8288-48e6-b96b-231fd1b6d263-card-content" data-jscall-id="195" style="position: relative;">
+                      <div class="cell-editor hide-vertical" id="52f9044d-1580-432e-93c3-702782b3b469-card-content" data-jscall-id="195" style="position: relative;">
                         <div data-jscall-id="196">
                           <div class="monaco-editor-div language-markdown hide-horizontal" data-jscall-id="197"></div>
                         </div>
@@ -2334,13 +2334,13 @@ body.bonito-export-mode .hover-buttons, body.bonito-export-mode .cell-menu-proxi
                       <div data-jscall-id="203" tabindex="0">
                         <div class="cell-output cell-output-markdown " data-jscall-id="198">
                           <div data-jscall-id="224">
-                            <div class="bonito-fragment" id="5bf39c9a-4573-4515-8b84-27d577c5dcb6" data-jscall-id="subsession-application-dom">
+                            <div class="bonito-fragment" id="25a3a025-98be-4e5e-8917-640551f53fe8" data-jscall-id="subsession-application-dom">
                               <div data-jscall-id="225">
                                 <style data-jscall-id="226"></style>
                                 <link href="../../bonito/css/katex.min6751968427317360032.css" data-jscall-id="227" rel="stylesheet" type="text/css" />
                               </div>
                               <div data-jscall-id="228">
-                                <script data-jscall-id="229" type="module">Bonito.init_session("5bf39c9a-4573-4515-8b84-27d577c5dcb6", Bonito.fetch_binary('../../bonito/bin/107913ef748bc49023a58af39c306e17f2b32f84-1516346462765206213.bin'), "sub", false);
+                                <script data-jscall-id="229" type="module">Bonito.init_session("25a3a025-98be-4e5e-8917-640551f53fe8", Bonito.fetch_binary('../../bonito/bin/824ea90081c2611c3925603a8202b4c385599b16-10197493609631832932.bin'), "sub", false);
 </script>
                                 <span data-jscall-id="204">
                                   <div class="markdown-body" data-jscall-id="205">
@@ -2381,24 +2381,24 @@ body.bonito-export-mode .hover-buttons, body.bonito-export-mode .cell-menu-proxi
                     <div class="cell-menu-proximity-area" data-jscall-id="230"></div>
                   </div>
                 </div>
-                <div class="cell-editor-container" id="a2267047-7e35-457c-98e1-157725acae3e" data-jscall-id="231">
-                  <div class=" style_4" style="" data-jscall-id="232" id="a2267047-7e35-457c-98e1-157725acae3e-container" tabindex="0">
-                    <div class=" style_4" style="" data-jscall-id="233">
-                      <div class="hover-buttons" id="a2267047-7e35-457c-98e1-157725acae3e-hover" data-jscall-id="234">
+                <div class="cell-editor-container" id="3d89b7e5-6e7b-4d8a-a892-b1141e0df732" data-jscall-id="231">
+                  <div class=" style_7" style="" data-jscall-id="232" id="3d89b7e5-6e7b-4d8a-a892-b1141e0df732-container" tabindex="0">
+                    <div class=" style_7" style="" data-jscall-id="233">
+                      <div class="hover-buttons" id="3d89b7e5-6e7b-4d8a-a892-b1141e0df732-hover" data-jscall-id="234">
                         <button onclick="" class="small-button toggle-button active" data-jscall-id="235">
-                          <img class="codicon  style_7" style="" data-jscall-id="236" src="../../bonito/svg/code18139302498156533340.svg" />
+                          <img class="codicon  style_4" style="" data-jscall-id="236" src="../../bonito/svg/code18139302498156533340.svg" />
                         </button>
                         <button onclick="" class="small-button toggle-button" data-jscall-id="237">
-                          <img class="codicon  style_7" style="" data-jscall-id="238" src="../../bonito/svg/terminal3126302118537120484.svg" />
+                          <img class="codicon  style_4" style="" data-jscall-id="238" src="../../bonito/svg/terminal3126302118537120484.svg" />
                         </button>
                         <button onclick="" class="small-button toggle-button active" data-jscall-id="239">
-                          <img class="codicon  style_7" style="" data-jscall-id="240" src="../../bonito/svg/graph187889671474048740.svg" />
+                          <img class="codicon  style_4" style="" data-jscall-id="240" src="../../bonito/svg/graph187889671474048740.svg" />
                         </button>
                         <button onclick="" class="small-button" data-jscall-id="241">
                           <img class="codicon  style_5" style="" data-jscall-id="242" src="../../bonito/svg/close17235711529866555203.svg" />
                         </button>
                       </div>
-                      <div class="cell-editor " id="a2267047-7e35-457c-98e1-157725acae3e-card-content" data-jscall-id="243" style="position: relative;">
+                      <div class="cell-editor " id="3d89b7e5-6e7b-4d8a-a892-b1141e0df732-card-content" data-jscall-id="243" style="position: relative;">
                         <div data-jscall-id="244">
                           <div class="monaco-editor-div language-julia" data-jscall-id="245"></div>
                         </div>
@@ -2412,7 +2412,7 @@ body.bonito-export-mode .hover-buttons, body.bonito-export-mode .cell-menu-proxi
                       <div data-jscall-id="251" tabindex="0">
                         <div class="cell-output cell-output-julia " data-jscall-id="246">
                           <div data-jscall-id="287">
-                            <div class="bonito-fragment" id="f3db4d8c-db2f-4400-8494-0b020299bc52" data-jscall-id="subsession-application-dom">
+                            <div class="bonito-fragment" id="bc6549fc-d0c4-435f-b08d-45297b00bbcc" data-jscall-id="subsession-application-dom">
                               <div data-jscall-id="288">
                                 <style data-jscall-id="289"></style>
                                 <style data-jscall-id="290"> {
@@ -2420,9 +2420,10 @@ body.bonito-export-mode .hover-buttons, body.bonito-export-mode .cell-menu-proxi
   margin: 20px 0 12px 0;
 }
 </style>
-                                <style data-jscall-id="291">.cell-default {
-  background-color: white;
-  color: black;
+                                <style data-jscall-id="291">.comparison-table {
+  border-collapse: collapse;
+  font-family: Arial, sans-serif;
+  width: 100%;
 }
 .table-header {
   border: 1px solid #ddd;
@@ -2433,6 +2434,9 @@ body.bonito-export-mode .hover-buttons, body.bonito-export-mode .cell-menu-proxi
   text-align: left;
   cursor: pointer;
 }
+.table-header:hover {
+  background-color: #e9e9e9;
+}
 .table-cell {
   border: 1px solid #ddd;
   padding: 8px;
@@ -2440,21 +2444,6 @@ body.bonito-export-mode .hover-buttons, body.bonito-export-mode .cell-menu-proxi
 }
 .table-row:hover .table-cell {
   background-color: #f9f9f9;
-}
-.comparison-table {
-  border-collapse: collapse;
-  font-family: Arial, sans-serif;
-  width: 100%;
-}
-.cell-neutral {
-  background-color: #fff3cd;
-  color: #856404;
-}
-.table-header:hover {
-  background-color: #e9e9e9;
-}
-.table-container {
-  overflow-x: auto;
 }
 .cell-good {
   background-color: #d4edda;
@@ -2464,10 +2453,21 @@ body.bonito-export-mode .hover-buttons, body.bonito-export-mode .cell-menu-proxi
   background-color: #f8d7da;
   color: #721c24;
 }
+.cell-neutral {
+  background-color: #fff3cd;
+  color: #856404;
+}
+.cell-default {
+  background-color: white;
+  color: black;
+}
+.table-container {
+  overflow-x: auto;
+}
 </style>
                               </div>
                               <div data-jscall-id="292">
-                                <script data-jscall-id="293" type="module">Bonito.init_session("f3db4d8c-db2f-4400-8494-0b020299bc52", Bonito.fetch_binary('../../bonito/bin/5a3f5d13ba29a9291fec739e5f2f9e418bc91b46-8394417331140014100.bin'), "sub", false);
+                                <script data-jscall-id="293" type="module">Bonito.init_session("bc6549fc-d0c4-435f-b08d-45297b00bbcc", Bonito.fetch_binary('../../bonito/bin/2759c33d9620919c36da8e6b17cbb75a649e09be-4210172320647993212.bin'), "sub", false);
 </script>
                                 <span data-jscall-id="252">
                                   <div data-jscall-id="253">
@@ -2558,24 +2558,24 @@ body.bonito-export-mode .hover-buttons, body.bonito-export-mode .cell-menu-proxi
                     <div class="cell-menu-proximity-area" data-jscall-id="310"></div>
                   </div>
                 </div>
-                <div class="cell-editor-container editor-collapsed" id="c8bf2c5d-653b-4ddb-8c26-a7f6c1db9c3b" data-jscall-id="311">
-                  <div class=" style_4" style="" data-jscall-id="312" id="c8bf2c5d-653b-4ddb-8c26-a7f6c1db9c3b-container" tabindex="0">
-                    <div class=" style_4" style="" data-jscall-id="313">
-                      <div class="hover-buttons" id="c8bf2c5d-653b-4ddb-8c26-a7f6c1db9c3b-hover" data-jscall-id="314">
+                <div class="cell-editor-container editor-collapsed" id="ee1cac86-9683-4c98-a9d6-c7f7641d3242" data-jscall-id="311">
+                  <div class=" style_7" style="" data-jscall-id="312" id="ee1cac86-9683-4c98-a9d6-c7f7641d3242-container" tabindex="0">
+                    <div class=" style_7" style="" data-jscall-id="313">
+                      <div class="hover-buttons" id="ee1cac86-9683-4c98-a9d6-c7f7641d3242-hover" data-jscall-id="314">
                         <button onclick="" class="small-button toggle-button" data-jscall-id="315">
-                          <img class="codicon  style_7" style="" data-jscall-id="316" src="../../bonito/svg/code18139302498156533340.svg" />
+                          <img class="codicon  style_4" style="" data-jscall-id="316" src="../../bonito/svg/code18139302498156533340.svg" />
                         </button>
                         <button onclick="" class="small-button toggle-button" data-jscall-id="317">
-                          <img class="codicon  style_7" style="" data-jscall-id="318" src="../../bonito/svg/terminal3126302118537120484.svg" />
+                          <img class="codicon  style_4" style="" data-jscall-id="318" src="../../bonito/svg/terminal3126302118537120484.svg" />
                         </button>
                         <button onclick="" class="small-button toggle-button active" data-jscall-id="319">
-                          <img class="codicon  style_7" style="" data-jscall-id="320" src="../../bonito/svg/graph187889671474048740.svg" />
+                          <img class="codicon  style_4" style="" data-jscall-id="320" src="../../bonito/svg/graph187889671474048740.svg" />
                         </button>
                         <button onclick="" class="small-button" data-jscall-id="321">
                           <img class="codicon  style_5" style="" data-jscall-id="322" src="../../bonito/svg/close17235711529866555203.svg" />
                         </button>
                       </div>
-                      <div class="cell-editor hide-vertical" id="c8bf2c5d-653b-4ddb-8c26-a7f6c1db9c3b-card-content" data-jscall-id="323" style="position: relative;">
+                      <div class="cell-editor hide-vertical" id="ee1cac86-9683-4c98-a9d6-c7f7641d3242-card-content" data-jscall-id="323" style="position: relative;">
                         <div data-jscall-id="324">
                           <div class="monaco-editor-div language-markdown hide-horizontal" data-jscall-id="325"></div>
                         </div>
@@ -2589,13 +2589,13 @@ body.bonito-export-mode .hover-buttons, body.bonito-export-mode .cell-menu-proxi
                       <div data-jscall-id="331" tabindex="0">
                         <div class="cell-output cell-output-markdown " data-jscall-id="326">
                           <div data-jscall-id="349">
-                            <div class="bonito-fragment" id="a8c916cd-2258-488e-8860-f6604cf280b5" data-jscall-id="subsession-application-dom">
+                            <div class="bonito-fragment" id="4bbb1ce3-0214-43ec-b0a0-6c17f6aa2314" data-jscall-id="subsession-application-dom">
                               <div data-jscall-id="350">
                                 <style data-jscall-id="351"></style>
                                 <link href="../../bonito/css/katex.min6751968427317360032.css" data-jscall-id="352" rel="stylesheet" type="text/css" />
                               </div>
                               <div data-jscall-id="353">
-                                <script data-jscall-id="354" type="module">Bonito.init_session("a8c916cd-2258-488e-8860-f6604cf280b5", Bonito.fetch_binary('../../bonito/bin/2d3052a65f2f3bc26dba6fe870862287e14c36b2-9167825964022937215.bin'), "sub", false);
+                                <script data-jscall-id="354" type="module">Bonito.init_session("4bbb1ce3-0214-43ec-b0a0-6c17f6aa2314", Bonito.fetch_binary('../../bonito/bin/204e663604e5df02bf83d67224fd8c7b4c126a20-9800607601256582183.bin'), "sub", false);
 </script>
                                 <span data-jscall-id="332">
                                   <div class="markdown-body" data-jscall-id="333">
@@ -2630,24 +2630,24 @@ body.bonito-export-mode .hover-buttons, body.bonito-export-mode .cell-menu-proxi
                     <div class="cell-menu-proximity-area" data-jscall-id="355"></div>
                   </div>
                 </div>
-                <div class="cell-editor-container" id="4f1f7934-d30f-4f0c-882d-58602202034d" data-jscall-id="356">
-                  <div class=" style_4" style="" data-jscall-id="357" id="4f1f7934-d30f-4f0c-882d-58602202034d-container" tabindex="0">
-                    <div class=" style_4" style="" data-jscall-id="358">
-                      <div class="hover-buttons" id="4f1f7934-d30f-4f0c-882d-58602202034d-hover" data-jscall-id="359">
+                <div class="cell-editor-container" id="363d2c36-7fdb-4940-a0e0-2ef974ed0b47" data-jscall-id="356">
+                  <div class=" style_7" style="" data-jscall-id="357" id="363d2c36-7fdb-4940-a0e0-2ef974ed0b47-container" tabindex="0">
+                    <div class=" style_7" style="" data-jscall-id="358">
+                      <div class="hover-buttons" id="363d2c36-7fdb-4940-a0e0-2ef974ed0b47-hover" data-jscall-id="359">
                         <button onclick="" class="small-button toggle-button active" data-jscall-id="360">
-                          <img class="codicon  style_7" style="" data-jscall-id="361" src="../../bonito/svg/code18139302498156533340.svg" />
+                          <img class="codicon  style_4" style="" data-jscall-id="361" src="../../bonito/svg/code18139302498156533340.svg" />
                         </button>
                         <button onclick="" class="small-button toggle-button" data-jscall-id="362">
-                          <img class="codicon  style_7" style="" data-jscall-id="363" src="../../bonito/svg/terminal3126302118537120484.svg" />
+                          <img class="codicon  style_4" style="" data-jscall-id="363" src="../../bonito/svg/terminal3126302118537120484.svg" />
                         </button>
                         <button onclick="" class="small-button toggle-button active" data-jscall-id="364">
-                          <img class="codicon  style_7" style="" data-jscall-id="365" src="../../bonito/svg/graph187889671474048740.svg" />
+                          <img class="codicon  style_4" style="" data-jscall-id="365" src="../../bonito/svg/graph187889671474048740.svg" />
                         </button>
                         <button onclick="" class="small-button" data-jscall-id="366">
                           <img class="codicon  style_5" style="" data-jscall-id="367" src="../../bonito/svg/close17235711529866555203.svg" />
                         </button>
                       </div>
-                      <div class="cell-editor " id="4f1f7934-d30f-4f0c-882d-58602202034d-card-content" data-jscall-id="368" style="position: relative;">
+                      <div class="cell-editor " id="363d2c36-7fdb-4940-a0e0-2ef974ed0b47-card-content" data-jscall-id="368" style="position: relative;">
                         <div data-jscall-id="369">
                           <div class="monaco-editor-div language-julia" data-jscall-id="370"></div>
                         </div>
@@ -2661,12 +2661,12 @@ body.bonito-export-mode .hover-buttons, body.bonito-export-mode .cell-menu-proxi
                       <div data-jscall-id="376" tabindex="0">
                         <div class="cell-output cell-output-julia " data-jscall-id="371">
                           <div data-jscall-id="388">
-                            <div class="bonito-fragment" id="85676bf6-735c-4f37-b028-f7954ebea3ef" data-jscall-id="subsession-application-dom">
+                            <div class="bonito-fragment" id="f21c1e20-3cbd-4a20-850a-c0e1209cb6ce" data-jscall-id="subsession-application-dom">
                               <div data-jscall-id="389">
                                 <style data-jscall-id="390"></style>
                               </div>
                               <div data-jscall-id="391">
-                                <script data-jscall-id="392" type="module">Bonito.init_session("85676bf6-735c-4f37-b028-f7954ebea3ef", Bonito.fetch_binary('../../bonito/bin/769a61830d87f14dd073d721dc89f175015b280b-6662003259939208690.bin'), "sub", false);
+                                <script data-jscall-id="392" type="module">Bonito.init_session("f21c1e20-3cbd-4a20-850a-c0e1209cb6ce", Bonito.fetch_binary('../../bonito/bin/03b90ad53768abc512913d734732923ce82b60fc-7434383627873479414.bin'), "sub", false);
 </script>
                                 <span data-jscall-id="377">
                                   <div style="background-color: #f8f9fa; padding: 12px; border-radius: 6px; border-left: 4px solid #28a745;" data-jscall-id="378">
@@ -2694,24 +2694,24 @@ body.bonito-export-mode .hover-buttons, body.bonito-export-mode .cell-menu-proxi
                     <div class="cell-menu-proximity-area" data-jscall-id="393"></div>
                   </div>
                 </div>
-                <div class="cell-editor-container editor-collapsed" id="b537da8f-7644-427f-9c8e-6b1dcf139ba3" data-jscall-id="394">
-                  <div class=" style_4" style="" data-jscall-id="395" id="b537da8f-7644-427f-9c8e-6b1dcf139ba3-container" tabindex="0">
-                    <div class=" style_4" style="" data-jscall-id="396">
-                      <div class="hover-buttons" id="b537da8f-7644-427f-9c8e-6b1dcf139ba3-hover" data-jscall-id="397">
+                <div class="cell-editor-container editor-collapsed" id="2c4cdeba-08d6-4da8-8699-1744b175ecd0" data-jscall-id="394">
+                  <div class=" style_7" style="" data-jscall-id="395" id="2c4cdeba-08d6-4da8-8699-1744b175ecd0-container" tabindex="0">
+                    <div class=" style_7" style="" data-jscall-id="396">
+                      <div class="hover-buttons" id="2c4cdeba-08d6-4da8-8699-1744b175ecd0-hover" data-jscall-id="397">
                         <button onclick="" class="small-button toggle-button" data-jscall-id="398">
-                          <img class="codicon  style_7" style="" data-jscall-id="399" src="../../bonito/svg/code18139302498156533340.svg" />
+                          <img class="codicon  style_4" style="" data-jscall-id="399" src="../../bonito/svg/code18139302498156533340.svg" />
                         </button>
                         <button onclick="" class="small-button toggle-button" data-jscall-id="400">
-                          <img class="codicon  style_7" style="" data-jscall-id="401" src="../../bonito/svg/terminal3126302118537120484.svg" />
+                          <img class="codicon  style_4" style="" data-jscall-id="401" src="../../bonito/svg/terminal3126302118537120484.svg" />
                         </button>
                         <button onclick="" class="small-button toggle-button active" data-jscall-id="402">
-                          <img class="codicon  style_7" style="" data-jscall-id="403" src="../../bonito/svg/graph187889671474048740.svg" />
+                          <img class="codicon  style_4" style="" data-jscall-id="403" src="../../bonito/svg/graph187889671474048740.svg" />
                         </button>
                         <button onclick="" class="small-button" data-jscall-id="404">
                           <img class="codicon  style_5" style="" data-jscall-id="405" src="../../bonito/svg/close17235711529866555203.svg" />
                         </button>
                       </div>
-                      <div class="cell-editor hide-vertical" id="b537da8f-7644-427f-9c8e-6b1dcf139ba3-card-content" data-jscall-id="406" style="position: relative;">
+                      <div class="cell-editor hide-vertical" id="2c4cdeba-08d6-4da8-8699-1744b175ecd0-card-content" data-jscall-id="406" style="position: relative;">
                         <div data-jscall-id="407">
                           <div class="monaco-editor-div language-markdown hide-horizontal" data-jscall-id="408"></div>
                         </div>
@@ -2725,13 +2725,13 @@ body.bonito-export-mode .hover-buttons, body.bonito-export-mode .cell-menu-proxi
                       <div data-jscall-id="414" tabindex="0">
                         <div class="cell-output cell-output-markdown " data-jscall-id="409">
                           <div data-jscall-id="452">
-                            <div class="bonito-fragment" id="fe96d93a-776f-44a5-a5ae-fc2045de64c1" data-jscall-id="subsession-application-dom">
+                            <div class="bonito-fragment" id="2edf16f1-f3e6-4306-aa43-265c440a9985" data-jscall-id="subsession-application-dom">
                               <div data-jscall-id="453">
                                 <style data-jscall-id="454"></style>
                                 <link href="../../bonito/css/katex.min6751968427317360032.css" data-jscall-id="455" rel="stylesheet" type="text/css" />
                               </div>
                               <div data-jscall-id="456">
-                                <script data-jscall-id="457" type="module">Bonito.init_session("fe96d93a-776f-44a5-a5ae-fc2045de64c1", Bonito.fetch_binary('../../bonito/bin/1e470df56e488b3939506530e3e4464c4b41a4d2-12090873148276844551.bin'), "sub", false);
+                                <script data-jscall-id="457" type="module">Bonito.init_session("2edf16f1-f3e6-4306-aa43-265c440a9985", Bonito.fetch_binary('../../bonito/bin/c80b6c88c4bbaf8fae3b2790ae44646bbd19a096-8455686608604525671.bin'), "sub", false);
 </script>
                                 <span data-jscall-id="415">
                                   <div class="markdown-body" data-jscall-id="416">
@@ -2797,24 +2797,24 @@ body.bonito-export-mode .hover-buttons, body.bonito-export-mode .cell-menu-proxi
                     <div class="cell-menu-proximity-area" data-jscall-id="458"></div>
                   </div>
                 </div>
-                <div class="cell-editor-container" id="93a90f96-5f16-40ac-9d5d-b0bf64311980" data-jscall-id="459">
-                  <div class=" style_4" style="" data-jscall-id="460" id="93a90f96-5f16-40ac-9d5d-b0bf64311980-container" tabindex="0">
-                    <div class=" style_4" style="" data-jscall-id="461">
-                      <div class="hover-buttons" id="93a90f96-5f16-40ac-9d5d-b0bf64311980-hover" data-jscall-id="462">
+                <div class="cell-editor-container" id="fecbf4ce-b34d-4f7e-8713-866d0418d1c6" data-jscall-id="459">
+                  <div class=" style_7" style="" data-jscall-id="460" id="fecbf4ce-b34d-4f7e-8713-866d0418d1c6-container" tabindex="0">
+                    <div class=" style_7" style="" data-jscall-id="461">
+                      <div class="hover-buttons" id="fecbf4ce-b34d-4f7e-8713-866d0418d1c6-hover" data-jscall-id="462">
                         <button onclick="" class="small-button toggle-button active" data-jscall-id="463">
-                          <img class="codicon  style_7" style="" data-jscall-id="464" src="../../bonito/svg/code18139302498156533340.svg" />
+                          <img class="codicon  style_4" style="" data-jscall-id="464" src="../../bonito/svg/code18139302498156533340.svg" />
                         </button>
                         <button onclick="" class="small-button toggle-button" data-jscall-id="465">
-                          <img class="codicon  style_7" style="" data-jscall-id="466" src="../../bonito/svg/terminal3126302118537120484.svg" />
+                          <img class="codicon  style_4" style="" data-jscall-id="466" src="../../bonito/svg/terminal3126302118537120484.svg" />
                         </button>
                         <button onclick="" class="small-button toggle-button active" data-jscall-id="467">
-                          <img class="codicon  style_7" style="" data-jscall-id="468" src="../../bonito/svg/graph187889671474048740.svg" />
+                          <img class="codicon  style_4" style="" data-jscall-id="468" src="../../bonito/svg/graph187889671474048740.svg" />
                         </button>
                         <button onclick="" class="small-button" data-jscall-id="469">
                           <img class="codicon  style_5" style="" data-jscall-id="470" src="../../bonito/svg/close17235711529866555203.svg" />
                         </button>
                       </div>
-                      <div class="cell-editor " id="93a90f96-5f16-40ac-9d5d-b0bf64311980-card-content" data-jscall-id="471" style="position: relative;">
+                      <div class="cell-editor " id="fecbf4ce-b34d-4f7e-8713-866d0418d1c6-card-content" data-jscall-id="471" style="position: relative;">
                         <div data-jscall-id="472">
                           <div class="monaco-editor-div language-julia" data-jscall-id="473"></div>
                         </div>
@@ -2828,12 +2828,12 @@ body.bonito-export-mode .hover-buttons, body.bonito-export-mode .cell-menu-proxi
                       <div data-jscall-id="479" tabindex="0">
                         <div class="cell-output cell-output-julia " data-jscall-id="474">
                           <div data-jscall-id="511">
-                            <div class="bonito-fragment" id="dbc1bc42-2cc4-4a7b-9b77-eb9ea20032d3" data-jscall-id="subsession-application-dom">
+                            <div class="bonito-fragment" id="af9b80d6-26a8-43cf-a5a5-10dcb1e29bd1" data-jscall-id="subsession-application-dom">
                               <div data-jscall-id="512">
                                 <style data-jscall-id="513"></style>
                               </div>
                               <div data-jscall-id="514">
-                                <script data-jscall-id="515" type="module">Bonito.init_session("dbc1bc42-2cc4-4a7b-9b77-eb9ea20032d3", Bonito.fetch_binary('../../bonito/bin/4724c106f0ea9cee4593e546aafee5c99304b58b-16942413831263829592.bin'), "sub", false);
+                                <script data-jscall-id="515" type="module">Bonito.init_session("af9b80d6-26a8-43cf-a5a5-10dcb1e29bd1", Bonito.fetch_binary('../../bonito/bin/a46cfb1f722f03a55caa4ce5b269a9a377def6f2-12252015597073429567.bin'), "sub", false);
 </script>
                                 <span data-jscall-id="480">
                                   <div data-jscall-id="481">
@@ -2886,24 +2886,24 @@ body.bonito-export-mode .hover-buttons, body.bonito-export-mode .cell-menu-proxi
                     <div class="cell-menu-proximity-area" data-jscall-id="516"></div>
                   </div>
                 </div>
-                <div class="cell-editor-container editor-collapsed" id="4aa758db-5fd5-4947-a279-56a80b32bd39" data-jscall-id="517">
-                  <div class=" style_4" style="" data-jscall-id="518" id="4aa758db-5fd5-4947-a279-56a80b32bd39-container" tabindex="0">
-                    <div class=" style_4" style="" data-jscall-id="519">
-                      <div class="hover-buttons" id="4aa758db-5fd5-4947-a279-56a80b32bd39-hover" data-jscall-id="520">
+                <div class="cell-editor-container editor-collapsed" id="dc437945-74e8-404e-b294-84423466eed9" data-jscall-id="517">
+                  <div class=" style_7" style="" data-jscall-id="518" id="dc437945-74e8-404e-b294-84423466eed9-container" tabindex="0">
+                    <div class=" style_7" style="" data-jscall-id="519">
+                      <div class="hover-buttons" id="dc437945-74e8-404e-b294-84423466eed9-hover" data-jscall-id="520">
                         <button onclick="" class="small-button toggle-button" data-jscall-id="521">
-                          <img class="codicon  style_7" style="" data-jscall-id="522" src="../../bonito/svg/code18139302498156533340.svg" />
+                          <img class="codicon  style_4" style="" data-jscall-id="522" src="../../bonito/svg/code18139302498156533340.svg" />
                         </button>
                         <button onclick="" class="small-button toggle-button" data-jscall-id="523">
-                          <img class="codicon  style_7" style="" data-jscall-id="524" src="../../bonito/svg/terminal3126302118537120484.svg" />
+                          <img class="codicon  style_4" style="" data-jscall-id="524" src="../../bonito/svg/terminal3126302118537120484.svg" />
                         </button>
                         <button onclick="" class="small-button toggle-button active" data-jscall-id="525">
-                          <img class="codicon  style_7" style="" data-jscall-id="526" src="../../bonito/svg/graph187889671474048740.svg" />
+                          <img class="codicon  style_4" style="" data-jscall-id="526" src="../../bonito/svg/graph187889671474048740.svg" />
                         </button>
                         <button onclick="" class="small-button" data-jscall-id="527">
                           <img class="codicon  style_5" style="" data-jscall-id="528" src="../../bonito/svg/close17235711529866555203.svg" />
                         </button>
                       </div>
-                      <div class="cell-editor hide-vertical" id="4aa758db-5fd5-4947-a279-56a80b32bd39-card-content" data-jscall-id="529" style="position: relative;">
+                      <div class="cell-editor hide-vertical" id="dc437945-74e8-404e-b294-84423466eed9-card-content" data-jscall-id="529" style="position: relative;">
                         <div data-jscall-id="530">
                           <div class="monaco-editor-div language-markdown hide-horizontal" data-jscall-id="531"></div>
                         </div>
@@ -2917,13 +2917,13 @@ body.bonito-export-mode .hover-buttons, body.bonito-export-mode .cell-menu-proxi
                       <div data-jscall-id="537" tabindex="0">
                         <div class="cell-output cell-output-markdown " data-jscall-id="532">
                           <div data-jscall-id="554">
-                            <div class="bonito-fragment" id="40dbf3f9-d53a-4206-a077-ea1cf6576665" data-jscall-id="subsession-application-dom">
+                            <div class="bonito-fragment" id="72171757-1640-4a4d-817d-0d49760952a8" data-jscall-id="subsession-application-dom">
                               <div data-jscall-id="555">
                                 <style data-jscall-id="556"></style>
                                 <link href="../../bonito/css/katex.min6751968427317360032.css" data-jscall-id="557" rel="stylesheet" type="text/css" />
                               </div>
                               <div data-jscall-id="558">
-                                <script data-jscall-id="559" type="module">Bonito.init_session("40dbf3f9-d53a-4206-a077-ea1cf6576665", Bonito.fetch_binary('../../bonito/bin/dcd0309334bea089e4ed5387ac4aaa9264cadc95-2828057489227727286.bin'), "sub", false);
+                                <script data-jscall-id="559" type="module">Bonito.init_session("72171757-1640-4a4d-817d-0d49760952a8", Bonito.fetch_binary('../../bonito/bin/2b93a9c520deb313f80fb34ae6d456aee1ed3812-1064827658020262470.bin'), "sub", false);
 </script>
                                 <span data-jscall-id="538">
                                   <div class="markdown-body" data-jscall-id="539">
@@ -2956,24 +2956,24 @@ body.bonito-export-mode .hover-buttons, body.bonito-export-mode .cell-menu-proxi
                     <div class="cell-menu-proximity-area" data-jscall-id="560"></div>
                   </div>
                 </div>
-                <div class="cell-editor-container" id="1d1d3e4f-a5f6-4be2-b931-955c405ee15d" data-jscall-id="561">
-                  <div class=" style_4" style="" data-jscall-id="562" id="1d1d3e4f-a5f6-4be2-b931-955c405ee15d-container" tabindex="0">
-                    <div class=" style_4" style="" data-jscall-id="563">
-                      <div class="hover-buttons" id="1d1d3e4f-a5f6-4be2-b931-955c405ee15d-hover" data-jscall-id="564">
+                <div class="cell-editor-container" id="dd6ab759-e6bd-413d-971b-84f4bff04073" data-jscall-id="561">
+                  <div class=" style_7" style="" data-jscall-id="562" id="dd6ab759-e6bd-413d-971b-84f4bff04073-container" tabindex="0">
+                    <div class=" style_7" style="" data-jscall-id="563">
+                      <div class="hover-buttons" id="dd6ab759-e6bd-413d-971b-84f4bff04073-hover" data-jscall-id="564">
                         <button onclick="" class="small-button toggle-button active" data-jscall-id="565">
-                          <img class="codicon  style_7" style="" data-jscall-id="566" src="../../bonito/svg/code18139302498156533340.svg" />
+                          <img class="codicon  style_4" style="" data-jscall-id="566" src="../../bonito/svg/code18139302498156533340.svg" />
                         </button>
                         <button onclick="" class="small-button toggle-button" data-jscall-id="567">
-                          <img class="codicon  style_7" style="" data-jscall-id="568" src="../../bonito/svg/terminal3126302118537120484.svg" />
+                          <img class="codicon  style_4" style="" data-jscall-id="568" src="../../bonito/svg/terminal3126302118537120484.svg" />
                         </button>
                         <button onclick="" class="small-button toggle-button active" data-jscall-id="569">
-                          <img class="codicon  style_7" style="" data-jscall-id="570" src="../../bonito/svg/graph187889671474048740.svg" />
+                          <img class="codicon  style_4" style="" data-jscall-id="570" src="../../bonito/svg/graph187889671474048740.svg" />
                         </button>
                         <button onclick="" class="small-button" data-jscall-id="571">
                           <img class="codicon  style_5" style="" data-jscall-id="572" src="../../bonito/svg/close17235711529866555203.svg" />
                         </button>
                       </div>
-                      <div class="cell-editor " id="1d1d3e4f-a5f6-4be2-b931-955c405ee15d-card-content" data-jscall-id="573" style="position: relative;">
+                      <div class="cell-editor " id="dd6ab759-e6bd-413d-971b-84f4bff04073-card-content" data-jscall-id="573" style="position: relative;">
                         <div data-jscall-id="574">
                           <div class="monaco-editor-div language-julia" data-jscall-id="575"></div>
                         </div>
@@ -2987,12 +2987,12 @@ body.bonito-export-mode .hover-buttons, body.bonito-export-mode .cell-menu-proxi
                       <div data-jscall-id="581" tabindex="0">
                         <div class="cell-output cell-output-julia " data-jscall-id="576">
                           <div data-jscall-id="661">
-                            <div class="bonito-fragment" id="18624b65-09ea-478e-b475-37db5e0b98c1" data-jscall-id="subsession-application-dom">
+                            <div class="bonito-fragment" id="1a4c150d-30bf-4884-8f89-73dedcb087ff" data-jscall-id="subsession-application-dom">
                               <div data-jscall-id="662">
                                 <style data-jscall-id="663"></style>
                               </div>
                               <div data-jscall-id="664">
-                                <script data-jscall-id="665" type="module">Bonito.init_session("18624b65-09ea-478e-b475-37db5e0b98c1", Bonito.fetch_binary('../../bonito/bin/8387fbac73981f40d5efb010d1c5998b5eacd730-16532156251166039863.bin'), "sub", false);
+                                <script data-jscall-id="665" type="module">Bonito.init_session("1a4c150d-30bf-4884-8f89-73dedcb087ff", Bonito.fetch_binary('../../bonito/bin/a8c1eaa19549a9c4c6688b5b41613c5b97083ec5-7635191941733182130.bin'), "sub", false);
 </script>
                                 <span data-jscall-id="582">
                                   <div data-jscall-id="583">
@@ -3010,27 +3010,27 @@ body.bonito-export-mode .hover-buttons, body.bonito-export-mode .cell-menu-proxi
                                         </tr>
                                         <tr data-jscall-id="594">
                                           <td style="font-weight: bold; padding: 4px;" data-jscall-id="595">Mean:</td>
-                                          <td style="padding: 4px;" data-jscall-id="596">-0.074</td>
+                                          <td style="padding: 4px;" data-jscall-id="596">0.171</td>
                                         </tr>
                                         <tr data-jscall-id="597">
                                           <td style="font-weight: bold; padding: 4px;" data-jscall-id="598">Median:</td>
-                                          <td style="padding: 4px;" data-jscall-id="599">-0.034</td>
+                                          <td style="padding: 4px;" data-jscall-id="599">0.113</td>
                                         </tr>
                                         <tr data-jscall-id="600">
                                           <td style="font-weight: bold; padding: 4px;" data-jscall-id="601">Standard Deviation:</td>
-                                          <td style="padding: 4px;" data-jscall-id="602">1.119</td>
+                                          <td style="padding: 4px;" data-jscall-id="602">0.957</td>
                                         </tr>
                                         <tr data-jscall-id="603">
                                           <td style="font-weight: bold; padding: 4px;" data-jscall-id="604">Variance:</td>
-                                          <td style="padding: 4px;" data-jscall-id="605">1.253</td>
+                                          <td style="padding: 4px;" data-jscall-id="605">0.916</td>
                                         </tr>
                                         <tr data-jscall-id="606">
                                           <td style="font-weight: bold; padding: 4px;" data-jscall-id="607">Min:</td>
-                                          <td style="padding: 4px;" data-jscall-id="608">-2.762</td>
+                                          <td style="padding: 4px;" data-jscall-id="608">-1.75</td>
                                         </tr>
                                         <tr data-jscall-id="609">
                                           <td style="font-weight: bold; padding: 4px;" data-jscall-id="610">Max:</td>
-                                          <td style="padding: 4px;" data-jscall-id="611">2.673</td>
+                                          <td style="padding: 4px;" data-jscall-id="611">2.815</td>
                                         </tr>
                                       </table>
                                     </div>
@@ -3043,27 +3043,27 @@ body.bonito-export-mode .hover-buttons, body.bonito-export-mode .cell-menu-proxi
                                         </tr>
                                         <tr data-jscall-id="618">
                                           <td style="font-weight: bold; padding: 4px;" data-jscall-id="619">Mean:</td>
-                                          <td style="padding: 4px;" data-jscall-id="620">0.959</td>
+                                          <td style="padding: 4px;" data-jscall-id="620">1.21</td>
                                         </tr>
                                         <tr data-jscall-id="621">
                                           <td style="font-weight: bold; padding: 4px;" data-jscall-id="622">Median:</td>
-                                          <td style="padding: 4px;" data-jscall-id="623">0.638</td>
+                                          <td style="padding: 4px;" data-jscall-id="623">0.968</td>
                                         </tr>
                                         <tr data-jscall-id="624">
                                           <td style="font-weight: bold; padding: 4px;" data-jscall-id="625">Standard Deviation:</td>
-                                          <td style="padding: 4px;" data-jscall-id="626">0.924</td>
+                                          <td style="padding: 4px;" data-jscall-id="626">1.121</td>
                                         </tr>
                                         <tr data-jscall-id="627">
                                           <td style="font-weight: bold; padding: 4px;" data-jscall-id="628">Variance:</td>
-                                          <td style="padding: 4px;" data-jscall-id="629">0.855</td>
+                                          <td style="padding: 4px;" data-jscall-id="629">1.257</td>
                                         </tr>
                                         <tr data-jscall-id="630">
                                           <td style="font-weight: bold; padding: 4px;" data-jscall-id="631">Min:</td>
-                                          <td style="padding: 4px;" data-jscall-id="632">0.012</td>
+                                          <td style="padding: 4px;" data-jscall-id="632">0.031</td>
                                         </tr>
                                         <tr data-jscall-id="633">
                                           <td style="font-weight: bold; padding: 4px;" data-jscall-id="634">Max:</td>
-                                          <td style="padding: 4px;" data-jscall-id="635">5.073</td>
+                                          <td style="padding: 4px;" data-jscall-id="635">6.106</td>
                                         </tr>
                                       </table>
                                     </div>
@@ -3076,7 +3076,7 @@ body.bonito-export-mode .hover-buttons, body.bonito-export-mode .cell-menu-proxi
                                         </tr>
                                         <tr data-jscall-id="642">
                                           <td style="font-weight: bold; padding: 4px;" data-jscall-id="643">Mean:</td>
-                                          <td style="padding: 4px;" data-jscall-id="644">-0.026</td>
+                                          <td style="padding: 4px;" data-jscall-id="644">-0.106</td>
                                         </tr>
                                         <tr data-jscall-id="645">
                                           <td style="font-weight: bold; padding: 4px;" data-jscall-id="646">Median:</td>
@@ -3084,19 +3084,19 @@ body.bonito-export-mode .hover-buttons, body.bonito-export-mode .cell-menu-proxi
                                         </tr>
                                         <tr data-jscall-id="648">
                                           <td style="font-weight: bold; padding: 4px;" data-jscall-id="649">Standard Deviation:</td>
-                                          <td style="padding: 4px;" data-jscall-id="650">1.183</td>
+                                          <td style="padding: 4px;" data-jscall-id="650">1.205</td>
                                         </tr>
                                         <tr data-jscall-id="651">
                                           <td style="font-weight: bold; padding: 4px;" data-jscall-id="652">Variance:</td>
-                                          <td style="padding: 4px;" data-jscall-id="653">1.4</td>
+                                          <td style="padding: 4px;" data-jscall-id="653">1.452</td>
                                         </tr>
                                         <tr data-jscall-id="654">
                                           <td style="font-weight: bold; padding: 4px;" data-jscall-id="655">Min:</td>
-                                          <td style="padding: 4px;" data-jscall-id="656">-1.937</td>
+                                          <td style="padding: 4px;" data-jscall-id="656">-1.977</td>
                                         </tr>
                                         <tr data-jscall-id="657">
                                           <td style="font-weight: bold; padding: 4px;" data-jscall-id="658">Max:</td>
-                                          <td style="padding: 4px;" data-jscall-id="659">1.926</td>
+                                          <td style="padding: 4px;" data-jscall-id="659">1.925</td>
                                         </tr>
                                       </table>
                                     </div>
@@ -3112,24 +3112,24 @@ body.bonito-export-mode .hover-buttons, body.bonito-export-mode .cell-menu-proxi
                     <div class="cell-menu-proximity-area" data-jscall-id="666"></div>
                   </div>
                 </div>
-                <div class="cell-editor-container editor-collapsed" id="e82df7f7-05a5-41ea-b6d7-990c00e7c5d8" data-jscall-id="667">
-                  <div class=" style_4" style="" data-jscall-id="668" id="e82df7f7-05a5-41ea-b6d7-990c00e7c5d8-container" tabindex="0">
-                    <div class=" style_4" style="" data-jscall-id="669">
-                      <div class="hover-buttons" id="e82df7f7-05a5-41ea-b6d7-990c00e7c5d8-hover" data-jscall-id="670">
+                <div class="cell-editor-container editor-collapsed" id="9028661c-d6eb-48f6-a2f2-de9ac1e22efe" data-jscall-id="667">
+                  <div class=" style_7" style="" data-jscall-id="668" id="9028661c-d6eb-48f6-a2f2-de9ac1e22efe-container" tabindex="0">
+                    <div class=" style_7" style="" data-jscall-id="669">
+                      <div class="hover-buttons" id="9028661c-d6eb-48f6-a2f2-de9ac1e22efe-hover" data-jscall-id="670">
                         <button onclick="" class="small-button toggle-button" data-jscall-id="671">
-                          <img class="codicon  style_7" style="" data-jscall-id="672" src="../../bonito/svg/code18139302498156533340.svg" />
+                          <img class="codicon  style_4" style="" data-jscall-id="672" src="../../bonito/svg/code18139302498156533340.svg" />
                         </button>
                         <button onclick="" class="small-button toggle-button" data-jscall-id="673">
-                          <img class="codicon  style_7" style="" data-jscall-id="674" src="../../bonito/svg/terminal3126302118537120484.svg" />
+                          <img class="codicon  style_4" style="" data-jscall-id="674" src="../../bonito/svg/terminal3126302118537120484.svg" />
                         </button>
                         <button onclick="" class="small-button toggle-button active" data-jscall-id="675">
-                          <img class="codicon  style_7" style="" data-jscall-id="676" src="../../bonito/svg/graph187889671474048740.svg" />
+                          <img class="codicon  style_4" style="" data-jscall-id="676" src="../../bonito/svg/graph187889671474048740.svg" />
                         </button>
                         <button onclick="" class="small-button" data-jscall-id="677">
                           <img class="codicon  style_5" style="" data-jscall-id="678" src="../../bonito/svg/close17235711529866555203.svg" />
                         </button>
                       </div>
-                      <div class="cell-editor hide-vertical" id="e82df7f7-05a5-41ea-b6d7-990c00e7c5d8-card-content" data-jscall-id="679" style="position: relative;">
+                      <div class="cell-editor hide-vertical" id="9028661c-d6eb-48f6-a2f2-de9ac1e22efe-card-content" data-jscall-id="679" style="position: relative;">
                         <div data-jscall-id="680">
                           <div class="monaco-editor-div language-markdown hide-horizontal" data-jscall-id="681"></div>
                         </div>
@@ -3143,12 +3143,12 @@ body.bonito-export-mode .hover-buttons, body.bonito-export-mode .cell-menu-proxi
                       <div data-jscall-id="687" tabindex="0">
                         <div class="cell-output cell-output-markdown " data-jscall-id="682">
                           <div data-jscall-id="692">
-                            <div class="bonito-fragment" id="2f658957-1582-4f0c-a770-3df0da109780" data-jscall-id="subsession-application-dom">
+                            <div class="bonito-fragment" id="4b6a87ff-7536-4aba-b68f-315187e99a95" data-jscall-id="subsession-application-dom">
                               <div data-jscall-id="693">
                                 <style data-jscall-id="694"></style>
                               </div>
                               <div data-jscall-id="695">
-                                <script data-jscall-id="696" type="module">Bonito.init_session("2f658957-1582-4f0c-a770-3df0da109780", Bonito.fetch_binary('../../bonito/bin/ebd28b0d8156fec5b1872138e5264ce9dcf68a9f-4827246116284591454.bin'), "sub", false);
+                                <script data-jscall-id="696" type="module">Bonito.init_session("4b6a87ff-7536-4aba-b68f-315187e99a95", Bonito.fetch_binary('../../bonito/bin/41ea13f34cced2a74354608e8ec2d61eadb948e2-13240469490874225619.bin'), "sub", false);
 </script>
                                 <span data-jscall-id="688">
                                   <div class="markdown-body" data-jscall-id="689">
@@ -3165,24 +3165,24 @@ body.bonito-export-mode .hover-buttons, body.bonito-export-mode .cell-menu-proxi
                     <div class="cell-menu-proximity-area" data-jscall-id="697"></div>
                   </div>
                 </div>
-                <div class="cell-editor-container" id="40e0856a-f851-49f1-bea8-289a1597a5e4" data-jscall-id="698">
-                  <div class=" style_4" style="" data-jscall-id="699" id="40e0856a-f851-49f1-bea8-289a1597a5e4-container" tabindex="0">
-                    <div class=" style_4" style="" data-jscall-id="700">
-                      <div class="hover-buttons" id="40e0856a-f851-49f1-bea8-289a1597a5e4-hover" data-jscall-id="701">
+                <div class="cell-editor-container" id="9a8c426f-0006-4fab-ad78-a9eac615b229" data-jscall-id="698">
+                  <div class=" style_7" style="" data-jscall-id="699" id="9a8c426f-0006-4fab-ad78-a9eac615b229-container" tabindex="0">
+                    <div class=" style_7" style="" data-jscall-id="700">
+                      <div class="hover-buttons" id="9a8c426f-0006-4fab-ad78-a9eac615b229-hover" data-jscall-id="701">
                         <button onclick="" class="small-button toggle-button active" data-jscall-id="702">
-                          <img class="codicon  style_7" style="" data-jscall-id="703" src="../../bonito/svg/code18139302498156533340.svg" />
+                          <img class="codicon  style_4" style="" data-jscall-id="703" src="../../bonito/svg/code18139302498156533340.svg" />
                         </button>
                         <button onclick="" class="small-button toggle-button" data-jscall-id="704">
-                          <img class="codicon  style_7" style="" data-jscall-id="705" src="../../bonito/svg/terminal3126302118537120484.svg" />
+                          <img class="codicon  style_4" style="" data-jscall-id="705" src="../../bonito/svg/terminal3126302118537120484.svg" />
                         </button>
                         <button onclick="" class="small-button toggle-button active" data-jscall-id="706">
-                          <img class="codicon  style_7" style="" data-jscall-id="707" src="../../bonito/svg/graph187889671474048740.svg" />
+                          <img class="codicon  style_4" style="" data-jscall-id="707" src="../../bonito/svg/graph187889671474048740.svg" />
                         </button>
                         <button onclick="" class="small-button" data-jscall-id="708">
                           <img class="codicon  style_5" style="" data-jscall-id="709" src="../../bonito/svg/close17235711529866555203.svg" />
                         </button>
                       </div>
-                      <div class="cell-editor " id="40e0856a-f851-49f1-bea8-289a1597a5e4-card-content" data-jscall-id="710" style="position: relative;">
+                      <div class="cell-editor " id="9a8c426f-0006-4fab-ad78-a9eac615b229-card-content" data-jscall-id="710" style="position: relative;">
                         <div data-jscall-id="711">
                           <div class="monaco-editor-div language-julia" data-jscall-id="712"></div>
                         </div>
@@ -3196,12 +3196,12 @@ body.bonito-export-mode .hover-buttons, body.bonito-export-mode .cell-menu-proxi
                       <div data-jscall-id="718" tabindex="0">
                         <div class="cell-output cell-output-julia " data-jscall-id="713">
                           <div data-jscall-id="726">
-                            <div class="bonito-fragment" id="bd0a2dc4-4377-4536-b97a-57d985f661a0" data-jscall-id="subsession-application-dom">
+                            <div class="bonito-fragment" id="5b6a3977-58a8-4941-8540-f5ac5e949010" data-jscall-id="subsession-application-dom">
                               <div data-jscall-id="727">
                                 <style data-jscall-id="728"></style>
                               </div>
                               <div data-jscall-id="729">
-                                <script data-jscall-id="730" type="module">Bonito.init_session("bd0a2dc4-4377-4536-b97a-57d985f661a0", Bonito.fetch_binary('../../bonito/bin/26eb831648e837da89e63fe5ef2c0c520ba5c74c-11491489245403624738.bin'), "sub", false);
+                                <script data-jscall-id="730" type="module">Bonito.init_session("5b6a3977-58a8-4941-8540-f5ac5e949010", Bonito.fetch_binary('../../bonito/bin/eabca48bf27842d87acc25945e5ea7c060ca29d4-11181903681367494975.bin'), "sub", false);
 </script>
                                 <span data-jscall-id="719">
                                   <div data-jscall-id="720">
@@ -3209,7 +3209,7 @@ body.bonito-export-mode .hover-buttons, body.bonito-export-mode .cell-menu-proxi
                                     <div style="width: 100%; height: 100%" data-jscall-id="722">
                                       <canvas data-jp-suppress-context-menu style="display: block" data-jscall-id="723" data-lm-suppress-shortcuts="true" tabindex="0"></canvas>
                                     </div>
-                                    <p style="margin-top: 12px; font-weight: bold; color: #2c3e50;" data-jscall-id="724">Correlation coefficient: 0.967</p>
+                                    <p style="margin-top: 12px; font-weight: bold; color: #2c3e50;" data-jscall-id="724">Correlation coefficient: 0.969</p>
                                     <p style="margin-top: 8px; font-style: italic; color: #666;" data-jscall-id="725">Data shows relationship y ≈ x &#43; noise with correlation analysis.</p>
                                   </div>
                                 </span>
@@ -3222,24 +3222,24 @@ body.bonito-export-mode .hover-buttons, body.bonito-export-mode .cell-menu-proxi
                     <div class="cell-menu-proximity-area" data-jscall-id="731"></div>
                   </div>
                 </div>
-                <div class="cell-editor-container editor-collapsed" id="97f52774-0049-4611-8868-74f7c1ec9e39" data-jscall-id="732">
-                  <div class=" style_4" style="" data-jscall-id="733" id="97f52774-0049-4611-8868-74f7c1ec9e39-container" tabindex="0">
-                    <div class=" style_4" style="" data-jscall-id="734">
-                      <div class="hover-buttons" id="97f52774-0049-4611-8868-74f7c1ec9e39-hover" data-jscall-id="735">
+                <div class="cell-editor-container editor-collapsed" id="03abaaa3-90dc-47d7-b8e5-be4b37919cc2" data-jscall-id="732">
+                  <div class=" style_7" style="" data-jscall-id="733" id="03abaaa3-90dc-47d7-b8e5-be4b37919cc2-container" tabindex="0">
+                    <div class=" style_7" style="" data-jscall-id="734">
+                      <div class="hover-buttons" id="03abaaa3-90dc-47d7-b8e5-be4b37919cc2-hover" data-jscall-id="735">
                         <button onclick="" class="small-button toggle-button" data-jscall-id="736">
-                          <img class="codicon  style_7" style="" data-jscall-id="737" src="../../bonito/svg/code18139302498156533340.svg" />
+                          <img class="codicon  style_4" style="" data-jscall-id="737" src="../../bonito/svg/code18139302498156533340.svg" />
                         </button>
                         <button onclick="" class="small-button toggle-button" data-jscall-id="738">
-                          <img class="codicon  style_7" style="" data-jscall-id="739" src="../../bonito/svg/terminal3126302118537120484.svg" />
+                          <img class="codicon  style_4" style="" data-jscall-id="739" src="../../bonito/svg/terminal3126302118537120484.svg" />
                         </button>
                         <button onclick="" class="small-button toggle-button active" data-jscall-id="740">
-                          <img class="codicon  style_7" style="" data-jscall-id="741" src="../../bonito/svg/graph187889671474048740.svg" />
+                          <img class="codicon  style_4" style="" data-jscall-id="741" src="../../bonito/svg/graph187889671474048740.svg" />
                         </button>
                         <button onclick="" class="small-button" data-jscall-id="742">
                           <img class="codicon  style_5" style="" data-jscall-id="743" src="../../bonito/svg/close17235711529866555203.svg" />
                         </button>
                       </div>
-                      <div class="cell-editor hide-vertical" id="97f52774-0049-4611-8868-74f7c1ec9e39-card-content" data-jscall-id="744" style="position: relative;">
+                      <div class="cell-editor hide-vertical" id="03abaaa3-90dc-47d7-b8e5-be4b37919cc2-card-content" data-jscall-id="744" style="position: relative;">
                         <div data-jscall-id="745">
                           <div class="monaco-editor-div language-markdown hide-horizontal" data-jscall-id="746"></div>
                         </div>
@@ -3253,13 +3253,13 @@ body.bonito-export-mode .hover-buttons, body.bonito-export-mode .cell-menu-proxi
                       <div data-jscall-id="752" tabindex="0">
                         <div class="cell-output cell-output-markdown " data-jscall-id="747">
                           <div data-jscall-id="764">
-                            <div class="bonito-fragment" id="7e9f42d3-dec7-404d-b33f-d9698318f1c0" data-jscall-id="subsession-application-dom">
+                            <div class="bonito-fragment" id="54d24792-7648-40e4-833b-36a0d9fc9548" data-jscall-id="subsession-application-dom">
                               <div data-jscall-id="765">
                                 <style data-jscall-id="766"></style>
                                 <link href="../../bonito/css/katex.min6751968427317360032.css" data-jscall-id="767" rel="stylesheet" type="text/css" />
                               </div>
                               <div data-jscall-id="768">
-                                <script data-jscall-id="769" type="module">Bonito.init_session("7e9f42d3-dec7-404d-b33f-d9698318f1c0", Bonito.fetch_binary('../../bonito/bin/59a605a46b65d26c6537f4e276ab53746231d6fa-4890649756558909298.bin'), "sub", false);
+                                <script data-jscall-id="769" type="module">Bonito.init_session("54d24792-7648-40e4-833b-36a0d9fc9548", Bonito.fetch_binary('../../bonito/bin/199fdafb407fa963cd205ed11cf5b8a7a7dae107-5725586848181057733.bin'), "sub", false);
 </script>
                                 <span data-jscall-id="753">
                                   <div class="markdown-body" data-jscall-id="754">
@@ -3285,24 +3285,24 @@ body.bonito-export-mode .hover-buttons, body.bonito-export-mode .cell-menu-proxi
                     <div class="cell-menu-proximity-area" data-jscall-id="770"></div>
                   </div>
                 </div>
-                <div class="cell-editor-container" id="9febc41a-8cff-4d86-83c2-535b078de0cb" data-jscall-id="771">
-                  <div class=" style_4" style="" data-jscall-id="772" id="9febc41a-8cff-4d86-83c2-535b078de0cb-container" tabindex="0">
-                    <div class=" style_4" style="" data-jscall-id="773">
-                      <div class="hover-buttons" id="9febc41a-8cff-4d86-83c2-535b078de0cb-hover" data-jscall-id="774">
+                <div class="cell-editor-container" id="7559e17f-2a9e-4790-82ea-b388ab56cf43" data-jscall-id="771">
+                  <div class=" style_7" style="" data-jscall-id="772" id="7559e17f-2a9e-4790-82ea-b388ab56cf43-container" tabindex="0">
+                    <div class=" style_7" style="" data-jscall-id="773">
+                      <div class="hover-buttons" id="7559e17f-2a9e-4790-82ea-b388ab56cf43-hover" data-jscall-id="774">
                         <button onclick="" class="small-button toggle-button active" data-jscall-id="775">
-                          <img class="codicon  style_7" style="" data-jscall-id="776" src="../../bonito/svg/code18139302498156533340.svg" />
+                          <img class="codicon  style_4" style="" data-jscall-id="776" src="../../bonito/svg/code18139302498156533340.svg" />
                         </button>
                         <button onclick="" class="small-button toggle-button" data-jscall-id="777">
-                          <img class="codicon  style_7" style="" data-jscall-id="778" src="../../bonito/svg/terminal3126302118537120484.svg" />
+                          <img class="codicon  style_4" style="" data-jscall-id="778" src="../../bonito/svg/terminal3126302118537120484.svg" />
                         </button>
                         <button onclick="" class="small-button toggle-button active" data-jscall-id="779">
-                          <img class="codicon  style_7" style="" data-jscall-id="780" src="../../bonito/svg/graph187889671474048740.svg" />
+                          <img class="codicon  style_4" style="" data-jscall-id="780" src="../../bonito/svg/graph187889671474048740.svg" />
                         </button>
                         <button onclick="" class="small-button" data-jscall-id="781">
                           <img class="codicon  style_5" style="" data-jscall-id="782" src="../../bonito/svg/close17235711529866555203.svg" />
                         </button>
                       </div>
-                      <div class="cell-editor " id="9febc41a-8cff-4d86-83c2-535b078de0cb-card-content" data-jscall-id="783" style="position: relative;">
+                      <div class="cell-editor " id="7559e17f-2a9e-4790-82ea-b388ab56cf43-card-content" data-jscall-id="783" style="position: relative;">
                         <div data-jscall-id="784">
                           <div class="monaco-editor-div language-julia" data-jscall-id="785"></div>
                         </div>
@@ -3316,12 +3316,12 @@ body.bonito-export-mode .hover-buttons, body.bonito-export-mode .cell-menu-proxi
                       <div data-jscall-id="791" tabindex="0">
                         <div class="cell-output cell-output-julia " data-jscall-id="786">
                           <div data-jscall-id="819">
-                            <div class="bonito-fragment" id="0887973d-4d34-402e-bff1-6a26a6c4206b" data-jscall-id="subsession-application-dom">
+                            <div class="bonito-fragment" id="0b450916-4529-4efa-8d0d-1741fba73c15" data-jscall-id="subsession-application-dom">
                               <div data-jscall-id="820">
                                 <style data-jscall-id="821"></style>
                               </div>
                               <div data-jscall-id="822">
-                                <script data-jscall-id="823" type="module">Bonito.init_session("0887973d-4d34-402e-bff1-6a26a6c4206b", Bonito.fetch_binary('../../bonito/bin/b3529e42b2055827db13c9c9f7f2916e60010cb5-306724531686492083.bin'), "sub", false);
+                                <script data-jscall-id="823" type="module">Bonito.init_session("0b450916-4529-4efa-8d0d-1741fba73c15", Bonito.fetch_binary('../../bonito/bin/987b8efd3dc16b3486f7816a8765afbb5e426bb9-7552917400655642626.bin'), "sub", false);
 </script>
                                 <span data-jscall-id="792">
                                   <div data-jscall-id="793">
@@ -3368,24 +3368,24 @@ body.bonito-export-mode .hover-buttons, body.bonito-export-mode .cell-menu-proxi
                     <div class="cell-menu-proximity-area" data-jscall-id="824"></div>
                   </div>
                 </div>
-                <div class="cell-editor-container editor-collapsed" id="77ee715f-21f8-46b1-88d3-3ae4fc4c4bf0" data-jscall-id="825">
-                  <div class=" style_4" style="" data-jscall-id="826" id="77ee715f-21f8-46b1-88d3-3ae4fc4c4bf0-container" tabindex="0">
-                    <div class=" style_4" style="" data-jscall-id="827">
-                      <div class="hover-buttons" id="77ee715f-21f8-46b1-88d3-3ae4fc4c4bf0-hover" data-jscall-id="828">
+                <div class="cell-editor-container editor-collapsed" id="5d98e1f0-0876-463f-8afb-f3706299bcf9" data-jscall-id="825">
+                  <div class=" style_7" style="" data-jscall-id="826" id="5d98e1f0-0876-463f-8afb-f3706299bcf9-container" tabindex="0">
+                    <div class=" style_7" style="" data-jscall-id="827">
+                      <div class="hover-buttons" id="5d98e1f0-0876-463f-8afb-f3706299bcf9-hover" data-jscall-id="828">
                         <button onclick="" class="small-button toggle-button" data-jscall-id="829">
-                          <img class="codicon  style_7" style="" data-jscall-id="830" src="../../bonito/svg/code18139302498156533340.svg" />
+                          <img class="codicon  style_4" style="" data-jscall-id="830" src="../../bonito/svg/code18139302498156533340.svg" />
                         </button>
                         <button onclick="" class="small-button toggle-button" data-jscall-id="831">
-                          <img class="codicon  style_7" style="" data-jscall-id="832" src="../../bonito/svg/terminal3126302118537120484.svg" />
+                          <img class="codicon  style_4" style="" data-jscall-id="832" src="../../bonito/svg/terminal3126302118537120484.svg" />
                         </button>
                         <button onclick="" class="small-button toggle-button active" data-jscall-id="833">
-                          <img class="codicon  style_7" style="" data-jscall-id="834" src="../../bonito/svg/graph187889671474048740.svg" />
+                          <img class="codicon  style_4" style="" data-jscall-id="834" src="../../bonito/svg/graph187889671474048740.svg" />
                         </button>
                         <button onclick="" class="small-button" data-jscall-id="835">
                           <img class="codicon  style_5" style="" data-jscall-id="836" src="../../bonito/svg/close17235711529866555203.svg" />
                         </button>
                       </div>
-                      <div class="cell-editor hide-vertical" id="77ee715f-21f8-46b1-88d3-3ae4fc4c4bf0-card-content" data-jscall-id="837" style="position: relative;">
+                      <div class="cell-editor hide-vertical" id="5d98e1f0-0876-463f-8afb-f3706299bcf9-card-content" data-jscall-id="837" style="position: relative;">
                         <div data-jscall-id="838">
                           <div class="monaco-editor-div language-markdown hide-horizontal" data-jscall-id="839"></div>
                         </div>
@@ -3399,13 +3399,13 @@ body.bonito-export-mode .hover-buttons, body.bonito-export-mode .cell-menu-proxi
                       <div data-jscall-id="845" tabindex="0">
                         <div class="cell-output cell-output-markdown " data-jscall-id="840">
                           <div data-jscall-id="862">
-                            <div class="bonito-fragment" id="58c6529f-dd50-48fd-ac3f-e3c9d744b4f3" data-jscall-id="subsession-application-dom">
+                            <div class="bonito-fragment" id="d1b81f93-152c-46e9-a44d-41b30ca83bf5" data-jscall-id="subsession-application-dom">
                               <div data-jscall-id="863">
                                 <style data-jscall-id="864"></style>
                                 <link href="../../bonito/css/katex.min6751968427317360032.css" data-jscall-id="865" rel="stylesheet" type="text/css" />
                               </div>
                               <div data-jscall-id="866">
-                                <script data-jscall-id="867" type="module">Bonito.init_session("58c6529f-dd50-48fd-ac3f-e3c9d744b4f3", Bonito.fetch_binary('../../bonito/bin/332c3dfcce0300906be1c453d68e4f15d4619e9d-6254732550359323618.bin'), "sub", false);
+                                <script data-jscall-id="867" type="module">Bonito.init_session("d1b81f93-152c-46e9-a44d-41b30ca83bf5", Bonito.fetch_binary('../../bonito/bin/6db56a23b7898ccbd937381ce7c3ef48c77d1aeb-3589120635897397590.bin'), "sub", false);
 </script>
                                 <span data-jscall-id="846">
                                   <div class="markdown-body" data-jscall-id="847">
@@ -3441,24 +3441,24 @@ body.bonito-export-mode .hover-buttons, body.bonito-export-mode .cell-menu-proxi
                     <div class="cell-menu-proximity-area" data-jscall-id="868"></div>
                   </div>
                 </div>
-                <div class="cell-editor-container" id="e4f0d963-312b-4648-b848-a602b82d158a" data-jscall-id="869">
-                  <div class=" style_4" style="" data-jscall-id="870" id="e4f0d963-312b-4648-b848-a602b82d158a-container" tabindex="0">
-                    <div class=" style_4" style="" data-jscall-id="871">
-                      <div class="hover-buttons" id="e4f0d963-312b-4648-b848-a602b82d158a-hover" data-jscall-id="872">
+                <div class="cell-editor-container" id="c098ffe8-74da-4a3e-837f-12752dc3d12a" data-jscall-id="869">
+                  <div class=" style_7" style="" data-jscall-id="870" id="c098ffe8-74da-4a3e-837f-12752dc3d12a-container" tabindex="0">
+                    <div class=" style_7" style="" data-jscall-id="871">
+                      <div class="hover-buttons" id="c098ffe8-74da-4a3e-837f-12752dc3d12a-hover" data-jscall-id="872">
                         <button onclick="" class="small-button toggle-button active" data-jscall-id="873">
-                          <img class="codicon  style_7" style="" data-jscall-id="874" src="../../bonito/svg/code18139302498156533340.svg" />
+                          <img class="codicon  style_4" style="" data-jscall-id="874" src="../../bonito/svg/code18139302498156533340.svg" />
                         </button>
                         <button onclick="" class="small-button toggle-button" data-jscall-id="875">
-                          <img class="codicon  style_7" style="" data-jscall-id="876" src="../../bonito/svg/terminal3126302118537120484.svg" />
+                          <img class="codicon  style_4" style="" data-jscall-id="876" src="../../bonito/svg/terminal3126302118537120484.svg" />
                         </button>
                         <button onclick="" class="small-button toggle-button active" data-jscall-id="877">
-                          <img class="codicon  style_7" style="" data-jscall-id="878" src="../../bonito/svg/graph187889671474048740.svg" />
+                          <img class="codicon  style_4" style="" data-jscall-id="878" src="../../bonito/svg/graph187889671474048740.svg" />
                         </button>
                         <button onclick="" class="small-button" data-jscall-id="879">
                           <img class="codicon  style_5" style="" data-jscall-id="880" src="../../bonito/svg/close17235711529866555203.svg" />
                         </button>
                       </div>
-                      <div class="cell-editor " id="e4f0d963-312b-4648-b848-a602b82d158a-card-content" data-jscall-id="881" style="position: relative;">
+                      <div class="cell-editor " id="c098ffe8-74da-4a3e-837f-12752dc3d12a-card-content" data-jscall-id="881" style="position: relative;">
                         <div data-jscall-id="882">
                           <div class="monaco-editor-div language-julia" data-jscall-id="883"></div>
                         </div>
@@ -3472,12 +3472,12 @@ body.bonito-export-mode .hover-buttons, body.bonito-export-mode .cell-menu-proxi
                       <div data-jscall-id="889" tabindex="0">
                         <div class="cell-output cell-output-julia " data-jscall-id="884">
                           <div data-jscall-id="923">
-                            <div class="bonito-fragment" id="2e9c6a76-86ca-414b-820a-b67cbe203ef8" data-jscall-id="subsession-application-dom">
+                            <div class="bonito-fragment" id="4bb45859-b44c-4712-8ce7-492fd54ba0da" data-jscall-id="subsession-application-dom">
                               <div data-jscall-id="924">
                                 <style data-jscall-id="925"></style>
                               </div>
                               <div data-jscall-id="926">
-                                <script data-jscall-id="927" type="module">Bonito.init_session("2e9c6a76-86ca-414b-820a-b67cbe203ef8", Bonito.fetch_binary('../../bonito/bin/3c039ee5a4086eec17dcfe1e6ba42e4b84da0149-10682805825724554100.bin'), "sub", false);
+                                <script data-jscall-id="927" type="module">Bonito.init_session("4bb45859-b44c-4712-8ce7-492fd54ba0da", Bonito.fetch_binary('../../bonito/bin/4fd6c700ed58dc07519bd468fa5cf1537c736476-553026396997284647.bin'), "sub", false);
 </script>
                                 <span data-jscall-id="890">
                                   <div data-jscall-id="891">
@@ -3494,27 +3494,27 @@ body.bonito-export-mode .hover-buttons, body.bonito-export-mode .cell-menu-proxi
                                       <tbody data-jscall-id="900">
                                         <tr data-jscall-id="901">
                                           <td style="padding: 8px; border: 1px solid #ddd;" data-jscall-id="902">100</td>
-                                          <td style="padding: 8px; border: 1px solid #ddd; font-family: monospace;" data-jscall-id="903">2.1073</td>
-                                          <td style="padding: 8px; border: 1px solid #ddd; font-family: monospace;" data-jscall-id="904">0.0974</td>
-                                          <td style="padding: 8px; border: 1px solid #ddd; font-family: monospace;" data-jscall-id="905">0.1073</td>
+                                          <td style="padding: 8px; border: 1px solid #ddd; font-family: monospace;" data-jscall-id="903">2.021</td>
+                                          <td style="padding: 8px; border: 1px solid #ddd; font-family: monospace;" data-jscall-id="904">0.0955</td>
+                                          <td style="padding: 8px; border: 1px solid #ddd; font-family: monospace;" data-jscall-id="905">0.021</td>
                                         </tr>
                                         <tr data-jscall-id="906">
                                           <td style="padding: 8px; border: 1px solid #ddd;" data-jscall-id="907">500</td>
-                                          <td style="padding: 8px; border: 1px solid #ddd; font-family: monospace;" data-jscall-id="908">1.9794</td>
-                                          <td style="padding: 8px; border: 1px solid #ddd; font-family: monospace;" data-jscall-id="909">0.0441</td>
-                                          <td style="padding: 8px; border: 1px solid #ddd; font-family: monospace;" data-jscall-id="910">0.0206</td>
+                                          <td style="padding: 8px; border: 1px solid #ddd; font-family: monospace;" data-jscall-id="908">2.0223</td>
+                                          <td style="padding: 8px; border: 1px solid #ddd; font-family: monospace;" data-jscall-id="909">0.0426</td>
+                                          <td style="padding: 8px; border: 1px solid #ddd; font-family: monospace;" data-jscall-id="910">0.0223</td>
                                         </tr>
                                         <tr data-jscall-id="911">
                                           <td style="padding: 8px; border: 1px solid #ddd;" data-jscall-id="912">1000</td>
-                                          <td style="padding: 8px; border: 1px solid #ddd; font-family: monospace;" data-jscall-id="913">2.0119</td>
-                                          <td style="padding: 8px; border: 1px solid #ddd; font-family: monospace;" data-jscall-id="914">0.0305</td>
-                                          <td style="padding: 8px; border: 1px solid #ddd; font-family: monospace;" data-jscall-id="915">0.0119</td>
+                                          <td style="padding: 8px; border: 1px solid #ddd; font-family: monospace;" data-jscall-id="913">2.0405</td>
+                                          <td style="padding: 8px; border: 1px solid #ddd; font-family: monospace;" data-jscall-id="914">0.0303</td>
+                                          <td style="padding: 8px; border: 1px solid #ddd; font-family: monospace;" data-jscall-id="915">0.0405</td>
                                         </tr>
                                         <tr data-jscall-id="916">
                                           <td style="padding: 8px; border: 1px solid #ddd;" data-jscall-id="917">5000</td>
-                                          <td style="padding: 8px; border: 1px solid #ddd; font-family: monospace;" data-jscall-id="918">1.9915</td>
+                                          <td style="padding: 8px; border: 1px solid #ddd; font-family: monospace;" data-jscall-id="918">1.9963</td>
                                           <td style="padding: 8px; border: 1px solid #ddd; font-family: monospace;" data-jscall-id="919">0.0137</td>
-                                          <td style="padding: 8px; border: 1px solid #ddd; font-family: monospace;" data-jscall-id="920">0.0085</td>
+                                          <td style="padding: 8px; border: 1px solid #ddd; font-family: monospace;" data-jscall-id="920">0.0037</td>
                                         </tr>
                                       </tbody>
                                     </table>
@@ -3531,24 +3531,24 @@ body.bonito-export-mode .hover-buttons, body.bonito-export-mode .cell-menu-proxi
                     <div class="cell-menu-proximity-area" data-jscall-id="928"></div>
                   </div>
                 </div>
-                <div class="cell-editor-container editor-collapsed" id="e41e52e4-35ce-4d4d-9bcd-42cd1e8f8f9b" data-jscall-id="929">
-                  <div class=" style_4" style="" data-jscall-id="930" id="e41e52e4-35ce-4d4d-9bcd-42cd1e8f8f9b-container" tabindex="0">
-                    <div class=" style_4" style="" data-jscall-id="931">
-                      <div class="hover-buttons" id="e41e52e4-35ce-4d4d-9bcd-42cd1e8f8f9b-hover" data-jscall-id="932">
+                <div class="cell-editor-container editor-collapsed" id="49a9f06c-1a30-4bdf-a5fc-4504768302fe" data-jscall-id="929">
+                  <div class=" style_7" style="" data-jscall-id="930" id="49a9f06c-1a30-4bdf-a5fc-4504768302fe-container" tabindex="0">
+                    <div class=" style_7" style="" data-jscall-id="931">
+                      <div class="hover-buttons" id="49a9f06c-1a30-4bdf-a5fc-4504768302fe-hover" data-jscall-id="932">
                         <button onclick="" class="small-button toggle-button" data-jscall-id="933">
-                          <img class="codicon  style_7" style="" data-jscall-id="934" src="../../bonito/svg/code18139302498156533340.svg" />
+                          <img class="codicon  style_4" style="" data-jscall-id="934" src="../../bonito/svg/code18139302498156533340.svg" />
                         </button>
                         <button onclick="" class="small-button toggle-button" data-jscall-id="935">
-                          <img class="codicon  style_7" style="" data-jscall-id="936" src="../../bonito/svg/terminal3126302118537120484.svg" />
+                          <img class="codicon  style_4" style="" data-jscall-id="936" src="../../bonito/svg/terminal3126302118537120484.svg" />
                         </button>
                         <button onclick="" class="small-button toggle-button active" data-jscall-id="937">
-                          <img class="codicon  style_7" style="" data-jscall-id="938" src="../../bonito/svg/graph187889671474048740.svg" />
+                          <img class="codicon  style_4" style="" data-jscall-id="938" src="../../bonito/svg/graph187889671474048740.svg" />
                         </button>
                         <button onclick="" class="small-button" data-jscall-id="939">
                           <img class="codicon  style_5" style="" data-jscall-id="940" src="../../bonito/svg/close17235711529866555203.svg" />
                         </button>
                       </div>
-                      <div class="cell-editor hide-vertical" id="e41e52e4-35ce-4d4d-9bcd-42cd1e8f8f9b-card-content" data-jscall-id="941" style="position: relative;">
+                      <div class="cell-editor hide-vertical" id="49a9f06c-1a30-4bdf-a5fc-4504768302fe-card-content" data-jscall-id="941" style="position: relative;">
                         <div data-jscall-id="942">
                           <div class="monaco-editor-div language-markdown hide-horizontal" data-jscall-id="943"></div>
                         </div>
@@ -3562,7 +3562,7 @@ body.bonito-export-mode .hover-buttons, body.bonito-export-mode .cell-menu-proxi
                       <div data-jscall-id="949" tabindex="0">
                         <div class="cell-output cell-output-markdown " data-jscall-id="944">
                           <div data-jscall-id="1046">
-                            <div class="bonito-fragment" id="ebf14278-3613-4417-8811-64571d8d9671" data-jscall-id="subsession-application-dom">
+                            <div class="bonito-fragment" id="1a710193-6193-46f3-b667-687c8e749dbe" data-jscall-id="subsession-application-dom">
                               <div data-jscall-id="1047">
                                 <style data-jscall-id="1048">.style_3 {
   list-style-type: disc;
@@ -3570,7 +3570,7 @@ body.bonito-export-mode .hover-buttons, body.bonito-export-mode .cell-menu-proxi
 </style>
                               </div>
                               <div data-jscall-id="1049">
-                                <script data-jscall-id="1050" type="module">Bonito.init_session("ebf14278-3613-4417-8811-64571d8d9671", Bonito.fetch_binary('../../bonito/bin/90fbba612ac0f7255b780667a549f990e03e792e-6347407987376320711.bin'), "sub", false);
+                                <script data-jscall-id="1050" type="module">Bonito.init_session("1a710193-6193-46f3-b667-687c8e749dbe", Bonito.fetch_binary('../../bonito/bin/9a247de755cf956dc7934c77f1581cc7e5d0f4ee-5190214016450453311.bin'), "sub", false);
 </script>
                                 <span data-jscall-id="950">
                                   <div class="markdown-body" data-jscall-id="951">
