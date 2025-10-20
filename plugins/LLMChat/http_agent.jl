@@ -321,7 +321,7 @@ function prompt(agent::HTTPAgent, messages::Vector{AgentMessage}, tools::Vector;
     # Convert messages to API format
     api_messages = [
         Dict("role" => "system", "content" => system_prompt(api)),
-        [message_to_api(msg) for msg in messages]...
+        [message_to_api(api, msg) for msg in messages]...
     ]
 
     # Build request with streaming enabled
@@ -371,26 +371,146 @@ end
 # ============================================================================
 
 """
-    message_to_api(msg::AgentMessage)
+    message_to_api(api::AbstractApi, msg::AgentMessage)
 
-Convert AgentMessage to API format with support for text, images, files, and tool calls/results.
+Convert AgentMessage to API-specific format. Default implementation for Claude-style APIs.
 """
-function message_to_api(msg::AgentMessage)
-    content = msg.content
-    role = msg.role == :user ? "user" : "assistant"
-    # Check if content contains image or file references
-    # Format: ![image](path/to/image.png) or [file](path/to/file.txt)
-    if content isa String
-        content_parts = parse_content_with_media(content)
-        if length(content_parts) > 1
-            # Multi-part message with images/files
-            return Dict("role" => role, "content" => content_parts)
-        end
-        # Simple text message
-        return Dict("role" => role, "content" => content)
+function message_to_api(api::AbstractApi, msg::AgentMessage)
+    api_role = msg.role == :user ? "user" : "assistant"
+    content_value = message_to_api(api, msg.content, msg.cell_id)
+    return Dict("role" => api_role, "content" => content_value)
+end
+
+"""
+    message_to_api(api::OpenAIApi, msg::AgentMessage)
+
+Convert AgentMessage to OpenAI format. Merges additional fields from content conversion.
+"""
+function message_to_api(api::OpenAIApi, msg::AgentMessage)
+    api_role = msg.role == :user ? "user" : "assistant"
+
+    # Get content value or additional fields from content-specific method
+    content_or_fields = message_to_api(api, msg.content, msg.cell_id)
+
+    # Start with base message dict
+    msg_dict = Dict{String, Any}("role" => api_role, "content" => nothing)
+
+    # If content method returned a dict, merge additional fields
+    if content_or_fields isa Dict
+        merge!(msg_dict, content_or_fields)
+    else
+        # Otherwise it's just the content value
+        msg_dict["content"] = content_or_fields
     end
 
-    return Dict("role" => role, "content" => content)
+    return msg_dict
+end
+
+# Ollama uses OpenAI format
+message_to_api(api::OllamaApi, msg::AgentMessage) = message_to_api(OpenAIApi("", "", "", ""), msg)
+
+# ============================================================================
+# Content value conversion (returns just the content value, not full message dict)
+# ============================================================================
+
+"""
+    message_to_api(api::AbstractApi, content::AbstractString, cell_id)
+
+Convert string to content value (string or array of content parts for multimodal).
+"""
+function message_to_api(api::AbstractApi, content::AbstractString, cell_id)
+    content_parts = parse_content_with_media(string(content))
+
+    if length(content_parts) > 1
+        # Multi-part message with images/files
+        return content_parts
+    end
+    # Simple text message
+    return string(content)
+end
+
+"""
+    message_to_api(api::AbstractApi, tool::AbstractTool, cell_id)
+
+Convert tool to content value (array with tool_use block for Claude-style APIs).
+"""
+function message_to_api(api::AbstractApi, tool::AbstractTool, cell_id)
+    tool_id = "tool_$(cell_id)"
+    return [Dict(
+        "type" => "tool_use",
+        "id" => tool_id,
+        "name" => tool_name(typeof(tool)),
+        "input" => tool
+    )]
+end
+
+"""
+    message_to_api(api::OpenAIApi, tool::AbstractTool, cell_id)
+
+Convert tool for OpenAI format (returns dict with tool_calls field to be merged).
+"""
+function message_to_api(api::OpenAIApi, tool::AbstractTool, cell_id)
+    tool_id = "tool_$(cell_id)"
+    fields = [String(f) => getfield(tool, f) for f in propertynames(tool)]
+
+    return Dict(
+        "tool_calls" => [Dict(
+            "id" => tool_id,
+            "type" => "function",
+            "function" => Dict(
+                "name" => tool_name(typeof(tool)),
+                "arguments" => Dict(fields)
+            )
+        )]
+    )
+end
+
+"""
+    message_to_api(api::AbstractApi, result::ToolResult, cell_id)
+
+Convert tool result to content value (array with tool_result block for Claude-style APIs).
+"""
+function message_to_api(api::AbstractApi, result::ToolResult, cell_id)
+    tool_id = "tool_$(cell_id)"
+
+    # Convert result to string
+    result_str = if !result.success && result.result isa Exception
+        "Error: $(string(result.result))"
+    elseif result.result isa Dict && haskey(result.result, "error")
+        "Error: $(result.result["error"])"
+    else
+        repr(result.result)
+    end
+
+    return [Dict(
+        "type" => "tool_result",
+        "tool_use_id" => tool_id,
+        "content" => result_str
+    )]
+end
+
+"""
+    message_to_api(api::OpenAIApi, result::ToolResult, cell_id)
+
+Convert tool result for OpenAI format (returns dict with role and tool_call_id to be merged).
+"""
+function message_to_api(api::OpenAIApi, result::ToolResult, cell_id)
+    tool_id = "tool_$(cell_id)"
+
+    # Convert result to string
+    result_str = if !result.success && result.result isa Exception
+        "Error: $(string(result.result))"
+    elseif result.result isa Dict && haskey(result.result, "error")
+        "Error: $(result.result["error"])"
+    else
+        repr(result.result)
+    end
+
+    return Dict(
+        "role" => "tool",
+        "tool_call_id" => tool_id,
+        "content" => result_str
+    )
 end
 
 """

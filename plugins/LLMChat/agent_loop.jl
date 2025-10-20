@@ -27,7 +27,7 @@ function run_agent_loop!(book, agent::Any, user_message::String, config::AgentCo
     add_cell!(book, user_markdown_code, "julia", Dict{Symbol, Any}(:from => :user))
     async_spinner!(task_spinner, "agent loop", 1:50) do i
         # Get current conversation
-        messages = cells_to_messages(book.cells)
+        messages = cells_to_messages(book)
         # Call agent with nested spinner - returns Channel with multiple items (tools and text)
         result_channel = async_spinner!(task_spinner, "asking") do
             prompt(agent, messages, config.tools; spinner=task_spinner)
@@ -86,6 +86,21 @@ end
 extract_output(value) = value
 extract_output(value::BonitoBook.NoSplat) = value.value
 
+function store_tool_exe!(book, tool_execution, cell_id=book.cell_id_counter[])
+     # Get next cell ID
+    # Create data/tools directory if needed
+    tools_dir = joinpath(book.folder, "data", "tools")
+    if !isdir(tools_dir)
+        mkpath(tools_dir)
+    end
+    # Write ToolExecution to JSON file
+    tool_type = typeof(tool_execution.tool)
+    tool_file = joinpath(tools_dir, "$(tool_name(tool_type))-$(cell_id).json")
+    open(io-> JSON3.write(io, tool_execution), tool_file, "w")
+    return tool_file
+end
+
+
 function process_item!(book, tool::AddCellTool)
     # AddCellTool is special - execute it and directly add the cell content
     metadata = something(tool.metadata, Dict{Symbol,Any}())
@@ -93,29 +108,9 @@ function process_item!(book, tool::AddCellTool)
     cell = add_cell!(book, tool.content, tool.language, metadata; editor_visible=true)
     val = cell.editor.output[]
     result = ToolResult(repr(extract_output(val)))
-
     # Create ToolExecution and serialize it
     tool_execution = ToolExecution(tool, result)
-
-    # Get next cell ID
-    cell_id = book.cell_id_counter[]
-    # Create data/tools directory if needed
-    tools_dir = joinpath(book.folder, "data", "tools")
-    if !isdir(tools_dir)
-        mkpath(tools_dir)
-    end
-    # Write ToolExecution to JSON file
-    tool_type = typeof(tool)
-    tool_file = joinpath(tools_dir, "$(tool_name(tool_type))-$(cell_id).json")
-    write(tool_file, JSON3.write(tool_execution))
-
-    # Generate Julia code that reads the ToolExecution from the JSON file
-    name = "$(tool_name(tool_type))-$(cell_id).json"
-    tool_code = """open(io -> JSON3.read(io, ToolExecution{$(nameof(tool_type))}), data"tools/$name")"""
-
-    # Add as Julia code cell (will be executed and rendered)
-    cell = add_cell!(book, tool_code, "julia", Dict{Symbol, Any}(:from => :tool, :tool => tool_name(tool_type)))
-
+    store_tool_exe!(book, tool_execution, cell.uuid)
     return cell
 end
 
@@ -125,25 +120,14 @@ function process_item!(book, tool::AbstractTool)
 
     # Create ToolExecution
     tool_execution = ToolExecution(tool, result)
-
-    # Get next cell ID
-    cell_id = book.cell_id_counter[]
-    # Create data/tools directory if needed
-    tools_dir = joinpath(book.folder, "data", "tools")
-    if !isdir(tools_dir)
-        mkpath(tools_dir)
-    end
-    # Write ToolExecution to JSON file
-    tool_type = typeof(tool)
-    tool_file = joinpath(tools_dir, "$(tool_name(tool_type))-$(cell_id).json")
-    write(tool_file, JSON3.write(tool_execution))
+    path = store_tool_exe!(book, tool_execution)
 
     # Generate Julia code that reads the ToolExecution from the JSON file
-    name = "$(tool_name(tool_type))-$(cell_id).json"
-    tool_code = """open(io -> JSON3.read(io, ToolExecution{$(nameof(tool_type))}), data"tools/$name")"""
-
+    name = basename(path)
+    tool_code = """open(io -> JSON3.read(io, $(typeof(tool_execution))), data"tools/$name")"""
+    tool_type = tool_name(typeof(tool))
     # Add as Julia code cell (will be executed and rendered)
-    cell = add_cell!(book, tool_code, "julia", Dict{Symbol, Any}(:from => :tool, :tool => tool_name(tool_type)))
+    cell = add_cell!(book, tool_code, "julia", Dict{Symbol, Any}(:from => :tool, :tool => tool_type))
 
     return cell  # Return the cell for TodoList tracking
 end

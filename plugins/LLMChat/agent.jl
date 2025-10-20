@@ -196,95 +196,15 @@ function extract_markdown_content(source::String)
     return source
 end
 
-function represent_tool(::Type{<:AbstractTool}, cell)
-    # Extract ToolExecution from cell output
-    execution = extract_output(cell.editor.output[])
-    tool = execution.tool
-    result = execution.result
-
-    id = cell.uuid
-    tool_id = "tool_$(id)"
-    fields = [f => getfield(tool, f) for f in propertynames(tool)]
-
-    # Tool call (assistant message with content array)
-    tool_call = AgentMessage(:assistant, [Dict(
-        "type" => "tool_use",
-        "id" => tool_id,
-        "name" => tool_name(typeof(tool)),
-        "input" => Dict(fields)
-        )], id)
-
-    # Tool result (user message with content array)
-    # Convert result to string for API
-    result_str = if !result.success && result.result isa Exception
-        "Error: $(string(result.result))"
-    elseif result.result isa Dict && haskey(result.result, "error")
-        "Error: $(result.result["error"])"
-    else
-        repr(result.result)
-    end
-
-    tool_result = AgentMessage(:user, [Dict(
-        "type" => "tool_result",
-        "tool_use_id" => tool_id,
-        "content" => result_str
-        )], id)
-
-    return [tool_call, tool_result]
-end
-
-function represent_tool(::Type{AddCellTool}, cell)
-    # Extract ToolExecution from cell output
-    execution = extract_output(cell.editor.output[])
-    tool = execution.tool
-    result = execution.result
-
-    # AddCellTool: show full output/logging
-    content = tool.content
-    logging = cell.editor.logging_html[]
-    tool_id = "tool_$(cell.uuid)"
-
-    # Tool call (assistant message with content array)
-    tool_call = AgentMessage(:assistant, [Dict(
-        "type" => "tool_use",
-        "id" => tool_id,
-        "name" => "add_cell",
-        "input" => Dict(
-            "language" => tool.language,
-            "content" => content,
-            "metadata" => Dict()
-        )
-    )], cell.uuid)
-
-    # Tool result with actual result
-    result_str = if !result.success && result.result isa Exception
-        "Error: $(string(result.result))"
-    else
-        """
-        result: $(repr(result.result))
-        logs: $(logging)
-        """
-    end
-
-    tool_result = AgentMessage(:user, [Dict(
-        "type" => "tool_result",
-        "tool_use_id" => tool_id,
-        "content" => result_str
-    )], cell.uuid)
-
-    return [tool_call, tool_result]
-end
-
-
 """
     cells_to_messages(cells::Vector{CellEditor})
 
 Convert notebook cells to agent messages.
 Smartly extracts content from Markdown.parse wrappers and filters out add_cell tool cells.
 """
-function cells_to_messages(cells::Vector)
+function cells_to_messages(book)
     messages = AgentMessage[]
-    for cell in cells
+    for cell in book.cells
         role = get(cell.metadata, :from, :assistant)
         cell_id = cell.uuid
         tool_type = get(cell.metadata, :tool, nothing)
@@ -296,8 +216,11 @@ function cells_to_messages(cells::Vector)
             push!(messages, AgentMessage(role, content, cell_id))
         else
             TT = tool_name_to_type(string(tool_type))
+            data = joinpath(book.folder, "data", "tools", "$(tool_type)-$(cell_id).json")
+            tool = open(io -> JSON3.read(io, ToolExecution{TT}), data)
             # Tool results: different formats based on tool type
-            append!(messages, represent_tool(TT, cell))
+            push!(messages, AgentMessage(:assistant, tool.tool, cell_id))
+            push!(messages, AgentMessage(:user, tool.result, cell_id))
         end
     end
     return messages
