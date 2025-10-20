@@ -3,7 +3,7 @@ module BonitoBookAlgebraOfGraphicsExt
 using BonitoBook
 using AlgebraOfGraphics
 using Bonito
-using Makie
+using AlgebraOfGraphics.Makie
 
 function Bonito.jsrender(s::Bonito.Session, value::AlgebraOfGraphics.Layers)
     spec = AlgebraOfGraphics.draw_to_spec(value)
@@ -19,6 +19,5 @@ function Bonito.jsrender(s::Bonito.Session, value::Makie.Observable{AlgebraOfGra
     spec_obs = map(AlgebraOfGraphics.draw_to_spec, value)
     return Bonito.jsrender(s, spec_obs)
 end
-
 
 end
