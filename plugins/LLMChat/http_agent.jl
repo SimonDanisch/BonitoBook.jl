@@ -153,7 +153,7 @@ function request_body(api::ClaudeApi, messages::Vector, tools::Vector)
         "messages" => user_messages,
         "system" => system_msg,
         "stream" => true,
-        "max_tokens" => 4096
+        "max_tokens" => 64000
     )
     if !isempty(tools)
         body["tools"] = [tool_to_claude(T) for T in tools]
@@ -224,6 +224,7 @@ You are a helpful AI assistant integrated into a Julia notebook.
 * Always use WGLMakie for plotting unless explicitly asked for another library
 
 # Julia specific tips:
+- Please dont ever activate any Pkg env! Always assume the user started you in the target env
 - Use `@doc(sym_or_var)` to get documentation for a function or package
 - Use `names(PackageName)` to get a list of functions in a package
 - Use `using PackageName` to load a package
@@ -346,19 +347,19 @@ function prompt(agent::HTTPAgent, messages::Vector{AgentMessage}, tools::Vector;
                 if resp.status >= 400
                     # Read error response body
                     error_body = read(io, String)
-                    error_msg = try
-                        # Try to parse as JSON for more detailed error
-                        error_json = JSON3.read(error_body)
-                        get(error_json, :error, get(error_json, :message, error_body))
-                    catch
-                        error_body
-                    end
-                    error("HTTP $(resp.status): $error_msg")
+                    put!(channel, "HTTP $(resp.status): $error_body")
+                    return
                 end
 
                 # Parse SSE stream and pass chunks to response parser
-                parse_sse(io, spinner=spinner) do parsed_chunk
-                    parse_response(api, parsed_chunk, channel)
+                try
+                    state = parse_state(api)
+                    parse_sse(io, spinner=spinner) do parsed_chunk
+                        parse_response(state, parsed_chunk, channel)
+                    end
+                catch e
+                    @warn "Failed to parse SSE stream" exception=e
+                    put!(channel, "Error parsing response stream: $(string(e))")
                 end
             end
         end
@@ -695,6 +696,8 @@ Accumulates partial data and only emits when complete.
 """
 const openai_state = Ref{Union{OpenAIStreamState, Nothing}}(nothing)
 
+
+
 function parse_response(api::OpenAIApi, chunk, output_channel::Channel)
     # Initialize state on first chunk
     if openai_state[] === nothing
@@ -777,161 +780,177 @@ mutable struct ClaudeStreamState
     text_buffer::String
     tool_name::String
     tool_input_buffer::String
+    stop_reason::Union{String, Nothing}
 end
 
-ClaudeStreamState() = ClaudeStreamState(-1, "", "", "", "")
+ClaudeStreamState() = ClaudeStreamState(-1, "", "", "", "", nothing)
 
-"""
-    parse_response(api::ClaudeApi, chunk, output_channel::Channel)
 
-Parse Claude streaming chunk and emit complete tools/text to output_channel.
-Claude streams with events: content_block_start, content_block_delta, content_block_stop
-"""
-const claude_state = Ref{Union{ClaudeStreamState, Nothing}}(nothing)
+parse_state(::ClaudeApi) = ClaudeStreamState()
 
-function parse_response(api::ClaudeApi, chunk, output_channel::Channel)
-    # Initialize state on first chunk
-    if claude_state[] === nothing
-        claude_state[] = ClaudeStreamState()
-    end
-    state = claude_state[]
+function parse_response(state::ClaudeStreamState, chunk, output_channel::Channel)
+    event_type = get(chunk, :type, "")
 
-    try
-        event_type = get(chunk, :type, "")
+    if event_type == "message_start"
+        # Message starting - can access initial metadata if needed
+        # Currently nothing to do here
+        return
 
-        if event_type == "content_block_start"
-            # New content block starting
-            block = chunk.content_block
-            state.current_block_index = chunk.index
-            state.current_block_type = block.type
+    elseif event_type == "content_block_start"
+        # New content block starting
+        block = chunk.content_block
+        state.current_block_index = chunk.index
+        state.current_block_type = block.type
 
-            if block.type == "tool_use"
-                state.tool_name = block.name
-                state.tool_input_buffer = ""
-            elseif block.type == "text"
-                state.text_buffer = ""
-            end
-
-        elseif event_type == "content_block_delta"
-            # Accumulate content for current block
-            delta = chunk.delta
-
-            if delta.type == "text_delta"
-                state.text_buffer *= delta.text
-            elseif delta.type == "input_json_delta"
-                state.tool_input_buffer *= delta.partial_json
-            end
-
-        elseif event_type == "content_block_stop"
-            # Block complete - emit to channel
-            if state.current_block_type == "text"
-                if !isempty(strip(state.text_buffer))
-                    put!(output_channel, state.text_buffer)
-                end
-                state.text_buffer = ""
-            elseif state.current_block_type == "tool_use"
-                if !isempty(state.tool_name) && !isempty(state.tool_input_buffer)
-                    tool_type = tool_name_to_type(state.tool_name)
-                    if tool_type !== nothing
-                        try
-                            tool = JSON3.read(state.tool_input_buffer, tool_type)
-                            put!(output_channel, tool)
-                        catch e
-                            @warn "Failed to parse tool input" tool_name=state.tool_name input=state.tool_input_buffer exception=e
-                        end
-                    end
-                end
-                state.tool_name = ""
-                state.tool_input_buffer = ""
-            end
-
-        elseif event_type == "message_stop"
-            # Message complete - reset state
-            claude_state[] = nothing
-        end
-    catch e
-        @warn "Failed to parse Claude streaming chunk" exception=e
-        claude_state[] = nothing
-    end
-end
-
-"""
-    parse_ollama_response(chunk, output_channel::Channel)
-
-Parse Ollama streaming chunk and emit complete tools/text to output_channel.
-Ollama uses OpenAI-compatible format with deltas.
-"""
-const ollama_state = Ref{Union{OpenAIStreamState, Nothing}}(nothing)
-
-function parse_response(api::OllamaApi, chunk, output_channel::Channel)
-    # Ollama uses OpenAI format, so reuse OpenAI state structure
-    if ollama_state[] === nothing
-        ollama_state[] = OpenAIStreamState()
-    end
-    state = ollama_state[]
-
-    try
-        if haskey(chunk, :message)
-            message = chunk.message
-
-            # Handle tool calls (accumulate)
-            if haskey(message, :tool_calls)
-                for tool_call in message.tool_calls
-                    idx = get(tool_call, :index, 0)
-
-                    if !haskey(state.tool_calls, idx)
-                        state.tool_calls[idx] = Dict("name" => "", "arguments" => "")
-                    end
-
-                    if haskey(tool_call, :function)
-                        func = tool_call.function
-                        if haskey(func, :name)
-                            state.tool_calls[idx]["name"] = func.name
-                        end
-                        if haskey(func, :arguments)
-                            state.tool_calls[idx]["arguments"] *= func.arguments
-                        end
-                    end
-                end
-            end
-
-            # Handle text content (accumulate)
-            if haskey(message, :content) && message.content !== nothing
-                state.text_buffer *= message.content
-            end
+        if block.type == "tool_use"
+            state.tool_name = block.name
+            state.tool_input_buffer = ""
+        elseif block.type == "text"
+            state.text_buffer = ""
         end
 
-        # Check if done
-        if haskey(chunk, :done) && chunk.done
-            # Emit all accumulated tools
-            for (idx, tool_data) in sort(collect(state.tool_calls), by=first)
-                tool_name = tool_data["name"]
-                args_json = tool_data["arguments"]
+    elseif event_type == "content_block_delta"
+        # Accumulate content for current block
+        delta = chunk.delta
 
-                if !isempty(tool_name) && !isempty(args_json)
-                    tool_type = tool_name_to_type(tool_name)
-                    if tool_type !== nothing
-                        try
-                            tool = JSON3.read(args_json, tool_type)
-                            put!(output_channel, tool)
-                        catch e
-                            @warn "Failed to parse tool arguments" tool_name args_json exception=e
-                        end
-                    end
-                end
-            end
+        if delta.type == "text_delta"
+            state.text_buffer *= delta.text
+        elseif delta.type == "input_json_delta"
+            state.tool_input_buffer *= delta.partial_json
+        end
 
-            # Emit accumulated text if present
+    elseif event_type == "content_block_stop"
+        # Block complete - emit to channel
+        if state.current_block_type == "text"
             if !isempty(strip(state.text_buffer))
                 put!(output_channel, state.text_buffer)
             end
-
-            # Reset state
-            ollama_state[] = nothing
+            state.text_buffer = ""
+        elseif state.current_block_type == "tool_use"
+            if !isempty(state.tool_name) && !isempty(state.tool_input_buffer)
+                tool_type = tool_name_to_type(state.tool_name)
+                if tool_type !== nothing
+                    try
+                        tool = JSON3.read(state.tool_input_buffer, tool_type)
+                        put!(output_channel, tool)
+                    catch e
+                        @warn "Failed to parse tool input" tool_name=state.tool_name input=state.tool_input_buffer exception=e
+                    end
+                end
+            end
+            state.tool_name = ""
+            state.tool_input_buffer = ""
         end
-    catch e
-        @warn "Failed to parse Ollama streaming chunk" exception=e
-        ollama_state[] = nothing
+
+    elseif event_type == "message_delta"
+        # Message-level updates (stop_reason, usage, etc.)
+        if haskey(chunk, :delta)
+            delta = chunk.delta
+            if haskey(delta, :stop_reason) && delta.stop_reason !== nothing
+                state.stop_reason = delta.stop_reason
+            end
+        end
+
+    elseif event_type == "message_stop"
+        # End of message - handle incomplete blocks and emit stop_reason if we have one
+
+        # If we have incomplete content when message stops, emit what we have
+        if state.stop_reason == "max_tokens"
+            # Handle incomplete tool - warn about it
+            if state.current_block_type == "tool_use" && !isempty(state.tool_input_buffer)
+                @warn "Tool call truncated due to max_tokens" tool_name=state.tool_name partial_input=state.tool_input_buffer
+            end
+
+            # Handle incomplete text - emit it
+            if state.current_block_type == "text" && !isempty(strip(state.text_buffer))
+                put!(output_channel, state.text_buffer)
+            end
+        end
+
+        if state.stop_reason !== nothing
+            # Emit stop reason as informational message only for actual issues
+            stop_msg = if state.stop_reason == "max_tokens"
+                "⚠️ Response truncated: Maximum token limit reached"
+            elseif state.stop_reason == "end_turn"
+                # Normal text completion - don't emit anything
+                nothing
+            elseif state.stop_reason == "tool_use"
+                # Normal tool use completion - don't emit anything
+                nothing
+            elseif state.stop_reason == "stop_sequence"
+                "Response stopped at specified sequence"
+            else
+                # Unknown stop reason - report it
+                "Response stopped: $(state.stop_reason)"
+            end
+
+            if stop_msg !== nothing
+                put!(output_channel, stop_msg)
+            end
+        end
+        return
+
+    elseif event_type == "ping"
+        # Keepalive ping - nothing to do
+        return
+    end
+end
+
+parse_state(::Union{OllamaApi, OpenAIApi}) = OpenAIStreamState()
+
+function parse_response(state::OpenAIStreamState, chunk, output_channel::Channel)
+    if haskey(chunk, :message)
+        message = chunk.message
+        # Handle tool calls (accumulate)
+        if haskey(message, :tool_calls)
+            for tool_call in message.tool_calls
+                idx = get(tool_call, :index, 0)
+
+                if !haskey(state.tool_calls, idx)
+                    state.tool_calls[idx] = Dict("name" => "", "arguments" => "")
+                end
+
+                if haskey(tool_call, :function)
+                    func = tool_call.function
+                    if haskey(func, :name)
+                        state.tool_calls[idx]["name"] = func.name
+                    end
+                    if haskey(func, :arguments)
+                        state.tool_calls[idx]["arguments"] *= func.arguments
+                    end
+                end
+            end
+        end
+
+        # Handle text content (accumulate)
+        if haskey(message, :content) && message.content !== nothing
+            state.text_buffer *= message.content
+        end
+    end
+
+    # Check if done
+    if haskey(chunk, :done) && chunk.done
+        # Emit all accumulated tools
+        for (idx, tool_data) in sort(collect(state.tool_calls), by=first)
+            tool_name = tool_data["name"]
+            args_json = tool_data["arguments"]
+
+            if !isempty(tool_name) && !isempty(args_json)
+                tool_type = tool_name_to_type(tool_name)
+                if tool_type !== nothing
+                    try
+                        tool = JSON3.read(args_json, tool_type)
+                        put!(output_channel, tool)
+                    catch e
+                        @warn "Failed to parse tool arguments" tool_name args_json exception=e
+                    end
+                end
+            end
+        end
+        # Emit accumulated text if present
+        if !isempty(strip(state.text_buffer))
+            put!(output_channel, state.text_buffer)
+        end
     end
 end
 

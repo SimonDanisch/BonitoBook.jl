@@ -60,7 +60,12 @@ function process_item!(book, agent::HTTPAgent, item)
     if multi_task_tool(item)
         agent.needs_to_be_done[typeof(item)] = item
     end
-    process_item!(book, item)
+    try
+        process_item!(book, item)
+    catch e
+        error_msg = "Error processing item of type $(typeof(item)): $(e)"
+        process_item!(book, error_msg)
+    end
 end
 
 """

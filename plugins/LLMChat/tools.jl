@@ -269,7 +269,7 @@ tool_input_schema(::Type{HttpGetTool}) = Dict(
 
 function execute_tool(tool::HttpGetTool)
     response = HTTP.get(tool.url)
-    return Dict("status" => response.status, "content" => String(response.body))
+    return Dict("status" => response.status, "content" => String(copy(response.body)))
 end
 
 """
