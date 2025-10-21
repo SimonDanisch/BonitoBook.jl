@@ -450,16 +450,11 @@ function generate_style(book;
         # Logging output
         CSS(
             ".cell-logging",
-            "min-height" => "0",
             "max-height" => "500px",
             "max-width" => "var(--editor-width)",
             "overflow-y" => "auto",
-            "height" => "auto",
             "margin" => "0",
             "padding" => "0",
-            "white-space" => "pre-wrap",
-            "word-wrap" => "break-word",
-            "flex" => "0 0 auto"
         ),
 
         CSS(
