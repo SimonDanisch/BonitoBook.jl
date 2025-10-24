@@ -2,7 +2,7 @@
 
 # BonitoBook Welcome Page Server
 # Serves all example books from docs/examples with a welcome page
-
+using WGLMakie # for faster book loading with WGLMakie examples
 using BonitoBook
 using Bonito
 using Electron
@@ -65,4 +65,5 @@ function @main(args)
 
     return 0
 end
-main([])
+# main([])
+#

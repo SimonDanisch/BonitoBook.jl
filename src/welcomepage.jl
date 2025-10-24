@@ -305,6 +305,19 @@ const WelcomePageStyles = Styles(
         ".welcome-create-button:active",
         "transform" => "translateY(0px)"
     ),
+    # Loading state for create button
+    CSS(
+        ".welcome-create-button.loading",
+        "cursor" => "not-allowed",
+        "opacity" => "0.8",
+        "animation" => "button-pulse 1.5s ease-in-out infinite"
+    ),
+    CSS(
+        "@keyframes button-pulse",
+        CSS("0%", "box-shadow" => "var(--welcome-shadow)"),
+        CSS("50%", "box-shadow" => "var(--welcome-shadow-hover)"),
+        CSS("100%", "box-shadow" => "var(--welcome-shadow)")
+    ),
 
     # Input container
     CSS(
@@ -366,6 +379,52 @@ const WelcomePageStyles = Styles(
         "color" => "var(--welcome-text)"
     ),
 
+    # Loading overlay to prevent interaction while creating book
+    CSS(
+        ".welcome-loading-overlay",
+        "position" => "fixed",
+        "top" => "0",
+        "left" => "0",
+        "right" => "0",
+        "bottom" => "0",
+        "background-color" => "rgba(0, 0, 0, 0.5)",
+        "z-index" => "9999",
+        "display" => "flex",
+        "align-items" => "center",
+        "justify-content" => "center",
+        "backdrop-filter" => "blur(2px)"
+    ),
+    CSS(
+        ".welcome-loading-overlay.hidden",
+        "display" => "none"
+    ),
+    CSS(
+        ".welcome-loading-message",
+        "background-color" => "var(--welcome-card-bg)",
+        "padding" => "30px 40px",
+        "border-radius" => "12px",
+        "box-shadow" => "var(--welcome-shadow-hover)",
+        "text-align" => "center",
+        "animation" => "overlay-pulse 1.5s ease-in-out infinite"
+    ),
+    CSS(
+        "@keyframes overlay-pulse",
+        CSS("0%", "transform" => "scale(1)"),
+        CSS("50%", "transform" => "scale(1.05)"),
+        CSS("100%", "transform" => "scale(1)")
+    ),
+    CSS(
+        ".welcome-loading-message h3",
+        "margin" => "0 0 10px 0",
+        "font-size" => "1.5rem",
+        "color" => "var(--welcome-text)"
+    ),
+    CSS(
+        ".welcome-loading-message p",
+        "margin" => "0",
+        "color" => "var(--welcome-text-secondary)"
+    ),
+
     # Responsive design
     CSS(
         "@media (max-width: 768px)",
@@ -418,21 +477,24 @@ function WelcomePage(content, title::String="BonitoBook"; navbar_items::Vector{P
 end
 
 """
-    Welcome(folder::String, server::Bonito.Server, session::Session)
+    Welcome
 
-Create a welcome page component that lists all markdown books in the specified folder.
+A welcome page component that lists all markdown books in a folder.
 Displays example books with links to open them, and provides option to create new books.
 
-# Arguments
+# Fields
 - `folder::String`: Path to folder containing example books (.md files)
 - `server::Bonito.Server`: The server instance to add new book routes to
-- `session::Session`: The current Bonito session
-
-# Returns
-A Bonito DOM element displaying the welcome interface
 """
-function Welcome(folder::String, server::Bonito.Server, session::Session)
+struct Welcome
+    folder::String
+    server::Bonito.Server
+end
+
+function Bonito.jsrender(session::Session, welcome::Welcome)
     # Find all .md files in the folder
+    folder = welcome.folder
+    server = welcome.server
     md_files = filter(f -> endswith(f, ".md"), readdir(folder))
 
     # Create hero section
@@ -445,18 +507,52 @@ function Welcome(folder::String, server::Bonito.Server, session::Session)
     # Create examples section with cards
     examples_title = DOM.h2("Example Books", class="welcome-section-title")
 
+    # Shared loading state for all interactions
+    is_loading = Observable(false)
+    loading_message = Observable("Loading...")
+
     example_cards = map(md_files) do file
         name = splitext(file)[1]
         display_name = titlecase(replace(name, "-" => " ", "_" => " "))
 
+        # Create a click observable for this example
+        example_click = Observable(false)
+
+        # Create link as a button with click handler
+        link = DOM.a(
+            "Open Example",
+            href=Bonito.Link("/$name"),
+            class="welcome-card-link",
+            onclick=js"""event => {
+                event.preventDefault();
+                $(example_click).notify(true);
+            }"""
+        )
+
+        # Handle click - show loading and navigate
+        on(session, example_click) do _
+            # Ignore if already loading
+            is_loading[] && return
+
+            is_loading[] = true
+            loading_message[] = "Opening $display_name..."
+
+            # Navigate after a brief moment to ensure overlay shows
+            @async try
+                book_url = Bonito.url(session, Bonito.Link("/$name"))
+                evaljs(session, js"window.location.href = $book_url")
+            catch e
+                @error "Failed to open example book: $e" exception=(e, catch_backtrace())
+                # Reset loading state on error
+                is_loading[] = false
+                loading_message[] = "Loading..."
+            end
+        end
+
         DOM.div(
             DOM.h3(display_name, class="welcome-card-title"),
             DOM.p("Click to open this example notebook", class="welcome-card-description"),
-            DOM.a(
-                "Open Example",
-                href=Bonito.Link("/$name"),
-                class="welcome-card-link"
-            ),
+            link,
             class="welcome-card"
         )
     end
@@ -482,16 +578,23 @@ function Welcome(folder::String, server::Bonito.Server, session::Session)
         oninput=js"event => $(filename_input).notify(event.target.value)"
     )
 
-    # Create button
+    # Create button with dynamic class based on loading state
+    button_class = map(is_loading) do loading
+        loading ? "welcome-create-button loading" : "welcome-create-button"
+    end
+
     create_button = DOM.button(
         icon("new-file"),
         DOM.span(" Create New Book"),
-        class="welcome-create-button",
+        class=button_class,
         onclick=js"event => $(create_button_click).notify(true)"
     )
 
     # Handle create button click
     on(session, create_button_click) do _
+        # Ignore clicks while loading
+        is_loading[] && return
+
         @async try
             filename = filename_input[]
             if isempty(filename)
@@ -507,7 +610,15 @@ function Welcome(folder::String, server::Bonito.Server, session::Session)
             # Create the book file in the folder
             book_path = joinpath(folder, filename)
             name = splitext(basename(filename))[1]
-                # Add route for the new book
+            display_name = titlecase(replace(name, "-" => " ", "_" => " "))
+
+            # Set loading state
+            is_loading[] = true
+            loading_message[] = "Creating $display_name...\nThis may take a moment on first run"
+
+            @info "Creating new book: $book_path"
+
+            # Add route for the new book
             book_app = App(title=name) do
                 book = create_book(book_path; replace_style=false, all_blocks_as_cell=false)
                 # Wrap the book in WelcomePage with navigation back to home
@@ -516,14 +627,20 @@ function Welcome(folder::String, server::Bonito.Server, session::Session)
 
             route!(server, "/$name" => book_app)
 
-            @info "Created new book: $book_path and added route /$name"
+            @info "Created new book and added route /$name"
+
             # Navigate to the new book
+            sleep(0.1)  # Small delay to ensure UI updates
             book_url = Bonito.url(session, Bonito.Link("/$name"))
             evaljs(session, js"window.location.href = $book_url")
-        catch e
-            @error "Failed to create new book: $e" exception=(e, catch_backtrace())
-        end
 
+            # Note: loading state will persist until page navigates away
+        catch e
+            @error "Failed to create book: $e" exception=(e, catch_backtrace())
+            # Reset loading state on error
+            is_loading[] = false
+            loading_message[] = "Loading..."
+        end
     end
 
     # Input container
@@ -541,6 +658,32 @@ function Welcome(folder::String, server::Bonito.Server, session::Session)
         class="welcome-section"
     )
 
+    # Create loading overlay with dynamic message
+    overlay_class = map(is_loading) do loading
+        loading ? "welcome-loading-overlay" : "welcome-loading-overlay hidden"
+    end
+
+    # Parse the loading message for title and subtitle
+    message_content = map(loading_message) do msg
+        lines = split(msg, '\n')
+        if length(lines) > 1
+            (title=lines[1], subtitle=join(lines[2:end], '\n'))
+        else
+            (title=msg, subtitle="")
+        end
+    end
+
+    loading_overlay = map(message_content) do content
+        DOM.div(
+            DOM.div(
+                DOM.h3(content.title),
+                isempty(content.subtitle) ? DOM.div() : DOM.p(content.subtitle);
+                class="welcome-loading-message"
+            );
+            class=overlay_class[]
+        )
+    end
+
     # Create main content
     content = DOM.div(
         hero,
@@ -549,8 +692,11 @@ function Welcome(folder::String, server::Bonito.Server, session::Session)
         class="welcome-content"
     )
 
-    # Wrap in page with navigation
-    return WelcomePage(content, "BonitoBook")
+    # Wrap in page with navigation and add overlay
+    page = WelcomePage(content, "BonitoBook")
+
+    # Add the loading overlay to the page
+    return Bonito.jsrender(session, DOM.div(page, loading_overlay))
 end
 
 """
@@ -582,8 +728,8 @@ function serve_welcome(folder::String; url="127.0.0.1", port=8773, proxy_url="")
     server = Bonito.Server(url, port; proxy_url=proxy_url, verbose=-1)
 
     # Add welcome page at root
-    welcome_app = App(title="BonitoBook") do session
-        return Welcome(folder, server, session)
+    welcome_app = App(title="BonitoBook") do
+        return Welcome(folder, server)
     end
     route!(server, "/" => welcome_app)
 
