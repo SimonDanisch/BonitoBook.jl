@@ -1,4 +1,6 @@
-const Monaco = ES6Module(joinpath(@__DIR__, "javascript", "Monaco.js"))
+#const Monaco = ES6Module(joinpath(@__DIR__, "javascript", "Monaco.js"))
+#global Monaco #::ES6Module # = ES6Module(joinpath(@__DIR__, "javascript", "Monaco.js"))
+global Monaco #::= ES6Module(joinpath(@__DIR__, "javascript", "Monaco.js"))
 
 
 

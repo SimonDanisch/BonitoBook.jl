@@ -1,0 +1,27 @@
+name = "BonitoBookGUI"
+uuid = "f667ff20-b716-4248-8539-ac37d8c805cf"
+version = "0.1.0"
+
+[deps]
+Bonito = "824d6782-a2ef-11e9-3a09-e5662e0c26f8"
+BonitoBook = "b416d416-7a6e-4336-8c1a-1f8a8cd59518"
+DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
+Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
+Electron = "a1bb12fb-d4d1-54b4-b10a-ee7951ef7ad3"
+GeometryBasics = "5c1252a2-5f33-56bf-86c9-59e7332b4326"
+Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
+Sunny = "2b4a2ac8-8f8b-43e8-abf4-3cb0c45e8736"
+WGLMakie = "276b4fcb-3e11-5398-bf8b-a0c2d153d008"
+
+[sources]
+BonitoBook = {path = ".."}
+
+[compat]
+Bonito = "4.1.8"
+DataFrames = "1.8.1"
+Distributions = "0.25.122"
+Electron = "6.0.0"
+GeometryBasics = "0.5.10"
+Statistics = "1.11.1"
+Sunny = "0.7.8"
+WGLMakie = "0.13.6"

@@ -19,7 +19,8 @@ const ALL_LANGUAGES = Dict(
 )
 
 function asset_path(paths...)
-    return joinpath(@__DIR__, "assets", paths...)
+    #return joinpath(@__DIR__, "assets", paths...)
+    return joinpath(pkgdir(@__MODULE__), "src", "assets", paths...)
 end
 
 function assets(paths...)
@@ -117,6 +118,20 @@ function MakieModule()
     else
         return nothing
     end
+end
+
+function __init__()
+
+    #global Monaco = ES6Module(joinpath(@__DIR__, "javascript", "Monaco.js"))
+
+    # In Julia 1.12 we can use:
+    # global Monaco = ES6Module(joinpath(pkgdir(@__MODULE__), "src", "javascript", "Monaco.js"))
+
+    # Julia 1.11 has a bug hence we need to do something dirty here
+    dir = isdir(@__DIR__) ? (@__DIR__) : joinpath(dirname(pkgdir(Bonito)), "BonitoBook/src")
+    global Monaco = ES6Module(joinpath(dir, "javascript", "Monaco.js"))
+
+    return
 end
 
 end
