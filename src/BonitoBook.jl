@@ -93,11 +93,7 @@ export Book, ChatComponent, ChatAgent, ChatMessage, MCPJuliaServer, Collapsible,
 export InlineBook
 export LanguageEval, JuliaEval, eval_code, get_language_evaluators
 export ALL_LANGUAGES
-<<<<<<< Updated upstream
-=======
-export LLMChatBooks
 export Welcome, serve_welcome
->>>>>>> Stashed changes
 
 function _MakieModule end
 
