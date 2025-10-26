@@ -1034,6 +1034,7 @@ function generate_style(book;
         CSS(
             ".book-cells",
             "width" => "fit-content", # Prevent the container from scrolling
+            "padding-bottom" => "200px", # Add space at bottom for last cell's output and menu
         ),
         CSS(
             ".book-cells-area",
