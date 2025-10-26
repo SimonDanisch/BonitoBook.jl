@@ -88,17 +88,102 @@ function execute_tool(tool::AbstractTool)
 end
 
 """
-    execute_tool!(tool::AbstractTool)
+    limit_output(result, max_tokens::Int)
 
-Execute the tool with error handling and return a ToolResult.
-This is a generic wrapper that calls execute_tool(tool) and handles exceptions.
+Limit the output size to approximately max_tokens.
+Assumes ~4 characters per token as a rough estimate.
+
+# Arguments
+- `result`: The result to limit (String, Dict, Array, or other)
+- `max_tokens::Int`: Maximum tokens to allow
+
+# Returns
+Limited version of the result, truncated with indicator if too long.
 """
-function execute_tool!(tool::AbstractTool)
+function limit_output(result::String, max_tokens::Int)
+    max_chars = max_tokens * 4  # Rough estimate: 4 chars per token
+    if length(result) <= max_chars
+        return result
+    end
+    truncated = result[1:max_chars]
+    return truncated * "\n\n... [OUTPUT TRUNCATED - showing first ~$max_tokens tokens of $(length(result) ÷ 4) total tokens]"
+end
+
+function limit_output(result::Dict, max_tokens::Int)
+    # Convert to JSON string, limit, and parse back
+    json_str = JSON3.write(result)
+    limited_str = limit_output(json_str, max_tokens)
+
+    # If truncated, return a simplified dict with truncation notice
+    if contains(limited_str, "OUTPUT TRUNCATED")
+        return Dict(
+            "_truncated" => true,
+            "_message" => "Output too large, showing summary",
+            "_original_size_tokens" => length(json_str) ÷ 4,
+            "_max_tokens" => max_tokens,
+            "_partial_data" => result
+        )
+    end
+    return result
+end
+
+function limit_output(result::AbstractArray, max_tokens::Int)
+    # Convert to JSON string and limit
+    json_str = JSON3.write(result)
+    max_chars = max_tokens * 4
+
+    if length(json_str) <= max_chars
+        return result
+    end
+
+    # Return truncated array with notice
+    total_items = length(result)
+    # Estimate how many items we can fit
+    avg_item_size = length(json_str) ÷ total_items
+    items_to_keep = max(1, (max_chars ÷ 2) ÷ avg_item_size)
+
+    truncated_result = result[1:min(items_to_keep, total_items)]
+    return [
+        truncated_result...,
+        Dict(
+            "_truncated" => true,
+            "_showing" => length(truncated_result),
+            "_total" => total_items,
+            "_message" => "Array truncated to fit token limit"
+        )
+    ]
+end
+
+function limit_output(result::Exception, max_tokens::Int)
+    # Limit exception message and stack trace
+    error_str = sprint(showerror, result, catch_backtrace())
+    return limit_output(error_str, max_tokens)
+end
+
+# Fallback for other types - convert to string and limit
+function limit_output(result, max_tokens::Int)
+    result_str = repr(result)
+    return limit_output(result_str, max_tokens)
+end
+
+"""
+    execute_tool!(tool::AbstractTool, max_tokens::Int=4000)
+
+Execute the tool with error handling and return a ToolResult with output limited to max_tokens.
+This is a generic wrapper that calls execute_tool(tool) and handles exceptions.
+
+# Arguments
+- `tool::AbstractTool`: The tool to execute
+- `max_tokens::Int`: Maximum tokens to include in the result (default: 4000)
+"""
+function execute_tool!(tool::AbstractTool, max_tokens::Int=4000)
     try
         result = execute_tool(tool)
-        return ToolResult(result)
+        limited_result = limit_output(result, max_tokens)
+        return ToolResult(limited_result)
     catch e
-        return ToolResult(e)
+        limited_error = limit_output(e, max_tokens)
+        return ToolResult(limited_error)
     end
 end
 

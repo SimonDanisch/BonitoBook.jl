@@ -65,16 +65,50 @@ end
     HTTPAgent <: LLMChatAgent
 
 Generic HTTP-based agent that works with OpenAI, Claude, Ollama, and compatible APIs.
+
+# Fields
+- `api::AbstractApi`: The API provider (OpenAI, Claude, Ollama)
+- `max_tokens::Int`: Maximum tokens in response
+- `temperature::Float64`: Sampling temperature
+- `system_prompt::String`: System prompt for the agent
+- `tools::Vector{Type{<:AbstractTool}}`: Available tools
+- `tool_choice::String`: How to use tools ("auto", "required", "none")
+- `max_tool_use_token::Int`: Maximum tokens to send back from tool results
+- `needs_to_be_done::Dict{DataType, AbstractTool}`: TodoList or other multi-step tasks
+- `last_item::Base.RefValue{Union{AbstractTool, String}}`: Last processed item
 """
 struct HTTPAgent <: LLMChatAgent
     api::AbstractApi
+    max_tokens::Int
+    temperature::Float64
+    system_prompt::String
+    tools::Vector{DataType}
+    tool_choice::String
+    max_tool_use_token::Int
     # TodoList or other tools implementing multi-step tasks
     needs_to_be_done::Dict{DataType, AbstractTool}
     last_item::Base.RefValue{Union{AbstractTool, String}}
 end
 
-function HTTPAgent(api::AbstractApi)
-    return HTTPAgent(api, Dict{DataType, AbstractTool}(), Ref{Union{AbstractTool, String}}(""))
+# Full constructor with keyword arguments for customization
+function HTTPAgent(api::AbstractApi;
+                   max_tokens::Int=4096,
+                   temperature::Float64=0.7,
+                   system_prompt::String="You are a helpful AI assistant integrated into a Julia notebook.",
+                   tools::Vector{DataType}=DEFAULT_TOOLS,
+                   tool_choice::String="auto",
+                   max_tool_use_token::Int=4000)
+    return HTTPAgent(
+        api,
+        max_tokens,
+        temperature,
+        system_prompt,
+        tools,
+        tool_choice,
+        max_tool_use_token,
+        Dict{DataType, AbstractTool}(),
+        Ref{Union{AbstractTool, String}}("")
+    )
 end
 
 # ============================================================================
@@ -206,6 +240,25 @@ function ollama_config(model::String; endpoint="http://localhost:11434/api/chat"
     return OllamaApi(endpoint, model, DEFAULT_SYSTEM_PROMPT)
 end
 
+"""
+    detect_api(model::String)
+
+Detect and create the appropriate API based on the model name.
+"""
+function detect_api(model::String)
+    # Detect based on model name patterns
+    if startswith(model, "claude") || contains(model, "claude")
+        api_key = get(ENV, "CLAUDE_API_KEY", nothing)
+        return ClaudeApi("https://api.anthropic.com/v1/messages", model, api_key, "")
+    elseif startswith(model, "gpt") || contains(model, "openai")
+        api_key = get(ENV, "OPENAI_API_KEY", nothing)
+        return OpenAIApi("https://api.openai.com/v1/chat/completions", model, api_key, "")
+    else
+        # Fallback to Ollama for local models
+        return OllamaApi("http://localhost:11434/api/chat", model, "")
+    end
+end
+
 const DEFAULT_SYSTEM_PROMPT = """
 You are a helpful AI assistant integrated into a Julia notebook.
 
@@ -306,7 +359,7 @@ function parse_sse(callback::Function, io::IO; spinner::Union{TaskSpinner,Nothin
 end
 
 """
-    prompt(agent::HTTPAgent, messages::Vector{AgentMessage}, tools::Vector;
+    prompt(agent::HTTPAgent, messages::Vector{AgentMessage};
            spinner::Union{TaskSpinner, Nothing}=nothing)
 
 Call the HTTP agent with streaming and return a Channel that yields complete content blocks (tools and text).
@@ -315,18 +368,18 @@ The Channel is closed after all items are yielded.
 # Optional Arguments
 - `spinner`: TaskSpinner for operation tracking and cancellation
 """
-function prompt(agent::HTTPAgent, messages::Vector{AgentMessage}, tools::Vector;
+function prompt(agent::HTTPAgent, messages::Vector{AgentMessage};
                 spinner::Union{TaskSpinner, Nothing}=nothing)
     api = agent.api
 
     # Convert messages to API format
     api_messages = [
-        Dict("role" => "system", "content" => system_prompt(api)),
+        Dict("role" => "system", "content" => agent.system_prompt),
         [message_to_api(api, msg) for msg in messages]...
     ]
 
     # Build request with streaming enabled
-    body = request_body(api, api_messages, tools)
+    body = request_body(api, api_messages, agent.tools)
 
     # Remove null fields
     filter!(p -> p.second !== nothing, body)

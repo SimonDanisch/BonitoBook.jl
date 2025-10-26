@@ -9,7 +9,7 @@ The loop continues until:
 """
 
 """
-    run_agent_loop!(book, agent, user_message::String, config::AgentConfig, task_spinner::TaskSpinner)
+    run_agent_loop!(book, agent::HTTPAgent, user_message::String, task_spinner::TaskSpinner)
 
 Main agent loop that:
 1. Adds user message as a cell
@@ -21,7 +21,7 @@ Uses TaskSpinner for visual feedback at different levels.
 
 Returns a Channel for any UI updates (currently unused but kept for future extensions).
 """
-function run_agent_loop!(book, agent::Any, user_message::String, config::AgentConfig, task_spinner::TaskSpinner)
+function run_agent_loop!(book, agent::HTTPAgent, user_message::String, task_spinner::TaskSpinner)
     # Add user message cell as Julia code with Markdown.parse
     user_markdown_code = "Markdown.parse($(repr(user_message)))"
     add_cell!(book, user_markdown_code, "julia", Dict{Symbol, Any}(:from => :user))
@@ -30,11 +30,11 @@ function run_agent_loop!(book, agent::Any, user_message::String, config::AgentCo
         messages = cells_to_messages(book)
         # Call agent with nested spinner - returns Channel with multiple items (tools and text)
         result_channel = async_spinner!(task_spinner, "asking") do
-            prompt(agent, messages, config.tools; spinner=task_spinner)
+            prompt(agent, messages; spinner=task_spinner)
         end
         # Process all items from the channel
         async_spinner!(task_spinner, "processing ai", result_channel) do item
-            process_item!(book, agent, item)
+            process_agent_item!(book, agent, item)
         end
         # Return true for stopping early
         isdone(agent) && return true
@@ -55,32 +55,32 @@ end
 
 multi_task_tool(item) = false
 
-function process_item!(book, agent::HTTPAgent, item)
+function process_agent_item!(book, agent::HTTPAgent, item)
     agent.last_item[] = item
     if multi_task_tool(item)
         agent.needs_to_be_done[typeof(item)] = item
     end
     try
-        process_item!(book, item)
+        process_item!(book, item, agent)
     catch e
         error_msg = "Error processing item of type $(typeof(item)): $(e)"
-        process_item!(book, error_msg)
+        process_item!(book, error_msg, agent)
     end
 end
 
 """
-    process_item!(book, item)
+    process_item!(book, item, agent)
 
 Process a result item by converting it to a cell or executing tools.
 Uses multiple dispatch to handle different item types.
 """
-function process_item!(book, item::String)
+function process_item!(book, item::String, agent::HTTPAgent)
     # Text content - create Julia code cell with Markdown.parse
     markdown_code = "Markdown.parse($(repr(item)))"
     add_cell!(book, markdown_code, "julia", Dict{Symbol, Any}(:from => :agent))
 end
 
-function process_item!(book, item::Dict)
+function process_item!(book, item::Dict, agent::HTTPAgent)
     # Direct cell creation (from backend)
     if haskey(item, :type) && item[:type] == :cell
         metadata = merge(Dict{Symbol, Any}(:from => :agent), get(item, :metadata, Dict()))
@@ -119,9 +119,9 @@ function process_item!(book, tool::AddCellTool)
     return cell
 end
 
-function process_item!(book, tool::AbstractTool)
-    # Execute the tool and get result
-    result = execute_tool!(tool)
+function process_item!(book, tool::AbstractTool, agent::HTTPAgent)
+    # Execute the tool and get result with token limit
+    result = execute_tool!(tool, agent.max_tool_use_token)
 
     # Create ToolExecution
     tool_execution = ToolExecution(tool, result)

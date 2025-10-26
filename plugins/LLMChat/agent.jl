@@ -33,6 +33,9 @@ AgentMessage(role::Symbol, content::Any) = AgentMessage(role, content, nothing)
 """
     AgentConfig
 
+DEPRECATED: This struct is kept only for backward compatibility with config file saving.
+All configuration is now handled directly by HTTPAgent.
+
 Configuration for an LLM chat agent.
 
 # Fields
@@ -42,6 +45,7 @@ Configuration for an LLM chat agent.
 - `system_prompt::String`: System prompt for the agent
 - `tools::Vector{Type{<:AbstractTool}}`: Available tools
 - `tool_choice::String`: How to use tools ("auto", "required", "none")
+- `max_tool_use_token::Int`: Maximum tokens to send back from tool results (default: 4000)
 """
 struct AgentConfig
     model::String
@@ -50,68 +54,103 @@ struct AgentConfig
     system_prompt::String
     tools::Vector{Type{<:AbstractTool}}
     tool_choice::String
+    max_tool_use_token::Int
 end
 
 """
     load_agent_config(folder::String)
 
-Load agent configuration from TOML file or create default.
+Load agent configuration from TOML file or create default HTTPAgent.
+Returns an HTTPAgent ready to use.
 """
 function load_agent_config(folder::String)
     config_path = joinpath(folder, "ai", "llm-config.toml")
 
-    # Default configuration
-    default_config = AgentConfig(
-        "claude-sonnet-4-20250514",
-        4096,
-        0.7,
-        "You are a helpful AI assistant integrated into a Julia notebook. You can execute code, read/write files, and help with programming tasks.",
-        DEFAULT_TOOLS,
-        "auto"
-    )
+    # Default configuration values
+    default_model = "claude-sonnet-4-20250514"
+    default_max_tokens = 4096
+    default_temperature = 0.7
+    default_system_prompt = "You are a helpful AI assistant integrated into a Julia notebook. You can execute code, read/write files, and help with programming tasks."
+    default_tools = DEFAULT_TOOLS
+    default_tool_choice = "auto"
+    default_max_tool_use_token = 4000
 
     if !isfile(config_path)
-        # Create default config file
+        # Create default config file - save using temporary AgentConfig for compatibility
+        default_config = AgentConfig(
+            default_model,
+            default_max_tokens,
+            default_temperature,
+            default_system_prompt,
+            default_tools,
+            default_tool_choice,
+            default_max_tool_use_token
+        )
         save_agent_config(folder, default_config)
-        return default_config
+
+        # Create and return HTTPAgent
+        api = detect_api(default_model)
+        return HTTPAgent(
+            api;
+            max_tokens=default_max_tokens,
+            temperature=default_temperature,
+            system_prompt=default_system_prompt,
+            tools=default_tools,
+            tool_choice=default_tool_choice,
+            max_tool_use_token=default_max_tool_use_token
+        )
     end
 
     # Load from TOML
     try
         toml_data = TOML.parsefile(config_path)
 
-        model = get(toml_data, "model", default_config.model)
-        max_tokens = get(toml_data, "max_tokens", default_config.max_tokens)
-        temperature = get(toml_data, "temperature", default_config.temperature)
-        tool_choice = get(toml_data, "tool_choice", default_config.tool_choice)
+        model = get(toml_data, "model", default_model)
+        max_tokens = get(toml_data, "max_tokens", default_max_tokens)
+        temperature = get(toml_data, "temperature", default_temperature)
+        tool_choice = get(toml_data, "tool_choice", default_tool_choice)
+        max_tool_use_token = get(toml_data, "max_tool_use_token", default_max_tool_use_token)
 
         # Load system prompt from separate file if it exists
         system_prompt_path = joinpath(folder, "ai", "llm-system-prompt.md")
         system_prompt = if isfile(system_prompt_path)
             read(system_prompt_path, String)
         else
-            get(toml_data, "system_prompt", default_config.system_prompt)
+            get(toml_data, "system_prompt", default_system_prompt)
         end
 
         # Parse tool names to types
         tool_names = get(toml_data, "tools", String[])
         tools = if isempty(tool_names)
-            default_config.tools
+            default_tools
         else
             parse_tool_names(tool_names)
         end
 
-        return AgentConfig(
-            model,
-            max_tokens,
-            temperature,
-            system_prompt,
-            tools,
-            tool_choice
+        # Create API and HTTPAgent
+        api = detect_api(model)
+        return HTTPAgent(
+            api;
+            max_tokens=max_tokens,
+            temperature=temperature,
+            system_prompt=system_prompt,
+            tools=tools,
+            tool_choice=tool_choice,
+            max_tool_use_token=max_tool_use_token
         )
     catch e
         @warn "Failed to load agent config, using defaults" exception=(e, catch_backtrace())
-        return default_config
+        # Return default HTTPAgent
+        api = detect_api(default_model)
+        return HTTPAgent(
+            api;
+            max_tokens=default_max_tokens,
+            temperature=default_temperature,
+            system_prompt=default_system_prompt,
+            tools=default_tools,
+            tool_choice=default_tool_choice,
+            max_tool_use_token=default_max_tool_use_token
+        )
     end
 end
 
@@ -133,6 +172,7 @@ function save_agent_config(folder::String, config::AgentConfig)
         "max_tokens" => config.max_tokens,
         "temperature" => config.temperature,
         "tool_choice" => config.tool_choice,
+        "max_tool_use_token" => config.max_tool_use_token,
         "tools" => [tool_name(T) for T in config.tools]
     )
 

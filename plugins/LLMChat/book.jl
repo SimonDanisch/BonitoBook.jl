@@ -25,35 +25,32 @@ An interactive LLM chat notebook where cells represent the conversation history.
 
 # Fields
 - `book::Book`: The underlying book
-- `agent::Union{LLMChatAgent, Nothing}`: The LLM agent (if available)
-- `config::AgentConfig`: Agent configuration
+- `agent::HTTPAgent`: The HTTP agent for LLM communication (contains all config and state)
 - `is_streaming::Observable{Bool}`: Whether agent is currently streaming
 - `current_task::Base.RefValue{Union{Task, Nothing}}`: Current streaming task
 - `task_spinner::TaskSpinner`: Unified spinner for all operations
 """
 mutable struct LLMChatBook <: BonitoBook.AbstractBook
     book::BonitoBook.Book
-    agent::Any
-    config::AgentConfig
+    agent::HTTPAgent
     is_streaming::Observable{Bool}
     current_task::Base.RefValue{Union{Task, Nothing}}
     task_spinner::TaskSpinner
 end
 
 """
-    create_book(book::Book; agent=nothing, config=nothing, kwargs...)
+    create_book(book::Book; agent=nothing, kwargs...)
 
 Create an LLM Chat book from a regular book.
 
 # Arguments
 - `book::Book`: The underlying book
-- `agent::Union{LLMChatAgent, Nothing}`: Optional agent (auto-detected if not provided)
-- `config::Union{AgentConfig, Nothing}`: Optional config (loaded from file if not provided)
+- `agent::Union{HTTPAgent, Nothing}`: Optional agent (loaded from config if not provided)
 """
-function create_book(book::BonitoBook.Book; agent=nothing, config=nothing, kwargs...)
-    # Load or create config
-    if config === nothing
-        config = load_agent_config(book.folder)
+function create_book(book::BonitoBook.Book; agent=nothing, kwargs...)
+    # Load or create agent
+    if agent === nothing
+        agent = load_agent_config(book.folder)
     end
     Core.eval(book.runner.mod,quote
         using BonitoBook.LLMChatBooks
@@ -72,7 +69,6 @@ function create_book(book::BonitoBook.Book; agent=nothing, config=nothing, kwarg
     return LLMChatBook(
         book,
         agent,
-        config,
         Observable(false),
         Ref{Union{Task, Nothing}}(nothing),
         TaskSpinner()
@@ -107,7 +103,6 @@ function send_message!(chat_book::LLMChatBook, message::String)
                 chat_book.book,
                 chat_book.agent,
                 message,
-                chat_book.config,
                 chat_book.task_spinner
             )
         catch e
@@ -149,10 +144,6 @@ function Bonito.jsrender(session::Session, chat_book::LLMChatBook)
     book = chat_book.book
     elements = BonitoBook.standard_setup!(session, book)
     BonitoBook.add_julia_mpc_route!(book)
-    # Create agent if not provided
-    if chat_book.agent === nothing
-        chat_book.agent = create_llm_chat_agent(book)
-    end
     # Render all cells
     cells = map(book.cells) do cell
         from = get(cell.metadata, :from, nothing)
