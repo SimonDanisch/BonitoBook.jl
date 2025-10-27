@@ -205,8 +205,6 @@ function Bonito.jsrender(session::Session, chat_book::LLMChatBook)
 
     # Main container
     chat_container = DOM.div(
-        LLMSpinnerStyles,
-        ChatStyles,
         cells_container,
         input_container,
         class="llm-chat-container"

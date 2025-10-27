@@ -40,20 +40,68 @@ function get_template_path()
 end
 
 """
+    get_plugin_template_path(bbook_folder::String)
+
+Get the plugin's bbook template path if a plugin is loaded.
+Checks if book.jl exists and if the plugin module provides a bbook template.
+
+Returns the plugin template path if found, nothing otherwise.
+"""
+function get_plugin_template_path(bbook_folder::String)
+    book_jl_path = joinpath(bbook_folder, "book.jl")
+    if !isfile(book_jl_path)
+        return nothing
+    end
+
+    # Read the book.jl to determine the plugin module
+    book_jl_content = read(book_jl_path, String)
+
+    # Try to extract module name (assuming format: BonitoBook.PluginName)
+    m = match(r"BonitoBook\.(\w+)", book_jl_content)
+    if m === nothing
+        return nothing
+    end
+
+    plugin_name = m.captures[1]
+
+    # Check if plugin template exists
+    plugin_template = joinpath(@__DIR__, "..", "plugins", plugin_name, "bbook")
+    if isdir(plugin_template)
+        return plugin_template
+    end
+
+    return nothing
+end
+
+"""
     get_file_path(bbook_folder, relative_path::String)
 
-Get path to a file, checking custom bbook folder first, then falling back to template.
+Get path to a file, checking in order:
+1. Custom file in bbook_folder (user's custom version)
+2. Plugin template (if a plugin is loaded and has the file)
+3. BonitoBook template (default fallback)
+
 Returns (path, is_custom) where is_custom indicates if it's from the custom folder.
 """
 function get_file_path(bbook_folder, relative_path::String)
     if !isnothing(bbook_folder)
+        # Check for custom file first
         custom_path = joinpath(bbook_folder, relative_path)
         if isfile(custom_path)
             return (custom_path, true)
         end
+
+        # Check for plugin template
+        plugin_template = get_plugin_template_path(bbook_folder)
+        if !isnothing(plugin_template)
+            plugin_file = joinpath(plugin_template, relative_path)
+            if isfile(plugin_file)
+                return (plugin_file, false)
+            end
+        end
     end
 
-    # Fall back to template
+    # Fall back to BonitoBook template
     template_path = joinpath(get_template_path(), relative_path)
     return (template_path, false)
 end
@@ -129,6 +177,7 @@ end
     initialize_file_for_editing(bbook_folder::String, relative_path::String)
 
 Initialize a file for editing by copying from template if it doesn't exist.
+Checks plugin template first, then falls back to BonitoBook template.
 Creates the bbook folder and necessary subdirectories if needed.
 Returns the path to the file to edit.
 """
@@ -157,7 +206,17 @@ function initialize_file_for_editing(bbook_folder::String, relative_path::String
         mkpath(parent_dir)
     end
 
-    # Copy from template
+    # Try to copy from plugin template first
+    plugin_template = get_plugin_template_path(bbook_folder)
+    if !isnothing(plugin_template)
+        plugin_file = joinpath(plugin_template, relative_path)
+        if isfile(plugin_file)
+            _cp(plugin_file, custom_path)
+            return custom_path
+        end
+    end
+
+    # Fall back to BonitoBook template
     template_path = joinpath(get_template_path(), relative_path)
     if isfile(template_path)
         _cp(template_path, custom_path)
