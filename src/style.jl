@@ -93,7 +93,7 @@ function generate_style(book;
     # Define theme media queries based on light_theme setting
     light_media_query = if light_theme === nothing
         BonitoBook.monaco_theme!(book, "default")  # Auto-detect in JS
-        "@media (prefers-color-scheme: light), (prefers-color-scheme: no-preference)"
+        "@media (prefers-color-scheme: light)"
     elseif light_theme === true
         BonitoBook.monaco_theme!(book, "vs")  # Force light Monaco theme
         "@media screen"  # Apply directly to root
