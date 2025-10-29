@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<rss version="2.0">
+  <channel>
+    <title>BonitoBook Documentation</title>
+    <link>https://bonitobook.org</link>
+    <description>Interactive notebooks powered by Julia and Bonito</description>
+    <item>
+      <title>v0.2: Plugin System, Language Extensions & Simplified Styling</title>
+      <link>./blogposts/october</link>
+      <description>Major update introducing a powerful plugin system, extensible language evaluators,
+    and a completely redesigned styling architecture</description>
+      <pubDate>Fri, 10 Oct 2025 14:23:0</pubDate>
+      <image>
+        <url>/home/runner/work/BonitoBook.jl/BonitoBook.jl/docs/src/blogposts/october/./website/slideshow.mp4</url>
+      </image>
+    </item>
+  </channel>
+</rss>
