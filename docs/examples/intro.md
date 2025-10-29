@@ -246,7 +246,6 @@ DOM.div(
     class="small-vertical"
 )
 ```
-
 ## Full composability with existing Bonito apps
 
 Any package defining Bonito Apps are working inside BonitoBook. This includes custom widgets, or whole applications.
@@ -411,3 +410,4 @@ There are lots of plans for what can be done in the future.
   * Exe building of a notebook
   * Better model agnostic agent tools implementation, so one isn't locked into an AI provider, while not loosing any features.
   * Support `display(...)` inside for loop and have more examples on how to customize display behavior
+
