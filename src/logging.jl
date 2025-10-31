@@ -1,7 +1,7 @@
 const ANSI_CSS = Styles(
     # Define ANSI color variables for light theme
     CSS(
-        "@media (prefers-color-scheme: light), (prefers-color-scheme: no-preference)",
+        "@media (prefers-color-scheme: light)",
         CSS(
             ":root",
             # Standard ANSI colors optimized for light backgrounds

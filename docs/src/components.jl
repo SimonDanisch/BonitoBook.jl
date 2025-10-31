@@ -80,7 +80,7 @@ const PageStyles = Styles(
 
     # Light theme colors - matching BonitoBook exactly
     CSS(
-        "@media (prefers-color-scheme: light), (prefers-color-scheme: no-preference)",
+        "@media (prefers-color-scheme: light)",
         CSS(
             ":root",
             "--site-bg-primary" => "#ffffff",

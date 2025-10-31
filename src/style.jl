@@ -93,7 +93,7 @@ function generate_style(book;
     # Define theme media queries based on light_theme setting
     light_media_query = if light_theme === nothing
         BonitoBook.monaco_theme!(book, "default")  # Auto-detect in JS
-        "@media (prefers-color-scheme: light), (prefers-color-scheme: no-preference)"
+        "@media (prefers-color-scheme: light)"
     elseif light_theme === true
         BonitoBook.monaco_theme!(book, "vs")  # Force light Monaco theme
         "@media screen"  # Apply directly to root
@@ -185,16 +185,21 @@ function generate_style(book;
             # Global box-sizing and inheritance
             CSS(
                 "*",
-                "box-sizing" => "border-box"
+                "box-sizing" => "border-box",
+                "-webkit-tap-highlight-color" => "transparent"
             ),
             CSS(
                 "html",
                 "background-color" => "var(--bg-primary)",
-                "color" => "var(--text-primary)"
+                "color" => "var(--text-primary)",
+                "-webkit-text-size-adjust" => "100%",
+                "text-size-adjust" => "100%"
             ),
             CSS(
                 "body",
-                "margin" => "0"
+                "margin" => "0",
+                "-webkit-font-smoothing" => "antialiased",
+                "-moz-osx-font-smoothing" => "grayscale"
             ),
             CSS("pre",
                 "margin-block" => "var(--spacing-xs) 0px",
@@ -374,7 +379,8 @@ function generate_style(book;
         CSS(
             ".monaco-list",
             "max-height" => "var(--max-height-medium)",
-            "overflow-y" => "auto !important"
+            "overflow-y" => "auto !important",
+            "-webkit-overflow-scrolling" => "touch"
         ),
         CSS(
             ".monaco-editor-div",
@@ -450,16 +456,11 @@ function generate_style(book;
         # Logging output
         CSS(
             ".cell-logging",
-            "min-height" => "0",
             "max-height" => "500px",
             "max-width" => "var(--editor-width)",
             "overflow-y" => "auto",
-            "height" => "auto",
             "margin" => "0",
             "padding" => "0",
-            "white-space" => "pre-wrap",
-            "word-wrap" => "break-word",
-            "flex" => "0 0 auto"
         ),
 
         CSS(
@@ -503,6 +504,7 @@ function generate_style(book;
             "overflow-y" => "auto",
             "overflow-x" => "visible",
             "width" => "var(--editor-width)",
+            "-webkit-overflow-scrolling" => "touch"
         ),
         # Remove max-height for markdown outputs
         CSS(
@@ -567,6 +569,8 @@ function generate_style(book;
             "-moz-osx-font-smoothing" => "grayscale",
             "user-select" => "none",
             "-webkit-user-select" => "none",
+            "-moz-user-select" => "none",
+            "-ms-user-select" => "none",
             "flex-shrink" => "0",
             "color" => "var(--icon-color)",
             "filter" => "var(--icon-filter)"
@@ -617,6 +621,7 @@ function generate_style(book;
             ".markdown-body",
             "-ms-text-size-adjust" => "100%",
             "-webkit-text-size-adjust" => "100%",
+            "text-size-adjust" => "100%",
             "color" => "var(--text-primary)",
             "line-height" => "1.5",
             "font-family" => "-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif,Apple Color Emoji,Segoe UI Emoji,Segoe UI Symbol",
@@ -734,7 +739,8 @@ function generate_style(book;
         # Scrollbar styling
         CSS(
             "::-webkit-scrollbar",
-            "width" => "12px"
+            "width" => "12px",
+            "height" => "12px"
         ),
         CSS(
             "::-webkit-scrollbar-track",
@@ -1039,6 +1045,7 @@ function generate_style(book;
         CSS(
             ".book-cells",
             "width" => "fit-content", # Prevent the container from scrolling
+            "padding-bottom" => "200px", # Add space at bottom for last cell's output and menu
         ),
         CSS(
             ".book-cells-area",
@@ -1047,6 +1054,7 @@ function generate_style(book;
             "width" => "100%",
             "display" => "grid",
             "place-items" => "center",
+            "-webkit-overflow-scrolling" => "touch"
         ),
         CSS(
             ".book-main-content",
@@ -1238,7 +1246,8 @@ function generate_style(book;
             "padding" => "0",
             "width" => "100%",
             "position" => "relative",
-            "height" => "100%"
+            "height" => "100%",
+            "-webkit-overflow-scrolling" => "touch"
         ),
         # Vertical sidebar content - adapt height to content
         CSS(
@@ -1379,6 +1388,7 @@ function generate_style(book;
             "transition" => "all var(--transition-slow)",
             "appearance" => "none",
             "-webkit-appearance" => "none",
+            "-moz-appearance" => "none",
             "position" => "relative",
             "margin" => "0 var(--spacing-sm) 0 0",
             "flex-shrink" => "0"
@@ -1423,6 +1433,7 @@ function generate_style(book;
             "width" => "100%",
             "appearance" => "none",
             "-webkit-appearance" => "none",
+            "-moz-appearance" => "none",
             "background-repeat" => "no-repeat",
             "background-position" => "right var(--spacing-md) center",
             "background-size" => "var(--spacing-md)",
@@ -1478,6 +1489,7 @@ function generate_style(book;
             "outline" => "none",
             "appearance" => "none",
             "-webkit-appearance" => "none",
+            "-moz-appearance" => "none",
             "cursor" => "pointer",
             "transition" => "all 0.2s ease"
         ),
@@ -1485,6 +1497,7 @@ function generate_style(book;
             ".bonitobook-slider::-webkit-slider-thumb",
             "appearance" => "none",
             "-webkit-appearance" => "none",
+            "-moz-appearance" => "none",
             "width" => "var(--width-sm)",
             "height" => "var(--width-sm)",
             "border-radius" => "50%",

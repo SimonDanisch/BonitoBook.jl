@@ -1,18 +1,17 @@
-# New Book
+# Mime Tests
 
-1 + 1
+#### Printing
 
 ```julia (editor=true, logging=false, output=true, id=2)
 ]st
 ```
-```julia (editor=true, logging=false, output=true, id=3)
-sleep(1)
-```
-```julia (editor=true, logging=false, output=true, id=4)
+#### Tables
+
+```julia (editor=true, logging=false, output=true)
 using DataFrames
 DataFrame(A=1:3, B=5:7, fixed=1)
 ```
-```julia (editor=true, logging=false, output=true, id=5)
+```julia (editor=true, logging=false, output=true)
 Bonito.Table(DataFrame(A=1:3, B=5:7, fixed=1))
 ```
 ```julia (editor=true, logging=false, output=true, id=6)
@@ -29,19 +28,11 @@ Bonito.Table(table, class_callback=(t, ir, ic, val) -> begin
     return "cell-good"
 end)
 ```
-```julia (editor=true, logging=false, output=true, id=7)
-?subsup
-```
-```julia (editor=true, logging=false, output=true, id=8)
-using Makie.LaTeXStrings
-L"Trigonometric Functions: $\sin(x)$ and $\cos(x)$"
-```
-```julia (editor=true, logging=false, output=true, id=9)
-L"1 + \alpha^2"
-```
-```julia (editor=true, logging=false, output=true, id=10)
+#### Markdown
+
+```julia (editor=true, logging=false, output=true)
 md"""
-# Markdown output 
+# Markdown output
 
 |              Method | Order of Accuracy |                            Error Bound | Computational Cost |
 | -------------------:| -----------------:| --------------------------------------:| ------------------:|
@@ -50,8 +41,17 @@ md"""
 | Gaussian Quadrature |       $O(h^{2n})$ |                       Depends on nodes |               High |
 """
 ```
-```julia (editor=true, logging=false, output=true, id=11)
-rand(Vec3f, 10000)
+```julia (editor=true, logging=false, output=true)
+?chomp
+```
+#### Latex
+
+```julia (editor=true, logging=false, output=true)
+using Makie.LaTeXStrings
+L"Trigonometric Functions: $\sin(x)$ and $\cos(x)$"
+```
+```julia (editor=true, logging=false, output=true)
+L"1 + \alpha^2"
 ```
 ```julia (editor=true, logging=false, output=true, id=12)
 struct LatexNum <: Number
@@ -64,18 +64,26 @@ function Base.show(io::IO, m::MIME"text/latex", num::LatexNum)
 end
 LatexNum()
 ```
-```julia (editor=true, logging=false, output=true, id=13)
-rand(1000, 1000)
-```
-```julia (editor=true, logging=false, output=true, id=14)
-"hello world"
-```
-```julia (editor=true, logging=false, output=true, id=15)
-view("adasd", 1:2)
-```
 Latex inline
 
 ```latex
 \int_{-\infty}^{\infty} e^{-x^2} dx = \sqrt{\pi} \mathbf{A} = \begin{pmatrix} a_{11} & a_{12} \\ a_{21} & a_{22} \end{pmatrix}
 ```
 
+#### Arrays
+
+```julia (editor=true, logging=false, output=true)
+using GeometryBasics
+rand(Vec3f, 10000)
+```
+```julia (editor=true, logging=false, output=true)
+rand(1000, 1000)
+```
+#### Strings
+
+```julia (editor=true, logging=false, output=true)
+"hello world"
+```
+```julia (editor=true, logging=false, output=true)
+view("adasd", 1:2)
+```

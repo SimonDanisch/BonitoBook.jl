@@ -303,7 +303,7 @@ function render_editor(editor::EvalEditor)
         show ? "" : hiding
     end
     logging_class = map(editor.show_logging) do show
-        show ? "" : hiding
+        "cell-logging " * (show ? "" : hiding)
     end
     output_div = DOM.div(editor.output, class = map(c -> "cell-output cell-output-$(editor.language) $(c)", output_class))
     logging_html = Observable(HTML(""))
