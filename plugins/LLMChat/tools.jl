@@ -463,20 +463,18 @@ Supports: ls, glob, find, pwd, cp, mv, rm, mkdir, readdir
 struct FileTool <: AbstractTool
     command::String  # ls, glob, find, pwd, cp, mv, rm, mkdir, readdir
     arguments::Dict{String, Any}
+    function FileTool(command::String, arguments::Union{Nothing,Dict{String,Any}})
+        # If arguments is provided, use it
+        isnothing(arguments) || return new(command, arguments)
+        # Otherwise, collect kwargs as arguments
+        return new(command, Dict{String,Any}())
+    end
 end
 
 # Custom constructor for JSON3 deserialization - handles both formats:
 # 1. {"command": "pwd", "arguments": {}} - correct format
 # 2. {"command": "pwd", "path": "."} - flattened format from OpenAI
-function FileTool(;command::String, arguments::Union{Nothing, Dict{String, Any}}=nothing, kwargs...)
-    # If arguments is provided, use it
-    if arguments !== nothing
-        return FileTool(command, arguments)
-    end
-    # Otherwise, collect kwargs as arguments
-    args_dict = Dict{String, Any}(String(k) => v for (k, v) in kwargs)
-    return FileTool(command, args_dict)
-end
+
 
 tool_name(::Type{FileTool}) = "file_tool"
 tool_description(::Type{FileTool}) = """Perform file system operations safely. Use this instead of bash for file operations.
@@ -523,6 +521,19 @@ tool_input_schema(::Type{FileTool}) = Dict(
     "required" => ["command", "arguments"]
 )
 
+function find_file(dir::String, pattern::String, recursive::Bool, matches=String[])
+    for entry in readdir(dir)
+        fullpath = joinpath(dir, entry)
+        if occursin(pattern, entry)
+            push!(matches, fullpath)
+        end
+        if recursive && isdir(fullpath)
+            find_file(fullpath, pattern, recursive, matches)
+        end
+    end
+    return matches
+end
+
 function execute_tool(tool::FileTool)
     args = tool.arguments
     if tool.command == "pwd"
@@ -564,26 +575,7 @@ function execute_tool(tool::FileTool)
         end
         path = get(args, "path", ".")
         recursive = get(args, "recursive", false)
-        matches = String[]
-
-        function search_dir(dir)
-            try
-                for entry in readdir(dir)
-                    fullpath = joinpath(dir, entry)
-                    if occursin(pattern, entry)
-                        push!(matches, fullpath)
-                    end
-                    if recursive && isdir(fullpath)
-                        search_dir(fullpath)
-                    end
-                end
-            catch e
-                # Skip directories we can't read
-            end
-        end
-
-        search_dir(path)
-        return matches
+        return find_file(path, pattern, recursive)
     elseif tool.command == "mkdir"
         path = get(args, "path", nothing)
         if path === nothing

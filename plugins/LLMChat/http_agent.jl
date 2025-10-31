@@ -86,18 +86,18 @@ struct HTTPAgent <: LLMChatAgent
     tool_choice::String
     max_tool_use_token::Int
     # TodoList or other tools implementing multi-step tasks
-    needs_to_be_done::Dict{DataType, AbstractTool}
-    last_item::Base.RefValue{Union{AbstractTool, String}}
+    needs_to_be_done::Dict{DataType,AbstractTool}
+    last_item::Base.RefValue{Union{AbstractTool,String}}
 end
 
 # Full constructor with keyword arguments for customization
 function HTTPAgent(api::AbstractApi;
-                   max_tokens::Int=4096,
-                   temperature::Float64=0.7,
-                   system_prompt::String="You are a helpful AI assistant integrated into a Julia notebook.",
-                   tools::Vector{DataType}=DEFAULT_TOOLS,
-                   tool_choice::String="auto",
-                   max_tool_use_token::Int=4000)
+    max_tokens::Int=4096,
+    temperature::Float64=0.7,
+    system_prompt::String="You are a helpful AI assistant integrated into a Julia notebook.",
+    tools::Vector{DataType}=DEFAULT_TOOLS,
+    tool_choice::String="auto",
+    max_tool_use_token::Int=4000)
     return HTTPAgent(
         api,
         max_tokens,
@@ -106,8 +106,8 @@ function HTTPAgent(api::AbstractApi;
         tools,
         tool_choice,
         max_tool_use_token,
-        Dict{DataType, AbstractTool}(),
-        Ref{Union{AbstractTool, String}}("")
+        Dict{DataType,AbstractTool}(),
+        Ref{Union{AbstractTool,String}}("")
     )
 end
 
@@ -333,13 +333,8 @@ function parse_sse(callback::Function, io::IO; spinner::Union{TaskSpinner,Nothin
                 if data_str == "[DONE]" || isempty(data_str)
                     continue
                 end
-
-                try
-                    parsed_chunk = JSON3.read(data_str)
-                    callback(parsed_chunk)
-                catch e
-                    @debug "Failed to parse streaming chunk" exception=e data=data_str
-                end
+                parsed_chunk = JSON3.read(data_str)
+                callback(parsed_chunk)
             end
         end
     end
@@ -348,12 +343,8 @@ function parse_sse(callback::Function, io::IO; spinner::Union{TaskSpinner,Nothin
     if !isempty(strip(line_buffer)) && startswith(line_buffer, "data: ")
         data_str = strip(line_buffer[7:end])
         if data_str != "[DONE]" && !isempty(data_str)
-            try
-                parsed_chunk = JSON3.read(data_str)
-                callback(parsed_chunk)
-            catch e
-                @debug "Failed to parse final chunk" exception=e data=data_str
-            end
+            parsed_chunk = JSON3.read(data_str)
+            callback(parsed_chunk)
         end
     end
 end
@@ -368,8 +359,8 @@ The Channel is closed after all items are yielded.
 # Optional Arguments
 - `spinner`: TaskSpinner for operation tracking and cancellation
 """
-function prompt(agent::HTTPAgent, messages::Vector{AgentMessage};
-                spinner::Union{TaskSpinner, Nothing}=nothing)
+function prompt(callback, agent::HTTPAgent, messages::Vector{AgentMessage};
+    spinner::Union{TaskSpinner,Nothing}=nothing)
     api = agent.api
 
     # Convert messages to API format
@@ -385,39 +376,46 @@ function prompt(agent::HTTPAgent, messages::Vector{AgentMessage};
     filter!(p -> p.second !== nothing, body)
     req_headers = headers(api)
 
-    # Create output channel for complete tools and strings
-    output_channel = Channel{Union{AbstractTool, String}}(100; spawn=true) do channel
-        # Use HTTP.open for true streaming, disable automatic status exceptions
-        HTTP.open("POST", base_url(api), req_headers; status_exception=false) do io
-            async_spinner!(spinner, "http request") do
-                # Write request body
-                JSON3.write(io, body)
-                closewrite(io)
+    # Use HTTP.open for true streaming, disable automatic status exceptions
+    HTTP.open("POST", base_url(api), req_headers; status_exception=false) do io
+        async_spinner!(spinner, "http request") do
+            # Write request body
+            JSON3.write(io, body)
+            closewrite(io)
 
-                # Start reading response
-                resp = startread(io)
-                # Check response status
-                if resp.status >= 400
-                    # Read error response body
-                    error_body = read(io, String)
-                    put!(channel, "HTTP $(resp.status): $error_body")
-                    return
-                end
+            # Start reading response
+            resp = startread(io)
+            # Check response status
+            if resp.status >= 400
+                # Read error response body
+                error_body = read(io, String)
+                callback("HTTP $(resp.status): $error_body")
+                return
+            end
 
-                # Parse SSE stream and pass chunks to response parser
-                try
-                    state = parse_state(api)
-                    parse_sse(io, spinner=spinner) do parsed_chunk
-                        parse_response(state, parsed_chunk, channel)
+            # Parse SSE stream and pass chunks to response parser
+            try
+                state = parse_state(api)
+                parse_sse(io, spinner=spinner) do parsed_chunk
+                    parse_response(state, parsed_chunk) do item
+                        callback(item)
                     end
-                catch e
-                    @warn "Failed to parse SSE stream" exception=e
-                    put!(channel, "Error parsing response stream: $(string(e))")
                 end
+            catch e
+                @warn "Failed to parse SSE stream" exception = e
+                callback("Error parsing response stream: $(string(e))")
             end
         end
     end
-    return output_channel
+end
+
+
+function prompt(agent::HTTPAgent, messages::Vector{AgentMessage};
+    spinner::Union{TaskSpinner,Nothing}=nothing)
+    return Channel{Union{AbstractTool,String}}(Inf, spawn=true) do chan
+        prompt(item -> put!(chan, item), agent, messages; spinner=spinner)
+        close(chan)
+    end
 end
 
 # ============================================================================
@@ -447,7 +445,7 @@ function message_to_api(api::OpenAIApi, msg::AgentMessage)
     content_or_fields = message_to_api(api, msg.content, msg.cell_id)
 
     # Start with base message dict
-    msg_dict = Dict{String, Any}("role" => api_role, "content" => nothing)
+    msg_dict = Dict{String,Any}("role" => api_role, "content" => nothing)
 
     # If content method returned a dict, merge additional fields
     if content_or_fields isa Dict
@@ -513,7 +511,7 @@ function message_to_api(api::OpenAIApi, tool::AbstractTool, cell_id)
             "type" => "function",
             "function" => Dict(
                 "name" => tool_name(typeof(tool)),
-                "arguments" => Dict(fields)
+                "arguments" => JSON3.write(Dict(fields))
             )
         )]
     )
@@ -677,7 +675,7 @@ end
 
 Convert tool to OpenAI format.
 """
-function tool_to_openai(::Type{T}) where T <: AbstractTool
+function tool_to_openai(::Type{T}) where T<:AbstractTool
     return Dict(
         "type" => "function",
         "function" => Dict(
@@ -693,7 +691,7 @@ end
 
 Convert tool to Claude format.
 """
-function tool_to_claude(::Type{T}) where T <: AbstractTool
+function tool_to_claude(::Type{T}) where T<:AbstractTool
     return Dict(
         "name" => tool_name(T),
         "description" => tool_description(T),
@@ -735,89 +733,66 @@ end
 Accumulator for OpenAI streaming chunks. Tracks partial tool calls and text.
 """
 mutable struct OpenAIStreamState
-    tool_calls::Dict{Int, Dict{String, Any}}  # index => {name, arguments}
+    tool_calls::Dict{Int,Dict{String,Any}}  # index => {name, arguments}
     text_buffer::String
 end
 
-OpenAIStreamState() = OpenAIStreamState(Dict{Int, Dict{String, Any}}(), "")
+OpenAIStreamState() = OpenAIStreamState(Dict{Int,Dict{String,Any}}(), "")
+parse_state(::Union{OllamaApi,OpenAIApi}) = OpenAIStreamState()
 
-"""
-    parse_openai_response(chunk, output_channel::Channel)
-
-Parse OpenAI streaming chunk and emit complete tools/text to output_channel.
-Accumulates partial data and only emits when complete.
-"""
-const openai_state = Ref{Union{OpenAIStreamState, Nothing}}(nothing)
-
-
-
-function parse_response(api::OpenAIApi, chunk, output_channel::Channel)
-    # Initialize state on first chunk
-    if openai_state[] === nothing
-        openai_state[] = OpenAIStreamState()
+function parse_response(f, state::OpenAIStreamState, chunk)
+    choices = get(chunk, :choices, nothing)
+    if choices === nothing || isempty(choices)
+        return
     end
-    state = openai_state[]
 
-    if haskey(chunk, :choices) && !isempty(chunk.choices)
-        choice = chunk.choices[1]
-        delta = get(choice, :delta, nothing)
-
-        if delta !== nothing
-            # Handle tool calls (accumulate arguments)
-            if haskey(delta, :tool_calls)
-                for tool_delta in delta.tool_calls
-                    idx = tool_delta.index
-
-                    if !haskey(state.tool_calls, idx)
-                        state.tool_calls[idx] = Dict("name" => "", "arguments" => "")
+    choice = choices[1]
+    delta = get(choice, :delta, nothing)
+    if delta !== nothing
+        # --- Handle tool calls ---
+        if haskey(delta, :tool_calls)
+            for tool_delta in delta.tool_calls
+                idx = tool_delta.index
+                tool = get!(state.tool_calls, idx, Dict("name" => "", "arguments" => ""))
+                func = get(tool_delta, :function, nothing)
+                if func !== nothing
+                    if haskey(func, :name) && !isempty(func.name)
+                        tool["name"] = func.name
                     end
-
-                    # Accumulate function name
-                    if haskey(tool_delta, :function) && haskey(tool_delta.function, :name)
-                        state.tool_calls[idx]["name"] = tool_delta.function.name
-                    end
-
-                    # Accumulate arguments
-                    if haskey(tool_delta, :function) && haskey(tool_delta.function, :arguments)
-                        state.tool_calls[idx]["arguments"] *= tool_delta.function.arguments
+                    if haskey(func, :arguments) && func.arguments !== nothing
+                        tool["arguments"] *= func.arguments
                     end
                 end
-            end
-
-            # Handle text content (accumulate)
-            if haskey(delta, :content) && delta.content !== nothing
-                state.text_buffer *= delta.content
             end
         end
 
-        # Check if this is the final chunk
-        finish_reason = get(choice, :finish_reason, nothing)
-        if finish_reason !== nothing && finish_reason != "null"
-            # Emit all accumulated tools
-            for (idx, tool_data) in sort(collect(state.tool_calls), by=first)
-                tool_name = tool_data["name"]
-                args_json = tool_data["arguments"]
+        # --- Handle text output ---
+        if haskey(delta, :content) && delta.content !== nothing
+            state.text_buffer *= delta.content
+        end
+    end
+    # --- Handle completion ---
+    if get(choice, :finish_reason, nothing) !== nothing
+        # Emit tool calls first
+        for (idx, tool_data) in sort(collect(state.tool_calls), by=first)
+            tool_name = tool_data["name"]
+            args_json = tool_data["arguments"]
 
-                if !isempty(tool_name) && !isempty(args_json)
-                    tool_type = tool_name_to_type(tool_name)
-                    if tool_type !== nothing
-                        try
-                            tool = JSON3.read(args_json, tool_type)
-                            put!(output_channel, tool)
-                        catch e
-                            @warn "Failed to parse tool arguments" tool_name args_json exception=e
-                        end
+            if !isempty(tool_name) && !isempty(args_json)
+                tool_type = tool_name_to_type(tool_name)
+                if tool_type !== nothing
+                    try
+                        tool = JSON3.read(args_json, tool_type)
+                        f(tool)
+                    catch e
+                        @warn "Failed to parse tool arguments" tool_name args_json exception = e
                     end
                 end
             end
-
-            # Emit accumulated text if present
-            if !isempty(strip(state.text_buffer))
-                put!(output_channel, state.text_buffer)
-            end
-
-            # Reset state for next request
-            openai_state[] = nothing
+        end
+        # Emit text if any
+        if !isempty(strip(state.text_buffer))
+            f(state.text_buffer)
         end
     end
 end
@@ -833,7 +808,7 @@ mutable struct ClaudeStreamState
     text_buffer::String
     tool_name::String
     tool_input_buffer::String
-    stop_reason::Union{String, Nothing}
+    stop_reason::Union{String,Nothing}
 end
 
 ClaudeStreamState() = ClaudeStreamState(-1, "", "", "", "", nothing)
@@ -841,14 +816,13 @@ ClaudeStreamState() = ClaudeStreamState(-1, "", "", "", "", nothing)
 
 parse_state(::ClaudeApi) = ClaudeStreamState()
 
-function parse_response(state::ClaudeStreamState, chunk, output_channel::Channel)
+function parse_response(f, state::ClaudeStreamState, chunk)
     event_type = get(chunk, :type, "")
 
     if event_type == "message_start"
         # Message starting - can access initial metadata if needed
         # Currently nothing to do here
         return
-
     elseif event_type == "content_block_start"
         # New content block starting
         block = chunk.content_block
@@ -876,7 +850,7 @@ function parse_response(state::ClaudeStreamState, chunk, output_channel::Channel
         # Block complete - emit to channel
         if state.current_block_type == "text"
             if !isempty(strip(state.text_buffer))
-                put!(output_channel, state.text_buffer)
+                f(state.text_buffer)
             end
             state.text_buffer = ""
         elseif state.current_block_type == "tool_use"
@@ -885,9 +859,9 @@ function parse_response(state::ClaudeStreamState, chunk, output_channel::Channel
                 if tool_type !== nothing
                     try
                         tool = JSON3.read(state.tool_input_buffer, tool_type)
-                        put!(output_channel, tool)
+                        f(tool)
                     catch e
-                        @warn "Failed to parse tool input" tool_name=state.tool_name input=state.tool_input_buffer exception=e
+                        @warn "Failed to parse tool input" tool_name = state.tool_name input = state.tool_input_buffer exception = e
                     end
                 end
             end
@@ -906,20 +880,17 @@ function parse_response(state::ClaudeStreamState, chunk, output_channel::Channel
 
     elseif event_type == "message_stop"
         # End of message - handle incomplete blocks and emit stop_reason if we have one
-
         # If we have incomplete content when message stops, emit what we have
         if state.stop_reason == "max_tokens"
             # Handle incomplete tool - warn about it
             if state.current_block_type == "tool_use" && !isempty(state.tool_input_buffer)
-                @warn "Tool call truncated due to max_tokens" tool_name=state.tool_name partial_input=state.tool_input_buffer
+                @warn "Tool call truncated due to max_tokens" tool_name = state.tool_name partial_input = state.tool_input_buffer
             end
-
             # Handle incomplete text - emit it
             if state.current_block_type == "text" && !isempty(strip(state.text_buffer))
-                put!(output_channel, state.text_buffer)
+                f(state.text_buffer)
             end
         end
-
         if state.stop_reason !== nothing
             # Emit stop reason as informational message only for actual issues
             stop_msg = if state.stop_reason == "max_tokens"
@@ -938,7 +909,7 @@ function parse_response(state::ClaudeStreamState, chunk, output_channel::Channel
             end
 
             if stop_msg !== nothing
-                put!(output_channel, stop_msg)
+                f(stop_msg)
             end
         end
         return
@@ -949,63 +920,7 @@ function parse_response(state::ClaudeStreamState, chunk, output_channel::Channel
     end
 end
 
-parse_state(::Union{OllamaApi, OpenAIApi}) = OpenAIStreamState()
 
-function parse_response(state::OpenAIStreamState, chunk, output_channel::Channel)
-    if haskey(chunk, :message)
-        message = chunk.message
-        # Handle tool calls (accumulate)
-        if haskey(message, :tool_calls)
-            for tool_call in message.tool_calls
-                idx = get(tool_call, :index, 0)
-
-                if !haskey(state.tool_calls, idx)
-                    state.tool_calls[idx] = Dict("name" => "", "arguments" => "")
-                end
-
-                if haskey(tool_call, :function)
-                    func = tool_call.function
-                    if haskey(func, :name)
-                        state.tool_calls[idx]["name"] = func.name
-                    end
-                    if haskey(func, :arguments)
-                        state.tool_calls[idx]["arguments"] *= func.arguments
-                    end
-                end
-            end
-        end
-
-        # Handle text content (accumulate)
-        if haskey(message, :content) && message.content !== nothing
-            state.text_buffer *= message.content
-        end
-    end
-
-    # Check if done
-    if haskey(chunk, :done) && chunk.done
-        # Emit all accumulated tools
-        for (idx, tool_data) in sort(collect(state.tool_calls), by=first)
-            tool_name = tool_data["name"]
-            args_json = tool_data["arguments"]
-
-            if !isempty(tool_name) && !isempty(args_json)
-                tool_type = tool_name_to_type(tool_name)
-                if tool_type !== nothing
-                    try
-                        tool = JSON3.read(args_json, tool_type)
-                        put!(output_channel, tool)
-                    catch e
-                        @warn "Failed to parse tool arguments" tool_name args_json exception=e
-                    end
-                end
-            end
-        end
-        # Emit accumulated text if present
-        if !isempty(strip(state.text_buffer))
-            put!(output_channel, state.text_buffer)
-        end
-    end
-end
 
 # ============================================================================
 # Agent creation helpers
