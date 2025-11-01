@@ -1,13 +1,12 @@
-# New Book
+# Mime Tests
 
-1 + 1
+#### Printing
 
 ```julia (editor=true, logging=false, output=true)
 ]st
 ```
-```julia (editor=true, logging=false, output=true)
-sleep(1)
-```
+#### Tables
+
 ```julia (editor=true, logging=false, output=true)
 using DataFrames
 DataFrame(A=1:3, B=5:7, fixed=1)
@@ -41,7 +40,7 @@ L"1 + \alpha^2"
 ```
 ```julia (editor=true, logging=false, output=true)
 md"""
-# Markdown output 
+# Markdown output
 
 |              Method | Order of Accuracy |                            Error Bound | Computational Cost |
 | -------------------:| -----------------:| --------------------------------------:| ------------------:|
@@ -65,18 +64,26 @@ function Base.show(io::IO, m::MIME"text/latex", num::LatexNum)
 end
 LatexNum()
 ```
-```julia (editor=true, logging=false, output=true)
-rand(1000, 1000)
-```
-```julia (editor=true, logging=false, output=true)
-"hello world"
-```
-```julia (editor=true, logging=false, output=true)
-view("adasd", 1:2)
-```
 Latex inline
 
 ```latex
 \int_{-\infty}^{\infty} e^{-x^2} dx = \sqrt{\pi} \mathbf{A} = \begin{pmatrix} a_{11} & a_{12} \\ a_{21} & a_{22} \end{pmatrix}
 ```
 
+#### Arrays
+
+```julia (editor=true, logging=false, output=true)
+using GeometryBasics
+rand(Vec3f, 10000)
+```
+```julia (editor=true, logging=false, output=true)
+rand(1000, 1000)
+```
+#### Strings
+
+```julia (editor=true, logging=false, output=true)
+"hello world"
+```
+```julia (editor=true, logging=false, output=true)
+view("adasd", 1:2)
+```
