@@ -91,7 +91,6 @@ include("plugin_templates.jl")
 
 # Include plugins as submodules
 include("../plugins/LLMChat/book.jl")
-include("../plugins/SimpleCounter/book.jl")
 
 export Book, ChatComponent, ChatAgent, ChatMessage, MCPJuliaServer, Collapsible, Components, LoggingWidget, export_zip, import_zip, InteractiveError
 export InlineBook
