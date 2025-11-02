@@ -18,18 +18,17 @@ function ToggleButton(icon_name::String, obs_to_toggle::Observable{Bool})
     return DOM.button(
         button_icon;
         class = initial_class,
-        onclick = js"""event=> {
+        onclick = js"""((event)=> {
             const button = event.target.closest('button');
             const newValue = !$(obs_to_toggle).value;
             $(obs_to_toggle).notify(newValue);
-
             // Toggle the active class based on new value
             if (newValue) {
                 button.classList.add('active');
             } else {
                 button.classList.remove('active');
             }
-        }"""
+        })"""
     )
 end
 
@@ -367,19 +366,22 @@ Interactive cell for code editing and execution.
 - `delete_self::Observable{Bool}`: Signal for cell deletion
 - `focused::Observable{Bool}`: Whether the cell is currently focused
 - `metadata::Dict{Symbol, Any}`: Plugin-specific metadata (e.g., from=:user)
+- `class::String`: CSS class for the cell container
 """
-struct CellEditor
+mutable struct CellEditor
     language::String
     editor::EvalEditor
     uuid::Int
     delete_self::Observable{Bool}
     focused::Observable{Bool}
     metadata::Dict{Symbol, Any}
+    class::String
+    book::Any # Reference to the parent book, cant use type here to avoid circular dependency
 end
 
 
 """
-    CellEditor(content, language, runner; show_editor=true, show_logging=false, show_output=true, metadata=Dict{Symbol,Any}())
+    CellEditor(content, language, runner; show_editor=true, show_logging=false, show_output=true, metadata=Dict{Symbol,Any}(), class="")
 
 Create an interactive cell editor with code execution capabilities.
 
@@ -391,15 +393,15 @@ Create an interactive cell editor with code execution capabilities.
 - `show_logging`: Whether to show execution logs initially
 - `show_output`: Whether to show execution output initially
 - `metadata`: Plugin-specific metadata dictionary
+- `class`: CSS class for the cell container
 
 # Returns
 Configured `CellEditor` instance ready for interactive use.
 """
-function CellEditor(content, language, runner; show_editor = true, show_logging = false, show_output = true, theme = Observable("default"), metadata = Dict{Symbol, Any}(), id::Int = 0)
+function CellEditor(content, language, runner; show_editor = true, show_logging = false, show_output = true, theme = Observable("default"), metadata = Dict{Symbol, Any}(), id::Int = 0, class::String = "")
     runner = language == "markdown" ? MarkdownRunner() : runner
     # Use provided id or 0 as placeholder (will be replaced by assign_cell_ids!)
     uuid = id
-
     jleditor = EvalEditor(
         content, runner;
         show_editor = show_editor, show_logging = show_logging, language = language,
@@ -417,9 +419,21 @@ function CellEditor(content, language, runner; show_editor = true, show_logging 
         end
     end
     focused = Observable(false)
+
+    # Derive class from metadata[:from] if not explicitly provided
+    if isempty(class)
+        from = get(metadata, :from, nothing)
+        if from === nothing
+            class = ""  # No special class for regular cells
+        else
+            class = "cell-from-$from"
+        end
+    end
+
     return CellEditor(
         language, jleditor,
-        uuid, Observable(false), focused, metadata
+        uuid, Observable(false), focused, metadata, class,
+        nothing
     )
 end
 
@@ -499,10 +513,22 @@ function Bonito.jsrender(session::Session, editor::CellEditor)
 
     # Add collapsed class to container based on editor visibility
     container_class = map(any_visible) do visible
-        visible ? "cell-editor-container" : "cell-editor-container editor-collapsed"
+        base = "cell-editor-container"
+        collapsed = visible ? "" : " editor-collapsed"
+        custom = isempty(editor.class) ? "" : " $(editor.class)"
+        return base * collapsed * custom
     end
     cell_div = DOM.div(container, class = container_class, id = editor.uuid)
-    return Bonito.jsrender(session, cell_div)
+
+    # Add new_cell_menu if book is attached
+    if !isnothing(editor.book)
+        add_cell_div = new_cell_menu(editor.book, editor.uuid, editor.book.runner, editor.language)
+        full_cell = DOM.div(cell_div, add_cell_div)
+        setup_editor_callbacks!(editor.book, editor)
+        return Bonito.jsrender(session, full_cell)
+    else
+        return Bonito.jsrender(session, cell_div)
+    end
 end
 
 struct FileEditor
@@ -566,7 +592,7 @@ function DiffEditor(original::String, modified::String; language="julia", theme=
         :scrollbar => Dict(:vertical => "auto", :horizontal => "auto"),
     )
     opts = merge!(defaults, Dict{Symbol, Any}(options))
-    
+
     return DiffEditor(
         Observable(original),
         Observable(modified),
@@ -578,7 +604,7 @@ end
 
 function Bonito.jsrender(session::Session, diff_editor::DiffEditor)
     editor_div = DOM.div(class="monaco-diff-editor-div")
-    
+
     return Bonito.jsrender(
         session, DOM.div(
             editor_div,

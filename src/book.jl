@@ -33,12 +33,11 @@ include("book_structure.jl")
 function import_bookfile(book_file, folder, replace_style)
     if !isfile(book_file)
         write(
-            book_file,
+            book_file,"""
+            # New Book
+            ```julia (editor=true, logging=false, output=true)
+            ```
             """
-# New Book
-```julia (editor=true, logging=false, output=true)
-```
-"""
         )
     end
     name, ext = splitext(book_file)
@@ -113,6 +112,9 @@ function Book(user_file::String; folder=nothing, replace_style=false, all_blocks
         global_logging_widget, style_eval, spinner, current_cell, theme_preference, monaco_theme,
         cell_id_counter
     )
+    for cell in book.cells
+        cell.book = book  # Set back-reference to the parent book
+    end
     Core.eval(runner.mod, :(current_book() = $(book)))
     # Add data string macro for convenient data folder access
     Core.eval(runner.mod, :(macro data_str(path)
@@ -403,69 +405,61 @@ function save(book::Book)
     return export_md(book.file, book)
 end
 
-function insert_editor_below!(book, editor, editor_above_uuid)
-    # Handle special case for inserting at beginning
-    if editor_above_uuid == "beginning"
-        pushfirst!(book.cells, editor)
-        add_cell_div = new_cell_menu(book, editor.uuid, book.runner, editor.language)
-        setup_editor_callbacks!(book, editor)
-        elem = DOM.div(editor, add_cell_div)
-        save(book)  # Save the notebook after cell insertion
-        return Bonito.dom_in_js(
-            book.session, elem, js"""(elem) => {
-                $(Monaco).then(Monaco => {
-                    Monaco.add_editor_at_beginning(elem, $(editor.uuid));
-                })
-            }"""
-        )
-    end
+"""
+    insert_editor!(book, editor, index::Int)
 
-    # Normal case - find the editor above and insert below it
-    idx = findfirst(x -> x.uuid == editor_above_uuid, book.cells)
-    if isnothing(idx)
+Insert editor at a specific 1-based index position.
+
+- `book::Book`: Book instance
+- `editor::CellEditor`: Cell editor to insert
+- `index::Int`: 1-based index (1 = beginning, length(cells)+1 = end)
+"""
+function insert_editor!(book, editor, index::Int)
+    # Set book reference
+    editor.book = book
+
+    # Update book.cells array
+    if index == 1
+        pushfirst!(book.cells, editor)
+    elseif index > length(book.cells)
         push!(book.cells, editor)
     else
-        insert!(book.cells, idx + 1, editor)
+        insert!(book.cells, index, editor)
     end
-    add_cell_div = new_cell_menu(book, editor.uuid, book.runner)
-    setup_editor_callbacks!(book, editor)
-    elem = DOM.div(editor, add_cell_div)
-    save(book)  # Save the notebook after cell insertion
-    return Bonito.dom_in_js(
-        book.session, elem, js"""(elem) => {
+    # Save
+    save(book)
+    # Insert into DOM
+    elem = Bonito.jsrender(Session(book.session), editor)
+    return Bonito.evaljs(
+        book.session, js"""(() => {
             $(Monaco).then(Monaco => {
-                Monaco.add_editor_below($editor_above_uuid, elem, $(editor.uuid));
+                const elem = $(Observable(elem)).value;
+                console.log(elem);
+                Monaco.insert_editor_at_index(elem, $(editor.uuid), $(index));
             })
-        }"""
+        })()"""
     )
 end
 
-"""
-    insert_cell_at!(book, source, lang, pos)
-
-Insert cell at position (:begin, :end, or index).
-
-- `book::Book`: Book to modify
-- `source::String`: Cell content
-- `lang::String`: Language (julia, markdown, python)
-- `pos`: Position (:begin, :end, or integer index)
-"""
-function insert_cell_at!(book, source::String, lang::String, pos)
-    # Create cell editor with appropriate settings
-    editor = if lang == "markdown"
-        CellEditor(source, lang, book.runner; show_editor=false, show_output=true, theme=book.monaco_theme)
-    else
-        CellEditor(source, lang, book.runner; theme=book.monaco_theme)
+function insert_editor_below!(book, editor, editor_above_uuid)
+    if editor_above_uuid == "beginning"
+        return insert_editor!(book, editor, 1)
     end
+    idx = findfirst(x -> x.uuid == editor_above_uuid, book.cells)
+    if isnothing(idx)
+        # Append at end
+        return insert_editor!(book, editor, length(book.cells) + 1)
+    else
+        return insert_editor!(book, editor, idx + 1)
+    end
+end
 
-    # Handle different position types by finding the editor above
+
+function insert_cell_at!(book::Book, editor::CellEditor, pos)
     if pos == :begin
         if isempty(book.cells)
             # If no cells exist, add directly and handle manually
             push!(book.cells, editor)
-            add_cell_div = new_cell_menu(book, editor.uuid, book.runner, editor.language)
-            setup_editor_callbacks!(book, editor)
-            elem = DOM.div(editor, add_cell_div)
             return Bonito.dom_in_js(
                 book.session, elem, js"""(elem) => {
                     $(Monaco).then(Monaco => {
@@ -480,7 +474,7 @@ function insert_cell_at!(book, source::String, lang::String, pos)
     elseif pos == :end
         if isempty(book.cells)
             # If no cells exist, treat as beginning
-            return insert_cell_at!(book, source, lang, :begin)
+            return insert_cell_at!(book, editor, :begin)
         else
             # Insert at end by using the last cell as reference
             last_editor_uuid = book.cells[end].uuid
@@ -490,13 +484,12 @@ function insert_cell_at!(book, source::String, lang::String, pos)
         if pos < 1 || pos > length(book.cells) + 1
             error("Position $pos is out of bounds. Must be between 1 and $(length(book.cells) + 1)")
         end
-
         if pos == 1
             # Insert at beginning
-            return insert_cell_at!(book, source, lang, :begin)
+            return insert_cell_at!(book, editor, :begin)
         elseif pos == length(book.cells) + 1
             # Insert at end
-            return insert_cell_at!(book, source, lang, :end)
+            return insert_cell_at!(book, editor, :end)
         else
             # Insert at specific position by using the editor above as reference
             editor_above_uuid = book.cells[pos-1].uuid
@@ -505,6 +498,29 @@ function insert_cell_at!(book, source::String, lang::String, pos)
     else
         error("Invalid position $pos. Must be :begin, :end, or an integer")
     end
+end
+
+"""
+    insert_cell_at!(book, source, lang, pos)
+
+Insert cell at position (:begin, :end, or index).
+
+- `book::Book`: Book to modify
+- `source::String`: Cell content
+- `lang::String`: Language (julia, markdown, python)
+- `pos`: Position (:begin, :end, or integer index)
+"""
+function insert_cell_at!(book::Book, source::String, lang::String, pos)
+    # Create cell editor with appropriate settings
+    editor = if lang == "markdown"
+        CellEditor(source, lang, book.runner; show_editor=false, show_output=true, theme=book.monaco_theme)
+    else
+        CellEditor(source, lang, book.runner; theme=book.monaco_theme)
+    end
+    editor.book = book  # Set back-reference to the parent book
+
+    # Handle different position types by finding the editor above
+
 end
 
 function new_cell_menu(book, editor_above_uuid, runner, above_cell_language="julia")
@@ -628,10 +644,6 @@ end
 
 function standard_setup!(session::Session, book::Book)
     book.session = session
-    for editor in book.cells
-        setup_editor_callbacks!(book, editor)
-    end
-
     register_book = js"""
         $(Monaco).then(Monaco => {
             Monaco.BOOK.update_order($(map(c-> c.uuid, book.cells)));
@@ -683,10 +695,9 @@ function Bonito.jsrender(session::Session, book::Book)
     book.session = session
     runner = book.runner
     add_julia_mpc_route!(book)
-    cells = map(book.cells) do editor
-        add_cell_div = new_cell_menu(book, editor.uuid, runner, editor.language)
-        DOM.div(editor, add_cell_div)
-    end
+
+    # Cells render themselves with menu and callbacks via CellEditor.jsrender
+    cells = book.cells
 
     # Create tabbed editor instead of separate file tabs
     tabbed_editor = TabbedFileEditor(String[])

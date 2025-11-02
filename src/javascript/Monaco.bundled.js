@@ -364,28 +364,51 @@ class Book {
     }
 }
 const BOOK = new Book();
-function add_editor_at_beginning(elem, uuid1) {
+function insert_editor_at_index(elem, uuid1, index) {
     if (BOOK.cells.length === 0) {
         const inline_block = document.querySelector(".inline-block");
-        if (inline_block) {
-            inline_block.appendChild(elem);
+        const llm_chat_messages = document.querySelector(".llm-chat-messages");
+        const container = llm_chat_messages || inline_block;
+        if (container) {
+            container.appendChild(elem);
         }
-        BOOK.cells.unshift(uuid1);
-    } else {
+        BOOK.cells.push(uuid1);
+        return;
+    }
+    const arrayIndex = index - 1;
+    if (arrayIndex === 0) {
         const first_uuid = BOOK.cells[0];
         const first_editor_div = document.getElementById(first_uuid);
         if (first_editor_div) {
-            const parent = first_editor_div.parentElement;
-            parent.insertAdjacentElement("beforebegin", elem);
+            first_editor_div.parentElement.insertAdjacentElement("beforebegin", elem);
         }
         BOOK.cells.unshift(uuid1);
+        return;
     }
+    if (arrayIndex >= BOOK.cells.length) {
+        const last_uuid = BOOK.cells[BOOK.cells.length - 1];
+        const last_editor_div = document.getElementById(last_uuid);
+        if (last_editor_div) {
+            last_editor_div.parentElement.insertAdjacentElement("afterend", elem);
+        }
+        BOOK.cells.push(uuid1);
+        return;
+    }
+    const after_uuid = BOOK.cells[arrayIndex - 1];
+    const after_editor_div = document.getElementById(after_uuid);
+    if (after_editor_div) {
+        after_editor_div.parentElement.insertAdjacentElement("afterend", elem);
+    }
+    BOOK.cells.splice(arrayIndex, 0, uuid1);
+}
+function add_editor_at_beginning(elem, uuid1) {
+    insert_editor_at_index(elem, uuid1, 1);
 }
 function add_editor_below(above_editor_uuid, elem, uuid1) {
-    const editor_div = document.getElementById(above_editor_uuid);
-    const parent1 = editor_div.parentElement;
-    parent1.insertAdjacentElement("afterend", elem);
-    BOOK.add_below(above_editor_uuid, uuid1);
+    const idx = BOOK.cells.indexOf(above_editor_uuid);
+    if (idx !== -1) {
+        insert_editor_at_index(elem, uuid1, idx + 2);
+    }
 }
 function add_command(editor, label, keybinding, callback) {
     editor.addAction({
@@ -789,6 +812,7 @@ class MonacoDiffEditor {
 export { MonacoEditor as MonacoEditor };
 export { EvalEditor as EvalEditor };
 export { BOOK as BOOK };
+export { insert_editor_at_index as insert_editor_at_index };
 export { add_editor_at_beginning as add_editor_at_beginning };
 export { add_editor_below as add_editor_below };
 export { add_command as add_command };

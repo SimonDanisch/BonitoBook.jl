@@ -4,3 +4,5 @@ test/Sunny/01_LSWT_CoRh2O4
 docs/build
 !/Manifest.toml
 .CondaPkg
+docs/examples/.llm-chat-example-bbook/data/
+docs/examples/.llm-chat-example-bbook/.versions/

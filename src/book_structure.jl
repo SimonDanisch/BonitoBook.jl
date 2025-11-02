@@ -291,25 +291,13 @@ function assign_cell_ids!(cells::Vector)
             max_id = max(max_id, cell.uuid)
         end
     end
-
     # Start counter after the highest ID
     counter = Ref(max_id + 1)
-
     # Assign IDs to cells without them (uuid == 0)
     for (i, cell) in enumerate(cells)
         if cell.uuid == 0
             # Create new cell with assigned ID
-            cells[i] = CellEditor(
-                cell.editor.source[],
-                cell.language,
-                cell.editor.runner;
-                show_editor = cell.editor.show_editor[],
-                show_logging = cell.editor.show_logging[],
-                show_output = cell.editor.show_output[],
-                theme = cell.editor.editor.theme,
-                metadata = cell.metadata,
-                id = counter[]
-            )
+            cell.uuid = counter[]
             counter[] += 1
         end
     end

@@ -16,9 +16,32 @@ The LLM Chat plugin turns your notebook into a conversation with an AI assistant
 - **🎨 Beautiful rendering**: Tool uses and results are rendered with rich previews
 - **🔌 Extensible**: Easy to add custom tools and LLM backends
 
-## Installation
+## Quick Start
 
-The plugin is included with BonitoBook. To use it:
+### Option 1: Create from Template (Recommended)
+
+The easiest way to start is using the plugin template system:
+
+```julia
+using BonitoBook
+
+# Create a new LLM Chat book from template
+create_book_from_plugin("chat.md", "LLMChat")
+
+# Load and display
+book = Book("chat.md")
+display(book)
+```
+
+This automatically:
+- Creates the `.chat-bbook/` folder structure
+- Copies template files (style.jl, README.md)
+- Sets up the LLMChat plugin configuration
+- Creates necessary directories (data/, ai/)
+
+### Option 2: Manual Setup
+
+If you prefer manual setup:
 
 ```julia
 using BonitoBook
@@ -158,6 +181,36 @@ tools = ["bash", "file_read", "file_write", "file_edit", "http_get", "add_cell"]
 You are a helpful AI assistant integrated into a Julia notebook.
 You can execute code, read/write files, and help with programming tasks.
 ```
+
+### Customizing with Plugin Templates
+
+The LLMChat plugin provides a template system for easy customization:
+
+```julia
+# List available plugins
+using BonitoBook
+list_plugins()
+
+# Create book from template with custom variables
+create_book_from_plugin(
+    "my_chat.md",
+    "LLMChat",
+    template_vars = Dict(
+        "BOOK_TITLE" => "Research Assistant",
+        "AUTHOR" => "Dr. Smith"
+    )
+)
+
+# Or initialize template for existing book
+initialize_plugin_template("my_chat.md")
+```
+
+The template includes:
+- `style.jl` - Customizable styling (colors, layout, fonts)
+- `README.md` - Usage instructions and examples
+- Standard directories (`data/`, `ai/`)
+
+See the [Plugin Template System documentation](../../docs/plugin_template_system.md) for details.
 
 ## Built-in Tools
 

@@ -491,7 +491,7 @@ function message_to_api(api::AbstractApi, tool::AbstractTool, cell_id)
     return [Dict(
         "type" => "tool_use",
         "id" => tool_id,
-        "name" => tool_name(typeof(tool)),
+        "name" => Base.invokelatest(tool_name, typeof(tool)),
         "input" => tool
     )]
 end
@@ -510,7 +510,7 @@ function message_to_api(api::OpenAIApi, tool::AbstractTool, cell_id)
             "id" => tool_id,
             "type" => "function",
             "function" => Dict(
-                "name" => tool_name(typeof(tool)),
+                "name" => Base.invokelatest(tool_name, typeof(tool)),
                 "arguments" => JSON3.write(Dict(fields))
             )
         )]
@@ -858,7 +858,10 @@ function parse_response(f, state::ClaudeStreamState, chunk)
                 tool_type = tool_name_to_type(state.tool_name)
                 if tool_type !== nothing
                     try
-                        tool = JSON3.read(state.tool_input_buffer, tool_type)
+                        # Fix common LLM mistakes: "null" string should be null
+                        # Replace "metadata": "null" with "metadata": null
+                        fixed_input = replace(state.tool_input_buffer, r"\"metadata\"\s*:\s*\"null\"" => "\"metadata\": null")
+                        tool = JSON3.read(fixed_input, tool_type)
                         f(tool)
                     catch e
                         @warn "Failed to parse tool input" tool_name = state.tool_name input = state.tool_input_buffer exception = e

@@ -500,7 +500,6 @@ function generate_style(book;
         CSS(
             ".cell-output",
             "margin" => "var(--spacing-xs)",
-            "max-height" => "1000px",
             "overflow-y" => "auto",
             "overflow-x" => "visible",
             "width" => "var(--editor-width)",

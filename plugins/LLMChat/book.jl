@@ -11,6 +11,7 @@ include("tools.jl")
 include("rendering.jl")
 include("agent.jl")
 include("spinner.jl")       # Must come before http_agent.jl and agent_loop.jl (defines TaskSpinner)
+include("sanitizer.jl")     # Must come before agent_loop.jl (defines SanitizerConfig)
 include("http_agent.jl")
 include("agent_loop.jl")
 include("styles.jl")
@@ -29,6 +30,8 @@ An interactive LLM chat notebook where cells represent the conversation history.
 - `is_streaming::Observable{Bool}`: Whether agent is currently streaming
 - `current_task::Base.RefValue{Union{Task, Nothing}}`: Current streaming task
 - `task_spinner::TaskSpinner`: Unified spinner for all operations
+- `file_editor::BonitoBook.TabbedFileEditor`: File editor widget for opening files from tools
+- `sanitizer_config::SanitizerConfig`: Code execution sanitizer configuration
 """
 mutable struct LLMChatBook <: BonitoBook.AbstractBook
     book::BonitoBook.Book
@@ -36,22 +39,45 @@ mutable struct LLMChatBook <: BonitoBook.AbstractBook
     is_streaming::Observable{Bool}
     current_task::Base.RefValue{Union{Task, Nothing}}
     task_spinner::TaskSpinner
+    file_editor::BonitoBook.TabbedFileEditor
+    sanitizer_config::SanitizerConfig
 end
 
 """
-    create_book(book::Book; agent=nothing, kwargs...)
+    create_book(book::Book; agent=nothing, file_editor=nothing, sanitizer_config=nothing, kwargs...)
 
 Create an LLM Chat book from a regular book.
 
 # Arguments
 - `book::Book`: The underlying book
 - `agent::Union{HTTPAgent, Nothing}`: Optional agent (loaded from config if not provided)
+- `file_editor::Union{BonitoBook.TabbedFileEditor, Nothing}`: Optional file editor instance (created if not provided)
+- `sanitizer_config::Union{SanitizerConfig, Nothing}`: Code execution sanitizer config (default: restrictive)
 """
-function create_book(book::BonitoBook.Book; agent=nothing, kwargs...)
+function create_book(book::BonitoBook.Book; agent=nothing, file_editor=nothing, sanitizer_config=nothing, kwargs...)
     # Load or create agent
     if agent === nothing
         agent = load_agent_config(book.folder)
     end
+
+    # Create file editor if not provided
+    if file_editor === nothing
+        file_editor = BonitoBook.TabbedFileEditor(String[])
+    end
+
+    # Register file editor in book widgets for tool access
+    book.widgets["file_editor"] = file_editor
+
+    # Create default sanitizer config if not provided
+    if sanitizer_config === nothing
+        sanitizer_config = SanitizerConfig(
+            allow_pkg_operations=false,
+            allow_file_operations=false,  # Force use of tools
+            allow_include=false,
+            max_output_lines=1000
+        )
+    end
+
     Core.eval(book.runner.mod,quote
         using BonitoBook.LLMChatBooks
         using JSON3
@@ -71,9 +97,12 @@ function create_book(book::BonitoBook.Book; agent=nothing, kwargs...)
         agent,
         Observable(false),
         Ref{Union{Task, Nothing}}(nothing),
-        TaskSpinner()
+        TaskSpinner(),
+        file_editor,
+        sanitizer_config
     )
 end
+
 
 """
     send_message!(chat_book::LLMChatBook, message::String)
@@ -103,7 +132,9 @@ function send_message!(chat_book::LLMChatBook, message::String)
                 chat_book.book,
                 chat_book.agent,
                 message,
-                chat_book.task_spinner
+                chat_book.task_spinner,
+                chat_book.sanitizer_config,
+                chat_book.file_editor
             )
         catch e
             if !isa(e, InterruptException)
@@ -143,18 +174,9 @@ function Bonito.jsrender(session::Session, chat_book::LLMChatBook)
     # Standard book setup
     book = chat_book.book
     elements = BonitoBook.standard_setup!(session, book)
-    BonitoBook.add_julia_mpc_route!(book)
-    # Render all cells
-    cells = map(book.cells) do cell
-        from = get(cell.metadata, :from, nothing)
-        if from === nothing
-            cell_class = "cell-centered"
-        else
-            cell_class = "cell-from-$from"
-        end
-        return DOM.div(cell, class=cell_class)
-    end
-    cells_container = DOM.div(cells, class="llm-chat-messages", id="chat-messages")
+
+    # Render all cells directly (CellEditor.jsrender handles menu and callbacks)
+    cells_container = DOM.div(book.cells, class="llm-chat-messages", id="chat-messages")
     # Chat input and stop control
     input_text = Observable("")
     stop_requested = Observable(false)
@@ -215,7 +237,7 @@ function Bonito.jsrender(session::Session, chat_book::LLMChatBook)
         const input = $(input_field);
         const sendBtn = $(send_button);
         const stopBtn = $(stop_button);
-        const container = $(chat_container).querySelector('.llm-chat-messages');
+        const container = $(chat_container);
 
         // Auto-resize textarea with better sizing
         function resizeTextarea() {
@@ -275,13 +297,15 @@ function Bonito.jsrender(session::Session, chat_book::LLMChatBook)
         let scrollTimeout = null;
 
         function scrollToBottom() {
-            container.scrollTop = container.scrollHeight;
-            lastScrollHeight = container.scrollHeight;
+            requestAnimationFrame(() => {
+                container.scrollTop = container.scrollHeight;
+                lastScrollHeight = container.scrollHeight;
+            });
         }
 
-        // Check if user is near bottom (within 100px)
+        // Check if user is near bottom (within 150px)
         function isNearBottom() {
-            return container.scrollHeight - container.scrollTop - container.clientHeight < 100;
+            return container.scrollHeight - container.scrollTop - container.clientHeight < 150;
         }
 
         // Track user scrolling
@@ -293,26 +317,41 @@ function Bonito.jsrender(session::Session, chat_book::LLMChatBook)
             }, 1000);
         });
 
-        // Observe cells changes for auto-scroll - only on childList changes (new messages)
+        // Observe ALL changes in container (new cells AND cell content updates)
         const observer = new MutationObserver((mutations) => {
-            // Only scroll if content actually grew and user is near bottom
-            const hasNewContent = container.scrollHeight > lastScrollHeight;
-            if (hasNewContent && (!isUserScrolling || isNearBottom())) {
-                scrollToBottom();
-            }
+            // Throttle scroll updates
+            requestAnimationFrame(() => {
+                const hasNewContent = container.scrollHeight > lastScrollHeight;
+                // Auto-scroll if user is near bottom or not manually scrolling
+                if (hasNewContent && (!isUserScrolling || isNearBottom())) {
+                    scrollToBottom();
+                }
+                lastScrollHeight = container.scrollHeight;
+            });
         });
-        observer.observe(container, { childList: true, subtree: false });
+        // Watch for all changes including subtree (cell content updates)
+        observer.observe(container, {
+            childList: true,
+            subtree: true,
+            characterData: true,
+            attributes: true
+        });
 
-        // Auto-focus input when not streaming
+        // Auto-focus input and scroll when not streaming
         $(chat_book.is_streaming).on((streaming) => {
             if (!streaming) {
-                input.focus();
-                scrollToBottom();
+                setTimeout(() => {
+                    input.focus();
+                    scrollToBottom();
+                }, 100);
             }
         });
 
-        // Initial focus
-        input.focus();
+        // Initial setup
+        setTimeout(() => {
+            input.focus();
+            scrollToBottom();
+        }, 100);
     """
 
     # Handle input text changes
@@ -331,9 +370,65 @@ function Bonito.jsrender(session::Session, chat_book::LLMChatBook)
         end
     end
 
+    # Create layout with file editor
+    file_editor_widget = chat_book.file_editor
+
+    # File editor visibility toggle
+    editor_visible = Observable(true)
+
+    # Collapse/expand button at panel border
+    collapse_btn = DOM.div("◀", class="file-editor-collapse-btn", title="Toggle File Editor")
+
+    # JavaScript for collapse/expand functionality
+    collapse_script = js"""
+        const collapseBtn = $(collapse_btn);
+        const rightPanel = document.querySelector('.llm-chat-right-panel');
+        const editorVisible = $(editor_visible);
+
+        collapseBtn.addEventListener('click', () => {
+            const isVisible = !editorVisible.value;
+            editorVisible.notify(isVisible);
+
+            if (isVisible) {
+                rightPanel.style.display = 'flex';
+                collapseBtn.textContent = '◀';
+                collapseBtn.title = 'Hide File Editor';
+                collapseBtn.style.right = 'calc(40% - 10px)';
+                collapseBtn.style.borderRadius = '4px 0 0 4px';
+            } else {
+                rightPanel.style.display = 'none';
+                collapseBtn.textContent = '▶';
+                collapseBtn.title = 'Show File Editor';
+                collapseBtn.style.right = '0';
+                collapseBtn.style.borderRadius = '4px 0 0 4px';
+            }
+        });
+
+        // Initial state
+        rightPanel.style.display = editorVisible.value ? 'flex' : 'none';
+        collapseBtn.textContent = editorVisible.value ? '◀' : '▶';
+        collapseBtn.style.right = editorVisible.value ? 'calc(40% - 10px)' : '0';
+    """
+
+    # Split layout: chat on left, file editor on right with collapse button
+    layout = DOM.div(
+        DOM.div(
+            elements,
+            chat_container,
+            input_script,
+            class="llm-chat-left-panel"
+        ),
+        collapse_btn,
+        DOM.div(
+            file_editor_widget,
+            class="llm-chat-right-panel"
+        ),
+        collapse_script,
+        class="llm-chat-split-layout"
+    )
 
     # Return combined view
-    return Bonito.jsrender(session, DOM.div(elements, chat_container, input_script))
+    return Bonito.jsrender(session, layout)
 end
 
 end # module LLMChatBooks

@@ -385,32 +385,70 @@ class Book {
 
 export const BOOK = new Book();
 
-export function add_editor_at_beginning(elem, uuid) {
+/**
+ * Insert editor at a specific index (1-based)
+ * @param {HTMLElement} elem - The editor element to insert
+ * @param {number} uuid - The unique ID for the editor
+ * @param {number} index - The 1-based index where to insert (1 = beginning)
+ */
+export function insert_editor_at_index(elem, uuid, index) {
+    // Handle empty book (index 1)
     if (BOOK.cells.length === 0) {
-        // No cells exist, just append to the inline block
         const inline_block = document.querySelector(".inline-block");
-        if (inline_block) {
-            inline_block.appendChild(elem);
+        const llm_chat_messages = document.querySelector(".llm-chat-messages");
+        const container = llm_chat_messages || inline_block;
+
+        if (container) {
+            container.appendChild(elem);
         }
-        BOOK.cells.unshift(uuid);
-    } else {
-        // Insert before the first cell
+        BOOK.cells.push(uuid);
+        return;
+    }
+
+    // Convert to 0-based for array operations
+    const arrayIndex = index - 1;
+
+    // Insert at beginning
+    if (arrayIndex === 0) {
         const first_uuid = BOOK.cells[0];
         const first_editor_div = document.getElementById(first_uuid);
         if (first_editor_div) {
-            const parent = first_editor_div.parentElement;
-            parent.insertAdjacentElement("beforebegin", elem);
+            first_editor_div.parentElement.insertAdjacentElement("beforebegin", elem);
         }
         BOOK.cells.unshift(uuid);
+        return;
     }
+
+    // Insert at end
+    if (arrayIndex >= BOOK.cells.length) {
+        const last_uuid = BOOK.cells[BOOK.cells.length - 1];
+        const last_editor_div = document.getElementById(last_uuid);
+        if (last_editor_div) {
+            last_editor_div.parentElement.insertAdjacentElement("afterend", elem);
+        }
+        BOOK.cells.push(uuid);
+        return;
+    }
+
+    // Insert in middle - after element at arrayIndex - 1
+    const after_uuid = BOOK.cells[arrayIndex - 1];
+    const after_editor_div = document.getElementById(after_uuid);
+    if (after_editor_div) {
+        after_editor_div.parentElement.insertAdjacentElement("afterend", elem);
+    }
+    BOOK.cells.splice(arrayIndex, 0, uuid);
+}
+
+// Backwards compatibility wrappers
+export function add_editor_at_beginning(elem, uuid) {
+    insert_editor_at_index(elem, uuid, 1);
 }
 
 export function add_editor_below(above_editor_uuid, elem, uuid) {
-    const editor_div = document.getElementById(above_editor_uuid); // Correct function
-    const parent1 = editor_div.parentElement; // Parent of editor_div
-    // Append elem just below parent of editor_div
-    parent1.insertAdjacentElement("afterend", elem);
-    BOOK.add_below(above_editor_uuid, uuid);
+    const idx = BOOK.cells.indexOf(above_editor_uuid);
+    if (idx !== -1) {
+        insert_editor_at_index(elem, uuid, idx + 2); // +1 for 0->1 based, +1 for after
+    }
 }
 
 export function add_command(editor, label, keybinding, callback) {
@@ -778,7 +816,7 @@ export class MonacoDiffEditor {
         this.theme = theme.value;
         this.original_obs = original_obs;
         this.modified_obs = modified_obs;
-        
+
         theme.on((new_theme) => {
             this.set_theme(new_theme);
         });
@@ -809,10 +847,10 @@ export class MonacoDiffEditor {
             const minHeight = 100;
             const maxHeight = 600;
             const contentHeight = Math.min(Math.max(maxLines * lineHeight + 20, minHeight), maxHeight);
-            
+
             editor_div.style.height = `${contentHeight}px`;
             editor_div.style.width = '100%';
-            
+
             // Layout the editor
             diffEditor.layout();
 
@@ -826,7 +864,7 @@ export class MonacoDiffEditor {
                     e.preventDefault();
 
                     // Find the scrollable parent (could be book-cells-area, llm-chat-messages, or window)
-                    const scrollParent = document.querySelector(".book-cells-area") || 
+                    const scrollParent = document.querySelector(".book-cells-area") ||
                                        document.querySelector(".llm-chat-messages");
 
                     if (scrollParent) {
@@ -866,7 +904,7 @@ export class MonacoDiffEditor {
         const minHeight = 100;
         const maxHeight = 600;
         const contentHeight = Math.min(Math.max(maxLines * lineHeight + 20, minHeight), maxHeight);
-        
+
         this.editor_div.style.height = `${contentHeight}px`;
         diffEditor.layout();
     }

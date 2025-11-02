@@ -51,6 +51,90 @@ struct ToolExecution{T<:AbstractTool}
 end
 
 """
+    SummarizedToolExecution{T<:AbstractTool}
+
+Represents a summarized tool execution for display efficiency.
+The full execution is stored on disk and can be retrieved via cell ID.
+
+# Fields
+- `tool::T`: The tool that was executed
+- `result_summary::String`: Summary of the result
+- `result_size::Int`: Size of the full result in characters
+- `cell_id::String`: ID of the cell containing this execution (for lookup)
+- `is_error::Bool`: Whether the execution resulted in an error
+"""
+struct SummarizedToolExecution{T<:AbstractTool}
+    tool::T
+    result_summary::String
+    result_size::Int
+    cell_id::String
+    is_error::Bool
+end
+
+"""
+    should_summarize(result::ToolResult; min_size=1000)
+
+Check if a tool result should be summarized based on its size.
+"""
+function should_summarize(result::ToolResult; min_size=1000)
+    if !result.success
+        return false  # Don't summarize errors
+    end
+
+    # Check size of result
+    result_str = string(result.result)
+    return length(result_str) >= min_size
+end
+
+"""
+    summarize_result(result::ToolResult; max_length=200)
+
+Create a summary of a tool result by truncating it intelligently.
+"""
+function summarize_result(result::ToolResult; max_length=200)
+    if !result.success
+        return string(result.result)  # Keep errors full
+    end
+
+    result_str = string(result.result)
+
+    if length(result_str) <= max_length
+        return result_str
+    end
+
+    # For long results, show first 150 chars + ellipsis + last 50 chars
+    prefix_len = max_length - 53  # Leave room for ellipsis and suffix
+    suffix_len = 50
+
+    prefix = result_str[1:min(prefix_len, length(result_str))]
+    if length(result_str) > prefix_len + suffix_len
+        suffix = result_str[end-suffix_len+1:end]
+        return prefix * "\n...\n[$(length(result_str) - prefix_len - suffix_len) chars omitted]\n...\n" * suffix
+    else
+        return prefix * "..."
+    end
+end
+
+"""
+    SummarizedToolExecution(execution::ToolExecution{T}, cell_id::String) where T
+
+Create a summarized version of a tool execution.
+"""
+function SummarizedToolExecution(execution::ToolExecution{T}, cell_id::String) where T
+    summary = summarize_result(execution.result)
+    size = length(string(execution.result.result))
+    is_error = !execution.result.success
+
+    return SummarizedToolExecution{T}(
+        execution.tool,
+        summary,
+        size,
+        cell_id,
+        is_error
+    )
+end
+
+"""
     tool_name(::Type{<:AbstractTool})
 
 Return the name of the tool as it should be presented to the LLM.
@@ -619,6 +703,72 @@ function execute_tool(tool::FileTool)
     else
         error("Unknown command: $(tool.command)")
     end
+end
+
+"""
+    ToolLookupTool <: AbstractTool
+
+Retrieve the full result of a previously executed tool (useful when tool result was summarized).
+
+# Fields
+- `cell_id::String`: The ID of the cell containing the tool execution
+- `tool_name::String`: The name of the tool (e.g., "bash", "read", "write")
+"""
+struct ToolLookupTool <: AbstractTool
+    cell_id::String
+    tool_name::String
+end
+
+tool_name(::Type{ToolLookupTool}) = "lookup_tool_result"
+tool_description(::Type{ToolLookupTool}) = "Retrieve the full result of a previously executed tool. Use this when you need to see the complete output of a summarized tool execution."
+
+tool_input_schema(::Type{ToolLookupTool}) = Dict(
+    "type" => "object",
+    "properties" => Dict(
+        "cell_id" => Dict(
+            "type" => "string",
+            "description" => "The cell ID shown in the summarized tool execution"
+        ),
+        "tool_name" => Dict(
+            "type" => "string",
+            "description" => "The name of the tool (e.g., 'bash', 'read', 'write')"
+        )
+    ),
+    "required" => ["cell_id", "tool_name"]
+)
+
+function execute_tool!(tool::ToolLookupTool, book_folder::String)
+    tools_dir = joinpath(book_folder, "data", "tools")
+    json_file = joinpath(tools_dir, "$(tool.tool_name)-$(tool.cell_id).json")
+
+    if !isfile(json_file)
+        return ToolResult("Tool execution file not found: $(json_file)")
+    end
+
+    try
+        # Read the JSON file and return the full result
+        json_str = read(json_file, String)
+        json_data = JSON3.read(json_str)
+
+        # Extract the result
+        result = get(json_data, :result, nothing)
+        if result === nothing
+            return ToolResult("No result found in tool execution")
+        end
+
+        # Return the full result
+        result_str = string(result[:result])
+        return ToolResult("Full result from $(tool.tool_name) (cell $(tool.cell_id)):\n\n$(result_str)")
+    catch e
+        return ToolResult("Error loading tool execution: $(e)")
+    end
+end
+
+# Need to handle the book_folder parameter - add helper that extracts it from max_token param
+function execute_tool!(tool::ToolLookupTool, max_token::Int)
+    # This is a workaround - we need access to the book folder
+    # For now, return an error message asking the user to use the UI toggle instead
+    return ToolResult("Please use the 'Show Full Result' button in the UI to view the complete tool output. Tool lookup via API is not yet supported.")
 end
 
 # Export all tools
