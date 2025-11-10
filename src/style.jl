@@ -10,7 +10,8 @@ function generate_style(book;
         border_radius_large = "0.3125rem",
         transition_fast = "0.1s ease-out",
         transition_slow = "0.2s ease-in",
-        font_family_clean = "'Inter', 'Roboto', 'Arial', sans-serif",
+        text_font = "'Inter', 'Roboto', 'Arial', sans-serif",
+        mono_font = "SFMono-Regular, Consolas, Liberation Mono, Menlo, Courier, monospace",
         spacing_xxs = "0.125rem",
         spacing_xs = "0.25rem",
         spacing_sm = "0.5rem",
@@ -136,7 +137,8 @@ function generate_style(book;
                 "--border-radius-large" => border_radius_large,
                 "--transition-fast" => transition_fast,
                 "--transition-slow" => transition_slow,
-                "--font-family-clean" => font_family_clean,
+                "--text-font" => text_font,
+                "--mono-font" => mono_font,
                 # Common spacing
                 "--spacing-xxs" => spacing_xxs,
                 "--spacing-xs" => spacing_xs,
@@ -199,7 +201,8 @@ function generate_style(book;
                 "body",
                 "margin" => "0",
                 "-webkit-font-smoothing" => "antialiased",
-                "-moz-osx-font-smoothing" => "grayscale"
+                "-moz-osx-font-smoothing" => "grayscale",
+                "font-family" => "var(--text-font)"
             ),
             CSS("pre",
                 "margin-block" => "var(--spacing-xs) 0px",
@@ -470,7 +473,7 @@ function generate_style(book;
             "overflow-y" => "auto",
             "margin" => "0",
             "padding" => "var(--spacing-sm)",
-            "font-family" => "monospace",
+            "font-family" => "var(--mono-font)",
             "font-size" => "var(--font-size-xs)",
             "line-height" => "1.4",
             "white-space" => "pre-wrap",
@@ -504,13 +507,15 @@ function generate_style(book;
             "overflow-y" => "auto",
             "overflow-x" => "visible",
             "width" => "var(--editor-width)",
-            "-webkit-overflow-scrolling" => "touch"
+            "-webkit-overflow-scrolling" => "touch",
+            "font-family" => "var(--mono-font)"
         ),
-        # Remove max-height for markdown outputs
+        # Remove max-height for markdown outputs and use clean font
         CSS(
             ".cell-output-markdown.cell-output",
             "max-height" => "none",
-            "overflow-y" => "visible"
+            "overflow-y" => "visible",
+            "font-family" => "var(--text-font)"
         ),
         # Visibility controls
         CSS(".hide-vertical", "display" => "none"),
@@ -624,7 +629,7 @@ function generate_style(book;
             "text-size-adjust" => "100%",
             "color" => "var(--text-primary)",
             "line-height" => "1.5",
-            "font-family" => "-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif,Apple Color Emoji,Segoe UI Emoji,Segoe UI Symbol",
+            "font-family" => "var(--text-font)",
             "font-size" => "16px",
             "word-wrap" => "break-word"
         ),
@@ -699,24 +704,27 @@ function generate_style(book;
         CSS(
             ".data-frame table",
             "border-collapse" => "collapse",
-            "font-size" => "13px"
+            "font-size" => "13px",
+            "font-family" => "var(--mono-font)"
         ),
         CSS(
             ".data-frame th",
             "padding" => "8px 12px",
             "background-color" => "var(--hover-bg)",
             "font-weight" => "500",
-            "border-bottom" => "1px solid var(--border-primary)"
+            "border-bottom" => "1px solid var(--border-primary)",
+            "font-family" => "var(--mono-font)"
         ),
         CSS(
             ".data-frame td",
             "padding" => "6px 12px",
-            "border-bottom" => "1px solid var(--border-primary)"
+            "border-bottom" => "1px solid var(--border-primary)",
+            "font-family" => "var(--mono-font)"
         ),
         CSS(
             ".data-frame .rowLabel",
             "background-color" => "var(--hover-bg)",
-            "font-family" => "monospace",
+            "font-family" => "var(--mono-font)",
             "text-align" => "right"
         ),
         ),
@@ -1037,6 +1045,18 @@ function generate_style(book;
             ".book-main-menu .file-tabs-container",
             "justify-content" => "center",
             "border-bottom" => "none" # Remove border from tabs in menu
+        ),
+        CSS(
+            ".book-menu-container",
+            "position" => "sticky",
+            "top" => "0",
+            "width" => "100%",
+            "display" => "flex",
+            "flex-direction" => "column",
+            "align-items" => "center",
+            "background-color" => "var(--bg-primary)",
+            "z-index" => "var(--z-menu)",
+            "padding" => "var(--spacing-sm) 0",
         ),
         CSS(
             ".book-content",
