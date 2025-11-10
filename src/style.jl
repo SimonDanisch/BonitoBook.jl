@@ -10,7 +10,8 @@ function generate_style(book;
         border_radius_large = "0.3125rem",
         transition_fast = "0.1s ease-out",
         transition_slow = "0.2s ease-in",
-        font_family_clean = "'Inter', 'Roboto', 'Arial', sans-serif",
+        text_font = "'Inter', 'Roboto', 'Arial', sans-serif",
+        mono_font = "SFMono-Regular, Consolas, Liberation Mono, Menlo, Courier, monospace",
         spacing_xxs = "0.125rem",
         spacing_xs = "0.25rem",
         spacing_sm = "0.5rem",
@@ -136,7 +137,8 @@ function generate_style(book;
                 "--border-radius-large" => border_radius_large,
                 "--transition-fast" => transition_fast,
                 "--transition-slow" => transition_slow,
-                "--font-family-clean" => font_family_clean,
+                "--text-font" => text_font,
+                "--mono-font" => mono_font,
                 # Common spacing
                 "--spacing-xxs" => spacing_xxs,
                 "--spacing-xs" => spacing_xs,
@@ -200,7 +202,7 @@ function generate_style(book;
                 "margin" => "0",
                 "-webkit-font-smoothing" => "antialiased",
                 "-moz-osx-font-smoothing" => "grayscale",
-                "font-family" => "var(--font-family-clean)"
+                "font-family" => "var(--text-font)"
             ),
             CSS("pre",
                 "margin-block" => "var(--spacing-xs) 0px",
@@ -471,7 +473,7 @@ function generate_style(book;
             "overflow-y" => "auto",
             "margin" => "0",
             "padding" => "var(--spacing-sm)",
-            "font-family" => "monospace",
+            "font-family" => "var(--mono-font)",
             "font-size" => "var(--font-size-xs)",
             "line-height" => "1.4",
             "white-space" => "pre-wrap",
@@ -506,14 +508,14 @@ function generate_style(book;
             "overflow-x" => "visible",
             "width" => "var(--editor-width)",
             "-webkit-overflow-scrolling" => "touch",
-            "font-family" => "SFMono-Regular, Consolas, Liberation Mono, Menlo, Courier, monospace"
+            "font-family" => "var(--mono-font)"
         ),
         # Remove max-height for markdown outputs and use clean font
         CSS(
             ".cell-output-markdown.cell-output",
             "max-height" => "none",
             "overflow-y" => "visible",
-            "font-family" => "var(--font-family-clean)"
+            "font-family" => "var(--text-font)"
         ),
         # Visibility controls
         CSS(".hide-vertical", "display" => "none"),
@@ -627,7 +629,7 @@ function generate_style(book;
             "text-size-adjust" => "100%",
             "color" => "var(--text-primary)",
             "line-height" => "1.5",
-            "font-family" => "var(--font-family-clean)",
+            "font-family" => "var(--text-font)",
             "font-size" => "16px",
             "word-wrap" => "break-word"
         ),
@@ -703,7 +705,7 @@ function generate_style(book;
             ".data-frame table",
             "border-collapse" => "collapse",
             "font-size" => "13px",
-            "font-family" => "SFMono-Regular, Consolas, Liberation Mono, Menlo, Courier, monospace"
+            "font-family" => "var(--mono-font)"
         ),
         CSS(
             ".data-frame th",
@@ -711,18 +713,18 @@ function generate_style(book;
             "background-color" => "var(--hover-bg)",
             "font-weight" => "500",
             "border-bottom" => "1px solid var(--border-primary)",
-            "font-family" => "SFMono-Regular, Consolas, Liberation Mono, Menlo, Courier, monospace"
+            "font-family" => "var(--mono-font)"
         ),
         CSS(
             ".data-frame td",
             "padding" => "6px 12px",
             "border-bottom" => "1px solid var(--border-primary)",
-            "font-family" => "SFMono-Regular, Consolas, Liberation Mono, Menlo, Courier, monospace"
+            "font-family" => "var(--mono-font)"
         ),
         CSS(
             ".data-frame .rowLabel",
             "background-color" => "var(--hover-bg)",
-            "font-family" => "monospace",
+            "font-family" => "var(--mono-font)",
             "text-align" => "right"
         ),
         ),

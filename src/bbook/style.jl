@@ -20,7 +20,8 @@ style = BonitoBook.generate_style(current_book(),
     # border_radius_large = "0.3125rem",
     # transition_fast = "0.1s ease-out",
     # transition_slow = "0.2s ease-in",
-    # font_family_clean = "'Inter', 'Roboto', 'Arial', sans-serif",
+    # text_font = "'Inter', 'Roboto', 'Arial', sans-serif",
+    # mono_font = "SFMono-Regular, Consolas, Liberation Mono, Menlo, Courier, monospace",
 
     # # Spacing
     # spacing_xxs = "0.125rem",
