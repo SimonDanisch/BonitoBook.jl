@@ -36,7 +36,8 @@ end
 Get the path to the bbook template folder.
 """
 function get_template_path()
-    return joinpath(@__DIR__, "bbook")
+    #return joinpath(@__DIR__, "bbook")
+    return joinpath(pkgdir(@__MODULE__), "src", "bbook")
 end
 
 """
