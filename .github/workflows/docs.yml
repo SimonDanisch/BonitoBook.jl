@@ -31,11 +31,7 @@ jobs:
       - uses: julia-actions/cache@v2
       - name: Instantiate docs dependencies
         run: |
-          julia --color=yes --project=docs -e '
-            using Pkg
-            Pkg.add(url="https://github.com/AtelierArith/ClaudeCodeSDK.jl")
-            Pkg.instantiate()
-          '
+          julia --color=yes --project=docs -e 'using Pkg; Pkg.instantiate()'
       - name: Build Documentation Website
         run: julia --color=yes --project=docs "docs/make.jl"
         env:
