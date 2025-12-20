@@ -83,11 +83,17 @@ function compact_tool_result(result::ToolResult; max_summary_length::Int=300)
     end
 
     # Create summary: first 200 chars + indicator + last 50 chars
+    # Convert to char array for Unicode-safe indexing
     prefix_len = min(200, max_summary_length - 100)
     suffix_len = 50
 
-    prefix = result_str[1:min(prefix_len, length(result_str))]
-    suffix = result_str[max(1, length(result_str)-suffix_len+1):end]
+    chars = collect(result_str)
+    str_len = length(chars)
+    actual_prefix_len = min(prefix_len, str_len)
+    actual_suffix_len = min(suffix_len, max(0, str_len - actual_prefix_len))
+
+    prefix = String(chars[1:actual_prefix_len])
+    suffix = String(chars[end-actual_suffix_len+1:end])
 
     summary = """$prefix
 
