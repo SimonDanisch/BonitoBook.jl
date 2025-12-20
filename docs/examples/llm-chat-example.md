@@ -140,6 +140,7 @@ JSON3.read(read(data"tools/add_cell-13.json", String), AddCellTool)
 read(data"tools/add_cell-13.json", String)
 ```
 Can you add a cell with a cool wglmakie example?
+
 ```julia (editor=true, logging=false, output=true, id=16, from=:agent)
 using WGLMakie
 fig = Figure(size = (600, 400))
@@ -152,8 +153,6 @@ sphere = mesh!(ax, Sphere(Point3f(0, 0, 0), 1f0), color = rand(RGBf, 10, 10))
 end
 fig
 ```
-
-
-```julia (editor=true, logging=false, output=true, id=0)
+```julia (editor=true, logging=false, output=true, id=17)
 rotate!(sphere, Vec3f(0, 1, 0), 0.01)
 ```

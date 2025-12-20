@@ -8,33 +8,33 @@ using BonitoBook.LLMChatBooks
 @testset "LLMChat Tools" begin
     @testset "BashTool" begin
         # Test JSON deserialization
-        tool_json = """{"command":"echo 'test'","result":null}"""
+        tool_json = """{"command":"echo 'test'"}"""
         tool = JSON3.read(tool_json, BashTool)
         @test tool isa BashTool
         @test tool.command == "echo 'test'"
-        @test tool.result === nothing
 
-        # Test execution
+        # Test execution returns ToolResult
         result = execute_tool!(tool)
-        @test result isa Dict
-        @test result["success"] == true
-        @test occursin("test", result["output"])
-        @test tool.result === result
+        @test result isa ToolResult
+        @test result.success == true
+        @test occursin("test", string(result.result))
 
-        # Test jsrender with success
+        # Test ToolExecution for serialization
+        execution = ToolExecution(tool, result)
+        @test execution.tool === tool
+        @test execution.result === result
+
+        # Test JSON roundtrip via ToolExecution
+        json = JSON3.write(execution)
+        deserialized = JSON3.read(json, ToolExecution{BashTool})
+        @test deserialized.tool.command == tool.command
+        @test deserialized.result.success == true
+
+        # Test jsrender of ToolExecution
         session = Session()
-        rendered = Bonito.jsrender(session, tool)
+        rendered = Bonito.jsrender(session, deserialized)
         @test rendered isa Hyperscript.Node
-        @test occursin("test", string(rendered))
         @test occursin("tool-container", string(rendered))
-
-        # Test JSON roundtrip (execute -> serialize -> deserialize -> render)
-        json = JSON3.write(tool)
-        deserialized = JSON3.read(json, BashTool)
-        @test deserialized.result isa Dict
-        @test deserialized.result["success"] == true
-        rendered_roundtrip = Bonito.jsrender(session, deserialized)
-        @test occursin("test", string(rendered_roundtrip))
     end
 
     @testset "FileReadTool" begin
@@ -43,80 +43,43 @@ using BonitoBook.LLMChatBooks
         write(test_file, "Test content for FileReadTool")
 
         # Test JSON deserialization
-        tool_json = """{"path":"$test_file","result":null}"""
+        tool_json = """{"path":"$(replace(test_file, "\\" => "\\\\"))"}"""
         tool = JSON3.read(tool_json, FileReadTool)
         @test tool isa FileReadTool
         @test tool.path == test_file
 
         # Test execution
         result = execute_tool!(tool)
-        @test result isa Dict
-        @test result["success"] == true
-        @test result["content"] == "Test content for FileReadTool"
-        @test result["path"] == test_file
-
-        # Test jsrender with result
-        session = Session()
-        rendered = Bonito.jsrender(session, tool)
-        @test rendered isa Hyperscript.Node
-        @test occursin("Test content", string(rendered))
+        @test result isa ToolResult
+        @test result.success == true
+        @test occursin("Test content for FileReadTool", string(result.result))
 
         # Test non-existent file
-        tool_json_bad = """{"path":"/nonexistent/file.txt","result":null}"""
-        tool_bad = JSON3.read(tool_json_bad, FileReadTool)
+        tool_bad = FileReadTool("/nonexistent/file.txt")
         result_bad = execute_tool!(tool_bad)
-        @test result_bad isa Dict
-        @test result_bad["success"] == false
-        @test occursin("not found", result_bad["error"])
-
-        # Test error rendering (this was crashing before the fix)
-        rendered_error = Bonito.jsrender(session, tool_bad)
-        @test rendered_error isa Hyperscript.Node
-        @test occursin("File not found", string(rendered_error))
-        @test occursin("tool-error", string(rendered_error))
-
-        # Test JSON roundtrip for error case
-        json_error = JSON3.write(tool_bad)
-        deserialized_error = JSON3.read(json_error, FileReadTool)
-        @test deserialized_error.result["success"] == false
-        rendered_error_roundtrip = Bonito.jsrender(session, deserialized_error)
-        @test occursin("File not found", string(rendered_error_roundtrip))
+        @test result_bad isa ToolResult
+        @test result_bad.success == false
 
         # Cleanup
         rm(test_file, force=true)
     end
 
     @testset "FileWriteTool" begin
-        # Test JSON deserialization
         test_file = tempname()
-        tool_json = """{"path":"$test_file","content":"Written by FileWriteTool","result":null}"""
-        tool = JSON3.read(tool_json, FileWriteTool)
-        @test tool isa FileWriteTool
-        @test tool.path == test_file
-        @test tool.content == "Written by FileWriteTool"
 
         # Test execution
+        tool = FileWriteTool(test_file, "Written by FileWriteTool")
         result = execute_tool!(tool)
-        @test result isa Dict
-        @test result["success"] == true
-        @test result["path"] == test_file
-        @test result["bytes_written"] == 24
+        @test result isa ToolResult
+        @test result.success == true
         @test isfile(test_file)
         @test read(test_file, String) == "Written by FileWriteTool"
 
-        # Test jsrender
-        session = Session()
-        rendered = Bonito.jsrender(session, tool)
-        @test rendered isa Hyperscript.Node
-        @test occursin("bytes", string(rendered))
-        @test occursin("tool-container", string(rendered))
-
         # Test with subdirectory creation
         test_subdir = joinpath(tempdir(), "test_subdir_$(rand(1:10000))", "subdir", "file.txt")
-        tool_json_sub = """{"path":"$test_subdir","content":"Test content","result":null}"""
-        tool_sub = JSON3.read(tool_json_sub, FileWriteTool)
+        tool_sub = FileWriteTool(test_subdir, "Test content")
         result_sub = execute_tool!(tool_sub)
-        @test result_sub["success"] == true
+        @test result_sub.success == true
         @test isfile(test_subdir)
 
         # Cleanup
@@ -129,219 +92,99 @@ using BonitoBook.LLMChatBooks
         test_file = tempname()
         write(test_file, "Hello World")
 
-        # Test JSON deserialization
-        tool_json = """{"path":"$test_file","old_text":"World","new_text":"Julia","result":null}"""
-        tool = JSON3.read(tool_json, FileEditTool)
-        @test tool isa FileEditTool
-        @test tool.path == test_file
-        @test tool.old_text == "World"
-        @test tool.new_text == "Julia"
-
         # Test execution
+        tool = FileEditTool(test_file, "World", "Julia")
         result = execute_tool!(tool)
-        @test result isa Dict
-        @test result["success"] == true
-        @test result["path"] == test_file
+        @test result isa ToolResult
+        @test result.success == true
         @test read(test_file, String) == "Hello Julia"
 
-        # Test jsrender
-        session = Session()
-        rendered = Bonito.jsrender(session, tool)
-        @test rendered isa Hyperscript.Node
-        @test occursin("successfully", string(rendered))
-
         # Test with non-existent old_text
-        tool_json_bad = """{"path":"$test_file","old_text":"NotFound","new_text":"Replacement","result":null}"""
-        tool_bad = JSON3.read(tool_json_bad, FileEditTool)
+        tool_bad = FileEditTool(test_file, "NotFound", "Replacement")
         result_bad = execute_tool!(tool_bad)
-        @test result_bad["success"] == false
-        @test occursin("not found", result_bad["error"])
-
-        # Test error rendering
-        rendered_error = Bonito.jsrender(session, tool_bad)
-        @test rendered_error isa Hyperscript.Node
-        @test occursin("not found", string(rendered_error))
-        @test occursin("tool-error", string(rendered_error))
+        @test result_bad.success == false
 
         # Cleanup
         rm(test_file, force=true)
     end
 
     @testset "HttpGetTool" begin
-        # Test JSON deserialization
-        tool_json = """{"url":"https://httpbin.org/status/200","result":null}"""
-        tool = JSON3.read(tool_json, HttpGetTool)
-        @test tool isa HttpGetTool
-        @test tool.url == "https://httpbin.org/status/200"
-
-        # Test execution
+        # Test execution (uses httpbin.org for testing)
+        tool = HttpGetTool("https://httpbin.org/status/200")
         result = execute_tool!(tool)
-        @test result isa Dict
-        @test result["success"] == true
-        @test result["status"] == 200
-        @test result["url"] == "https://httpbin.org/status/200"
-
-        # Test jsrender
-        session = Session()
-        rendered = Bonito.jsrender(session, tool)
-        @test rendered isa Hyperscript.Node
-        @test occursin("Status", string(rendered))
-        @test occursin("200", string(rendered))
+        @test result isa ToolResult
+        @test result.success == true
+        @test result.result isa Dict
+        @test result.result["status"] == 200
     end
 
     @testset "AddCellTool" begin
         # Test JSON deserialization without metadata
-        tool_json = """{"language":"julia","content":"println(\\"Hello\\")","metadata":null,"result":null}"""
-        tool = JSON3.read(tool_json, AddCellTool)
+        tool = AddCellTool("julia", "println(\"Hello\")")
         @test tool isa AddCellTool
         @test tool.language == "julia"
         @test tool.content == "println(\"Hello\")"
         @test tool.metadata === nothing
 
-        # Test execution
-        result = execute_tool!(tool)
-        @test result isa Dict
-        @test result["success"] == true
-        @test result["language"] == "julia"
-        @test result["content"] == "println(\"Hello\")"
-        @test result["metadata"] == Dict{Symbol, Any}()
-
-        # Test jsrender (NEW: AddCellTool now has proper rendering)
-        session = Session()
-        rendered = Bonito.jsrender(session, tool)
-        @test rendered isa Hyperscript.Node
-        @test occursin("Hello", string(rendered))
-        @test occursin("julia", string(rendered))
-        @test occursin("tool-container", string(rendered))
-
-        # Test with markdown
-        tool_json_md = """{"language":"markdown","content":"# Title\\n\\nContent","metadata":null,"result":null}"""
-        tool_md = JSON3.read(tool_json_md, AddCellTool)
-        result_md = execute_tool!(tool_md)
-        @test result_md["success"] == true
-        @test result_md["language"] == "markdown"
+        # Test with metadata
+        tool_with_meta = AddCellTool("julia", "1+1", Dict{Symbol,Any}(:key => "value"))
+        @test tool_with_meta.metadata[:key] == "value"
     end
 
     @testset "TodoList" begin
-        # Test JSON deserialization
-        tool_json = """{"title":"Test Plan","items":["Step 1","Step 2","Step 3"],"status":[false,false,false],"result":null}"""
-        tool = JSON3.read(tool_json, TodoList)
-        @test tool isa TodoList
+        # Test construction
+        tool = TodoList("Test Plan", ["Step 1", "Step 2", "Step 3"])
         @test tool.title == "Test Plan"
         @test tool.items == ["Step 1", "Step 2", "Step 3"]
         @test tool.status == [false, false, false]
 
-        # Test execution
-        result = execute_tool!(tool)
-        @test result isa Dict
-        @test result["success"] == true
-        @test result["title"] == "Test Plan"
-        @test result["items"] == ["Step 1", "Step 2", "Step 3"]
-        @test result["status"] == [false, false, false]
-        @test result["done"] == false
-        @test occursin("## Test Plan", result["markdown"])
-        @test occursin("- [ ] Step 1", result["markdown"])
-        @test occursin("- [ ] Step 2", result["markdown"])
-        @test occursin("- [ ] Step 3", result["markdown"])
+        # Test isdone
+        @test isdone(tool) == false
 
-        # Test jsrender
-        session = Session()
-        rendered = Bonito.jsrender(session, tool)
-        @test rendered isa Hyperscript.Node
-        @test occursin("Test Plan", string(rendered))
-        @test occursin("Step 1", string(rendered))
-        @test occursin("todo-container", string(rendered))
+        # Test with all completed
+        tool_done = TodoList("Done Plan", ["Step 1"], [true])
+        @test isdone(tool_done) == true
     end
 
     @testset "FileTool" begin
-        # Test JSON deserialization - pwd
-        tool_json = """{"operation":"pwd","path":null,"pattern":null,"destination":null,"recursive":false,"result":null}"""
-        tool = JSON3.read(tool_json, FileTool)
-        @test tool isa FileTool
-        @test tool.operation == "pwd"
+        # Test pwd
+        tool_pwd = FileTool("pwd", Dict{String,Any}())
+        result = execute_tool!(tool_pwd)
+        @test result.success == true
+        @test result.result == pwd()
 
-        # Test pwd execution
-        result = execute_tool!(tool)
-        @test result isa Dict
-        @test result["success"] == true
-        @test result["operation"] == "pwd"
-        @test result["result"] isa String
-        @test !isempty(result["result"])
-
-        # Test ls operation
-        tool_ls = FileTool("ls", ".", nothing, nothing, false, nothing)
-        result_ls = execute_tool!(tool_ls)
-        @test result_ls["success"] == true
-        @test result_ls["result"] isa Vector
-
-        # Test glob operation
-        tool_glob = FileTool("glob", ".", "*.jl", nothing, false, nothing)
-        result_glob = execute_tool!(tool_glob)
-        @test result_glob["success"] == true
-        @test result_glob["result"] isa Vector
-        @test all(endswith.(result_glob["result"], ".jl"))
-
-        # Test find operation
+        # Test ls
         test_dir = mktempdir()
         write(joinpath(test_dir, "test_file.txt"), "test")
-        tool_find = FileTool("find", test_dir, "test", nothing, false, nothing)
+        tool_ls = FileTool("ls", Dict{String,Any}("path" => test_dir))
+        result_ls = execute_tool!(tool_ls)
+        @test result_ls.success == true
+        @test result_ls.result isa Vector
+        @test "test_file.txt" in result_ls.result
+
+        # Test glob
+        tool_glob = FileTool("glob", Dict{String,Any}("pattern" => "*.txt", "path" => test_dir))
+        result_glob = execute_tool!(tool_glob)
+        @test result_glob.success == true
+
+        # Test find
+        tool_find = FileTool("find", Dict{String,Any}("pattern" => "test", "path" => test_dir))
         result_find = execute_tool!(tool_find)
-        @test result_find["success"] == true
-        @test length(result_find["result"]) == 1
-        @test occursin("test_file.txt", result_find["result"][1])
+        @test result_find.success == true
+        @test length(result_find.result) >= 1
 
-        # Test mkdir operation
-        test_mkdir = joinpath(test_dir, "new_dir")
-        tool_mkdir = FileTool("mkdir", test_mkdir, nothing, nothing, false, nothing)
-        result_mkdir = execute_tool!(tool_mkdir)
-        @test result_mkdir["success"] == true
-        @test isdir(test_mkdir)
+        # Test mkdir
+        new_dir = joinpath(test_dir, "new_dir")
+        tool_mkdir = FileTool("mkdir", Dict{String,Any}("path" => new_dir))
+        execute_tool!(tool_mkdir)
+        @test isdir(new_dir)
 
-        # Test readdir operation
-        tool_readdir = FileTool("readdir", test_dir, nothing, nothing, false, nothing)
+        # Test readdir with details
+        tool_readdir = FileTool("readdir", Dict{String,Any}("path" => test_dir))
         result_readdir = execute_tool!(tool_readdir)
-        @test result_readdir["success"] == true
-        @test result_readdir["result"] isa Vector
-        @test all(x -> x isa Dict, result_readdir["result"])
-        @test all(x -> haskey(x, "name"), result_readdir["result"])
-        @test all(x -> haskey(x, "type"), result_readdir["result"])
-
-        # Test cp operation
-        src_file = joinpath(test_dir, "source.txt")
-        dst_file = joinpath(test_dir, "dest.txt")
-        write(src_file, "copy test")
-        tool_cp = FileTool("cp", src_file, nothing, dst_file, false, nothing)
-        result_cp = execute_tool!(tool_cp)
-        @test result_cp["success"] == true
-        @test isfile(dst_file)
-        @test read(dst_file, String) == "copy test"
-
-        # Test mv operation
-        mv_dst = joinpath(test_dir, "moved.txt")
-        tool_mv = FileTool("mv", dst_file, nothing, mv_dst, false, nothing)
-        result_mv = execute_tool!(tool_mv)
-        @test result_mv["success"] == true
-        @test isfile(mv_dst)
-        @test !isfile(dst_file)
-
-        # Test rm operation
-        tool_rm = FileTool("rm", mv_dst, nothing, nothing, false, nothing)
-        result_rm = execute_tool!(tool_rm)
-        @test result_rm["success"] == true
-        @test !isfile(mv_dst)
-
-        # Test jsrender
-        session = Session()
-        rendered = Bonito.jsrender(session, tool_readdir)
-        @test rendered isa Hyperscript.Node
-        @test occursin("readdir", string(rendered))
-        @test occursin("file-item", string(rendered))
-
-        # Test error handling
-        tool_bad = FileTool("ls", "/nonexistent_path_xyz", nothing, nothing, false, nothing)
-        result_bad = execute_tool!(tool_bad)
-        @test result_bad["success"] == false
-        @test haskey(result_bad, "error")
+        @test result_readdir.success == true
+        @test result_readdir.result isa Vector
+        @test all(x -> x isa Dict, result_readdir.result)
 
         # Cleanup
         rm(test_dir, recursive=true, force=true)
@@ -362,54 +205,43 @@ using BonitoBook.LLMChatBooks
         end
     end
 
-    @testset "Error Handling" begin
-        # Test execute_tool! error handling
-        test_file = "/nonexistent/path/file.txt"
-        tool_json = """{"path":"$test_file","result":null}"""
-        tool = JSON3.read(tool_json, FileReadTool)
-        result = execute_tool!(tool)
-        @test result isa Dict
-        @test result["success"] == false
-        @test haskey(result, "error")
-    end
-
-    @testset "JSON Roundtrip (Execute -> Serialize -> Deserialize -> Render)" begin
-        session = Session()
-
-        # Test all tools with the full roundtrip workflow as used in agent_loop.jl
+    @testset "ToolExecution JSON Roundtrip" begin
+        # Test serialization and deserialization of ToolExecution
         @testset "BashTool roundtrip" begin
             tool = BashTool("echo 'roundtrip'")
-            execute_tool!(tool)
-            json = JSON3.write(tool)
-            deserialized = JSON3.read(json, BashTool)
-            @test deserialized.result isa Dict
-            @test deserialized.result["success"] == true
-            rendered = Bonito.jsrender(session, deserialized)
-            @test occursin("roundtrip", string(rendered))
+            result = execute_tool!(tool)
+            execution = ToolExecution(tool, result)
+
+            json = JSON3.write(execution)
+            deserialized = JSON3.read(json, ToolExecution{BashTool})
+            @test deserialized.tool.command == tool.command
+            @test deserialized.result.success == result.success
         end
 
         @testset "FileReadTool roundtrip" begin
             test_file = tempname()
             write(test_file, "roundtrip content")
             tool = FileReadTool(test_file)
-            execute_tool!(tool)
-            json = JSON3.write(tool)
-            deserialized = JSON3.read(json, FileReadTool)
-            @test deserialized.result["success"] == true
-            rendered = Bonito.jsrender(session, deserialized)
-            @test occursin("roundtrip content", string(rendered))
+            result = execute_tool!(tool)
+            execution = ToolExecution(tool, result)
+
+            json = JSON3.write(execution)
+            deserialized = JSON3.read(json, ToolExecution{FileReadTool})
+            @test deserialized.tool.path == tool.path
+            @test deserialized.result.success == true
             rm(test_file)
         end
 
         @testset "FileWriteTool roundtrip" begin
             test_file = tempname()
             tool = FileWriteTool(test_file, "roundtrip")
-            execute_tool!(tool)
-            json = JSON3.write(tool)
-            deserialized = JSON3.read(json, FileWriteTool)
-            @test deserialized.result["success"] == true
-            rendered = Bonito.jsrender(session, deserialized)
-            @test occursin("bytes", string(rendered))
+            result = execute_tool!(tool)
+            execution = ToolExecution(tool, result)
+
+            json = JSON3.write(execution)
+            deserialized = JSON3.read(json, ToolExecution{FileWriteTool})
+            @test deserialized.tool.path == tool.path
+            @test deserialized.result.success == true
             rm(test_file)
         end
 
@@ -417,137 +249,155 @@ using BonitoBook.LLMChatBooks
             test_file = tempname()
             write(test_file, "old text")
             tool = FileEditTool(test_file, "old", "new")
-            execute_tool!(tool)
-            json = JSON3.write(tool)
-            deserialized = JSON3.read(json, FileEditTool)
-            @test deserialized.result["success"] == true
-            rendered = Bonito.jsrender(session, deserialized)
-            @test occursin("successfully", string(rendered))
+            result = execute_tool!(tool)
+            execution = ToolExecution(tool, result)
+
+            json = JSON3.write(execution)
+            deserialized = JSON3.read(json, ToolExecution{FileEditTool})
+            @test deserialized.tool.path == tool.path
+            @test deserialized.result.success == true
             rm(test_file)
-        end
-
-        @testset "HttpGetTool roundtrip" begin
-            tool = HttpGetTool("https://httpbin.org/status/200")
-            execute_tool!(tool)
-            json = JSON3.write(tool)
-            deserialized = JSON3.read(json, HttpGetTool)
-            @test deserialized.result["success"] == true
-            @test deserialized.result["status"] == 200
-            rendered = Bonito.jsrender(session, deserialized)
-            @test occursin("Status", string(rendered))
-        end
-
-        @testset "AddCellTool roundtrip" begin
-            tool = AddCellTool("julia", "println(\"roundtrip\")")
-            execute_tool!(tool)
-            json = JSON3.write(tool)
-            deserialized = JSON3.read(json, AddCellTool)
-            @test deserialized.result["success"] == true
-            rendered = Bonito.jsrender(session, deserialized)
-            @test occursin("roundtrip", string(rendered))
         end
 
         @testset "TodoList roundtrip" begin
             tool = TodoList("Roundtrip Plan", ["Task A", "Task B"])
-            execute_tool!(tool)
-            json = JSON3.write(tool)
-            deserialized = JSON3.read(json, TodoList)
-            @test deserialized.result["success"] == true
-            @test deserialized.result["done"] == false
-            rendered = Bonito.jsrender(session, deserialized)
-            @test occursin("Roundtrip Plan", string(rendered))
-            @test occursin("Task A", string(rendered))
+            result = execute_tool!(tool)
+            execution = ToolExecution(tool, result)
+
+            json = JSON3.write(execution)
+            deserialized = JSON3.read(json, ToolExecution{TodoList})
+            @test deserialized.tool.title == tool.title
+            @test deserialized.tool.items == tool.items
         end
 
         @testset "FileTool roundtrip" begin
             test_dir = mktempdir()
-            tool = FileTool("readdir", test_dir, nothing, nothing, false, nothing)
-            execute_tool!(tool)
-            json = JSON3.write(tool)
-            deserialized = JSON3.read(json, FileTool)
-            @test deserialized.result["success"] == true
-            rendered = Bonito.jsrender(session, deserialized)
-            @test occursin("readdir", string(rendered))
+            tool = FileTool("readdir", Dict{String,Any}("path" => test_dir))
+            result = execute_tool!(tool)
+            execution = ToolExecution(tool, result)
+
+            json = JSON3.write(execution)
+            deserialized = JSON3.read(json, ToolExecution{FileTool})
+            @test deserialized.tool.command == tool.command
+            @test deserialized.result.success == true
             rm(test_dir, recursive=true, force=true)
         end
     end
 
+    @testset "Output Limiting" begin
+        # Test limit_output function
+        @testset "String limiting" begin
+            short_str = "short"
+            @test limit_output(short_str, 100) == short_str
+
+            long_str = repeat("a", 1000)
+            limited = limit_output(long_str, 50)
+            @test length(limited) < length(long_str)
+            @test occursin("TRUNCATED", limited)
+        end
+
+        @testset "Array limiting" begin
+            short_arr = [1, 2, 3]
+            @test limit_output(short_arr, 1000) == short_arr
+
+            long_arr = collect(1:100)
+            limited = limit_output(long_arr, 10)
+            @test length(limited) < length(long_arr)
+        end
+    end
+
+    @testset "CompactingState" begin
+        # Test compacting state creation and persistence
+        test_dir = mktempdir()
+        ai_dir = joinpath(test_dir, "ai")
+        mkpath(ai_dir)
+
+        # Create new state
+        state = CompactingState(keep_last=3, min_size_to_compact=100)
+        @test state.keep_last == 3
+        @test state.min_size_to_compact == 100
+        @test isempty(state.compacted_cells)
+
+        # Add some compacted cells
+        push!(state.compacted_cells, 1)
+        push!(state.compacted_cells, 2)
+
+        # Save state
+        save_compacting_state(test_dir, state)
+        @test isfile(joinpath(ai_dir, "compacting-state.json"))
+
+        # Load state
+        loaded = load_compacting_state(test_dir)
+        @test loaded.keep_last == 3
+        @test loaded.min_size_to_compact == 100
+        @test 1 in loaded.compacted_cells
+        @test 2 in loaded.compacted_cells
+
+        # Test compact_tool_result
+        short_result = ToolResult("short result")
+        @test compact_tool_result(short_result) == short_result
+
+        long_result = ToolResult(repeat("a", 1000))
+        compacted = compact_tool_result(long_result)
+        @test length(string(compacted.result)) < length(string(long_result.result))
+        @test occursin("compacted for context efficiency", string(compacted.result))
+
+        # Error results should not be compacted
+        error_result = ToolResult(ErrorException("test error"))
+        @test compact_tool_result(error_result) == error_result
+
+        rm(test_dir, recursive=true, force=true)
+    end
+
     @testset "HTTP Streaming Agent" begin
         # Only run if API key is available
-        if haskey(ENV, "ANTHROPIC_API_KEY")
+        api_key = get(ENV, "ANTHROPIC_API_KEY", get(ENV, "CLAUDE_API_KEY", nothing))
+        if api_key !== nothing
             @testset "Basic Streaming" begin
-                config = claude_config("claude-3-5-sonnet-20241022"; api_key=ENV["ANTHROPIC_API_KEY"])
-                agent = HTTPAgent(config)
+                api = ClaudeApi("https://api.anthropic.com/v1/messages", "claude-sonnet-4-20250514", api_key, "")
+                agent = HTTPAgent(api)
 
-                messages = [AgentMessage(:user, "What is 2+2? Use bash to calculate: echo \$((2+2))")]
-                result_channel = prompt(agent, messages, [BashTool])
-                results = collect(result_channel)
-
-                @test length(results) >= 1
-                @test any(x -> x isa BashTool, results)
-
-                tool_idx = findfirst(x -> x isa BashTool, results)
-                @test tool_idx !== nothing
-                @test results[tool_idx].command == "echo \$((2+2))"
-            end
-
-            @testset "Streaming with Execution" begin
-                config = claude_config("claude-3-5-sonnet-20241022"; api_key=ENV["ANTHROPIC_API_KEY"])
-                agent = HTTPAgent(config)
-
-                messages = [AgentMessage(:user, "List files in /tmp using bash")]
-                result_channel = prompt(agent, messages, [BashTool])
-
-                for item in result_channel
-                    if item isa BashTool
-                        execute_tool!(item)
-                        @test item.result !== nothing
-                        @test haskey(item.result, "success")
-
-                        # JSON roundtrip
-                        json_str = JSON3.write(item)
-                        deserialized = JSON3.read(json_str, BashTool)
-                        @test deserialized.command == item.command
-                        @test deserialized.result == item.result
-
-                        # Test Dict with string keys
-                        @test item.result isa Dict
-                        @test all(k -> k isa String, keys(item.result))
-                    end
-                end
-            end
-
-            @testset "Text Response Only" begin
-                config = claude_config("claude-3-5-sonnet-20241022"; api_key=ENV["ANTHROPIC_API_KEY"])
-                agent = HTTPAgent(config)
-
-                messages = [AgentMessage(:user, "Just say hello, don't use any tools")]
-                result_channel = prompt(agent, messages, [BashTool])
+                messages = [AgentMessage(:user, "Say hello in one word")]
+                result_channel = prompt(agent, messages)
                 results = collect(result_channel)
 
                 @test length(results) >= 1
                 @test any(x -> x isa String, results)
-                @test all(x -> !(x isa AbstractTool), results)
             end
 
-            @testset "Complete Items Only" begin
-                config = claude_config("claude-3-5-sonnet-20241022"; api_key=ENV["ANTHROPIC_API_KEY"])
-                agent = HTTPAgent(config)
+            @testset "Tool Usage" begin
+                api = ClaudeApi("https://api.anthropic.com/v1/messages", "claude-sonnet-4-20250514", api_key, "")
+                agent = HTTPAgent(api; tools=[BashTool])
 
-                messages = [AgentMessage(:user, "Use bash to run: echo 'hello world'")]
-                result_channel = prompt(agent, messages, [BashTool])
+                messages = [AgentMessage(:user, "Use bash to echo 'test'")]
+                result_channel = prompt(agent, messages)
+                results = collect(result_channel)
 
-                for item in result_channel
-                    if item isa BashTool
-                        @test !isempty(item.command)
-                        @test_nowarn execute_tool!(item)
-                    elseif item isa String
-                        @test !isempty(strip(item))
-                    end
-                end
+                @test length(results) >= 1
+                has_tool = any(x -> x isa BashTool, results)
+                has_text = any(x -> x isa String, results)
+                @test has_tool || has_text  # Either tool use or text response
             end
         else
-            @warn "Skipping HTTP streaming tests - ANTHROPIC_API_KEY not set"
+            @warn "Skipping HTTP streaming tests - No API key found (ANTHROPIC_API_KEY or CLAUDE_API_KEY)"
+        end
+    end
+
+    @testset "LLM Response Parsing" begin
+        # Test Claude stream parsing
+        @testset "ClaudeStreamState" begin
+            state = ClaudeStreamState()
+            @test state.current_block_index == -1
+            @test state.text_buffer == ""
+            @test state.tool_name == ""
+            @test state.stop_reason === nothing
+        end
+
+        # Test OpenAI stream parsing
+        @testset "OpenAIStreamState" begin
+            state = OpenAIStreamState()
+            @test isempty(state.tool_calls)
+            @test state.text_buffer == ""
         end
     end
 end

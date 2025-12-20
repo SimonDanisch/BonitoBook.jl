@@ -286,7 +286,18 @@ struct BashTool <: AbstractTool
 end
 
 tool_name(::Type{BashTool}) = "bash"
-tool_description(::Type{BashTool}) = "Execute bash commands in the shell. Use for file operations, running scripts, etc."
+tool_description(::Type{BashTool}) = """Execute bash commands in the shell.
+
+**Usage Guidelines:**
+- Use for running scripts, git operations, and system commands
+- For file operations, prefer the `file_tool` instead (safer, no shell injection)
+- Commands run in the current working directory
+- Long-running commands may timeout
+
+**Examples:**
+- `git status` - Check git status
+- `julia -e 'println(1+1)'` - Quick Julia evaluation (prefer add_cell for complex code)
+- `ls -la` - List files with details"""
 tool_input_schema(::Type{BashTool}) = Dict(
     "type" => "object",
     "properties" => Dict(
@@ -312,7 +323,15 @@ struct FileReadTool <: AbstractTool
 end
 
 tool_name(::Type{FileReadTool}) = "file_read"
-tool_description(::Type{FileReadTool}) = "Read the contents of a file from the filesystem."
+tool_description(::Type{FileReadTool}) = """Read the contents of a file from the filesystem.
+
+**Usage Guidelines:**
+- Returns the full file content as text
+- Binary files may return garbled content
+- Large files will be truncated to fit token limits
+- Use `file_tool` with `readdir` to list directory contents first
+
+**Tip:** After reading, the file will be opened in the side editor for your reference."""
 tool_input_schema(::Type{FileReadTool}) = Dict(
     "type" => "object",
     "properties" => Dict(
@@ -342,7 +361,15 @@ struct FileWriteTool <: AbstractTool
 end
 
 tool_name(::Type{FileWriteTool}) = "file_write"
-tool_description(::Type{FileWriteTool}) = "Write content to a file. Creates the file if it doesn't exist, overwrites if it does."
+tool_description(::Type{FileWriteTool}) = """Write content to a file. Creates the file if it doesn't exist, overwrites if it does.
+
+**Usage Guidelines:**
+- Parent directories are created automatically if they don't exist
+- Use `file_edit` for modifying existing files (safer for partial changes)
+- Returns the number of bytes written
+- The file will be opened in the side editor after writing
+
+**Warning:** This overwrites the entire file! For partial edits, use `file_edit` instead."""
 tool_input_schema(::Type{FileWriteTool}) = Dict(
     "type" => "object",
     "properties" => Dict(
@@ -381,7 +408,16 @@ struct FileEditTool <: AbstractTool
 end
 
 tool_name(::Type{FileEditTool}) = "file_edit"
-tool_description(::Type{FileEditTool}) = "Edit a file by replacing specific text. Finds and replaces the old_text with new_text."
+tool_description(::Type{FileEditTool}) = """Edit a file by replacing specific text. Finds and replaces old_text with new_text.
+
+**Usage Guidelines:**
+- The old_text must exist in the file exactly (including whitespace)
+- Use `file_read` first to see the exact content you want to replace
+- Only the first occurrence is replaced
+- The file will be opened in the side editor after editing
+
+**Best Practice:** Include enough context in old_text to ensure you're replacing the right section.
+For example, include surrounding lines if the target line appears multiple times."""
 tool_input_schema(::Type{FileEditTool}) = Dict(
     "type" => "object",
     "properties" => Dict(
@@ -424,7 +460,16 @@ struct HttpGetTool <: AbstractTool
 end
 
 tool_name(::Type{HttpGetTool}) = "http_get"
-tool_description(::Type{HttpGetTool}) = "Fetch content from a URL via HTTP GET request."
+tool_description(::Type{HttpGetTool}) = """Fetch content from a URL via HTTP GET request.
+
+**Returns:**
+- `status`: HTTP status code (200, 404, etc.)
+- `content`: Response body as text
+
+**Usage Guidelines:**
+- Useful for fetching documentation, API responses, or web content
+- Large responses will be truncated
+- For complex HTTP operations, use `add_cell` with HTTP.jl code instead"""
 tool_input_schema(::Type{HttpGetTool}) = Dict(
     "type" => "object",
     "properties" => Dict(
@@ -455,7 +500,33 @@ end
 AddCellTool(language::String, content::String) = AddCellTool(language, content, nothing)
 
 tool_name(::Type{AddCellTool}) = "add_cell"
-tool_description(::Type{AddCellTool}) = "Add a new cell to the notebook. Can be used to add code or markdown cells."
+tool_description(::Type{AddCellTool}) = """Add a new cell to the notebook and execute it. This is the primary way to run Julia code.
+
+**Languages:**
+- `julia`: Execute Julia code (auto-runs and shows output)
+- `python`: Execute Python code (auto-runs)
+- `markdown`: Add markdown documentation (renders as HTML)
+
+**Julia Best Practices:**
+- Don't use println unless explicitly asked - the last expression is automatically displayed
+- Use `let` blocks for temporary computations to avoid polluting the namespace
+- Use `@doc function_name` to get documentation
+- Use WGLMakie for plotting (not Plots.jl) unless asked otherwise
+- Never use `Pkg.activate()` or `Pkg.add()` - assume the environment is set up
+
+**Examples:**
+```julia
+# Good: let block for temporary work
+let x = [1,2,3]
+    sum(x) / length(x)
+end
+
+# Good: Direct expression (output shown automatically)
+DataFrame(a=1:3, b=["x","y","z"])
+
+# Bad: Unnecessary println
+println(sum([1,2,3]))  # Don't do this
+```"""
 tool_input_schema(::Type{AddCellTool}) = Dict(
     "type" => "object",
     "properties" => Dict(
@@ -561,18 +632,20 @@ end
 
 
 tool_name(::Type{FileTool}) = "file_tool"
-tool_description(::Type{FileTool}) = """Perform file system operations safely. Use this instead of bash for file operations.
+tool_description(::Type{FileTool}) = """Perform file system operations safely without shell injection risks. Prefer this over bash for file operations.
 
-Commands:
-- pwd: Get current directory
-- ls: List files in directory
-- readdir: List files with size/type details
-- glob: Find files matching glob pattern (e.g., "*.jl", "test_*.txt")
-- find: Search for files by name substring
-- mkdir: Create directory (creates parent dirs if needed)
-- cp: Copy file or directory
-- mv: Move/rename file or directory
-- rm: Remove file or directory"""
+**Commands:**
+- `pwd`: Get current working directory (no arguments needed)
+- `ls`: List files in directory → `{path: "."}`
+- `readdir`: List files with size/type/modified details → `{path: "."}`
+- `glob`: Find files matching pattern → `{pattern: "*.jl", path: "."}`
+- `find`: Search by name substring → `{pattern: "test", path: ".", recursive: true}`
+- `mkdir`: Create directory (parents too) → `{path: "/new/dir"}`
+- `cp`: Copy file/directory → `{path: "src", destination: "dst", recursive: true}`
+- `mv`: Move/rename → `{path: "old", destination: "new"}`
+- `rm`: Remove file/directory → `{path: "file", recursive: true}`
+
+**Best Practice:** Use `readdir` first to explore, then `glob` or `find` to locate specific files."""
 
 tool_input_schema(::Type{FileTool}) = Dict(
     "type" => "object",

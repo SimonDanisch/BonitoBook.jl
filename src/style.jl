@@ -543,7 +543,7 @@ function generate_style(book;
             CSS("100%", "box-shadow" => "var(--shadow-soft)")
         ),
 
-        # Language icon
+        # Language icon - fixed size to prevent unexpected sizing issues
         CSS(
             ".small-language-icon",
             "position" => "absolute",
@@ -552,7 +552,20 @@ function generate_style(book;
             "opacity" => "0.8",
             "pointer-events" => "none",
             "color" => "var(--icon-color)",
-            "filter" => "var(--icon-filter)"
+            "filter" => "var(--icon-filter)",
+            "width" => "10px !important",
+            "height" => "10px !important",
+            "max-width" => "10px !important",
+            "max-height" => "10px !important"
+        ),
+        # Ensure language icon images don't grow
+        CSS(
+            ".small-language-icon img",
+            "width" => "10px !important",
+            "height" => "10px !important",
+            "max-width" => "10px !important",
+            "max-height" => "10px !important",
+            "object-fit" => "contain"
         ),
         ),
         editor_styles

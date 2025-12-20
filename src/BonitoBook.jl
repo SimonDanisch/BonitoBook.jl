@@ -60,11 +60,12 @@ function icon(name::String; size = "1.2em", class = "", style = Styles(), kw...)
     end
     file = only(candidates)
     asset = Asset(file)
-    # Just return the asset with minimal styling to match codicon behavior
+    # Return the asset with both width and height set to ensure proper sizing
+    # Using max-width/max-height prevents icons from becoming unexpectedly large
     return DOM.img(
         src = asset;
         class = "codicon $(class)",
-        style = Styles(style, "width" => size),
+        style = Styles(style, "width" => size, "height" => size, "max-width" => size, "max-height" => size),
         kw...
     )
 end
