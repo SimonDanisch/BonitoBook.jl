@@ -13,6 +13,7 @@ include("agent.jl")
 include("spinner.jl")       # Must come before http_agent.jl and agent_loop.jl (defines TaskSpinner)
 include("sanitizer.jl")     # Must come before agent_loop.jl (defines SanitizerConfig)
 include("http_agent.jl")
+include("message_history.jl")  # Message history: cells_to_messages, deduplication, compacting
 include("agent_loop.jl")
 include("styles.jl")
 

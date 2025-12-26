@@ -9,6 +9,67 @@ The loop continues until:
 """
 
 """
+    shorten_julia_output(result::String; max_lines::Int=50, max_chars::Int=8000)
+
+Shorten Julia execution output by truncating long outputs and removing
+verbose logging/stacktraces while preserving essential information.
+
+This is applied to AddCellTool results to reduce token usage.
+"""
+function shorten_julia_output(result::String; max_lines::Int=50, max_chars::Int=8000)
+    # If already short enough, return as-is
+    if length(result) <= max_chars
+        return result
+    end
+
+    lines = split(result, '\n')
+
+    # Filter out common verbose patterns
+    filtered_lines = String[]
+
+    for line in lines
+        # Skip stacktrace lines (they start with @ or [number])
+        if startswith(strip(line), "@ ") || occursin(r"^\s*\[\d+\]", line)
+            continue
+        end
+
+        # Skip INFO/DEBUG log lines if too many
+        if length(filtered_lines) > max_lines ÷ 2
+            if occursin(r"^\s*┌\s*(Info|Debug|Warning):", line) ||
+               occursin(r"^\s*│", line) ||
+               occursin(r"^\s*└", line)
+                continue
+            end
+        end
+
+        push!(filtered_lines, line)
+    end
+
+    # Truncate if still too long
+    if length(filtered_lines) > max_lines
+        head_lines = max_lines ÷ 2
+        tail_lines = max_lines - head_lines - 1
+
+        result_lines = vcat(
+            filtered_lines[1:head_lines],
+            ["... [$(length(filtered_lines) - max_lines) lines omitted] ..."],
+            filtered_lines[end-tail_lines+1:end]
+        )
+        filtered_lines = result_lines
+    end
+
+    result = join(filtered_lines, '\n')
+
+    # Final character limit
+    if length(result) > max_chars
+        half = max_chars ÷ 2 - 50
+        result = result[1:half] * "\n... [output truncated] ...\n" * result[end-half+1:end]
+    end
+
+    return result
+end
+
+"""
     run_agent_loop!(book, agent::HTTPAgent, user_message::String, task_spinner::TaskSpinner, sanitizer_config::SanitizerConfig, file_editor)
 
 Main agent loop that:
@@ -28,8 +89,12 @@ function run_agent_loop!(book, agent::HTTPAgent, user_message::String, task_spin
     user_markdown_code = "Markdown.parse($(repr(user_message)))"
     add_cell!(book, user_markdown_code, "julia", Dict{Symbol, Any}(:from => :user))
     async_spinner!(task_spinner, "agent loop", 1:50) do i
-        # Get current conversation
+        # Get current conversation (with compactor handling)
         messages = cells_to_messages(book)
+        # Deduplicate file reads (replaces duplicate results with references)
+        deduplicate_file_reads!(messages)
+        # Compact if context is too long (modifies messages in place, adds compactor cell if needed)
+        maybe_compact!(book, agent, messages)
         # Call agent with nested spinner - returns Channel with multiple items (tools and text)
         result_channel = async_spinner!(task_spinner, "asking") do
             prompt(agent, messages; spinner=task_spinner)
@@ -110,31 +175,14 @@ end
 
 
 function process_item!(book, tool::AddCellTool, agent::HTTPAgent, sanitizer_config::SanitizerConfig, file_editor)
-    # AddCellTool is special - execute it and directly add the cell content
-    # But first, sanitize the code if it's Julia
-    if tool.language == "julia"
-        violation = check_code_safety(tool.content, sanitizer_config)
-        if violation !== nothing
-            # Code is unsafe - create an error cell instead
-            error_msg = format_violation_error(violation, tool.content)
-            error_code = """error($(repr(error_msg)))"""
-            metadata = something(tool.metadata, Dict{Symbol,Any}())
-            metadata = merge(Dict{Symbol,Any}(:from => :agent, :tool => "add_cell", :sanitizer_blocked => true), metadata)
-            cell = add_cell!(book, error_code, "julia", metadata; editor_visible=true)
-            val = cell.editor.output[]
-            result = ToolResult(repr(extract_output(val)))
-            tool_execution = ToolExecution(tool, result)
-            store_tool_exe!(book, tool_execution, cell.uuid)
-            return cell
-        end
-    end
-
     # Code is safe (or not Julia) - proceed normally
     metadata = something(tool.metadata, Dict{Symbol,Any}())
     metadata = merge(Dict{Symbol,Any}(:from => :agent, :tool => "add_cell"), metadata)
     cell = add_cell!(book, tool.content, tool.language, metadata; editor_visible=true)
     val = cell.editor.output[]
-    result = ToolResult(repr(extract_output(val)))
+    # Shorten the output to reduce token usage (max_tool_use_token * 4 chars ≈ tokens)
+    output_str = shorten_julia_output(repr(extract_output(val)); max_chars=agent.max_tool_use_token * 4)
+    result = ToolResult(output_str)
     # Create ToolExecution and serialize it
     tool_execution = ToolExecution(tool, result)
     store_tool_exe!(book, tool_execution, cell.uuid)
@@ -226,89 +274,4 @@ function add_cell!(book, content::String, language::String, metadata::Dict; edit
         BonitoBook.run_sync!(cell.editor)
     end
     return cell
-end
-
-"""
-    summarize_old_tool_executions!(book; keep_last=5)
-
-Background task that summarizes old tool executions to save memory/display space.
-Keeps the last `keep_last` tool executions as full, summarizes the rest.
-"""
-function summarize_old_tool_executions!(book; keep_last=5)
-    # Get all tool cells (cells with metadata :from => :tool)
-    tool_cells = filter(book.cells) do cell
-        get(cell.metadata, :from, nothing) == :tool
-    end
-
-    # If we have fewer than keep_last+1 tool cells, nothing to summarize
-    if length(tool_cells) <= keep_last
-        return
-    end
-
-    # Get cells to summarize (all except the last keep_last)
-    cells_to_summarize = tool_cells[1:end-keep_last]
-
-    for cell in cells_to_summarize
-        # Check if already summarized (skip if so)
-        if contains(cell.editor.content[], "SummarizedToolExecution")
-            continue
-        end
-
-        # Extract the tool name and cell ID from the current code
-        # Current format: open(io -> JSON3.read(io, ToolExecution{SomeTool}), data"tools/toolname-cellid.json")
-        content = cell.editor.content[]
-        m = match(r"data\"tools/(.*?)-(.*?)\.json\"", content)
-        if m === nothing
-            @warn "Could not extract tool info from cell content" content=content
-            continue
-        end
-
-        tool_name_str = m.captures[1]
-        cell_id = m.captures[2]
-
-        # Get the full path to the JSON file
-        tools_dir = joinpath(book.folder, "data", "tools")
-        json_file = joinpath(tools_dir, "$(tool_name_str)-$(cell_id).json")
-
-        if !isfile(json_file)
-            @warn "Tool execution JSON file not found" file=json_file
-            continue
-        end
-
-        try
-            # Read the full execution to check if it should be summarized
-            # We need to read it as generic ToolExecution first to check size
-            json_str = read(json_file, String)
-            json_data = JSON3.read(json_str)
-
-            # Check result size
-            result_str = string(get(json_data, :result, Dict())[:result])
-            if length(result_str) < 1000
-                continue  # Don't summarize small results
-            end
-
-            # Create summarized version
-            # New code format: Use a special loader that creates SummarizedToolExecution
-            new_code = """
-            begin
-                # Load full execution and create summarized version
-                json_file = data"tools/$(tool_name_str)-$(cell_id).json"
-                # This will be rendered as summarized automatically
-                open(io -> JSON3.read(io, ToolExecution), json_file)
-            end
-            """
-
-            # Note: The actual summarization happens in rendering based on age
-            # For now, we just keep the full execution but mark it for potential summarization
-            # A more sophisticated approach would be to modify the JSON file or cell output
-
-            # Actually, let's not modify cells automatically for now
-            # Instead, we'll implement this as an opt-in feature that can be triggered manually
-            # or by a background task that the user can control
-
-        catch e
-            @warn "Error processing cell for summarization" cell_id=cell.uuid exception=(e, catch_backtrace())
-            continue
-        end
-    end
 end
