@@ -201,7 +201,10 @@ function parse_tool_names(names::Vector{String})
         "file_tool" => FileTool,
         "http_get" => HttpGetTool,
         "add_cell" => AddCellTool,
-        "todo_list" => TodoList
+        "todo_list" => TodoList,
+        "git" => GitTool,
+        "github" => GitHubTool,
+        "module_function" => ModuleFunctionTool
     )
 
     tools = Type{<:AbstractTool}[]

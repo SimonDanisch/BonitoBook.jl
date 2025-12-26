@@ -269,6 +269,12 @@ function add_cell!(book, content::String, language::String, metadata::Dict; edit
     # Insert at end
     BonitoBook.insert_editor!(book, cell, length(book.cells) + 1)
 
+    # Send set-source message to ensure Monaco editor has the correct content
+    # This is needed because dynamically inserted editors may not get the value from options
+    if editor_visible
+        BonitoBook.send(cell.editor; type="set-source", data=content)
+    end
+
     # Auto-run code cells
     if language == "julia" || language == "python"
         BonitoBook.run_sync!(cell.editor)

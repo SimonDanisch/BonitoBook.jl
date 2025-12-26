@@ -428,16 +428,15 @@ function insert_editor!(book, editor, index::Int)
     end
     # Save
     save(book)
-    # Insert into DOM
-    elem = Bonito.jsrender(Session(book.session), editor)
-    return Bonito.evaljs(
-        book.session, js"""(() => {
+    # Insert into DOM using dom_in_js which properly handles sub-session creation
+    # This avoids the "double freeing session" bug that occurs when manually creating
+    # a sub-session with Session(book.session) and using jsrender without proper initialization
+    return Bonito.dom_in_js(
+        book.session, editor, js"""(elem) => {
             $(Monaco).then(Monaco => {
-                const elem = $(Observable(elem)).value;
-                console.log(elem);
                 Monaco.insert_editor_at_index(elem, $(editor.uuid), $(index));
             })
-        })()"""
+        }"""
     )
 end
 

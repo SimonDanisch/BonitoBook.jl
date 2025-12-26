@@ -316,20 +316,30 @@ end
 """
     FileReadTool <: AbstractTool
 
-Read contents of a file.
+Read contents of a file, optionally specifying line ranges.
 """
 struct FileReadTool <: AbstractTool
     path::String
+    line_start::Union{Nothing, Int}
+    line_end::Union{Nothing, Int}
 end
+
+FileReadTool(path::String) = FileReadTool(path, nothing, nothing)
 
 tool_name(::Type{FileReadTool}) = "file_read"
 tool_description(::Type{FileReadTool}) = """Read the contents of a file from the filesystem.
 
 **Usage Guidelines:**
-- Returns the full file content as text
+- Returns the full file content as text (or specified line range)
 - Binary files may return garbled content
 - Large files will be truncated to fit token limits
 - Use `file_tool` with `readdir` to list directory contents first
+- Use `line_start` and `line_end` to read specific line ranges (1-indexed, inclusive)
+
+**Examples:**
+- Read entire file: `{"path": "file.jl"}`
+- Read lines 10-20: `{"path": "file.jl", "line_start": 10, "line_end": 20}`
+- Read from line 50 to end: `{"path": "file.jl", "line_start": 50}`
 
 **Tip:** After reading, the file will be opened in the side editor for your reference."""
 tool_input_schema(::Type{FileReadTool}) = Dict(
@@ -338,6 +348,14 @@ tool_input_schema(::Type{FileReadTool}) = Dict(
         "path" => Dict(
             "type" => "string",
             "description" => "Path to the file to read"
+        ),
+        "line_start" => Dict(
+            "type" => "integer",
+            "description" => "Starting line number (1-indexed, inclusive). If not specified, reads from beginning."
+        ),
+        "line_end" => Dict(
+            "type" => "integer",
+            "description" => "Ending line number (1-indexed, inclusive). If not specified, reads to end."
         )
     ),
     "required" => ["path"]
@@ -347,7 +365,39 @@ function execute_tool(tool::FileReadTool)
     if !isfile(tool.path)
         error("File not found: $(tool.path)")
     end
-    return read(tool.path, String)
+    
+    content = read(tool.path, String)
+    
+    # If no line range specified, return full content
+    if isnothing(tool.line_start) && isnothing(tool.line_end)
+        return content
+    end
+    
+    # Split into lines and extract range
+    lines = split(content, '\n')
+    total_lines = length(lines)
+    
+    start_line = isnothing(tool.line_start) ? 1 : tool.line_start
+    end_line = isnothing(tool.line_end) ? total_lines : tool.line_end
+    
+    # Validate range
+    if start_line < 1 || start_line > total_lines
+        error("line_start ($start_line) out of range (file has $total_lines lines)")
+    end
+    if end_line < start_line || end_line > total_lines
+        error("line_end ($end_line) out of range or before line_start (file has $total_lines lines)")
+    end
+    
+    selected_lines = lines[start_line:end_line]
+    result = join(selected_lines, '\n')
+    
+    # Add helpful header if range was used
+    if !isnothing(tool.line_start) || !isnothing(tool.line_end)
+        header = "# Lines $start_line-$end_line of $(basename(tool.path)) (total: $total_lines lines)\n\n"
+        result = header * result
+    end
+    
+    return result
 end
 
 """
@@ -865,3 +915,396 @@ export BashTool,
     TodoList,
     ToolExecution,
     ToolResult
+
+# ============================================================================
+# Git Tool
+# ============================================================================
+
+"""
+    GitTool <: AbstractTool
+
+Execute git commands safely in the current repository.
+"""
+struct GitTool <: AbstractTool
+    command::String
+    args::Vector{String}
+end
+
+GitTool(command::String) = GitTool(command, String[])
+
+tool_name(::Type{GitTool}) = "git"
+tool_description(::Type{GitTool}) = """Execute git commands in the current repository.
+
+**Usage Guidelines:**
+- Safe for read operations: status, log, diff, show, branch, etc.
+- Use for inspecting repository state and history
+- Commands run in the current working directory
+- For write operations (commit, push, etc.), prefer explicit user confirmation
+
+**Supported Commands:**
+- `status` - Show working tree status
+- `log` - Show commit logs (use args for options like ["-10", "--oneline"])
+- `diff` - Show changes between commits, commit and working tree, etc.
+- `show` - Show various types of objects
+- `branch` - List, create, or delete branches
+- `remote` - Manage set of tracked repositories
+- `blame` - Show what revision and author last modified each line
+- `ls-files` - Show information about files in the index and working tree
+- `config` - Get repository or global options
+
+**Examples:**
+- `{"command": "status"}` - Get current status
+- `{"command": "log", "args": ["-10", "--oneline"]}` - Get last 10 commits
+- `{"command": "diff", "args": ["HEAD~1"]}` - Show changes in last commit
+- `{"command": "branch", "args": ["-a"]}` - List all branches
+- `{"command": "show", "args": ["HEAD:path/to/file.jl"]}` - Show file from commit
+
+**Safety:** Write operations (commit, push, pull, merge, rebase) require explicit confirmation."""
+tool_input_schema(::Type{GitTool}) = Dict(
+    "type" => "object",
+    "properties" => Dict(
+        "command" => Dict(
+            "type" => "string",
+            "description" => "Git command to execute (e.g., 'status', 'log', 'diff')",
+            "enum" => ["status", "log", "diff", "show", "branch", "remote", "blame", "ls-files", "config", "rev-parse"]
+        ),
+        "args" => Dict(
+            "type" => "array",
+            "items" => Dict("type" => "string"),
+            "description" => "Arguments to pass to the git command"
+        )
+    ),
+    "required" => ["command"]
+)
+
+function execute_tool(tool::GitTool)
+    # Validate command is safe (read-only)
+    safe_commands = ["status", "log", "diff", "show", "branch", "remote", "blame", "ls-files", "config", "rev-parse"]
+    if !(tool.command in safe_commands)
+        error("Git command '$(tool.command)' is not allowed. Only read operations are permitted: $(join(safe_commands, ", "))")
+    end
+    
+    # Build command
+    cmd_parts = ["git", tool.command]
+    if !isempty(tool.args)
+        append!(cmd_parts, tool.args)
+    end
+    
+    # Execute
+    try
+        result = read(Cmd(cmd_parts), String)
+        return result
+    catch e
+        if e isa ProcessFailedException
+            # Try to get stderr for better error messages
+            error("Git command failed: $(tool.command) $(join(tool.args, " "))")
+        else
+            rethrow(e)
+        end
+    end
+end
+
+# ============================================================================
+# GitHub Tool
+# ============================================================================
+
+"""
+    GitHubTool <: AbstractTool
+
+Interact with GitHub API to fetch repository information, issues, PRs, etc.
+"""
+struct GitHubTool <: AbstractTool
+    action::String
+    owner::String
+    repo::String
+    params::Dict{String, Any}
+end
+
+GitHubTool(action::String, owner::String, repo::String) = GitHubTool(action, owner, repo, Dict{String, Any}())
+
+tool_name(::Type{GitHubTool}) = "github"
+tool_description(::Type{GitHubTool}) = """Interact with GitHub API to fetch repository information.
+
+**Usage Guidelines:**
+- No authentication required for public repositories
+- Use for fetching issues, pull requests, releases, commits, etc.
+- Rate limited to 60 requests per hour for unauthenticated requests
+
+**Supported Actions:**
+- `get_repo` - Get repository information
+- `list_issues` - List repository issues (params: {"state": "open|closed|all", "per_page": 30})
+- `get_issue` - Get specific issue (params: {"number": 123})
+- `list_pulls` - List pull requests (params: {"state": "open|closed|all", "per_page": 30})
+- `get_pull` - Get specific pull request (params: {"number": 123})
+- `list_commits` - List repository commits (params: {"per_page": 30, "sha": "branch"})
+- `get_commit` - Get specific commit (params: {"sha": "commit_sha"})
+- `list_releases` - List repository releases
+- `get_release` - Get specific release (params: {"tag": "v1.0.0"})
+- `get_readme` - Get repository README
+- `get_contents` - Get repository file contents (params: {"path": "path/to/file"})
+
+**Examples:**
+- `{"action": "get_repo", "owner": "JuliaLang", "repo": "Julia"}` - Get Julia repo info
+- `{"action": "list_issues", "owner": "JuliaLang", "repo": "Julia", "params": {"state": "open", "per_page": 10}}` - List open issues
+- `{"action": "get_pull", "owner": "MakieOrg", "repo": "Makie.jl", "params": {"number": 1234}}` - Get specific PR
+- `{"action": "get_contents", "owner": "JuliaLang", "repo": "Julia", "params": {"path": "README.md"}}` - Get README"""
+
+tool_input_schema(::Type{GitHubTool}) = Dict(
+    "type" => "object",
+    "properties" => Dict(
+        "action" => Dict(
+            "type" => "string",
+            "description" => "GitHub API action to perform",
+            "enum" => ["get_repo", "list_issues", "get_issue", "list_pulls", "get_pull", "list_commits", "get_commit", "list_releases", "get_release", "get_readme", "get_contents"]
+        ),
+        "owner" => Dict(
+            "type" => "string",
+            "description" => "Repository owner (user or organization)"
+        ),
+        "repo" => Dict(
+            "type" => "string",
+            "description" => "Repository name"
+        ),
+        "params" => Dict(
+            "type" => "object",
+            "description" => "Additional parameters for the action (varies by action)",
+            "properties" => Dict(
+                "number" => Dict("type" => "integer"),
+                "state" => Dict("type" => "string", "enum" => ["open", "closed", "all"]),
+                "per_page" => Dict("type" => "integer"),
+                "sha" => Dict("type" => "string"),
+                "tag" => Dict("type" => "string"),
+                "path" => Dict("type" => "string")
+            )
+        )
+    ),
+    "required" => ["action", "owner", "repo"]
+)
+
+function execute_tool(tool::GitHubTool)
+    base_url = "https://api.github.com"
+    
+    # Build URL based on action
+    url = if tool.action == "get_repo"
+        "$base_url/repos/$(tool.owner)/$(tool.repo)"
+    elseif tool.action == "list_issues"
+        state = get(tool.params, "state", "open")
+        per_page = get(tool.params, "per_page", 30)
+        "$base_url/repos/$(tool.owner)/$(tool.repo)/issues?state=$state&per_page=$per_page"
+    elseif tool.action == "get_issue"
+        number = tool.params["number"]
+        "$base_url/repos/$(tool.owner)/$(tool.repo)/issues/$number"
+    elseif tool.action == "list_pulls"
+        state = get(tool.params, "state", "open")
+        per_page = get(tool.params, "per_page", 30)
+        "$base_url/repos/$(tool.owner)/$(tool.repo)/pulls?state=$state&per_page=$per_page"
+    elseif tool.action == "get_pull"
+        number = tool.params["number"]
+        "$base_url/repos/$(tool.owner)/$(tool.repo)/pulls/$number"
+    elseif tool.action == "list_commits"
+        per_page = get(tool.params, "per_page", 30)
+        sha = get(tool.params, "sha", "")
+        query = "per_page=$per_page" * (isempty(sha) ? "" : "&sha=$sha")
+        "$base_url/repos/$(tool.owner)/$(tool.repo)/commits?$query"
+    elseif tool.action == "get_commit"
+        sha = tool.params["sha"]
+        "$base_url/repos/$(tool.owner)/$(tool.repo)/commits/$sha"
+    elseif tool.action == "list_releases"
+        "$base_url/repos/$(tool.owner)/$(tool.repo)/releases"
+    elseif tool.action == "get_release"
+        tag = tool.params["tag"]
+        "$base_url/repos/$(tool.owner)/$(tool.repo)/releases/tags/$tag"
+    elseif tool.action == "get_readme"
+        "$base_url/repos/$(tool.owner)/$(tool.repo)/readme"
+    elseif tool.action == "get_contents"
+        path = tool.params["path"]
+        "$base_url/repos/$(tool.owner)/$(tool.repo)/contents/$path"
+    else
+        error("Unknown action: $(tool.action)")
+    end
+    
+    # Make request
+    headers = [
+        "Accept" => "application/vnd.github.v3+json",
+        "User-Agent" => "BonitoBook-LLM-Agent"
+    ]
+    
+    response = HTTP.get(url, headers)
+    
+    if response.status != 200
+        error("GitHub API request failed with status $(response.status)")
+    end
+    
+    # Parse JSON response
+    json_response = JSON3.read(String(copy(response.body)))
+    
+    return json_response
+end
+
+# ============================================================================
+# Module Function Tool
+# ============================================================================
+
+"""
+    ModuleFunctionTool <: AbstractTool
+
+Add or update a function in a Julia module with metadata and analysis.
+"""
+struct ModuleFunctionTool <: AbstractTool
+    module_name::String
+    function_code::String
+    analyze::Bool
+end
+
+ModuleFunctionTool(module_name::String, function_code::String) = ModuleFunctionTool(module_name, function_code, true)
+
+tool_name(::Type{ModuleFunctionTool}) = "module_function"
+tool_description(::Type{ModuleFunctionTool}) = """Add or update a function in a Julia module with optional analysis.
+
+**Usage Guidelines:**
+- Define or update functions in a specific module
+- Optionally analyze with @code_warntype and JET.jl for performance insights
+- Automatically formats code using JuliaFormatter
+- Useful for iterative function development and optimization
+
+**Features:**
+- **Code Analysis**: Get type stability warnings via @code_warntype
+- **JET Analysis**: Static analysis for potential errors and type issues
+- **Auto-formatting**: Consistent code style via JuliaFormatter
+- **Module isolation**: Functions are defined in specified module
+
+**Examples:**
+- `{"module_name": "MyModule", "function_code": "function foo(x) x^2 end", "analyze": true}` - Add function with analysis
+- `{"module_name": "Main", "function_code": "function bar(x::Int) x + 1 end", "analyze": false}` - Add without analysis
+
+**Note:** Module must exist or be creatable. Analysis requires JET.jl to be available."""
+
+tool_input_schema(::Type{ModuleFunctionTool}) = Dict(
+    "type" => "object",
+    "properties" => Dict(
+        "module_name" => Dict(
+            "type" => "string",
+            "description" => "Name of the module to define the function in"
+        ),
+        "function_code" => Dict(
+            "type" => "string",
+            "description" => "Complete function definition code"
+        ),
+        "analyze" => Dict(
+            "type" => "boolean",
+            "description" => "Whether to run code_warntype and JET analysis (default: true)",
+            "default" => true
+        )
+    ),
+    "required" => ["module_name", "function_code"]
+)
+
+function execute_tool(tool::ModuleFunctionTool)
+    results = Dict{String, Any}()
+    
+    # Get or create module
+    mod = try
+        getfield(Main, Symbol(tool.module_name))
+    catch
+        # Try to create module if it doesn't exist
+        Core.eval(Main, :(module $(Symbol(tool.module_name)) end))
+        getfield(Main, Symbol(tool.module_name))
+    end
+    
+    # Parse and evaluate the function
+    try
+        expr = Meta.parse(tool.function_code)
+        Core.eval(mod, expr)
+        results["status"] = "success"
+        results["message"] = "Function defined in module $(tool.module_name)"
+    catch e
+        results["status"] = "error"
+        results["error"] = sprint(showerror, e)
+        return results
+    end
+    
+    # Extract function name for analysis
+    function_name = try
+        expr = Meta.parse(tool.function_code)
+        if expr.head == :function || expr.head == :(=)
+            sig = expr.args[1]
+            if sig isa Symbol
+                sig
+            elseif sig.head == :call
+                sig.args[1]
+            elseif sig.head == :where || sig.head == :(::)
+                # Handle parametric functions
+                inner = sig.args[1]
+                if inner isa Symbol
+                    inner
+                elseif inner.head == :call
+                    inner.args[1]
+                else
+                    nothing
+                end
+            else
+                nothing
+            end
+        else
+            nothing
+        end
+    catch
+        nothing
+    end
+    
+    # Perform analysis if requested
+    if tool.analyze && !isnothing(function_name)
+        func = try
+            getfield(mod, function_name)
+        catch
+            nothing
+        end
+        
+        if !isnothing(func)
+            # Get method information
+            ms = methods(func)
+            results["methods"] = "$(length(ms)) method(s) defined"
+            
+            # Code warntype analysis for first method
+            if length(ms) > 0
+                m = first(ms)
+                try
+                    warntype_output = sprint() do io
+                        Base.code_warntype(io, func, m.sig.parameters[2:end])
+                    end
+                    results["code_warntype"] = warntype_output
+                catch e
+                    results["code_warntype"] = "Could not run @code_warntype: $(sprint(showerror, e))"
+                end
+            end
+            
+            # JET analysis if available (must use invokelatest since JET is loaded at runtime)
+            if isdefined(Main, :JET)
+                try
+                    jet_mod = Main.JET
+                    # Can't use macros from dynamically loaded modules, use function call instead
+                    report = Base.invokelatest(jet_mod.report_opt, func)
+                    results["jet_analysis"] = string(report)
+                catch e
+                    results["jet_analysis"] = "JET analysis not available or failed: $(sprint(showerror, e))"
+                end
+            else
+                results["jet_analysis"] = "JET.jl not loaded (use: using JET)"
+            end
+        end
+    end
+    
+    # Format code
+    try
+        if isdefined(Main, :JuliaFormatter)
+            formatted = Main.JuliaFormatter.format_text(tool.function_code)
+            results["formatted_code"] = formatted
+        else
+            results["formatted_code"] = "JuliaFormatter not loaded"
+        end
+    catch e
+        results["formatted_code"] = "Formatting failed: $(sprint(showerror, e))"
+    end
+    
+    return results
+end

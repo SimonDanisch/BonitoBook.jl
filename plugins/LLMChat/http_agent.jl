@@ -2,6 +2,21 @@ using Bonito.HTTP
 using JSON3
 using Bonito.Base64
 
+# Default tools available to the agent
+const DEFAULT_TOOLS = [
+    BashTool,
+    FileReadTool,
+    FileWriteTool,
+    FileEditTool,
+    FileTool,
+    HttpGetTool,
+    AddCellTool,
+    TodoList,
+    GitTool,
+    GitHubTool,
+    ModuleFunctionTool
+]
+
 """
     AbstractApi
 
