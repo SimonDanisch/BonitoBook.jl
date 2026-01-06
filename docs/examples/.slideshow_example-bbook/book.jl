@@ -239,6 +239,11 @@ function Bonito.jsrender(session::Session, slideshow::SlideshowBook)
                         active_element.closest('.cell-editor') !== null
                     );
 
+                    // Ignore Enter key entirely (let BonitoBook handle shift+enter for execution)
+                    if (e.key === 'Enter') {
+                        return;
+                    }
+
                     // Only handle navigation if not editing
                     if (!is_editing) {
                         if (e.key === 'ArrowRight') {

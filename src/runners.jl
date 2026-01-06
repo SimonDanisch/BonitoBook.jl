@@ -73,7 +73,9 @@ Runner for processing markdown content with LaTeX math and code highlighting.
 Handles markdown parsing, MathJax integration, and syntax highlighting for embedded code blocks.
 """
 struct MarkdownRunner
+    folder::String
 end
+MarkdownRunner() = MarkdownRunner("")
 
 """
     parse_source(::MarkdownRunner, source)
@@ -86,7 +88,7 @@ Parse markdown source into rendered HTML with syntax highlighting and math suppo
 # Returns
 Rendered markdown with embedded Monaco editors for code blocks and MathJax for LaTeX.
 """
-function parse_source(::MarkdownRunner, source)
+function parse_source(runner::MarkdownRunner, source)
     return try
         replacements = Dict(
             Markdown.Code => (node) -> begin
@@ -105,6 +107,24 @@ function parse_source(::MarkdownRunner, source)
                     }
                     """
                     return editor
+                end
+            end,
+            Markdown.Image => (node) -> begin
+                # Convert relative image paths to Bonito Asset
+                url = node.url
+                if startswith(url, "./data/") || startswith(url, "data/")
+                    # Relative path - use Asset to serve from bbook/data folder
+                    filename = replace(url, r"^\.?/?data/" => "")
+                    image_path = joinpath(runner.folder, "data", filename)
+                    if isfile(image_path)
+                        return Asset(image_path)
+                    else
+                        @warn "Image not found: $image_path"
+                        return node
+                    end
+                else
+                    # Absolute or external URL - keep as is
+                    return node
                 end
             end
         )

@@ -391,8 +391,8 @@ Create an interactive cell editor with code execution capabilities.
 # Returns
 Configured `CellEditor` instance ready for interactive use.
 """
-function CellEditor(content, language, runner; show_editor = true, show_logging = false, show_output = true, theme = Observable("default"))
-    runner = language == "markdown" ? MarkdownRunner() : runner
+function CellEditor(content, language, runner; show_editor = true, show_logging = false, show_output = true, theme = Observable("default"), folder = "")
+    runner = language == "markdown" ? MarkdownRunner(folder) : runner
     uuid = string(UUIDs.uuid4())
 
     jleditor = EvalEditor(

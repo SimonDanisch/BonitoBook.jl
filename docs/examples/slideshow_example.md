@@ -3,13 +3,11 @@
 **Makie.jl** + **BonitoBook** = Interactive visualizations in your browser!
 
 ```julia (editor=true, logging=false, output=true)
-using WGLMakie
-set_theme!(size=(800, 300))
+using Revise, Bonito, WGLMakie, NDViewer, GeometryBasics
+using NDViewer: yaml_viewer
 
-x = range(0, 2π, length=50)
-lines(x, sin.(x),
-      axis=(xlabel="x", ylabel="sin(x)", title="Welcome to Makie!"),
-      color=:steelblue, linewidth=3)
+yaml_path(name) = normpath(pathof(NDViewer), "..", "..", "examples", name)
+yaml_viewer(yaml_path("speedyweather.yaml"))
 ```
 ---
 
@@ -74,6 +72,7 @@ surface(x, y, z, colormap=:plasma)
 Apply themes and customize styling:
 
 ```julia (editor=true, logging=false, output=true)
+using WGLMakie
 set_theme!(theme_dark();size=(800,400))
 
 x = 0:0.1:4π

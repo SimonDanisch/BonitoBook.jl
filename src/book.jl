@@ -81,7 +81,7 @@ function Book(user_file::String; folder=nothing, replace_style=false, all_blocks
     # The runner will cd into folder for code execution
     runner = AsyncRunner(folder; global_logger=global_logging_widget.logging)
     monaco_theme = Observable{String}("default")
-    editors = cells2editors(cells, runner, monaco_theme)
+    editors = cells2editors(cells, runner, monaco_theme, folder)
     progress = Observable((false, 0.0))
 
     # Activate the project in the parent directory (where Project.toml is)
@@ -95,7 +95,7 @@ function Book(user_file::String; folder=nothing, replace_style=false, all_blocks
     ))
     include_file = joinpath(folder, "include.jl")
     if isfile(include_file)
-        runner.mod.include(include_file)
+        @eval runner.mod include($include_file)
     end
     # Set up style evaluation - use get_file_path to check custom then template
     style_path, is_custom = get_file_path(folder, "style.jl")
