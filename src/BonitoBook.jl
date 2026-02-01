@@ -87,11 +87,13 @@ include("completions.jl")
 include("interact.jl")
 include("chat.jl")
 include("mcp_julia_server.jl")
+include("utils.jl")
 
 export Book, ChatComponent, ChatAgent, ChatMessage, MCPJuliaServer, Collapsible, Components, LoggingWidget, export_zip, import_zip, InteractiveError
 export InlineBook
 export LanguageEval, JuliaEval, eval_code, get_language_evaluators
 export ALL_LANGUAGES
+export execute_markdown
 
 function _MakieModule end
 
