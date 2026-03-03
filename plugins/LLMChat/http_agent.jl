@@ -90,7 +90,7 @@ Generic HTTP-based agent that works with OpenAI, Claude, Ollama, and compatible 
 - `tool_choice::String`: How to use tools ("auto", "required", "none")
 - `max_tool_use_token::Int`: Maximum tokens to send back from tool results
 - `needs_to_be_done::Dict{DataType, AbstractTool}`: TodoList or other multi-step tasks
-- `last_item::Base.RefValue{Union{AbstractTool, String}}`: Last processed item
+- `last_item::Base.RefValue{Union{Nothing, AbstractTool, String}}`: Last processed item (nothing initially)
 """
 struct HTTPAgent <: LLMChatAgent
     api::AbstractApi
@@ -102,7 +102,7 @@ struct HTTPAgent <: LLMChatAgent
     max_tool_use_token::Int
     # TodoList or other tools implementing multi-step tasks
     needs_to_be_done::Dict{DataType,AbstractTool}
-    last_item::Base.RefValue{Union{AbstractTool,String}}
+    last_item::Base.RefValue{Union{Nothing, AbstractTool, String}}
 end
 
 # Full constructor with keyword arguments for customization
@@ -122,7 +122,7 @@ function HTTPAgent(api::AbstractApi;
         tool_choice,
         max_tool_use_token,
         Dict{DataType,AbstractTool}(),
-        Ref{Union{AbstractTool,String}}("")
+        Ref{Union{Nothing, AbstractTool, String}}(nothing)
     )
 end
 

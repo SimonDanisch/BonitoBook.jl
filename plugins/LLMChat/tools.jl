@@ -279,38 +279,150 @@ end
 """
     BashTool <: AbstractTool
 
-Execute bash commands in the shell.
+Execute shell commands using Julia's `run()` function.
 """
 struct BashTool <: AbstractTool
     command::String
+    pipeline::Union{Nothing, Vector{String}}
+    output_file::Union{Nothing, String}
+    append::Bool
+    timeout::Union{Nothing, Float64}
 end
 
+BashTool(command::String) = BashTool(command, nothing, nothing, false, nothing)
+
 tool_name(::Type{BashTool}) = "bash"
-tool_description(::Type{BashTool}) = """Execute bash commands in the shell.
+tool_description(::Type{BashTool}) = """Execute shell commands using Julia's command execution.
+
+**IMPORTANT: This is NOT a real bash shell!**
+This tool uses Julia's `run(Cmd(...))` which does NOT support shell features like:
+- `&&` or `||` (command chaining)
+- `|` (piping) - use the `pipeline` parameter instead
+- `>` or `>>` (redirection) - use `output_file` and `append` parameters instead
+- Shell variables, globbing, or subshells
 
 **Usage Guidelines:**
-- Use for running scripts, git operations, and system commands
-- For file operations, prefer the `file_tool` instead (safer, no shell injection)
+- Each command is a single executable with arguments
+- For piping multiple commands, use the `pipeline` array parameter
+- For output redirection, use `output_file` (and `append: true` for `>>`)
+- For file operations, prefer `file_tool` (safer, no shell injection)
 - Commands run in the current working directory
-- Long-running commands may timeout
+- Set `timeout` to limit execution time for long-running commands
+
+**Parameters:**
+- `command`: The main command to execute (required)
+- `pipeline`: Array of additional commands to pipe output through (optional)
+- `output_file`: File path to redirect output to (optional)
+- `append`: If true, append to output_file instead of overwriting (default: false)
+- `timeout`: Maximum execution time in seconds (optional, default: no limit)
 
 **Examples:**
-- `git status` - Check git status
-- `julia -e 'println(1+1)'` - Quick Julia evaluation (prefer add_cell for complex code)
-- `ls -la` - List files with details"""
+- Simple command: `{"command": "ls -la"}`
+- With pipeline: `{"command": "cat file.txt", "pipeline": ["grep pattern", "wc -l"]}`
+- With redirection: `{"command": "echo hello", "output_file": "out.txt"}`
+- Append mode: `{"command": "echo more", "output_file": "out.txt", "append": true}`
+- With timeout: `{"command": "sleep 10", "timeout": 5}`
+
+**For complex shell operations:**
+Consider using `add_cell` with Julia code instead:
+```julia
+run(pipeline(`cat file.txt`, `grep pattern`, `wc -l`))
+```"""
 tool_input_schema(::Type{BashTool}) = Dict(
     "type" => "object",
     "properties" => Dict(
         "command" => Dict(
             "type" => "string",
-            "description" => "The bash command to execute"
+            "description" => "The command to execute (e.g., 'ls -la', 'git status'). Do NOT use shell operators like && || | > here."
+        ),
+        "pipeline" => Dict(
+            "type" => "array",
+            "items" => Dict("type" => "string"),
+            "description" => "Additional commands to pipe output through (replaces shell '|'). Each string is a separate command."
+        ),
+        "output_file" => Dict(
+            "type" => "string",
+            "description" => "File path to redirect output to (replaces shell '>' or '>>')"
+        ),
+        "append" => Dict(
+            "type" => "boolean",
+            "description" => "If true, append to output_file instead of overwriting (default: false)",
+            "default" => false
+        ),
+        "timeout" => Dict(
+            "type" => "number",
+            "description" => "Maximum execution time in seconds. Command will be killed if it exceeds this limit."
         )
     ),
     "required" => ["command"]
 )
 
 function execute_tool(tool::BashTool)
-    return read(Cmd(split(tool.command, " "; keepempty=false)), String)
+    # Parse the main command
+    main_cmd = Cmd(split(tool.command, " "; keepempty=false))
+
+    # Build pipeline if specified
+    if !isnothing(tool.pipeline) && !isempty(tool.pipeline)
+        # Create pipeline of commands
+        cmds = [main_cmd]
+        for pipe_cmd in tool.pipeline
+            push!(cmds, Cmd(split(pipe_cmd, " "; keepempty=false)))
+        end
+        full_pipeline = Base.pipeline(cmds...)
+    else
+        full_pipeline = main_cmd
+    end
+
+    # Helper function to run with optional timeout
+    function run_with_timeout(cmd, timeout)
+        if isnothing(timeout)
+            return read(cmd, String)
+        end
+
+        output = IOBuffer()
+        proc = open(cmd, "r")
+        start_time = time()
+
+        try
+            while !eof(proc) && (time() - start_time) < timeout
+                if bytesavailable(proc) > 0
+                    write(output, read(proc, bytesavailable(proc)))
+                else
+                    sleep(0.01)  # Small sleep to avoid busy waiting
+                end
+            end
+
+            if (time() - start_time) >= timeout
+                kill(proc)
+                return String(take!(output)) * "\n[TIMEOUT: Command exceeded $(timeout)s limit and was killed]"
+            end
+
+            # Read any remaining output
+            write(output, read(proc))
+            return String(take!(output))
+        finally
+            close(proc)
+        end
+    end
+
+    # Handle output redirection
+    if !isnothing(tool.output_file)
+        mode = tool.append ? "a" : "w"
+        if isnothing(tool.timeout)
+            open(tool.output_file, mode) do io
+                run(pipeline(full_pipeline, stdout=io))
+            end
+        else
+            # For timeout with file output, capture first then write
+            result = run_with_timeout(full_pipeline, tool.timeout)
+            open(tool.output_file, mode) do io
+                write(io, result)
+            end
+        end
+        return "Output written to $(tool.output_file)$(tool.append ? " (appended)" : "")"
+    else
+        return run_with_timeout(full_pipeline, tool.timeout)
+    end
 end
 
 """
