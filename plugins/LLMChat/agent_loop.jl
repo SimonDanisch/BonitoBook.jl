@@ -113,6 +113,93 @@ function run_agent_loop!(book, agent::HTTPAgent, user_message::String, task_spin
     return
 end
 
+"""
+    run_agent_loop!(book, agent::ClaudeCodeAgent, user_message, task_spinner, sanitizer_config, file_editor)
+
+Agent loop for Claude Code CLI. Similar to HTTPAgent loop but uses
+ClaudeCodeAgent's prompt method. The Claude CLI manages its own conversation
+history, so we only pass the current user message.
+"""
+function run_agent_loop!(book, agent::ClaudeCodeAgent, user_message::String, task_spinner::TaskSpinner, sanitizer_config::SanitizerConfig, file_editor)
+    # Reset agent state for new conversation turn
+    agent.last_item[] = nothing
+    empty!(agent.needs_to_be_done)
+
+    # Add user message cell
+    user_markdown_code = "Markdown.parse($(repr(user_message)))"
+    add_cell!(book, user_markdown_code, "julia", Dict{Symbol, Any}(:from => :user))
+
+    async_spinner!(task_spinner, "agent loop", 1:50) do i
+        # Build messages from current conversation
+        messages = cells_to_messages(book)
+
+        # Call Claude CLI - returns Channel with items
+        result_channel = async_spinner!(task_spinner, "asking claude") do
+            prompt(agent, messages; spinner=task_spinner)
+        end
+
+        # Process all items from the channel
+        async_spinner!(task_spinner, "processing ai", result_channel) do item
+            process_agent_item!(book, agent, item, sanitizer_config, file_editor)
+        end
+
+        # Return true for stopping early
+        isdone(agent) && return true
+    end
+    return
+end
+
+function process_agent_item!(book, agent::ClaudeCodeAgent, item, sanitizer_config::SanitizerConfig, file_editor)
+    agent.last_item[] = item
+    if multi_task_tool(item)
+        agent.needs_to_be_done[typeof(item)] = item
+    end
+    try
+        process_item!(book, item, agent, sanitizer_config, file_editor)
+    catch e
+        error_msg = "Error processing item of type $(typeof(item)): $(e)"
+        process_item!(book, error_msg, agent, sanitizer_config, file_editor)
+    end
+end
+
+# Text content handler for ClaudeCodeAgent
+function process_item!(book, item::String, agent::ClaudeCodeAgent, sanitizer_config::SanitizerConfig, file_editor)
+    markdown_code = "Markdown.parse($(repr(item)))"
+    add_cell!(book, markdown_code, "julia", Dict{Symbol, Any}(:from => :agent))
+end
+
+# Tool handler for ClaudeCodeAgent — reuse the HTTPAgent tool handlers
+function process_item!(book, tool::AddCellTool, agent::ClaudeCodeAgent, sanitizer_config::SanitizerConfig, file_editor)
+    metadata = something(tool.metadata, Dict{Symbol,Any}())
+    metadata = merge(Dict{Symbol,Any}(:from => :agent, :tool => "add_cell"), metadata)
+    cell = add_cell!(book, tool.content, tool.language, metadata; editor_visible=true)
+    return cell
+end
+
+function process_item!(book, tool::AbstractTool, agent::ClaudeCodeAgent, sanitizer_config::SanitizerConfig, file_editor)
+    result = execute_tool!(tool, 4000)
+    tool_execution = ToolExecution(tool, result)
+    path = store_tool_exe!(book, tool_execution)
+    name = basename(path)
+    tool_code = """open(io -> JSON3.read(io, $(typeof(tool_execution))), data"tools/$name")"""
+    tool_type = Base.invokelatest(tool_name, typeof(tool))
+    cell = add_cell!(book, tool_code, "julia", Dict{Symbol, Any}(:from => :tool, :tool => tool_type))
+    open_file_in_editor(tool, file_editor)
+    return cell
+end
+
+function process_item!(book, item::Dict, agent::ClaudeCodeAgent, sanitizer_config::SanitizerConfig, file_editor)
+    if haskey(item, :type) && item[:type] == :cell
+        metadata = merge(Dict{Symbol, Any}(:from => :agent), get(item, :metadata, Dict()))
+        add_cell!(book, item[:content], item[:language], metadata)
+    end
+end
+
+# Fallback
+function process_item!(book, item, agent::ClaudeCodeAgent, sanitizer_config::SanitizerConfig, file_editor)
+    nothing
+end
+
 function isdone(agent::HTTPAgent)
     if !isempty(agent.needs_to_be_done)
         finished = all(isdone, values(agent.needs_to_be_done))

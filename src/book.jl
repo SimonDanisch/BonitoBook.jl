@@ -18,6 +18,8 @@ mutable struct Book <: AbstractBook
     theme_preference::Observable{String}
     monaco_theme::Observable{String}
     cell_id_counter::Ref{Int}  # Counter for assigning unique cell IDs
+    last_save_hash::Ref{UInt64}  # Hash of file after last save (prevents self-triggering)
+    file_watcher::Union{Nothing, EvalFileOnChange}  # Watches markdown file for external changes
 end
 
 
@@ -49,12 +51,25 @@ function import_bookfile(book_file, folder, replace_style)
 
     # Set book.file to point to the .md file where content should be saved
     if ext == ".md" || ext == ".ipynb"
-        # For .md files, book.file points to the original file
-        # Create folder structure based on the .md file
         if isnothing(folder)
             folder = create_book_structure(book_file; replace_style=replace_style)
         elseif !isdir(folder)
             error("Provided folder $folder does not exist")
+        else
+            # Detect if the provided folder is a plugin template (read-only).
+            # If it contains a book.jl that references a plugin, create an
+            # instance folder instead so we don't mutate the plugin.
+            if is_plugin_template(folder)
+                instance_folder = create_book_structure(book_file; replace_style=replace_style)
+                # Copy the book.jl reference so the instance inherits the plugin
+                plugin_book_jl = joinpath(folder, "book.jl")
+                instance_book_jl = joinpath(instance_folder, "book.jl")
+                if isfile(plugin_book_jl) && !isfile(instance_book_jl)
+                    _cp(plugin_book_jl, instance_book_jl)
+                end
+                @info "Created instance folder $instance_folder (inheriting from plugin $folder)"
+                folder = instance_folder
+            end
         end
         return book_file, folder
     else
@@ -81,7 +96,7 @@ function Book(user_file::String; folder=nothing, replace_style=false, all_blocks
     # The runner will cd into folder for code execution
     runner = AsyncRunner(folder; global_logger=global_logging_widget.logging)
     monaco_theme = Observable{String}("default")
-    editors = cells2editors(cells, runner, monaco_theme)
+    editors = cells2editors(cells, runner, monaco_theme, folder)
     progress = Observable((false, 0.0))
 
     # Assign IDs to all cells and get the next counter value
@@ -98,7 +113,7 @@ function Book(user_file::String; folder=nothing, replace_style=false, all_blocks
     ))
     include_file = joinpath(folder, "include.jl")
     if isfile(include_file)
-        runner.mod.include(include_file)
+        @eval runner.mod include($include_file)
     end
     # Set up style evaluation - use get_file_path to check custom then template
     style_path, is_custom = get_file_path(folder, "style.jl")
@@ -110,7 +125,7 @@ function Book(user_file::String; folder=nothing, replace_style=false, all_blocks
     book = Book(
         markdown_file, folder, editors, runner, progress, nothing, nothing, Dict{String,Any}(),
         global_logging_widget, style_eval, spinner, current_cell, theme_preference, monaco_theme,
-        cell_id_counter
+        cell_id_counter, Ref(UInt64(0)), nothing
     )
     for cell in book.cells
         cell.book = book  # Set back-reference to the parent book
@@ -402,7 +417,121 @@ function save(book::Book)
     # Create backup with original filename
     backup_name = "$(splitext(basename(book.file))[1])-$version.md"
     cp(book.file, joinpath(book.folder, ".versions", backup_name); force=true)
-    return export_md(book.file, book)
+    result = export_md(book.file, book)
+    # Record hash so file watcher can ignore our own saves
+    book.last_save_hash[] = hash(read(book.file))
+    return result
+end
+
+"""
+    apply_file_changes!(book::Book)
+
+Detect external changes to the markdown file and update the notebook.
+Uses cell IDs to match old cells to new cells, preserving execution state
+for unchanged cells.
+"""
+function apply_file_changes!(book::Book)
+    # Skip if this is our own save
+    file_hash = hash(read(book.file))
+    file_hash == book.last_save_hash[] && return
+
+    new_cells = load_book(book.file)
+
+    # Build ID -> editor lookup for current cells
+    old_by_id = Dict(c.uuid => c for c in book.cells)
+
+    # Match new cells to old ones by ID
+    new_editors = CellEditor[]
+    matched_ids = Set{Int}()
+
+    for cell in new_cells
+        if haskey(old_by_id, cell.id)
+            # Existing cell - update source if changed
+            editor = old_by_id[cell.id]
+            push!(matched_ids, cell.id)
+            if editor.editor.source[] != cell.source
+                # Source changed externally - update Julia-side observable
+                editor.editor.source[] = cell.source
+                # Also push to JS if session is active
+                if !isnothing(book.session)
+                    set_source!(editor.editor, cell.source)
+                end
+                # Re-run markdown cells immediately
+                if cell.language == "markdown"
+                    run_sync!(editor.editor)
+                end
+            end
+            push!(new_editors, editor)
+        else
+            # New cell - create editor
+            new_editor = CellEditor(
+                cell.source, string(cell.language), book.runner;
+                show_editor=cell.show_editor,
+                show_logging=cell.show_logging,
+                show_output=cell.show_output,
+                theme=book.monaco_theme,
+                metadata=cell.metadata,
+                id=cell.id
+            )
+            new_editor.book = book
+            push!(new_editors, new_editor)
+        end
+    end
+
+    # Find deleted cells (old cells not in matched_ids)
+    for editor in book.cells
+        if !(editor.uuid in matched_ids)
+            close(editor)
+        end
+    end
+
+    # Update the book cells array
+    book.cells = new_editors
+
+    # Sync JS state if session is available
+    if !isnothing(book.session)
+        evaljs(book.session, js"""
+            $(Monaco).then(Monaco => {
+                Monaco.BOOK.update_order($(map(c -> c.uuid, book.cells)));
+            })
+        """)
+    end
+
+    # Record current state as our last known hash
+    book.last_save_hash[] = file_hash
+    return
+end
+
+"""
+    start_file_watcher!(book::Book)
+
+Start watching the book's markdown file for external changes.
+Reuses the same FileWatching pattern as EvalFileOnChange.
+"""
+function start_file_watcher!(book::Book)
+    !isnothing(book.file_watcher) && return
+    watcher = Observable(mtime(book.file))
+    current_output = Observable{Any}(nothing)
+    last_valid_output = Observable{Any}(nothing)
+    file_watcher_task = Ref{Task}()
+    close_flag = Threads.Atomic{Bool}(false)
+    efo = EvalFileOnChange(
+        book.file, current_output, last_valid_output,
+        watcher, file_watcher_task, close_flag
+    )
+    # Override the default eval behavior - instead of evaluating the file,
+    # detect changes and diff
+    Observables.clear(watcher)
+    on(watcher) do _time
+        try
+            apply_file_changes!(book)
+        catch e
+            @warn "Error applying file changes" exception=(e, catch_backtrace())
+        end
+    end
+    start_watch_loop!(efo)
+    book.file_watcher = efo
+    return
 end
 
 """
@@ -438,6 +567,27 @@ function insert_editor!(book, editor, index::Int)
             })
         }"""
     )
+end
+
+"""
+    move_cell!(book::Book, from_uuid::Int, to_index::Int)
+
+Move a cell from its current position to a new 1-based index.
+Updates both the Julia cells array and saves the markdown.
+"""
+function move_cell!(book::Book, from_uuid::Int, to_index::Int)
+    from_idx = findfirst(x -> x.uuid == from_uuid, book.cells)
+    isnothing(from_idx) && return
+    to_index = clamp(to_index, 1, length(book.cells))
+    from_idx == to_index && return
+
+    editor = book.cells[from_idx]
+    deleteat!(book.cells, from_idx)
+    # Adjust target index after removal
+    adjusted = from_idx < to_index ? to_index - 1 : to_index
+    insert!(book.cells, adjusted, editor)
+    save(book)
+    return
 end
 
 function insert_editor_below!(book, editor, editor_above_uuid)
@@ -643,9 +793,21 @@ end
 
 function standard_setup!(session::Session, book::Book)
     book.session = session
+
+    # Observable for receiving cell move messages from JS drag & drop
+    move_cell_obs = Observable(Dict{String,Any}())
+    on(session, move_cell_obs) do msg
+        haskey(msg, "uuid") || return
+        haskey(msg, "to_index") || return
+        from_uuid = Int(msg["uuid"])
+        to_index = Int(msg["to_index"])
+        move_cell!(book, from_uuid, to_index)
+    end
+
     register_book = js"""
         $(Monaco).then(Monaco => {
             Monaco.BOOK.update_order($(map(c-> c.uuid, book.cells)));
+            Monaco.BOOK.setup_drag_drop($(move_cell_obs));
         })
     """
 
@@ -674,9 +836,16 @@ function standard_setup!(session::Session, book::Book)
         });
     """
     on(session.on_close) do closed
-        closed && close(book.runner)
+        if closed
+            close(book.runner)
+            if !isnothing(book.file_watcher)
+                book.file_watcher.close[] = true
+            end
+        end
         return
     end
+    # Start watching the markdown file for external changes
+    start_file_watcher!(book)
     style = book.style_eval.last_valid_output
     codicon = Styles(
         CSS(
@@ -692,6 +861,7 @@ end
 
 function Bonito.jsrender(session::Session, book::Book)
     book.session = session
+    session.metadata[:current_book] = book
     runner = book.runner
     add_julia_mpc_route!(book)
 

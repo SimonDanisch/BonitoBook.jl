@@ -11,8 +11,7 @@ const REDIRECT_TARGET = Base.RefValue{RedirectTarget}()
 function Base.write(target::RedirectTarget, bytes::AbstractVector{UInt8})
     lock(target.lock) do
         if !isempty(bytes)
-            printer = HTMLPrinter(IOBuffer(bytes); root_tag = "span")
-            str = sprint(io -> show(io, MIME"text/html"(), printer))
+            str = Bonito.ansi_to_html(bytes)
             target.observable[] = str
         end
     end
@@ -24,7 +23,7 @@ function Base.setindex!(target::RedirectTarget, obs::Observable{String})
     end
 end
 
-# Taken from IOCapture.jl, adpated to our needs!
+# Taken from IOCapture.jl, adapted to our needs!
 function redirect_all_to_channel()
     # Needs to be singleton, since we can only redirect one time
     if isassigned(REDIRECT_TARGET)

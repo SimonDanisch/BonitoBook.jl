@@ -381,6 +381,228 @@ class Book {
         // Needs to be parent since the cell div is wrapped in another with the add menu
         document.getElementById(uuid).parentElement.remove();
     }
+
+    setup_drag_drop(move_cell_obs) {
+        this.move_cell_obs = move_cell_obs;
+        this.drag_state = null;
+        this.drop_indicator = null;
+        this.scroll_parent = document.querySelector(".book-cells-area");
+        this.auto_scroll_speed = 0;
+        this.scroll_interval = null;
+
+        // Ensure we only add listeners once globally
+        if (window._BONITO_DRAG_LISTENERS_SET) return;
+        window._BONITO_DRAG_LISTENERS_SET = true;
+
+        // Use document-level listeners to handle dragging over sticky menus and off-screen
+        document.addEventListener("dragover", (e) => {
+            if (this.drag_state) this.handle_drag_over(e);
+        });
+        document.addEventListener("drop", (e) => {
+            if (this.drag_state) this.handle_drop(e);
+        });
+        document.addEventListener("dragenter", (e) => {
+            if (this.drag_state) e.preventDefault();
+        });
+    }
+
+    start_auto_scroll(speed) {
+        this.auto_scroll_speed = speed;
+        if (!this.scroll_interval) {
+            this.scroll_interval = setInterval(() => {
+                if (this.scroll_parent && this.auto_scroll_speed !== 0) {
+                    this.scroll_parent.scrollTop += this.auto_scroll_speed;
+                }
+            }, 16); // ~60fps
+        }
+    }
+
+    stop_auto_scroll() {
+        if (this.scroll_interval) {
+            clearInterval(this.scroll_interval);
+            this.scroll_interval = null;
+        }
+        this.auto_scroll_speed = 0;
+    }
+
+    get_cell_wrapper(uuid) {
+        const el = document.getElementById(uuid);
+        return el ? el.parentElement : null;
+    }
+
+    start_drag(uuid, event) {
+        const wrapper = this.get_cell_wrapper(uuid);
+        if (!wrapper) return;
+        this.drag_state = { uuid, wrapper };
+        this.drag_start_y = event.clientY; // Track starting position
+        wrapper.classList.add("dragging");
+
+        // Create drop indicator line
+        if (!this.drop_indicator) {
+            this.drop_indicator = document.createElement("div");
+            this.drop_indicator.className = "drop-indicator";
+        }
+
+        // Use a custom data type to prevent browser from navigating if dropped on URL bar
+        event.dataTransfer.effectAllowed = "move";
+        event.dataTransfer.setData("application/x-bonitobook-cell", String(uuid));
+        
+        // Use a transparent drag image to avoid the "ghost" text follow
+        const img = new Image();
+        img.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+        event.dataTransfer.setDragImage(img, 0, 0);
+    }
+
+    end_drag() {
+        this.stop_auto_scroll();
+        if (this.drag_state) {
+            this.drag_state.wrapper.classList.remove("dragging");
+            this.drag_state = null;
+        }
+        if (this.drop_indicator && this.drop_indicator.parentElement) {
+            this.drop_indicator.remove();
+        }
+        // Clear all drop target highlights
+        document.querySelectorAll(".drop-target-before, .drop-target-after").forEach(el => {
+            el.classList.remove("drop-target-before", "drop-target-after");
+        });
+    }
+
+    handle_drag_over(event) {
+        if (!this.drag_state) return;
+        event.preventDefault(); // Always prevent default to allow drop
+        event.dataTransfer.dropEffect = "move";
+
+        // Find scroll parent if missing or detached
+        if (!this.scroll_parent || !this.scroll_parent.isConnected) {
+            this.scroll_parent = document.querySelector(".book-cells-area");
+        }
+
+        // Handle auto-scrolling
+        if (this.scroll_parent) {
+            // Use viewport-relative boundaries for perfect symmetry and menu handling
+            const threshold = 180;
+            const topDist = event.clientY; // relative to viewport top
+            const bottomDist = window.innerHeight - event.clientY; // relative to viewport bottom
+
+            // Directional lock: only scroll if moving towards edge or already at extreme edge
+            const movedTop = event.clientY < this.drag_start_y - 5 || event.clientY < 40;
+            const movedBottom = event.clientY > this.drag_start_y + 5 || (window.innerHeight - event.clientY) < 40;
+
+            // Symmetry check: use the same formula for both directions
+            const calculateSpeed = (dist) => {
+                if (dist >= threshold) return 0;
+                // intensity: 0 at threshold, 1 at edge
+                const intensity = (threshold - dist) / threshold;
+                // Quadratic ramp (0 to ~12px per frame)
+                return Math.pow(Math.min(1.1, intensity), 2) * 12.0;
+            };
+
+            const sTop = calculateSpeed(topDist);
+            const sBottom = calculateSpeed(bottomDist);
+
+            if (sTop > 0 && movedTop) {
+                this.start_auto_scroll(-sTop);
+            } else if (sBottom > 0 && movedBottom) {
+                this.start_auto_scroll(sBottom);
+            } else {
+                this.stop_auto_scroll();
+            }
+        }
+
+        // Find closest cell wrapper
+        const target = this.find_closest_cell(event.clientY);
+        if (!target) return;
+
+        const rect = target.wrapper.getBoundingClientRect();
+        const midY = rect.top + rect.height / 2;
+        const before = event.clientY < midY;
+
+        // Visual feedback: drop indicator and highlights
+        if (before) {
+            target.wrapper.insertAdjacentElement("beforebegin", this.drop_indicator);
+            target.wrapper.classList.add("drop-target-before");
+            target.wrapper.classList.remove("drop-target-after");
+        } else {
+            target.wrapper.insertAdjacentElement("afterend", this.drop_indicator);
+            target.wrapper.classList.add("drop-target-after");
+            target.wrapper.classList.remove("drop-target-before");
+        }
+
+        // Remove highlights from other cells
+        for (const uuid of this.cells) {
+            if (uuid === target.uuid) continue;
+            const wrapper = this.get_cell_wrapper(uuid);
+            if (wrapper) {
+                wrapper.classList.remove("drop-target-before", "drop-target-after");
+            }
+        }
+
+        this.drop_indicator.dataset.targetUuid = String(target.uuid);
+        this.drop_indicator.dataset.before = String(before);
+    }
+
+    handle_drop(event) {
+        event.preventDefault();
+        if (!this.drag_state || !this.drop_indicator) return;
+
+        const from_uuid = this.drag_state.uuid;
+        const target_uuid = parseInt(this.drop_indicator.dataset.targetUuid);
+        const before = this.drop_indicator.dataset.before === "true";
+
+        if (isNaN(target_uuid) || from_uuid === target_uuid) {
+            this.end_drag();
+            return;
+        }
+
+        // Calculate new 1-based index for Julia
+        let target_idx = this.cells.indexOf(target_uuid);
+        if (target_idx === -1) { this.end_drag(); return; }
+
+        // Adjust for before/after
+        if (!before) target_idx += 1;
+        // Convert to 1-based
+        const to_index = target_idx + 1;
+
+        // Reorder in JS cells array
+        const from_idx = this.cells.indexOf(from_uuid);
+        this.cells.splice(from_idx, 1);
+        const adjusted = from_idx < target_idx ? target_idx - 1 : target_idx;
+        this.cells.splice(adjusted, 0, from_uuid);
+
+        // Reorder in DOM
+        const wrapper = this.drag_state.wrapper;
+        const target_wrapper = this.get_cell_wrapper(target_uuid);
+        if (target_wrapper) {
+            if (before) {
+                target_wrapper.insertAdjacentElement("beforebegin", wrapper);
+            } else {
+                target_wrapper.insertAdjacentElement("afterend", wrapper);
+            }
+        }
+
+        // Notify Julia
+        this.move_cell_obs.notify({ uuid: from_uuid, to_index: to_index });
+        this.end_drag();
+    }
+
+    find_closest_cell(clientY) {
+        let closest = null;
+        let closestDist = Infinity;
+        for (const uuid of this.cells) {
+            if (this.drag_state && uuid === this.drag_state.uuid) continue;
+            const wrapper = this.get_cell_wrapper(uuid);
+            if (!wrapper) continue;
+            const rect = wrapper.getBoundingClientRect();
+            const mid = rect.top + rect.height / 2;
+            const dist = Math.abs(clientY - mid);
+            if (dist < closestDist) {
+                closestDist = dist;
+                closest = { uuid, wrapper };
+            }
+        }
+        return closest;
+    }
 }
 
 export const BOOK = new Book();
@@ -628,6 +850,23 @@ export function setup_cell_editor(
                 }
             }
         });
+    }
+
+    // Drag & drop: wire up drag handle and cell wrapper
+    const drag_handle = buttons.querySelector(".drag-handle");
+    if (drag_handle) {
+        // The cell wrapper is the outermost parent with the cell id
+        const cell_div = container.closest("[id]");
+        const cell_wrapper = cell_div ? cell_div.parentElement : null;
+        const uuid = cell_div ? parseInt(cell_div.id) : null;
+        if (cell_wrapper && uuid !== null) {
+            drag_handle.addEventListener("dragstart", (e) => {
+                BOOK.start_drag(uuid, e);
+            });
+            drag_handle.addEventListener("dragend", () => {
+                BOOK.end_drag();
+            });
+        }
     }
 }
 

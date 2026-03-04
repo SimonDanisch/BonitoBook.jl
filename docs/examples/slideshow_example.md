@@ -2,14 +2,12 @@
 
 **Makie.jl** + **BonitoBook** = Interactive visualizations in your browser!
 
-```julia (editor=true, logging=false, output=true, id=2)
-using WGLMakie
-set_theme!(size=(800, 300))
+```julia (editor=true, logging=false, output=true)
+using Revise, Bonito, WGLMakie, NDViewer, GeometryBasics
+using NDViewer: yaml_viewer
 
-x = range(0, 2π, length=50)
-lines(x, sin.(x),
-      axis=(xlabel="x", ylabel="sin(x)", title="Welcome to Makie!"),
-      color=:steelblue, linewidth=3)
+yaml_path(name) = normpath(pathof(NDViewer), "..", "..", "examples", name)
+yaml_viewer(yaml_path("speedyweather.yaml"))
 ```
 ---
 
@@ -17,7 +15,7 @@ lines(x, sin.(x),
 
 **Figure** and **Axis** are Makie's building blocks. Multiple plots in one figure:
 
-```julia (editor=true, logging=false, output=true, id=4)
+```julia (editor=true, logging=false, output=true)
 x = 1:20
 y1 = x .+ 2 * randn(20)
 y2 = 2 * x .+ randn(20)
@@ -35,7 +33,7 @@ fig
 
 Histograms, densities, and time series:
 
-```julia (editor=true, logging=false, output=true, id=6)
+```julia (editor=true, logging=false, output=true)
 using Statistics, Distributions
 
 data1 = randn(1000)
@@ -60,7 +58,7 @@ fig
 
 Click and drag to rotate, scroll to zoom!
 
-```julia (editor=true, logging=false, output=true, id=8)
+```julia (editor=true, logging=false, output=true)
 x = range(-3, 3, length=50)
 y = range(-3, 3, length=50)
 z = [sin(sqrt(x^2+y^2)) / sqrt(x^2+y^2) for x in x, y in y]
@@ -73,7 +71,8 @@ surface(x, y, z, colormap=:plasma)
 
 Apply themes and customize styling:
 
-```julia (editor=true, logging=false, output=true, id=10)
+```julia (editor=true, logging=false, output=true)
+using WGLMakie
 set_theme!(theme_dark();size=(800,400))
 
 x = 0:0.1:4π

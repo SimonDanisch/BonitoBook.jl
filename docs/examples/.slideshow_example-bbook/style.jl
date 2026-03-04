@@ -315,6 +315,156 @@ slideshow_styles = Styles(
         "margin-bottom" => "1.5rem"
     ),
 
+    # Hide hover menu in presentation mode
+    CSS(
+        ".presentation-themed-slideshow .hover-buttons",
+        "display" => "none !important"
+    ),
+
+    # Center and fix cell output to fit content
+    CSS(
+        ".slideshow-content .cell-output",
+        "width" => "fit-content",
+        "max-width" => "95%",
+        "margin-left" => "auto",
+        "margin-right" => "auto"
+    ),
+
+    # Center cell editor
+    CSS(
+        ".slideshow-content .cell-editor",
+        "margin-left" => "auto !important",
+        "margin-right" => "auto !important"
+    ),
+
+    # Large screen optimizations for presentations
+    CSS(
+        "@media (min-width: 1600px)",
+        CSS(
+            ".slideshow-content h1",
+            "font-size" => "4.5rem"
+        ),
+        CSS(
+            ".slideshow-content h2",
+            "font-size" => "3.5rem"
+        ),
+        CSS(
+            ".slideshow-content h3",
+            "font-size" => "2.8rem"
+        ),
+        CSS(
+            ".slideshow-content :is(p, li)",
+            "font-size" => "1.6rem",
+            "line-height" => "1.8"
+        ),
+        CSS(
+            ".slideshow-content .cell-editor-container",
+            "width" => "95%",
+            "max-width" => "1600px"
+        ),
+        CSS(
+            ".slideshow-content .cell-output",
+            "max-width" => "1600px"
+        ),
+        # Larger code font for presentations
+        CSS(
+            ".slideshow-content .monaco-editor, .slideshow-content .cell-editor",
+            "font-size" => "16px !important"
+        ),
+        CSS(
+            ".slideshow-content .view-lines",
+            "font-size" => "16px !important"
+        ),
+        # NDViewer widget scaling for large screens
+        CSS(
+            ".slideshow-content .ndviewer-widgets",
+            "padding" => "8px 16px",
+            "gap" => "4px 20px"
+        ),
+        CSS(
+            ".slideshow-content .ndviewer-lbl",
+            "font-size" => "16px"
+        ),
+        CSS(
+            ".slideshow-content .ndviewer-val",
+            "font-size" => "15px"
+        ),
+        CSS(
+            ".slideshow-content .ndviewer-play-btn",
+            "width" => "32px",
+            "height" => "32px",
+            "font-size" => "14px"
+        ),
+        CSS(
+            ".slideshow-content .ndviewer-slider-wrap",
+            "min-width" => "160px"
+        ),
+    ),
+
+    # Extra large screens (4K, projectors)
+    CSS(
+        "@media (min-width: 2400px)",
+        CSS(
+            ".slideshow-content h1",
+            "font-size" => "5.5rem"
+        ),
+        CSS(
+            ".slideshow-content h2",
+            "font-size" => "4.2rem"
+        ),
+        CSS(
+            ".slideshow-content h3",
+            "font-size" => "3.2rem"
+        ),
+        CSS(
+            ".slideshow-content :is(p, li)",
+            "font-size" => "2rem",
+            "line-height" => "1.9"
+        ),
+        CSS(
+            ".slideshow-content .cell-editor-container",
+            "width" => "90%",
+            "max-width" => "2200px"
+        ),
+        CSS(
+            ".slideshow-content .cell-output",
+            "max-width" => "2200px"
+        ),
+        # Even larger code font for 4K
+        CSS(
+            ".slideshow-content .monaco-editor, .slideshow-content .cell-editor",
+            "font-size" => "20px !important"
+        ),
+        CSS(
+            ".slideshow-content .view-lines",
+            "font-size" => "20px !important"
+        ),
+        # NDViewer widget scaling for extra large screens
+        CSS(
+            ".slideshow-content .ndviewer-widgets",
+            "padding" => "12px 24px",
+            "gap" => "6px 28px"
+        ),
+        CSS(
+            ".slideshow-content .ndviewer-lbl",
+            "font-size" => "20px"
+        ),
+        CSS(
+            ".slideshow-content .ndviewer-val",
+            "font-size" => "18px"
+        ),
+        CSS(
+            ".slideshow-content .ndviewer-play-btn",
+            "width" => "40px",
+            "height" => "40px",
+            "font-size" => "18px"
+        ),
+        CSS(
+            ".slideshow-content .ndviewer-slider-wrap",
+            "min-width" => "200px"
+        ),
+    ),
+
     # Images and figures - exclude button icons
     CSS(
         ".slideshow-content :is(img, svg):not(.small-button *):not(.codicon svg)",
@@ -327,8 +477,12 @@ slideshow_styles = Styles(
 
 )
 
-# Generate base BonitoBook styles but scope global elements to slideshow container
-base_style = BonitoBook.generate_style(current_book(); light_theme=true)
+# Generate base BonitoBook styles with wider editor for presentations
+base_style = BonitoBook.generate_style(current_book();
+    light_theme=true,
+    editor_width="80vw",
+    editor_max_width="1600px"
+)
 
 # Override base styles to be scoped to slideshow when embedded
 slideshow_scoped_style = Styles(

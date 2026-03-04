@@ -499,6 +499,54 @@ function generate_style(book;
             "pointer-events" => "auto",
         ),
 
+        # Drag handle
+        CSS(
+            ".drag-handle",
+            "cursor" => "grab",
+            "opacity" => "0.7",
+            "transition" => "all var(--transition-fast)",
+        ),
+        CSS(
+            ".drag-handle:hover",
+            "opacity" => "1",
+            "background-color" => "var(--hover-bg)",
+            "transform" => "scale(1.1)",
+        ),
+        CSS(
+            ".drag-handle:active",
+            "cursor" => "grabbing",
+        ),
+        # Dragging state
+        CSS(
+            ".dragging",
+            "opacity" => "0.2 !important",
+            "transform" => "scale(0.98)",
+            "transition" => "transform var(--transition-fast)",
+        ),
+        # Drop indicator line
+        CSS(
+            ".drop-indicator",
+            "height" => "4px",
+            "background" => "var(--accent-blue)",
+            "border-radius" => "2px",
+            "margin" => "4px 0",
+            "box-shadow" => "0 0 8px var(--accent-blue)",
+            "z-index" => "var(--z-overlay)",
+            "position" => "relative",
+            "transition" => "all 0.1s ease",
+        ),
+        # Highlights for target cells
+        CSS(
+            ".drop-target-before",
+            "border-top" => "2px solid var(--accent-blue) !important",
+            "transition" => "border-top 0.1s ease",
+        ),
+        CSS(
+            ".drop-target-after",
+            "border-bottom" => "2px solid var(--accent-blue) !important",
+            "transition" => "border-bottom 0.1s ease",
+        ),
+
         # Cell output
         CSS(
             ".cell-output",
@@ -1081,28 +1129,38 @@ function generate_style(book;
         ),
         CSS(
             ".book-cells-area",
+            "flex" => "1",
             "overflow-y" => "auto",
             "overflow-x" => "hidden",
             "width" => "100%",
-            "display" => "grid",
-            "place-items" => "center",
+            "display" => "flex",
+            "flex-direction" => "column",
+            "align-items" => "center",
             "-webkit-overflow-scrolling" => "touch"
         ),
         CSS(
             ".book-main-content",
             "overflow" => "hidden",
+            "flex" => "1",
+            "display" => "flex",
+            "flex-direction" => "column",
+            "height" => "100%",
         ),
         CSS(
             ".book-document",
             "display" => "flex",
             "flex-direction" => "column",
             "height" => "100vh",
+            "width" => "100vw",
             "overflow" => "hidden"
         ),
         CSS(
             ".book-wrapper",
             "overflow" => "hidden",
-            "height" => "100vh"
+            "height" => "100vh",
+            "width" => "100vw",
+            "display" => "flex",
+            "flex-direction" => "column"
         ),
         CSS(
             ".book-bottom-panel",
@@ -1341,6 +1399,7 @@ function generate_style(book;
             "flex-direction" => "row",
             "width" => "100%",
             "height" => "100%",
+            "flex" => "1",
             "overflow" => "hidden",
             "position" => "relative",
         ),

@@ -61,10 +61,25 @@ end
     load_agent_config(folder::String)
 
 Load agent configuration from TOML file or create default HTTPAgent.
-Returns an HTTPAgent ready to use.
+Supports `backend = "claude-code"` to use the Claude Code CLI wrapper,
+or defaults to HTTPAgent for direct API access.
+Returns an LLMChatAgent ready to use.
 """
 function load_agent_config(folder::String)
     config_path = joinpath(folder, "ai", "llm-config.toml")
+
+    # Check for backend selection in config
+    if isfile(config_path)
+        try
+            toml_data = TOML.parsefile(config_path)
+            backend = get(toml_data, "backend", "http")
+            if backend == "claude-code"
+                return load_claude_code_config(folder)
+            end
+        catch
+            # Fall through to default HTTP agent
+        end
+    end
 
     # Default configuration values
     default_model = "claude-sonnet-4-20250514"

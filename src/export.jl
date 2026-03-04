@@ -132,32 +132,149 @@ function export_md(file::AbstractString, book::Book)
             show_output = editor.show_output[]
             metadata = cell_editor.metadata
 
+            # Build options string with metadata
+            opts = ["editor=$show_editor", "logging=$show_logging", "output=$show_output"]
+
+            # Add uuid as id
+            push!(opts, "id=$(cell_editor.uuid)")
+
+            # Add metadata fields
+            for (key, val) in metadata
+                val_str = if val isa Symbol
+                    ":$val"
+                elseif val isa String
+                    "\"$val\""
+                else
+                    string(val)
+                end
+                push!(opts, "$key=$val_str")
+            end
+
+            opts_str = join(opts, ", ")
+            # Use a fence long enough to not conflict with backticks in content
+            fence = "```"
+            while occursin(fence, content)
+                fence *= "`"
+            end
+            println(io, "$fence$language ($opts_str)")
+            println(io, content)
+            println(io, fence)
+        end
+    end
+    return file
+end
+
+"""
+    cell_output_to_file(output_dir, cell_id, value) -> Union{String, Nothing}
+
+Save a cell's output value to a file in the output directory.
+Returns the relative path to the saved file, or nothing if the value can't be saved.
+
+Tries formats in order: image/png, image/svg+xml, text/html, text/plain.
+"""
+function cell_output_to_file(output_dir::String, cell_id::Int, value)
+    isnothing(value) && return nothing
+    # Unwrap NoSplat
+    if value isa NoSplat
+        value = value.value
+    end
+    isnothing(value) && return nothing
+
+    mkpath(output_dir)
+
+    # Try PNG
+    if showable(MIME"image/png"(), value)
+        path = joinpath(output_dir, "cell_$(cell_id).png")
+        open(path, "w") do io
+            show(io, MIME"image/png"(), value)
+        end
+        return "cell_$(cell_id).png"
+    end
+
+    # Try SVG
+    if showable(MIME"image/svg+xml"(), value)
+        path = joinpath(output_dir, "cell_$(cell_id).svg")
+        open(path, "w") do io
+            show(io, MIME"image/svg+xml"(), value)
+        end
+        return "cell_$(cell_id).svg"
+    end
+
+    # Try text/html - save as .html snippet for reference
+    if showable(MIME"text/html"(), value)
+        path = joinpath(output_dir, "cell_$(cell_id).html")
+        open(path, "w") do io
+            show(io, MIME"text/html"(), value)
+        end
+        return "cell_$(cell_id).html"
+    end
+
+    # Fallback: text/plain
+    path = joinpath(output_dir, "cell_$(cell_id).txt")
+    open(path, "w") do io
+        show(io, MIME"text/plain"(), value)
+    end
+    return "cell_$(cell_id).txt"
+end
+
+"""
+    export_md_with_results(file, book; output_dir=nothing)
+
+Export book to markdown with cell outputs inlined as images or code blocks.
+Output files are saved to `output_dir` (defaults to `./<name>-bbook/data/output/`).
+
+Images are referenced as `![](./path/to/output.png)` for GitHub markdown compatibility.
+
+- `file::AbstractString`: Output file path
+- `book::Book`: Book to export
+- `output_dir`: Directory for output files (default: auto)
+"""
+function export_md_with_results(file::AbstractString, book::Book; output_dir::String = "")
+    if isempty(output_dir)
+        output_dir = joinpath(book.folder, "data", "output")
+    end
+    mkpath(output_dir)
+
+    # Compute relative path from the markdown file to the output dir
+    md_dir = dirname(abspath(file))
+    rel_output_dir = relpath(abspath(output_dir), md_dir)
+
+    open(file, "w") do io
+        for cell_editor in book.cells
+            language = cell_editor.language
+            editor = cell_editor.editor
+            content = editor.source[]
+
             if language == "markdown"
                 println(io, content)
             else
-                # Build options string with metadata
-                opts = ["editor=$show_editor", "logging=$show_logging", "output=$show_output"]
-
-                # Add uuid as id
-                push!(opts, "id=$(cell_editor.uuid)")
-
-                # Add metadata fields
-                for (key, val) in metadata
-                    val_str = if val isa Symbol
-                        ":$val"
-                    elseif val isa String
-                        "\"$val\""
-                    else
-                        string(val)
-                    end
-                    push!(opts, "$key=$val_str")
-                end
-
-                opts_str = join(opts, ", ")
-                println(io, "```$language ($opts_str)")
+                # Write the code block
+                println(io, "```$language")
                 println(io, content)
                 println(io, "```")
+                println(io)
+
+                # Write the output
+                output_val = editor.output[]
+                output_file = cell_output_to_file(output_dir, cell_editor.uuid, output_val)
+                if !isnothing(output_file)
+                    rel_path = joinpath(rel_output_dir, output_file)
+                    if endswith(output_file, ".png") || endswith(output_file, ".svg")
+                        println(io, "![Output]($(rel_path))")
+                    elseif endswith(output_file, ".html")
+                        # Include HTML inline for GitHub (limited support)
+                        println(io, "<!-- Output: $(rel_path) -->")
+                    elseif endswith(output_file, ".txt")
+                        txt = read(joinpath(output_dir, output_file), String)
+                        if !isempty(strip(txt))
+                            println(io, "```")
+                            println(io, txt)
+                            println(io, "```")
+                        end
+                    end
+                end
             end
+            println(io)
         end
     end
     return file
@@ -398,4 +515,86 @@ function import_zip(zip_path::String, target_dir::String="")
     book_file = joinpath(target_dir, basename(splitext(zip_path)[1]) * ".md")
     @info "Imported book from ZIP to: $book_file"
     return book_file, target_dir
+end
+
+# ============================================================================
+# Typst / PDF Export
+# ============================================================================
+
+"""
+    export_typst(file, book; output_dir="", style_path=nothing)
+
+Export book to Typst markup. Uses `export_md_with_results` to generate markdown
+with inlined outputs, then converts to Typst via CommonMark's `typst()` writer.
+
+# Arguments
+- `file::AbstractString`: Output .typ file path
+- `book::Book`: Book to export
+- `output_dir::String`: Directory for output files (default: auto)
+- `style_path`: Custom style.typ path (default: loaded via `get_file_path`)
+"""
+function export_typst(file::AbstractString, book::Book; output_dir::String="", style_path=nothing)
+    # Step 1: Generate markdown with results
+    tmp_md = tempname() * ".md"
+    export_md_with_results(tmp_md, book; output_dir=output_dir)
+
+    # Step 2: Parse with CommonMark
+    source = read(tmp_md, String)
+    rm(tmp_md; force=true)
+
+    parser = Bonito.bonito_parser()
+    ast = parser(source)
+
+    # Step 3: Convert to Typst markup
+    typst_content = CommonMark.typst(ast)
+
+    # Step 4: Load style template
+    if style_path === nothing
+        style_path, _ = get_file_path(book.folder, "style.typ")
+    end
+    style_content = if isfile(style_path)
+        read(style_path, String)
+    else
+        ""
+    end
+
+    # Step 5: Write combined Typst file
+    open(file, "w") do io
+        if !isempty(style_content)
+            println(io, style_content)
+            println(io)
+        end
+        write(io, typst_content)
+    end
+
+    @info "Exported book to Typst: $file"
+    return file
+end
+
+"""
+    export_pdf(file, book; output_dir="", style_path=nothing)
+
+Export book to PDF via Typst. Generates a .typ intermediate file,
+then compiles it with `typst compile`.
+
+# Arguments
+- `file::AbstractString`: Output .pdf file path
+- `book::Book`: Book to export
+- `output_dir::String`: Directory for output files (default: auto)
+- `style_path`: Custom style.typ path (default: loaded via `get_file_path`)
+"""
+function export_pdf(file::AbstractString, book::Book; output_dir::String="", style_path=nothing)
+    # Generate .typ intermediate
+    typ_file = tempname() * ".typ"
+    export_typst(typ_file, book; output_dir=output_dir, style_path=style_path)
+
+    # Compile with Typst
+    try
+        run(`$(Typst_jll.typst()) compile $(typ_file) $(file)`)
+        @info "Exported book to PDF: $file"
+    finally
+        rm(typ_file; force=true)
+    end
+
+    return file
 end

@@ -267,7 +267,7 @@ function execute_tool!(tool::AbstractTool, max_tokens::Int=4000)
         return ToolResult(limited_result)
     catch e
         limited_error = limit_output(e, max_tokens)
-        return ToolResult(limited_error)
+        return ToolResult(limited_error, false)
     end
 end
 
@@ -290,6 +290,8 @@ struct BashTool <: AbstractTool
 end
 
 BashTool(command::String) = BashTool(command, nothing, nothing, false, nothing)
+BashTool(command::String, pipeline, output_file, append::Nothing, timeout) =
+    BashTool(command, pipeline, output_file, false, timeout)
 
 tool_name(::Type{BashTool}) = "bash"
 tool_description(::Type{BashTool}) = """Execute shell commands using Julia's command execution.
@@ -358,29 +360,52 @@ tool_input_schema(::Type{BashTool}) = Dict(
 )
 
 function execute_tool(tool::BashTool)
-    # Parse the main command
-    main_cmd = Cmd(split(tool.command, " "; keepempty=false))
-
-    # Build pipeline if specified
-    if !isnothing(tool.pipeline) && !isempty(tool.pipeline)
-        # Create pipeline of commands
-        cmds = [main_cmd]
-        for pipe_cmd in tool.pipeline
-            push!(cmds, Cmd(split(pipe_cmd, " "; keepempty=false)))
-        end
-        full_pipeline = Base.pipeline(cmds...)
-    else
-        full_pipeline = main_cmd
+    # If it's just a comment/no-op tool (starting with #), return nothing
+    if startswith(lstrip(tool.command), "#")
+        return nothing
     end
+
+    # Use bash -c to execute the command correctly with all shell features (piping, redirections, quoting)
+    # We ignore the pipeline/output_file/append/timeout parameters if they're handled inside the bash command
+    # but for compatibility we should still handle them.
+    
+    # Base command: use bash -c for the main command to handle quoting and operators
+    # We use a single string command to avoid quoting issues with Cmd()
+    full_command = tool.command
+    
+    # Append pipeline if provided
+    if !isnothing(tool.pipeline) && !isempty(tool.pipeline)
+        for p in tool.pipeline
+            full_command *= " | " * p
+        end
+    end
+    
+    # Append redirection if provided
+    if !isnothing(tool.output_file)
+        op = tool.append ? " >> " : " > "
+        full_command *= op * tool.output_file
+    end
+
+    # Create the Cmd to run via bash
+    cmd = `bash -c $(full_command)`
 
     # Helper function to run with optional timeout
     function run_with_timeout(cmd, timeout)
         if isnothing(timeout)
-            return read(cmd, String)
+            return try
+                read(cmd, String)
+            catch e
+                if e isa ProcessFailedException
+                    # In case of failure, try to get error message from stderr
+                    return "Command failed with exit code $(e.status)"
+                end
+                rethrow(e)
+            end
         end
 
         output = IOBuffer()
-        proc = open(cmd, "r")
+        # Use open() to start process, with stderr merged into stdout for easier debugging
+        proc = open(pipeline(cmd, stderr=stdout), "r")
         start_time = time()
 
         try
@@ -388,7 +413,7 @@ function execute_tool(tool::BashTool)
                 if bytesavailable(proc) > 0
                     write(output, read(proc, bytesavailable(proc)))
                 else
-                    sleep(0.01)  # Small sleep to avoid busy waiting
+                    sleep(0.01)
                 end
             end
 
@@ -397,7 +422,6 @@ function execute_tool(tool::BashTool)
                 return String(take!(output)) * "\n[TIMEOUT: Command exceeded $(timeout)s limit and was killed]"
             end
 
-            # Read any remaining output
             write(output, read(proc))
             return String(take!(output))
         finally
@@ -405,24 +429,7 @@ function execute_tool(tool::BashTool)
         end
     end
 
-    # Handle output redirection
-    if !isnothing(tool.output_file)
-        mode = tool.append ? "a" : "w"
-        if isnothing(tool.timeout)
-            open(tool.output_file, mode) do io
-                run(pipeline(full_pipeline, stdout=io))
-            end
-        else
-            # For timeout with file output, capture first then write
-            result = run_with_timeout(full_pipeline, tool.timeout)
-            open(tool.output_file, mode) do io
-                write(io, result)
-            end
-        end
-        return "Output written to $(tool.output_file)$(tool.append ? " (appended)" : "")"
-    else
-        return run_with_timeout(full_pipeline, tool.timeout)
-    end
+    return run_with_timeout(cmd, tool.timeout)
 end
 
 """
@@ -885,8 +892,7 @@ function execute_tool(tool::FileTool)
             error("Pattern required for glob")
         end
         path = get(args, "path", ".")
-        pattern_path = joinpath(path, pattern)
-        return glob(pattern_path)
+        return glob(pattern, path)
     elseif tool.command == "find"
         pattern = get(args, "pattern", nothing)
         if pattern === nothing
@@ -1026,7 +1032,13 @@ export BashTool,
     AddCellTool,
     TodoList,
     ToolExecution,
-    ToolResult
+    ToolResult,
+    execute_tool!,
+    tool_name,
+    tool_description,
+    tool_input_schema,
+    limit_output,
+    isdone
 
 # ============================================================================
 # Git Tool

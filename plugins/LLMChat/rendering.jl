@@ -161,8 +161,11 @@ function Bonito.jsrender(session::Session, execution::ToolExecution{FileReadTool
     click = Observable(false)
     open_btn = DOM.button("📂 Open", class="tool-open-btn", onclick=js"event=> $(click).notify(true)")
     on(session, click) do _
-        book = BonitoBook.current_book()
-        if haskey(book.widgets, "file_editor")
+        book = BonitoBook.current_book(session)
+        if isnothing(book)
+            book = BonitoBook.current_book()
+        end
+        if !isnothing(book) && haskey(book.widgets, "file_editor")
             file_editor = book.widgets["file_editor"]
             if isfile(tool.path)
                 BonitoBook.open_file!(file_editor, tool.path)
@@ -228,8 +231,11 @@ function Bonito.jsrender(session::Session, execution::ToolExecution{FileWriteToo
     click = Observable(false)
     open_btn = DOM.button("📂 Open", class="tool-open-btn", onclick=js"event=> $(click).notify(true)")
     on(session, click) do _
-        book = BonitoBook.current_book()
-        if haskey(book.widgets, "file_editor")
+        book = BonitoBook.current_book(session)
+        if isnothing(book)
+            book = BonitoBook.current_book()
+        end
+        if !isnothing(book) && haskey(book.widgets, "file_editor")
             file_editor = book.widgets["file_editor"]
             if isfile(tool.path)
                 BonitoBook.open_file!(file_editor, tool.path)
@@ -269,8 +275,11 @@ function Bonito.jsrender(session::Session, execution::ToolExecution{FileEditTool
     click = Observable(false)
     open_btn = DOM.button("📂 Open", class="tool-open-btn", onclick=js"event=> $(click).notify(true)")
     on(session, click) do _
-        book = (@__MODULE__).current_book()
-        if haskey(book.widgets, "file_editor")
+        book = BonitoBook.current_book(session)
+        if isnothing(book)
+            book = BonitoBook.current_book()
+        end
+        if !isnothing(book) && haskey(book.widgets, "file_editor")
             file_editor = book.widgets["file_editor"]
             if isfile(tool.path)
                 BonitoBook.open_file!(file_editor, tool.path)

@@ -139,7 +139,7 @@ Interactive code editor with execution capabilities and bidirectional JavaScript
 - `source::Observable{String}`: Current source code
 - `output::Observable{Any}`: Execution output
 - `logging::Observable{String}`: Execution logs
-- `logging_html::Observable{String}`: HTML-formatted logs
+- `terminal_output::TerminalOutput`: Terminal output widget for formatted logs
 - `show_logging::Observable{Bool}`: Whether to show logs
 - `show_output::Observable{Bool}`: Whether to show output
 - `show_editor::Observable{Bool}`: Whether to show editor
@@ -158,7 +158,7 @@ struct EvalEditor
 
     output::Observable{Any}
     logging::Observable{String}
-    logging_html::Observable{String}
+    terminal_output::TerminalOutput
 
     show_logging::Observable{Bool}
     show_output::Observable{Bool}
@@ -253,11 +253,10 @@ function EvalEditor(
     result = Observable{Any}(nothing)
     src = Observable(source)
     logging = Observable("")
-    logging_html = Observable("")
+    terminal_out = TerminalOutput()
     on(logging) do str
         if !isempty(str)
-            # Append the new HTML content (already formatted by ANSIColoredPrinters)
-            logging_html[] = logging_html[] * str
+            append_html!(terminal_out, str)
         end
     end
     # Initialize markdown_focus_edit based on parameter or auto-detect
@@ -278,7 +277,7 @@ function EvalEditor(
         src,
         result,
         logging,
-        logging_html,
+        terminal_out,
 
         Observable(show_logging),
         show_output,
@@ -305,11 +304,7 @@ function render_editor(editor::EvalEditor)
         "cell-logging " * (show ? "" : hiding)
     end
     output_div = DOM.div(editor.output, class = map(c -> "cell-output cell-output-$(editor.language) $(c)", output_class))
-    logging_html = Observable(HTML(""))
-    on(editor.logging_html) do str
-        logging_html[] = HTML("<pre>" * str * "</pre>")
-    end
-    logging_div = DOM.div(ANSI_CSS, DOM.div(logging_html, class = logging_class))
+    logging_div = DOM.div(editor.terminal_output, class = logging_class)
     # Set the init func, which we can only do here where we have all divs
     editor.editor.js_init_func[] = js"""((editor) => {
         const output_div = $(output_div);
@@ -344,7 +339,7 @@ function Base.close(editor::EvalEditor)
     Observables.clear(editor.source)
     Observables.clear(editor.output)
     Observables.clear(editor.logging)
-    Observables.clear(editor.logging_html)
+    Observables.clear(editor.terminal_output.content)
     Observables.clear(editor.show_logging)
     Observables.clear(editor.show_output)
     Observables.clear(editor.show_editor)
@@ -493,7 +488,8 @@ function Bonito.jsrender(session::Session, editor::CellEditor)
         })
     }
     """
-    hover_buttons = DOM.div(show_editor, show_logging, out, delete_editor; class = "hover-buttons", id = hover_id)
+    drag_handle = DOM.div(icon("gripper", size = "14px"); class = "drag-handle small-button", draggable = "true")
+    hover_buttons = DOM.div(drag_handle, show_editor, show_logging, out, delete_editor; class = "hover-buttons", id = hover_id)
 
     # Create small always-visible language indicator positioned in bottom right
     names = Dict(lang_name => lang.icon for (lang_name, lang) in ALL_LANGUAGES)

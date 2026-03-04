@@ -362,6 +362,185 @@ class Book {
         }
         document.getElementById(uuid1).parentElement.remove();
     }
+    setup_drag_drop(move_cell_obs) {
+        this.move_cell_obs = move_cell_obs;
+        this.drag_state = null;
+        this.drop_indicator = null;
+        this.scroll_parent = document.querySelector(".book-cells-area");
+        this.auto_scroll_speed = 0;
+        this.scroll_interval = null;
+        if (window._BONITO_DRAG_LISTENERS_SET) return;
+        window._BONITO_DRAG_LISTENERS_SET = true;
+        document.addEventListener("dragover", (e)=>{
+            if (this.drag_state) this.handle_drag_over(e);
+        });
+        document.addEventListener("drop", (e)=>{
+            if (this.drag_state) this.handle_drop(e);
+        });
+        document.addEventListener("dragenter", (e)=>{
+            if (this.drag_state) e.preventDefault();
+        });
+    }
+    start_auto_scroll(speed) {
+        this.auto_scroll_speed = speed;
+        if (!this.scroll_interval) {
+            this.scroll_interval = setInterval(()=>{
+                if (this.scroll_parent && this.auto_scroll_speed !== 0) {
+                    this.scroll_parent.scrollTop += this.auto_scroll_speed;
+                }
+            }, 16);
+        }
+    }
+    stop_auto_scroll() {
+        if (this.scroll_interval) {
+            clearInterval(this.scroll_interval);
+            this.scroll_interval = null;
+        }
+        this.auto_scroll_speed = 0;
+    }
+    get_cell_wrapper(uuid1) {
+        const el = document.getElementById(uuid1);
+        return el ? el.parentElement : null;
+    }
+    start_drag(uuid1, event) {
+        const wrapper = this.get_cell_wrapper(uuid1);
+        if (!wrapper) return;
+        this.drag_state = {
+            uuid: uuid1,
+            wrapper
+        };
+        this.drag_start_y = event.clientY;
+        wrapper.classList.add("dragging");
+        if (!this.drop_indicator) {
+            this.drop_indicator = document.createElement("div");
+            this.drop_indicator.className = "drop-indicator";
+        }
+        event.dataTransfer.effectAllowed = "move";
+        event.dataTransfer.setData("application/x-bonitobook-cell", String(uuid1));
+        const img = new Image();
+        img.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+        event.dataTransfer.setDragImage(img, 0, 0);
+    }
+    end_drag() {
+        this.stop_auto_scroll();
+        if (this.drag_state) {
+            this.drag_state.wrapper.classList.remove("dragging");
+            this.drag_state = null;
+        }
+        if (this.drop_indicator && this.drop_indicator.parentElement) {
+            this.drop_indicator.remove();
+        }
+        document.querySelectorAll(".drop-target-before, .drop-target-after").forEach((el)=>{
+            el.classList.remove("drop-target-before", "drop-target-after");
+        });
+    }
+    handle_drag_over(event) {
+        if (!this.drag_state) return;
+        event.preventDefault();
+        event.dataTransfer.dropEffect = "move";
+        if (!this.scroll_parent || !this.scroll_parent.isConnected) {
+            this.scroll_parent = document.querySelector(".book-cells-area");
+        }
+        if (this.scroll_parent) {
+            const topDist = event.clientY;
+            const bottomDist = window.innerHeight - event.clientY;
+            const movedTop = event.clientY < this.drag_start_y - 5 || event.clientY < 40;
+            const movedBottom = event.clientY > this.drag_start_y + 5 || window.innerHeight - event.clientY < 40;
+            const calculateSpeed = (dist)=>{
+                if (dist >= 180) return 0;
+                const intensity = (180 - dist) / 180;
+                return Math.pow(Math.min(1.1, intensity), 2) * 12.0;
+            };
+            const sTop = calculateSpeed(topDist);
+            const sBottom = calculateSpeed(bottomDist);
+            if (sTop > 0 && movedTop) {
+                this.start_auto_scroll(-sTop);
+            } else if (sBottom > 0 && movedBottom) {
+                this.start_auto_scroll(sBottom);
+            } else {
+                this.stop_auto_scroll();
+            }
+        }
+        const target = this.find_closest_cell(event.clientY);
+        if (!target) return;
+        const rect = target.wrapper.getBoundingClientRect();
+        const midY = rect.top + rect.height / 2;
+        const before = event.clientY < midY;
+        if (before) {
+            target.wrapper.insertAdjacentElement("beforebegin", this.drop_indicator);
+            target.wrapper.classList.add("drop-target-before");
+            target.wrapper.classList.remove("drop-target-after");
+        } else {
+            target.wrapper.insertAdjacentElement("afterend", this.drop_indicator);
+            target.wrapper.classList.add("drop-target-after");
+            target.wrapper.classList.remove("drop-target-before");
+        }
+        for (const uuid1 of this.cells){
+            if (uuid1 === target.uuid) continue;
+            const wrapper = this.get_cell_wrapper(uuid1);
+            if (wrapper) {
+                wrapper.classList.remove("drop-target-before", "drop-target-after");
+            }
+        }
+        this.drop_indicator.dataset.targetUuid = String(target.uuid);
+        this.drop_indicator.dataset.before = String(before);
+    }
+    handle_drop(event) {
+        event.preventDefault();
+        if (!this.drag_state || !this.drop_indicator) return;
+        const from_uuid = this.drag_state.uuid;
+        const target_uuid = parseInt(this.drop_indicator.dataset.targetUuid);
+        const before = this.drop_indicator.dataset.before === "true";
+        if (isNaN(target_uuid) || from_uuid === target_uuid) {
+            this.end_drag();
+            return;
+        }
+        let target_idx = this.cells.indexOf(target_uuid);
+        if (target_idx === -1) {
+            this.end_drag();
+            return;
+        }
+        if (!before) target_idx += 1;
+        const to_index = target_idx + 1;
+        const from_idx = this.cells.indexOf(from_uuid);
+        this.cells.splice(from_idx, 1);
+        const adjusted = from_idx < target_idx ? target_idx - 1 : target_idx;
+        this.cells.splice(adjusted, 0, from_uuid);
+        const wrapper = this.drag_state.wrapper;
+        const target_wrapper = this.get_cell_wrapper(target_uuid);
+        if (target_wrapper) {
+            if (before) {
+                target_wrapper.insertAdjacentElement("beforebegin", wrapper);
+            } else {
+                target_wrapper.insertAdjacentElement("afterend", wrapper);
+            }
+        }
+        this.move_cell_obs.notify({
+            uuid: from_uuid,
+            to_index: to_index
+        });
+        this.end_drag();
+    }
+    find_closest_cell(clientY) {
+        let closest = null;
+        let closestDist = Infinity;
+        for (const uuid1 of this.cells){
+            if (this.drag_state && uuid1 === this.drag_state.uuid) continue;
+            const wrapper = this.get_cell_wrapper(uuid1);
+            if (!wrapper) continue;
+            const rect = wrapper.getBoundingClientRect();
+            const mid = rect.top + rect.height / 2;
+            const dist = Math.abs(clientY - mid);
+            if (dist < closestDist) {
+                closestDist = dist;
+                closest = {
+                    uuid: uuid1,
+                    wrapper
+                };
+            }
+        }
+        return closest;
+    }
 }
 const BOOK = new Book();
 function insert_editor_at_index(elem, uuid1, index) {
@@ -549,6 +728,20 @@ function setup_cell_editor(eval_editor, buttons_id, container_id, card_content_i
                 }
             }
         });
+    }
+    const drag_handle = buttons.querySelector(".drag-handle");
+    if (drag_handle) {
+        const cell_div = container.closest("[id]");
+        const cell_wrapper = cell_div ? cell_div.parentElement : null;
+        const uuid1 = cell_div ? parseInt(cell_div.id) : null;
+        if (cell_wrapper && uuid1 !== null) {
+            drag_handle.addEventListener("dragstart", (e)=>{
+                BOOK.start_drag(uuid1, e);
+            });
+            drag_handle.addEventListener("dragend", ()=>{
+                BOOK.end_drag();
+            });
+        }
     }
 }
 class Connection {

@@ -13,12 +13,15 @@ include("agent.jl")
 include("spinner.jl")       # Must come before http_agent.jl and agent_loop.jl (defines TaskSpinner)
 include("sanitizer.jl")     # Must come before agent_loop.jl (defines SanitizerConfig)
 include("http_agent.jl")
+include("claude_cli.jl")    # Claude Code CLI wrapper (must come after tools.jl, agent.jl, spinner.jl)
 include("message_history.jl")  # Message history: cells_to_messages, deduplication, compacting
 include("agent_loop.jl")
 include("styles.jl")
 
 # Export main types
-export LLMChatBook, create_book
+export LLMChatBook, create_book,
+    AgentMessage, TaskSpinner,
+    ClaudeStreamState, OpenAIStreamState
 
 """
     LLMChatBook <: AbstractBook
@@ -27,7 +30,7 @@ An interactive LLM chat notebook where cells represent the conversation history.
 
 # Fields
 - `book::Book`: The underlying book
-- `agent::HTTPAgent`: The HTTP agent for LLM communication (contains all config and state)
+- `agent::LLMChatAgent`: The agent for LLM communication (HTTPAgent, ClaudeCodeAgent, etc.)
 - `is_streaming::Observable{Bool}`: Whether agent is currently streaming
 - `current_task::Base.RefValue{Union{Task, Nothing}}`: Current streaming task
 - `task_spinner::TaskSpinner`: Unified spinner for all operations
@@ -36,7 +39,7 @@ An interactive LLM chat notebook where cells represent the conversation history.
 """
 mutable struct LLMChatBook <: BonitoBook.AbstractBook
     book::BonitoBook.Book
-    agent::HTTPAgent
+    agent::LLMChatAgent
     is_streaming::Observable{Bool}
     current_task::Base.RefValue{Union{Task, Nothing}}
     task_spinner::TaskSpinner
@@ -174,6 +177,7 @@ end
 function Bonito.jsrender(session::Session, chat_book::LLMChatBook)
     # Standard book setup
     book = chat_book.book
+    session.metadata[:current_book] = book
     elements = BonitoBook.standard_setup!(session, book)
 
     # Render all cells directly (CellEditor.jsrender handles menu and callbacks)

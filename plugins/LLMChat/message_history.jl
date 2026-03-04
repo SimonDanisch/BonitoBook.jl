@@ -94,12 +94,13 @@ function cells_to_messages(book)
             continue
         end
 
-        role = get(cell.metadata, :from, :assistant)
+        raw_from = get(cell.metadata, :from, :user)
+        role = (raw_from == :user) ? :user : :assistant
         cell_id = cell.uuid
         tool_type = get(cell.metadata, :tool, nothing)
 
         # Handle compactor cells specially
-        if role == :compactor
+        if raw_from == :compactor
             content = cell.editor.source[]
             content = extract_markdown_content(content)
             # Send as :user role to the API (it's context for the assistant)
@@ -116,13 +117,20 @@ function cells_to_messages(book)
         else
             TT = tool_name_to_type(string(tool_type))
             # Use abspath to handle relative book.folder paths correctly
-            data = joinpath(abspath(book.folder), "data", "tools", "$(tool_type)-$(cell_id).json")
-            tool_execution = open(io -> JSON3.read(io, ToolExecution{TT}), data)
-
-            # Tool call message
-            push!(messages, AgentMessage(:assistant, tool_execution.tool, cell_id))
-            # Tool result message
-            push!(messages, AgentMessage(:user, tool_execution.result, cell_id))
+            data_path = joinpath(abspath(book.folder), "data", "tools", "$(tool_type)-$(cell_id).json")
+            
+            if isfile(data_path)
+                tool_execution = open(io -> JSON3.read(io, ToolExecution{TT}), data_path)
+                # Tool call message
+                push!(messages, AgentMessage(:assistant, tool_execution.tool, cell_id))
+                # Tool result message
+                push!(messages, AgentMessage(:user, tool_execution.result, cell_id))
+            else
+                # Fallback: if tool data is missing, treat as normal message
+                content = cell.editor.source[]
+                content = extract_markdown_content(content)
+                push!(messages, AgentMessage(role, content, cell_id))
+            end
         end
     end
 

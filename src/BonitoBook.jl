@@ -2,9 +2,10 @@ module BonitoBook
 
 using Bonito
 using Markdown
+using CommonMark
+using Typst_jll
 using UUIDs
 using Pkg
-using ANSIColoredPrinters
 using Logging
 using Markdown
 using Bonito.HTTP
@@ -90,11 +91,34 @@ include("chat.jl")
 include("mcp_julia_server.jl")
 include("plugin_templates.jl")
 
+"""
+    current_book(session::Session)
+
+Retrieve the current book instance from a Bonito session.
+"""
+function current_book(session::Session)
+    return get(session.metadata, :current_book, nothing)
+end
+
+"""
+    current_book()
+
+Global fallback for retrieving the current book. Tries to find it in the caller's module.
+"""
+function current_book()
+    # Check if there is a current_book() in Main or the caller's context
+    # This is a bit of a hack for the LLMChat plugin
+    if isdefined(Main, :current_book)
+        return Main.current_book()
+    end
+    return nothing
+end
+
 # Include plugins as submodules
 include("../plugins/LLMChat/book.jl")
 
 export Book, ChatComponent, ChatAgent, ChatMessage, MCPJuliaServer, Collapsible, Components, LoggingWidget, export_zip, import_zip, InteractiveError
-export InlineBook
+export InlineBook, current_book
 export LanguageEval, JuliaEval, eval_code, get_language_evaluators
 export ALL_LANGUAGES
 export LLMChatBooks, SimpleCounterBooks

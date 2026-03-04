@@ -40,6 +40,17 @@ function get_template_path()
 end
 
 """
+    is_plugin_template(folder::String) -> Bool
+
+Check if a folder is a plugin's bbook template directory (read-only).
+Returns true if the folder lives inside the BonitoBook plugins directory.
+"""
+function is_plugin_template(folder::String)
+    plugins_dir = normpath(joinpath(@__DIR__, "..", "plugins"))
+    return startswith(normpath(abspath(folder)), plugins_dir)
+end
+
+"""
     get_plugin_template_path(bbook_folder::String)
 
 Get the plugin's bbook template path if a plugin is loaded.

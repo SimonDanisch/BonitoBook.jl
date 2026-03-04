@@ -73,7 +73,9 @@ Runner for processing markdown content with LaTeX math and code highlighting.
 Handles markdown parsing, MathJax integration, and syntax highlighting for embedded code blocks.
 """
 struct MarkdownRunner
+    folder::String
 end
+MarkdownRunner() = MarkdownRunner("")
 
 """
     parse_source(::MarkdownRunner, source)
@@ -86,9 +88,48 @@ Parse markdown source into rendered HTML with syntax highlighting and math suppo
 # Returns
 Rendered markdown with embedded Monaco editors for code blocks and MathJax for LaTeX.
 """
-function parse_source(::MarkdownRunner, source)
+function parse_source(runner::MarkdownRunner, source)
     return try
-        replacements = Dict(
+        replacements = Dict{Any, Function}(
+            # CommonMark replacement keys (used by CommonMark parser path)
+            CommonMark.CodeBlock => (node) -> begin
+                info = node.t.info
+                if info == "latex"
+                    return Bonito.KaTeX(node.literal)
+                elseif isempty(info)
+                    return nothing  # Use default rendering
+                else
+                    editor = MonacoEditor(node.literal; language=info, readOnly=true, lineNumbers="off", editor_classes=["markdown-inline-code"])
+                    editor.js_init_func[] = js"""
+                    (editor) => {
+                        Promise.all([$(Monaco), editor.monaco, editor.editor]).then(([mod, monaco, e]) => {
+                            // Resize editor to fit content
+                            mod.resize_to_lines(e, monaco, editor.editor_div);
+                        });
+                    }
+                    """
+                    return editor
+                end
+            end,
+            CommonMark.Image => (node) -> begin
+                # Convert relative image paths to Bonito Asset
+                url = node.t.destination
+                if startswith(url, "./data/") || startswith(url, "data/")
+                    # Relative path - use Asset to serve from bbook/data folder
+                    filename = replace(url, r"^\.?/?data/" => "")
+                    image_path = joinpath(runner.folder, "data", filename)
+                    if isfile(image_path)
+                        return Asset(image_path)
+                    else
+                        @warn "Image not found: $image_path"
+                        return nothing  # Use default rendering
+                    end
+                else
+                    # Absolute or external URL - use default rendering
+                    return nothing
+                end
+            end,
+            # Legacy stdlib Markdown keys (kept for backward compatibility)
             Markdown.Code => (node) -> begin
                 if node.language == "latex"
                     return [Bonito.KaTeX(node.code)]
@@ -105,6 +146,24 @@ function parse_source(::MarkdownRunner, source)
                     }
                     """
                     return editor
+                end
+            end,
+            Markdown.Image => (node) -> begin
+                # Convert relative image paths to Bonito Asset
+                url = node.url
+                if startswith(url, "./data/") || startswith(url, "data/")
+                    # Relative path - use Asset to serve from bbook/data folder
+                    filename = replace(url, r"^\.?/?data/" => "")
+                    image_path = joinpath(runner.folder, "data", filename)
+                    if isfile(image_path)
+                        return Asset(image_path)
+                    else
+                        @warn "Image not found: $image_path"
+                        return node
+                    end
+                else
+                    # Absolute or external URL - keep as is
+                    return node
                 end
             end
         )
@@ -291,7 +350,7 @@ end
 function run!(runner::AsyncRunner, editor::EvalEditor)
     editor.loading[] = true
     editor.show_logging[] = true
-    editor.logging_html[] = ""
+    empty!(editor.terminal_output)
     put!(runner.task_queue, RunnerTask(editor.source[], editor.output, editor.logging, editor.language))
     deregister = nothing
     deregister = on(editor.output) do _

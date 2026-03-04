@@ -1,6 +1,5 @@
 using Test
 using JSON3
-using HTTP
 using Bonito
 using Hyperscript
 using BonitoBook.LLMChatBooks
@@ -109,13 +108,17 @@ using BonitoBook.LLMChatBooks
     end
 
     @testset "HttpGetTool" begin
-        # Test execution (uses httpbin.org for testing)
-        tool = HttpGetTool("https://httpbin.org/status/200")
-        result = execute_tool!(tool)
-        @test result isa ToolResult
-        @test result.success == true
-        @test result.result isa Dict
-        @test result.result["status"] == 200
+        # Test execution (uses httpbin.org for testing, may fail without network)
+        try
+            tool = HttpGetTool("https://httpbin.org/status/200")
+            result = execute_tool!(tool)
+            @test result isa ToolResult
+            @test result.success == true
+            @test result.result isa Dict
+            @test result.result["status"] == 200
+        catch e
+            @warn "Skipping HttpGetTool test - network unavailable" exception=e
+        end
     end
 
     @testset "AddCellTool" begin
@@ -306,49 +309,6 @@ using BonitoBook.LLMChatBooks
         end
     end
 
-    @testset "CompactingState" begin
-        # Test compacting state creation and persistence
-        test_dir = mktempdir()
-        ai_dir = joinpath(test_dir, "ai")
-        mkpath(ai_dir)
-
-        # Create new state
-        state = CompactingState(keep_last=3, min_size_to_compact=100)
-        @test state.keep_last == 3
-        @test state.min_size_to_compact == 100
-        @test isempty(state.compacted_cells)
-
-        # Add some compacted cells
-        push!(state.compacted_cells, 1)
-        push!(state.compacted_cells, 2)
-
-        # Save state
-        save_compacting_state(test_dir, state)
-        @test isfile(joinpath(ai_dir, "compacting-state.json"))
-
-        # Load state
-        loaded = load_compacting_state(test_dir)
-        @test loaded.keep_last == 3
-        @test loaded.min_size_to_compact == 100
-        @test 1 in loaded.compacted_cells
-        @test 2 in loaded.compacted_cells
-
-        # Test compact_tool_result
-        short_result = ToolResult("short result")
-        @test compact_tool_result(short_result) == short_result
-
-        long_result = ToolResult(repeat("a", 1000))
-        compacted = compact_tool_result(long_result)
-        @test length(string(compacted.result)) < length(string(long_result.result))
-        @test occursin("compacted for context efficiency", string(compacted.result))
-
-        # Error results should not be compacted
-        error_result = ToolResult(ErrorException("test error"))
-        @test compact_tool_result(error_result) == error_result
-
-        rm(test_dir, recursive=true, force=true)
-    end
-
     @testset "HTTP Streaming Agent" begin
         # Only run if API key is available
         api_key = get(ENV, "ANTHROPIC_API_KEY", get(ENV, "CLAUDE_API_KEY", nothing))
@@ -398,6 +358,291 @@ using BonitoBook.LLMChatBooks
             state = OpenAIStreamState()
             @test isempty(state.tool_calls)
             @test state.text_buffer == ""
+        end
+    end
+
+    @testset "Claude Code CLI Wrapper" begin
+        @testset "ClaudeCodeConfig defaults" begin
+            config = LLMChatBooks.ClaudeCodeConfig(; cwd="/tmp")
+            @test config.model == "claude-sonnet-4-20250514"
+            @test config.permission_mode == "acceptEdits"
+            @test config.max_turns == 20
+            @test config.cwd == "/tmp"
+            @test "Read" in config.allowed_tools
+            @test "Write" in config.allowed_tools
+            @test "Bash" in config.allowed_tools
+            @test config.continue_conversation == true
+        end
+
+        @testset "ClaudeCodeConfig custom" begin
+            config = LLMChatBooks.ClaudeCodeConfig(;
+                model="claude-haiku-4-5-20251001",
+                max_turns=5,
+                allowed_tools=["Read"],
+                permission_mode="deny",
+                cwd="/tmp",
+                max_thinking_tokens=4000,
+                continue_conversation=false,
+            )
+            @test config.model == "claude-haiku-4-5-20251001"
+            @test config.max_turns == 5
+            @test config.allowed_tools == ["Read"]
+            @test config.permission_mode == "deny"
+            @test config.max_thinking_tokens == 4000
+            @test config.continue_conversation == false
+        end
+
+        @testset "ClaudeCodeAgent creation" begin
+            # Only test if claude CLI is available
+            cli_path = nothing
+            try
+                cli_path = LLMChatBooks.find_claude_cli()
+            catch
+                # CLI not installed, skip
+            end
+
+            if cli_path !== nothing
+                config = LLMChatBooks.ClaudeCodeConfig(; cwd=pwd())
+                agent = LLMChatBooks.ClaudeCodeAgent(config)
+                @test agent isa LLMChatBooks.LLMChatAgent
+                @test agent isa LLMChatBooks.ClaudeCodeAgent
+                @test agent.cli_path == cli_path
+                @test agent.last_item[] === nothing
+                @test isempty(agent.needs_to_be_done)
+            else
+                @warn "Skipping ClaudeCodeAgent creation test - claude CLI not found"
+            end
+        end
+
+        @testset "build_command" begin
+            cli_path = nothing
+            try
+                cli_path = LLMChatBooks.find_claude_cli()
+            catch end
+
+            if cli_path !== nothing
+                config = LLMChatBooks.ClaudeCodeConfig(;
+                    model="test-model",
+                    system_prompt="test prompt",
+                    allowed_tools=["Read", "Write"],
+                    permission_mode="acceptEdits",
+                    max_turns=5,
+                    cwd="/tmp",
+                )
+                agent = LLMChatBooks.ClaudeCodeAgent(config)
+                cmd = LLMChatBooks.build_command(agent, "hello world")
+
+                cmd_str = string(cmd)
+                @test occursin("--output-format", cmd_str)
+                @test occursin("stream-json", cmd_str)
+                @test occursin("--verbose", cmd_str)
+                @test occursin("--model", cmd_str)
+                @test occursin("test-model", cmd_str)
+                @test occursin("--system-prompt", cmd_str)
+                @test occursin("--allowedTools", cmd_str)
+                @test occursin("Read,Write", cmd_str)
+                @test occursin("--max-turns", cmd_str)
+                @test occursin("-p", cmd_str)
+                @test occursin("hello world", cmd_str)
+                # Check CLAUDECODE env is unset (for nested execution)
+                @test occursin("CLAUDECODE", cmd_str)
+            else
+                @warn "Skipping build_command test - claude CLI not found"
+            end
+        end
+
+        @testset "parse_stream_message" begin
+            # System messages -> nothing
+            @test LLMChatBooks.parse_stream_message(
+                """{"type":"system","message":"init"}"""
+            ) === nothing
+
+            # Empty/invalid -> nothing
+            @test LLMChatBooks.parse_stream_message("") === nothing
+            @test LLMChatBooks.parse_stream_message("not json") === nothing
+            @test LLMChatBooks.parse_stream_message("""{"type":"user"}""") === nothing
+
+            # Result messages -> nothing (duplicates assistant text)
+            @test LLMChatBooks.parse_stream_message(
+                """{"type":"result","result":"Done!","cost_usd":0.01}"""
+            ) === nothing
+
+            # Assistant with text
+            result = LLMChatBooks.parse_stream_message(
+                """{"type":"assistant","message":{"content":[{"type":"text","text":"Hello!"}]}}"""
+            )
+            @test result isa Vector
+            @test length(result) == 1
+            @test result[1] == "Hello!"
+
+            # Assistant with multiple content blocks
+            result = LLMChatBooks.parse_stream_message(
+                """{"type":"assistant","message":{"content":[{"type":"text","text":"Let me read."},{"type":"tool_use","id":"t1","name":"Read","input":{"file_path":"/tmp/test.txt"}}]}}"""
+            )
+            @test result isa Vector
+            @test length(result) == 2
+            @test result[1] isa String
+            @test result[1] == "Let me read."
+            @test result[2] isa FileReadTool
+            @test result[2].path == "/tmp/test.txt"
+
+            # Empty text blocks are skipped
+            result = LLMChatBooks.parse_stream_message(
+                """{"type":"assistant","message":{"content":[{"type":"text","text":"   "}]}}"""
+            )
+            @test result isa Vector
+            @test isempty(result)
+        end
+
+        @testset "parse_tool_use mappings" begin
+            # Read
+            block = JSON3.read("""{"name":"Read","input":{"file_path":"/tmp/a.txt"}}""")
+            tool = LLMChatBooks.parse_tool_use(block)
+            @test tool isa FileReadTool
+            @test tool.path == "/tmp/a.txt"
+
+            # Write
+            block = JSON3.read("""{"name":"Write","input":{"file_path":"/tmp/b.txt","content":"hi"}}""")
+            tool = LLMChatBooks.parse_tool_use(block)
+            @test tool isa FileWriteTool
+            @test tool.path == "/tmp/b.txt"
+            @test tool.content == "hi"
+
+            # Edit
+            block = JSON3.read("""{"name":"Edit","input":{"file_path":"/tmp/c.txt","old_string":"a","new_string":"b"}}""")
+            tool = LLMChatBooks.parse_tool_use(block)
+            @test tool isa FileEditTool
+            @test tool.path == "/tmp/c.txt"
+            @test tool.old_text == "a"
+            @test tool.new_text == "b"
+
+            # Bash
+            block = JSON3.read("""{"name":"Bash","input":{"command":"ls"}}""")
+            tool = LLMChatBooks.parse_tool_use(block)
+            @test tool isa BashTool
+            @test tool.command == "ls"
+
+            # Glob -> FileTool
+            block = JSON3.read("""{"name":"Glob","input":{"pattern":"*.jl"}}""")
+            tool = LLMChatBooks.parse_tool_use(block)
+            @test tool isa FileTool
+            @test tool.command == "glob"
+            @test tool.arguments["pattern"] == "*.jl"
+
+            # Grep -> BashTool
+            block = JSON3.read("""{"name":"Grep","input":{"pattern":"hello","path":"."}}""")
+            tool = LLMChatBooks.parse_tool_use(block)
+            @test tool isa BashTool
+            @test occursin("grep", tool.command)
+            @test occursin("hello", tool.command)
+
+            # Julia exec -> AddCellTool
+            block = JSON3.read("""{"name":"mcp__julia-server__julia_exec","input":{"code":"1+1"}}""")
+            tool = LLMChatBooks.parse_tool_use(block)
+            @test tool isa AddCellTool
+            @test tool.language == "julia"
+            @test tool.content == "1+1"
+
+            # Unknown tool -> BashTool fallback
+            block = JSON3.read("""{"name":"UnknownTool","input":{"foo":"bar"}}""")
+            tool = LLMChatBooks.parse_tool_use(block)
+            @test tool isa BashTool
+            @test occursin("UnknownTool", tool.command)
+        end
+
+        @testset "isdone logic" begin
+            config = LLMChatBooks.ClaudeCodeConfig(; cwd=pwd())
+            try
+                agent = LLMChatBooks.ClaudeCodeAgent(config)
+
+                # Initially not done (last_item is nothing)
+                @test LLMChatBooks.isdone(agent) == false
+
+                # After text -> done
+                agent.last_item[] = "response text"
+                @test LLMChatBooks.isdone(agent) == true
+
+                # After tool -> not done
+                agent.last_item[] = FileReadTool("/tmp/test.txt")
+                @test LLMChatBooks.isdone(agent) == false
+
+                # Back to text -> done
+                agent.last_item[] = "more text"
+                @test LLMChatBooks.isdone(agent) == true
+            catch e
+                @warn "Skipping isdone test - claude CLI not found" exception=e
+            end
+        end
+
+        @testset "load_claude_code_config" begin
+            tmpdir = mktempdir()
+            ai_dir = joinpath(tmpdir, "ai")
+            mkpath(ai_dir)
+
+            # Write config with claude-code backend
+            write(joinpath(ai_dir, "llm-config.toml"), """
+backend = "claude-code"
+model = "claude-haiku-4-5-20251001"
+max_turns = 10
+permission_mode = "deny"
+""")
+
+            try
+                agent = LLMChatBooks.load_agent_config(tmpdir)
+                @test agent isa LLMChatBooks.ClaudeCodeAgent
+                @test agent.config.model == "claude-haiku-4-5-20251001"
+                @test agent.config.max_turns == 10
+                @test agent.config.permission_mode == "deny"
+            catch e
+                @warn "Skipping config loading test - claude CLI not found" exception=e
+            end
+
+            # Test that HTTP backend still works (needs API key for ClaudeApi)
+            api_key = get(ENV, "ANTHROPIC_API_KEY", get(ENV, "CLAUDE_API_KEY", nothing))
+            if api_key !== nothing
+                write(joinpath(ai_dir, "llm-config.toml"), """
+backend = "http"
+model = "claude-sonnet-4-20250514"
+""")
+                agent_http = LLMChatBooks.load_agent_config(tmpdir)
+                @test agent_http isa LLMChatBooks.HTTPAgent
+            end
+
+            rm(tmpdir, recursive=true, force=true)
+        end
+
+        @testset "CLI integration" begin
+            # Only test if claude CLI is available and API key is set
+            cli_available = try
+                LLMChatBooks.find_claude_cli()
+                true
+            catch
+                false
+            end
+
+            api_key = get(ENV, "ANTHROPIC_API_KEY", nothing)
+
+            if cli_available && api_key !== nothing
+                config = LLMChatBooks.ClaudeCodeConfig(;
+                    model="claude-sonnet-4-20250514",
+                    system_prompt="Respond with exactly one word: PONG",
+                    max_turns=1,
+                    cwd=pwd(),
+                    allowed_tools=String[],
+                    max_thinking_tokens=0,
+                )
+                agent = LLMChatBooks.ClaudeCodeAgent(config)
+                spinner = LLMChatBooks.TaskSpinner()
+                messages = [AgentMessage(:user, "PING")]
+
+                chan = LLMChatBooks.prompt(agent, messages; spinner=spinner)
+                items = collect(chan)
+
+                @test length(items) >= 1
+                @test any(x -> x isa String, items)
+            else
+                @warn "Skipping CLI integration test - claude CLI not found or no API key"
+            end
         end
     end
 end

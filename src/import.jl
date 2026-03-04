@@ -231,7 +231,17 @@ Vector of `Cell` objects representing the book content.
 """
 function load_book(path; all_blocks_as_cell=false)
     if endswith(path, ".ipynb")
-        return ipynb2book(path)
+        # Detect whether the file is actually a Jupyter notebook (JSON) or
+        # a markdown file with .ipynb extension (used by some BonitoBook examples).
+        content = read(path, String)
+        stripped = lstrip(content)
+        if startswith(stripped, '{')
+            return ipynb2book(path)
+        else
+            @info "File $path has .ipynb extension but contains markdown, loading as markdown"
+            md = Markdown.parse(content)
+            return markdown2book(md, all_blocks_as_cell=all_blocks_as_cell)
+        end
     elseif endswith(path, ".md")
         md = Markdown.parse_file(path)
         return markdown2book(md, all_blocks_as_cell=all_blocks_as_cell)
@@ -252,7 +262,7 @@ Convert a vector of cells to interactive cell editors.
 # Returns
 Vector of `CellEditor` objects ready for interactive use.
 """
-function cells2editors(cells, runner, theme = Observable("default"))
+function cells2editors(cells, runner, theme = Observable("default"), folder = "")
     return map(cells) do cell
         return CellEditor(
             cell.source, string(cell.language), runner;
