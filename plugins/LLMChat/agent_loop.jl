@@ -85,6 +85,10 @@ Uses file_editor to automatically open files when file tools are used.
 Returns a Channel for any UI updates (currently unused but kept for future extensions).
 """
 function run_agent_loop!(book, agent::HTTPAgent, user_message::String, task_spinner::TaskSpinner, sanitizer_config::SanitizerConfig, file_editor)
+    # Reset agent state for new conversation turn
+    agent.last_item[] = nothing
+    empty!(agent.needs_to_be_done)
+
     # Add user message cell as Julia code with Markdown.parse
     user_markdown_code = "Markdown.parse($(repr(user_message)))"
     add_cell!(book, user_markdown_code, "julia", Dict{Symbol, Any}(:from => :user))

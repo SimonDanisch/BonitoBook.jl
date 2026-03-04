@@ -285,6 +285,12 @@ const ChatStyles = Bonito.Styles(
         "box-shadow" => "0 2px 4px rgba(0, 0, 0, 0.08)"
     ),
 
+    # Ensure proper spacing for visible editors in chat cells
+    CSS(
+        ".llm-chat-messages .cell-editor",
+        "margin-top" => "0.5rem"
+    ),
+
     # Fixed chat input at bottom - improved design
     CSS(
         ".llm-chat-input-container",
