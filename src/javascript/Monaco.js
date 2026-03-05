@@ -1,5 +1,31 @@
 const MONACO = "https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/+esm";
 const monaco = import(MONACO);
+const HTML_TO_IMAGE = "https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.10.10/html-to-image.min.js";
+let htmlToImagePromise = null;
+
+function get_html_to_image() {
+    if (typeof htmlToImage !== "undefined") {
+        return Promise.resolve(htmlToImage);
+    }
+    if (!htmlToImagePromise) {
+        htmlToImagePromise = new Promise((resolve, reject) => {
+            const existing = document.querySelector('script[data-bonitobook-html-to-image="1"]');
+            if (existing) {
+                existing.addEventListener("load", () => resolve(htmlToImage));
+                existing.addEventListener("error", reject);
+                return;
+            }
+            const script = document.createElement("script");
+            script.src = HTML_TO_IMAGE;
+            script.async = true;
+            script.dataset.bonitobookHtmlToImage = "1";
+            script.onload = () => resolve(htmlToImage);
+            script.onerror = reject;
+            document.head.appendChild(script);
+        });
+    }
+    return htmlToImagePromise;
+}
 
 // Configure Julia language support with auto-indentation
 monaco.then((m) => {
@@ -274,6 +300,8 @@ export class EvalEditor {
         } else if (message.type === "toggle-logging") {
             this.show_logging = message.data;
             toggle_elem(message.data, this.logging_div, this.direction);
+        } else if (message.type === "capture-output") {
+            this.capture_output(message.format || "png", message.request_id);
         } else if (message.type === "goto-line") {
             this.editor.editor.then((editor) => {
                 const lineNumber = Math.max(1, message.line);
@@ -295,6 +323,53 @@ export class EvalEditor {
             message.data.forEach(this.process_message.bind(this));
         } else {
             console.warn("Unknown message type:", message.type);
+        }
+    }
+    async capture_output(format, request_id) {
+        try {
+            const lib = await get_html_to_image();
+            const node = this.output_div;
+            if (!node) {
+                this.js_to_julia.notify({
+                    type: "captured-output",
+                    ok: false,
+                    request_id,
+                    error: "No output node found"
+                });
+                return;
+            }
+            const hidden_h = node.classList.contains("hide-horizontal");
+            const hidden_v = node.classList.contains("hide-vertical");
+            if (hidden_h) node.classList.remove("hide-horizontal");
+            if (hidden_v) node.classList.remove("hide-vertical");
+
+            // Let layout settle after potential class changes.
+            await new Promise((r) => requestAnimationFrame(() => r()));
+            const filter = (domNode) => domNode.tagName !== "SCRIPT";
+            let data_url;
+            if (format === "svg") {
+                data_url = await lib.toSvg(node, { filter, cacheBust: true });
+            } else {
+                data_url = await lib.toPng(node, { filter, cacheBust: true, pixelRatio: 2 });
+            }
+
+            if (hidden_h) node.classList.add("hide-horizontal");
+            if (hidden_v) node.classList.add("hide-vertical");
+
+            this.js_to_julia.notify({
+                type: "captured-output",
+                ok: true,
+                request_id,
+                format: format === "svg" ? "svg" : "png",
+                data_url
+            });
+        } catch (e) {
+            this.js_to_julia.notify({
+                type: "captured-output",
+                ok: false,
+                request_id,
+                error: String(e)
+            });
         }
     }
     toggle_editor(show) {

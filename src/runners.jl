@@ -280,7 +280,7 @@ function AsyncRunner(project::String, mod::Module=Module(gensym("BonitoBook")); 
         for task in task_queue
             try
                 redirect_target[] = task.logging
-                run!(mod, language_evaluators, task)
+                Base.invokelatest(run!, mod, language_evaluators, task)
                 println()
             catch e
                 @error "Error running code: $(task.source)" exception = (e, catch_backtrace())
@@ -377,7 +377,15 @@ function run!(mod::Module, language_evaluators::Dict{String,LanguageEval}, task:
         eval_result = eval_code(evaluator, mod, "", 1, source)
         result[] = Base.invokelatest(book_display, eval_result)
     catch e
-        result[] = InteractiveError(e, Base.catch_backtrace(), Base.invokelatest(mod.current_book))
+        # Avoid `mod.current_book` direct access here: in long-lived runner tasks this can
+        # hit world-age issues when `current_book` is defined after the task started.
+        book_ref = Base.invokelatest(() -> mod.current_book())
+        if book_ref isa Book
+            result[] = InteractiveError(e, Base.catch_backtrace(), book_ref)
+        else
+            # Last resort fallback if no book context is available.
+            result[] = Base.invokelatest(book_display, sprint(showerror, e))
+        end
     end
     return
 end

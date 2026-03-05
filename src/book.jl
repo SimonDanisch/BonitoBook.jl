@@ -32,7 +32,7 @@ end
 # Include book structure management functions
 include("book_structure.jl")
 
-function import_bookfile(book_file, folder, replace_style)
+function import_bookfile(book_file, folder, replace_style, plugin_template=nothing, plugin_module_name=nothing)
     if !isfile(book_file)
         write(
             book_file,"""
@@ -53,9 +53,33 @@ function import_bookfile(book_file, folder, replace_style)
     if ext == ".md" || ext == ".ipynb"
         if isnothing(folder)
             folder = create_book_structure(book_file; replace_style=replace_style)
+            if !isnothing(plugin_module_name)
+                wrapper_file = joinpath(folder, "book.jl")
+                if !isfile(wrapper_file)
+                    write(wrapper_file, """
+                    module AutoPluginBook
+                    using BonitoBook
+                    using $(plugin_module_name)
+                    create_book(book::BonitoBook.Book; kwargs...) = $(plugin_module_name).create_book(book; kwargs...)
+                    end
+                    """)
+                end
+            end
         elseif !isdir(folder)
             error("Provided folder $folder does not exist")
         else
+            if !isnothing(plugin_module_name)
+                wrapper_file = joinpath(folder, "book.jl")
+                if !isfile(wrapper_file)
+                    write(wrapper_file, """
+                    module AutoPluginBook
+                    using BonitoBook
+                    using $(plugin_module_name)
+                    create_book(book::BonitoBook.Book; kwargs...) = $(plugin_module_name).create_book(book; kwargs...)
+                    end
+                    """)
+                end
+            end
             # Detect if the provided folder is a plugin template (read-only).
             # If it contains a book.jl that references a plugin, create an
             # instance folder instead so we don't mutate the plugin.
@@ -86,9 +110,9 @@ Create Book from .md or .ipynb file.
 - `replace_style::Bool`: Replace style.jl with template
 - `all_blocks_as_cell::Bool`: Treat all code blocks as cells
 """
-function Book(user_file::String; folder=nothing, replace_style=false, all_blocks_as_cell=false)
+function Book(user_file::String; folder=nothing, replace_style=false, all_blocks_as_cell=false, plugin_template=nothing, plugin_module_name=nothing)
     # Ensure we have a file path
-    markdown_file, folder = import_bookfile(user_file, folder, replace_style)
+    markdown_file, folder = import_bookfile(user_file, folder, replace_style, plugin_template, plugin_module_name)
     # Load the book content
     cells = load_book(markdown_file; all_blocks_as_cell=all_blocks_as_cell)
     global_logging_widget = LoggingWidget()
@@ -116,7 +140,7 @@ function Book(user_file::String; folder=nothing, replace_style=false, all_blocks
         @eval runner.mod include($include_file)
     end
     # Set up style evaluation - use get_file_path to check custom then template
-    style_path, is_custom = get_file_path(folder, "style.jl")
+    style_path, is_custom = get_file_path(folder, "style.jl"; plugin_template=plugin_template)
     style_eval = EvalFileOnChange(style_path; module_context=runner.mod)
     # Load main styling implementation
     spinner = BookSpinner()
@@ -141,7 +165,7 @@ function Book(user_file::String; folder=nothing, replace_style=false, all_blocks
 end
 
 """
-    create_book(file; folder=nothing, replace_style=false, all_blocks_as_cell=false, plugin_kw_args...)
+    create_book(file; folder=nothing, replace_style=false, all_blocks_as_cell=false, plugin=nothing, plugin_kw_args...)
 
 Create a Book instance from .md or .ipynb file. This is the entry point for the plugin system.
 If a plugin exists, returns the plugin-specific book type. Otherwise returns a standard Book.
@@ -151,13 +175,40 @@ If a plugin exists, returns the plugin-specific book type. Otherwise returns a s
 - `folder::Union{Nothing, String}`: Folder for .book-name-bbook structure (default: auto-create next to .md file)
 - `replace_style::Bool`: Replace style.jl with template (default: false)
 - `all_blocks_as_cell::Bool`: Treat all code blocks as cells (default: false)
+- `plugin::Union{Nothing, Module}`: Plugin module to apply (e.g. `BonitoBook.LLMChatBooks`)
 
 **Plugin Arguments:**
 - `plugin_kw_args...`: Additional keyword arguments passed to the plugin's create_book function
 """
-function create_book(user_file::String; folder=nothing, replace_style=false, all_blocks_as_cell=false, plugin_kw_args...)
+function create_book(user_file::String; folder=nothing, replace_style=false, all_blocks_as_cell=false, plugin=nothing, plugin_kw_args...)
+    plugin_template = nothing
+    plugin_module_name = nothing
+    if plugin !== nothing
+        if !(plugin isa Module)
+            error("`plugin` must be a Module, got $(typeof(plugin))")
+        end
+        plugin_template = plugin_template_path(plugin)
+        plugin_module_name = plugin_fullname(plugin)
+    end
     # Create basic Book instance with explicit Book constructor arguments
-    book = Book(user_file; folder=folder, replace_style=replace_style, all_blocks_as_cell=all_blocks_as_cell)
+    book = Book(
+        user_file;
+        folder=folder,
+        replace_style=replace_style,
+        all_blocks_as_cell=all_blocks_as_cell,
+        plugin_template=plugin_template,
+        plugin_module_name=plugin_module_name
+    )
+    if plugin isa Module
+        if !isdefined(plugin, :create_book)
+            error("Plugin module $(plugin_fullname(plugin)) must define create_book(book::BonitoBook.Book; kwargs...)")
+        end
+        create_book_method = getfield(plugin, :create_book)
+        if !hasmethod(create_book_method, (BonitoBook.Book,))
+            error("Plugin module $(plugin_fullname(plugin)) create_book must accept BonitoBook.Book as first argument")
+        end
+        return Base.invokelatest(() -> create_book_method(book; plugin_kw_args...))
+    end
     # Check for plugin extension
     extension = joinpath(book.folder, "book.jl")
     if isfile(extension)
@@ -752,7 +803,7 @@ function setup_menu(book::Book, tabbed_file_editor::TabbedFileEditor)
     style_setting_button, click = SmallButton("paintcan")
     on(click) do _click
         # Initialize file for editing (creates folder/file if needed)
-        style_path = initialize_file_for_editing(book.folder, "style.jl")
+        style_path = initialize_file_for_editing(book.folder, "style.jl"; plugin_template=get_plugin_template_path(book.folder))
         # Update the book's style_eval to watch the custom file
         update_filepath!(book.style_eval, style_path)
         # Open in editor
@@ -948,12 +999,13 @@ end
 
 
 """
-    book(path; replace_style=false, all_blocks_as_cell=false, url="127.0.0.1", port=8773, proxy_url="", openbrowser=true, folder=nothing)
+    book(path; replace_style=false, all_blocks_as_cell=false, url="127.0.0.1", port=8773, proxy_url="", openbrowser=true, folder=nothing, plugin=nothing)
 
 Launch a BonitoBook server for interactive notebook editing.
 
 - `path::AbstractString`: Path to .md or .ipynb file
 - `folder::Union{Nothing, AbstractString}`: Folder for .book-name-bbook structure (default: auto-create next to .md file)
+- `plugin::Union{Nothing, Module}`: Plugin module to apply (e.g. `BonitoBook.LLMChatBooks`)
 - `replace_style::Bool`: Replace style.jl with template
 - `all_blocks_as_cell::Bool`: Treat all code blocks as cells (and not just ```julia (editor=true, logging=false, output=true)`)
 - `url::String`: Server URL
@@ -966,6 +1018,7 @@ function book(path::AbstractString;
     all_blocks_as_cell=false,
     url="127.0.0.1",
     folder=nothing,
+    plugin=nothing,
     port=8773,
     proxy_url="",
     openbrowser=true,
@@ -973,7 +1026,7 @@ function book(path::AbstractString;
 )
     name = splitext(basename(path))[1]
     app = App(title=name) do
-        return create_book(path; replace_style=replace_style, all_blocks_as_cell=all_blocks_as_cell, folder=folder, plugin_args...)
+        return create_book(path; replace_style=replace_style, all_blocks_as_cell=all_blocks_as_cell, folder=folder, plugin=plugin, plugin_args...)
     end
     server = get_server(url, port, proxy_url)
     route!(server, "/$(name)" => app)

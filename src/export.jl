@@ -202,10 +202,42 @@ function cell_output_to_file(output_dir::String, cell_id::Int, value)
 
     # Try text/html - save as .html snippet for reference
     if showable(MIME"text/html"(), value)
-        path = joinpath(output_dir, "cell_$(cell_id).html")
-        open(path, "w") do io
-            show(io, MIME"text/html"(), value)
+        html_path = joinpath(output_dir, "cell_$(cell_id).html")
+        html = sprint(io -> show(io, MIME"text/html"(), value))
+        open(html_path, "w") do io
+            write(io, html)
         end
+
+        # If HTML contains inline SVG, extract it so Markdown/GitHub/PDF can render it as an image.
+        svg_match = match(r"(?is)<svg\b.*?</svg>", html)
+        if svg_match !== nothing
+            svg_path = joinpath(output_dir, "cell_$(cell_id).svg")
+            open(svg_path, "w") do io
+                write(io, svg_match.match)
+            end
+            return "cell_$(cell_id).svg"
+        end
+
+        # Create a plain-text fallback for Markdown/PDF flows that do not render HTML.
+        txt_path = joinpath(output_dir, "cell_$(cell_id).txt")
+        txt = if showable(MIME"text/plain"(), value)
+            sprint(io -> show(io, MIME"text/plain"(), value))
+        else
+            # Very lightweight HTML-to-text fallback for readability.
+            t = replace(html, r"(?is)<script\b.*?</script>" => "")
+            t = replace(t, r"(?is)<style\b.*?</style>" => "")
+            t = replace(t, r"(?i)<br\s*/?>" => "\n")
+            t = replace(t, r"(?i)</p\s*>" => "\n\n")
+            t = replace(t, r"(?is)<[^>]+>" => "")
+            t = replace(t, "&nbsp;" => " ", "&lt;" => "<", "&gt;" => ">", "&amp;" => "&")
+            strip(t)
+        end
+        if !isempty(strip(txt))
+            open(txt_path, "w") do io
+                write(io, txt)
+            end
+        end
+
         return "cell_$(cell_id).html"
     end
 
@@ -215,6 +247,22 @@ function cell_output_to_file(output_dir::String, cell_id::Int, value)
         show(io, MIME"text/plain"(), value)
     end
     return "cell_$(cell_id).txt"
+end
+
+function _capture_output_png_from_browser(output_dir::String, cell_editor::CellEditor; timeout::Real = 5.0)
+    msg = capture_output!(cell_editor.editor; format = "png", timeout = timeout)
+    msg isa Dict{String, Any} || return nothing
+    get(msg, "ok", false) || return nothing
+    data_url = get(msg, "data_url", nothing)
+    data_url isa String || return nothing
+    prefix = "data:image/png;base64,"
+    startswith(data_url, prefix) || return nothing
+    bytes = Base64.base64decode(data_url[length(prefix)+1:end])
+    path = joinpath(output_dir, "cell_$(cell_editor.uuid).png")
+    open(path, "w") do io
+        write(io, bytes)
+    end
+    return basename(path)
 end
 
 """
@@ -262,12 +310,34 @@ function export_md_with_results(file::AbstractString, book::Book; output_dir::St
                     if endswith(output_file, ".png") || endswith(output_file, ".svg")
                         println(io, "![Output]($(rel_path))")
                     elseif endswith(output_file, ".html")
-                        # Include HTML inline for GitHub (limited support)
-                        println(io, "<!-- Output: $(rel_path) -->")
+                        # Prefer a live browser snapshot when available.
+                        browser_img = if !isnothing(book.session) && isopen(book.session)
+                            _capture_output_png_from_browser(output_dir, cell_editor)
+                        else
+                            nothing
+                        end
+                        if browser_img !== nothing
+                            img_rel_path = joinpath(rel_output_dir, browser_img)
+                            println(io, "![Output]($(img_rel_path))")
+                            println(io)
+                        end
+                        # Keep a link to raw HTML and include plain-text fallback for GitHub/PDF.
+                        println(io, "[Output (HTML)]($(rel_path))")
+                        txt_file = replace(output_file, r"\.html$" => ".txt")
+                        txt_path = joinpath(output_dir, txt_file)
+                        if isfile(txt_path)
+                            txt = read(txt_path, String)
+                            if !isempty(strip(txt))
+                                println(io)
+                                println(io, "```text")
+                                println(io, txt)
+                                println(io, "```")
+                            end
+                        end
                     elseif endswith(output_file, ".txt")
                         txt = read(joinpath(output_dir, output_file), String)
                         if !isempty(strip(txt))
-                            println(io, "```")
+                            println(io, "```text")
                             println(io, txt)
                             println(io, "```")
                         end

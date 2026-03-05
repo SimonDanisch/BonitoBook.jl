@@ -271,7 +271,8 @@ function cells2editors(cells, runner, theme = Observable("default"), folder = ""
             show_output = cell.show_output,
             theme = theme,
             metadata = cell.metadata,
-            id = cell.id
+            id = cell.id,
+            folder = folder
         )
     end
 end

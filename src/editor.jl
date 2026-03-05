@@ -165,6 +165,7 @@ struct EvalEditor
     show_editor::Observable{Bool}
 
     loading::Observable{Bool}
+    capture_response::Observable{Any}
     language::String
     resize_to_lines::Bool
     markdown_focus_edit::Observable{Bool}  # Controls click-to-edit for markdown cells
@@ -186,6 +187,8 @@ function process_message(editor::EvalEditor, message::Dict)
         editor.show_logging[] = message["data"]
     elseif message["type"] == "toggle-output"
         editor.show_output[] = message["data"]
+    elseif message["type"] == "captured-output"
+        editor.capture_response[] = message
     elseif message["type"] === "multi"
         foreach(msg -> process_message(editor, msg), message["data"])
     else
@@ -197,6 +200,18 @@ end
 function send(editor::EvalEditor; msg...)
     editor.julia_to_js[] = Dict{String, Any}((string(k) => v for (k, v) in pairs(msg)))
     return
+end
+
+function capture_output!(editor::EvalEditor; format::String = "png", timeout::Real = 5.0)
+    request_id = string(uuid4())
+    editor.capture_response[] = nothing
+    send(editor; type = "capture-output", format = format, request_id = request_id)
+    success = Bonito.wait_for(timeout = timeout) do
+        msg = editor.capture_response[]
+        return msg isa Dict{String, Any} && get(msg, "request_id", "") == request_id
+    end
+    success || return nothing
+    return editor.capture_response[]
 end
 
 function run_from_newest!(editor::EvalEditor)
@@ -283,6 +298,7 @@ function EvalEditor(
         show_output,
         show_editor_obs,
         loading,
+        Observable{Any}(nothing),
         language,
         resize_to_lines,
         markdown_focus_edit_obs
@@ -344,6 +360,7 @@ function Base.close(editor::EvalEditor)
     Observables.clear(editor.show_output)
     Observables.clear(editor.show_editor)
     Observables.clear(editor.loading)
+    Observables.clear(editor.capture_response)
     Observables.clear(editor.markdown_focus_edit)
     Observables.clear(editor.editor.theme)
     return nothing
@@ -393,8 +410,8 @@ Create an interactive cell editor with code execution capabilities.
 # Returns
 Configured `CellEditor` instance ready for interactive use.
 """
-function CellEditor(content, language, runner; show_editor = true, show_logging = false, show_output = true, theme = Observable("default"), metadata = Dict{Symbol, Any}(), id::Int = 0, class::String = "")
-    runner = language == "markdown" ? MarkdownRunner() : runner
+function CellEditor(content, language, runner; show_editor = true, show_logging = false, show_output = true, theme = Observable("default"), metadata = Dict{Symbol, Any}(), id::Int = 0, class::String = "", folder = "")
+    runner = language == "markdown" ? MarkdownRunner(folder) : runner
     # Use provided id or 0 as placeholder (will be replaced by assign_cell_ids!)
     uuid = id
     jleditor = EvalEditor(

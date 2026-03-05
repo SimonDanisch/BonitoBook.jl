@@ -116,12 +116,13 @@ end
 
 # Include plugins as submodules
 include("../plugins/LLMChat/book.jl")
+include("../plugins/Slideshow/book.jl")
 
 export Book, ChatComponent, ChatAgent, ChatMessage, MCPJuliaServer, Collapsible, Components, LoggingWidget, export_zip, import_zip, InteractiveError
 export InlineBook, current_book
 export LanguageEval, JuliaEval, eval_code, get_language_evaluators
 export ALL_LANGUAGES
-export LLMChatBooks, SimpleCounterBooks
+export LLMChatBooks, SlideshowBooks, SimpleCounterBooks
 export PluginInfo, discover_plugins, get_plugin_info, list_plugins
 export create_book_from_plugin, initialize_plugin_template
 

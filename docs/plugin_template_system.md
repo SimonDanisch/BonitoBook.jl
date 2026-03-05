@@ -7,7 +7,6 @@ The Plugin Template System provides a formalized way to create, distribute, and 
 Plugins can provide:
 - **Template folders** (`bbook/`) with default configurations and styles
 - **Data folders** with example data or assets
-- **Metadata** (`plugin.toml`) describing the plugin
 - **Template variables** for customization during instantiation
 
 ## Plugin Structure
@@ -18,7 +17,6 @@ A plugin should have this structure:
 plugins/
   MyPlugin/
     book.jl              # Main plugin module
-    plugin.toml          # Plugin metadata (optional)
     README.md            # Plugin documentation
     bbook/               # Template folder (optional)
       style.jl           # Style template
@@ -29,31 +27,7 @@ plugins/
     ...other plugin files...
 ```
 
-## Plugin Metadata (plugin.toml)
-
-The `plugin.toml` file provides metadata about the plugin:
-
-```toml
-[plugin]
-name = "MyPlugin"
-version = "1.0.0"
-author = "Your Name"
-description = "A brief description of what this plugin does"
-
-[features]
-streaming = true
-tool_use = false
-custom_feature = true
-
-[dependencies]
-required = ["Bonito", "BonitoBook", "SomePackage"]
-
-[template]
-has_template = true
-copy_data_by_default = false
-include = ["style.jl", "README.md", "config.toml"]
-variables = ["BOOK_TITLE", "AUTHOR"]
-```
+Plugin metadata is derived from source files (`book.jl`, `README.md`) and the module location (`pathof(module)`), not from a separate metadata file.
 
 ## Discovering Plugins
 
@@ -73,8 +47,6 @@ Available Plugins:
 
 📦 LLMChat
    Module: LLMChatBooks
-   Version: 0.1.0
-   Author: BonitoBook Contributors
    Interactive LLM chat notebook with streaming responses, tool use, and file editing
    ✓ Has template folder
 
@@ -211,21 +183,7 @@ Create template files that users can customize:
 - `config.toml` - Configuration template
 - Any other files users might want to customize
 
-### 4. Create plugin metadata (`plugins/MyPlugin/plugin.toml`)
-
-```toml
-[plugin]
-name = "MyPlugin"
-version = "1.0.0"
-author = "Your Name"
-description = "Brief description of your plugin"
-
-[template]
-has_template = true
-variables = ["CUSTOM_VAR_1", "CUSTOM_VAR_2"]
-```
-
-### 5. Add the plugin to BonitoBook
+### 4. Add the plugin to BonitoBook
 
 Edit `src/BonitoBook.jl`:
 
@@ -237,7 +195,7 @@ include("../plugins/MyPlugin/book.jl")
 export MyPluginBooks
 ```
 
-### 6. Test your plugin
+### 5. Test your plugin
 
 ```julia
 using BonitoBook

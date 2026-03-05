@@ -14,8 +14,6 @@ Metadata about a plugin.
 - `path::String`: Path to plugin directory
 - `template_path::Union{String, Nothing}`: Path to plugin's bbook template folder
 - `description::String`: Plugin description
-- `author::String`: Plugin author
-- `version::String`: Plugin version
 """
 struct PluginInfo
     name::String
@@ -66,22 +64,9 @@ function discover_plugins()
         template_path = joinpath(plugin_path, "bbook")
         has_template = isdir(template_path)
 
-        # Try to read plugin.toml for metadata
-        plugin_toml = joinpath(plugin_path, "plugin.toml")
         description = ""
         author = ""
         version = ""
-
-        if isfile(plugin_toml)
-            try
-                config = Pkg.TOML.parsefile(plugin_toml)
-                description = get(config, "description", "")
-                author = get(config, "author", "")
-                version = get(config, "version", "")
-            catch e
-                @warn "Failed to parse plugin.toml for $entry" exception=e
-            end
-        end
 
         # If no description, try to extract from README
         if isempty(description)
@@ -281,10 +266,11 @@ function create_book_from_plugin(bookfile::String, plugin_name::String;
         # This book uses the $(plugin.name) plugin
         # Module: $(plugin.module_name)
 
+        module AutoPluginBook
+        using BonitoBook
         using BonitoBook.$(plugin.module_name)
-
-        # Create the book with plugin
-        $(plugin.module_name).create_book(current_book())
+        create_book(book::BonitoBook.Book; kwargs...) = BonitoBook.$(plugin.module_name).create_book(book; kwargs...)
+        end
         """
         write(book_jl_path, book_jl_content)
     end
