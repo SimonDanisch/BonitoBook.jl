@@ -1,0 +1,61 @@
+»πkîŸ$eb4e406c-6ecb-4818-85d5-c82670e0b3bd§root«2«/jìŸ$eb4e406c-6ecb-4818-85d5-c82670e0b3bd§root‘ê»Tî»ÑkîŸ$eb4e406c-6ecb-4818-85d5-c82670e0b3bd§root«\«YjìŸ$eb4e406c-6ecb-4818-85d5-c82670e0b3bd§root«*ë«&eí•28009æcell-output cell-output-julia «ˆÉ£obs«h•28009ßpayload«“fìÄŸwreturn value => {
+    Bonito.update_node_attribute(document.querySelector('[data-jscall-id="109"]'), 'class', value);
+}ŸU/home/runner/.julia/packages/Bonito/OJTyF/src/rendering/hyperscript_integration.jl:92®msg_type°1»zkîŸ$eb4e406c-6ecb-4818-85d5-c82670e0b3bd§root«S«PjìŸ$eb4e406c-6ecb-4818-85d5-c82670e0b3bd§root«!ë«eí•28010µcell-editor-container«ıÉ£obs«h•28010ßpayload«—fìÄŸvreturn value => {
+    Bonito.update_node_attribute(document.querySelector('[data-jscall-id="94"]'), 'class', value);
+}ŸU/home/runner/.julia/packages/Bonito/OJTyF/src/rendering/hyperscript_integration.jl:92®msg_type°1»kîŸ$eb4e406c-6ecb-4818-85d5-c82670e0b3bd§root«2«/jìŸ$eb4e406c-6ecb-4818-85d5-c82670e0b3bd§root‘ê»∞Çßpayload»òfìÄ⁄1    (function() {
+        const cell = document.querySelector('[data-jscall-id="92"]');
+        const handle = document.querySelector('[data-jscall-id="93"]');
+        let isDragging = false;
+        let startX, startY, initialX, initialY;
+
+        function onMouseDown(e) {
+            // Only allow dragging when clicking the drag handle
+            if (e.target !== handle && !handle.contains(e.target)) return;
+
+            isDragging = true;
+            cell.classList.add('dragging');
+            handle.classList.add('dragging');
+
+            startX = e.clientX;
+            startY = e.clientY;
+
+            // Get current position more reliably
+            const rect = cell.getBoundingClientRect();
+            const containerRect = cell.parentElement.getBoundingClientRect();
+            initialX = rect.left - containerRect.left;
+            initialY = rect.top - containerRect.top;
+
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        function onMouseMove(e) {
+            if (!isDragging) return;
+
+            const deltaX = e.clientX - startX;
+            const deltaY = e.clientY - startY;
+
+            const newX = Math.max(0, initialX + deltaX);
+            const newY = Math.max(20, initialY + deltaY); // Ensure handle stays visible
+
+            cell.style.left = newX + 'px';
+            cell.style.top = newY + 'px';
+        }
+
+        function onMouseUp() {
+            if (isDragging) {
+                isDragging = false;
+                cell.classList.remove('dragging');
+                handle.classList.remove('dragging');
+            }
+        }
+
+        // Only attach mousedown to the handle
+        handle.addEventListener('mousedown', onMouseDown);
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
+    })();
+Ÿ`/home/runner/work/BonitoBook.jl/BonitoBook.jl/docs/examples/.draggable_example-bbook/book.jl:143®msg_type°2»0kîŸ$eb4e406c-6ecb-4818-85d5-c82670e0b3bd§root«2«/jìŸ$eb4e406c-6ecb-4818-85d5-c82670e0b3bd§root‘ê«ÃÇßpayload«µfìÄŸcif (typeof Bonito !== 'undefined' && Bonito.set_no_connection) {
+    Bonito.set_no_connection();
+}
+ŸL/home/runner/.julia/packages/Bonito/OJTyF/src/connection/no-connection.jl:13®msg_type°2
