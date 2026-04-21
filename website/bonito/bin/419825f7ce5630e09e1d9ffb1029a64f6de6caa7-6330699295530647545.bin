@@ -1,8 +1,0 @@
-»µkîŸ$ee246262-7573-4a49-ae82-c31e53ffebd6§root«2«/jìŸ$ee246262-7573-4a49-ae82-c31e53ffebd6§root‘ê»Pì»ákîŸ$ee246262-7573-4a49-ae82-c31e53ffebd6§root«`«]jìŸ$ee246262-7573-4a49-ae82-c31e53ffebd6§root«.ë«*eí•19528Ÿ!cell-output cell-output-markdown «ıÉ£obs«h•19528ßpayload«—fìÄŸvreturn value => {
-    Bonito.update_node_attribute(document.querySelector('[data-jscall-id="45"]'), 'class', value);
-}ŸU/home/runner/.julia/packages/Bonito/OJTyF/src/rendering/hyperscript_integration.jl:92®msg_type°1»åkîŸ$ee246262-7573-4a49-ae82-c31e53ffebd6§root«e«bjìŸ$ee246262-7573-4a49-ae82-c31e53ffebd6§root«3ë«/eí•19529Ÿ&cell-editor-container editor-collapsed«ıÉ£obs«h•19529ßpayload«—fìÄŸvreturn value => {
-    Bonito.update_node_attribute(document.querySelector('[data-jscall-id="30"]'), 'class', value);
-}ŸU/home/runner/.julia/packages/Bonito/OJTyF/src/rendering/hyperscript_integration.jl:92®msg_type°1»0kîŸ$ee246262-7573-4a49-ae82-c31e53ffebd6§root«2«/jìŸ$ee246262-7573-4a49-ae82-c31e53ffebd6§root‘ê«ÃÇßpayload«µfìÄŸcif (typeof Bonito !== 'undefined' && Bonito.set_no_connection) {
-    Bonito.set_no_connection();
-}
-ŸL/home/runner/.julia/packages/Bonito/OJTyF/src/connection/no-connection.jl:13®msg_type°2
