@@ -169,6 +169,14 @@ struct EvalEditor
     language::String
     resize_to_lines::Bool
     markdown_focus_edit::Observable{Bool}  # Controls click-to-edit for markdown cells
+    # CellEditor copies its `uuid` here so the runner can stamp
+    # attributed entries into `book.console_log` without a full
+    # CellEditor back-reference. `Ref` (not Observable) because we
+    # don't need to react to changes — we just need a mutable slot
+    # that `ensure_cell_id!` can update if the cell got assigned an id
+    # after EvalEditor construction. Standalone EvalEditors (FileEditor)
+    # leave this at 0 → entries are recorded under "no cell".
+    cell_id::Base.RefValue{Int}
 end
 
 function process_message(editor::EvalEditor, message::Dict)
@@ -206,11 +214,18 @@ function capture_output!(editor::EvalEditor; format::String = "png", timeout::Re
     request_id = string(uuid4())
     editor.capture_response[] = nothing
     send(editor; type = "capture-output", format = format, request_id = request_id)
-    success = Bonito.wait_for(timeout = timeout) do
+    # `Bonito.wait_for` returns a Symbol (`:success` / `:timed_out` /
+    # whatever the predicate yielded if it was a Symbol), not a Bool —
+    # so `success || return` would error on the Symbol.
+    # Match on `AbstractDict`, not `Dict{String, Any}`: the Bonito
+    # JS→Julia bridge can produce `Dict{Any, Any}` depending on the
+    # deserialiser path, and the stricter type test silently rejects
+    # valid responses, leaving capture stuck until the wait times out.
+    status = Bonito.wait_for(timeout = timeout) do
         msg = editor.capture_response[]
-        return msg isa Dict{String, Any} && get(msg, "request_id", "") == request_id
+        return msg isa AbstractDict && get(msg, "request_id", "") == request_id
     end
-    success || return nothing
+    status === :success || return nothing
     return editor.capture_response[]
 end
 
@@ -301,7 +316,8 @@ function EvalEditor(
         Observable{Any}(nothing),
         language,
         resize_to_lines,
-        markdown_focus_edit_obs
+        markdown_focus_edit_obs,
+        Ref(0),
     )
     on(js_to_julia) do message
         process_message(editor, message)
@@ -420,6 +436,11 @@ function CellEditor(content, language, runner; show_editor = true, show_logging 
         show_output = show_output, theme = theme,
         tabCompletion = "on"
     )
+    # Propagate the cell's uuid into the EvalEditor's cell_id ref so
+    # the runner can stamp attributed entries into `book.console_log`
+    # without a CellEditor back-reference. `ensure_cell_id!` keeps this
+    # in sync for cells that get an id assigned post-construction.
+    jleditor.cell_id[] = uuid
 
     if language == "markdown"
         # run immediately, since we only show output
@@ -585,6 +606,14 @@ Monaco diff editor for comparing original and modified text.
 - `language::String`: Programming language for syntax highlighting
 - `options::Dict{Symbol, Any}`: Editor configuration options
 - `theme::Observable{String}`: Editor theme
+- `max_height::Observable{Int}`: Upper bound on the auto-sized editor
+  height (the JS dynamically sizes to content; this caps it). Drive this
+  from the host to swap between a compact preview and a fully expanded
+  view without re-mounting Monaco — the JS reacts to changes via
+  `setMaxHeight` and calls `editor.layout()` so the resize is animated by
+  Monaco itself instead of fighting with an outer CSS clip.
+- `min_height::Int`: Lower bound on the auto-sized height (so the editor
+  stays usable for trivial diffs); static after construction.
 """
 struct DiffEditor
     original::Observable{String}
@@ -592,9 +621,16 @@ struct DiffEditor
     language::String
     options::Dict{Symbol, Any}
     theme::Observable{String}
+    max_height::Observable{Int}
+    min_height::Int
 end
 
-function DiffEditor(original::String, modified::String; language="julia", theme=Observable("default"), options...)
+function DiffEditor(original::String, modified::String;
+                    language = "julia",
+                    theme = Observable("default"),
+                    max_height::Union{Int,Observable{Int}} = 600,
+                    min_height::Int = 100,
+                    options...)
     defaults = Dict{Symbol, Any}(
         :readOnly => true,
         :renderSideBySide => true,
@@ -605,13 +641,16 @@ function DiffEditor(original::String, modified::String; language="julia", theme=
         :scrollbar => Dict(:vertical => "auto", :horizontal => "auto"),
     )
     opts = merge!(defaults, Dict{Symbol, Any}(options))
+    max_h = max_height isa Observable ? max_height : Observable(Int(max_height))
 
     return DiffEditor(
         Observable(original),
         Observable(modified),
         language,
         opts,
-        theme
+        theme,
+        max_h,
+        Int(min_height),
     )
 end
 
@@ -629,7 +668,9 @@ function Bonito.jsrender(session::Session, diff_editor::DiffEditor)
                     $(diff_editor.modified),
                     $(diff_editor.language),
                     $(diff_editor.options),
-                    $(diff_editor.theme)
+                    $(diff_editor.theme),
+                    $(diff_editor.max_height),
+                    $(diff_editor.min_height)
                 );
                 return diffEditor.editor;
             })

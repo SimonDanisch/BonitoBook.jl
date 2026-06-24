@@ -41,7 +41,7 @@ BonitoBookPythonCallExt = ["PythonCall", "CondaPkg"]
 [compat]
 ANSIColoredPrinters = "0.0.1"
 Base64 = "1"
-Bonito = "4.1.2"
+Bonito = "4.1.2,5"
 CommonMark = "1"
 CondaPkg = "0.2"
 Dates = "1"

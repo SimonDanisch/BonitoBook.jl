@@ -11,6 +11,7 @@ using Markdown
 using Bonito.HTTP
 using JSON3
 using Observables
+using TOML
 
 # Global constant defining all supported languages
 const ALL_LANGUAGES = Dict(
@@ -100,29 +101,14 @@ function current_book(session::Session)
     return get(session.metadata, :current_book, nothing)
 end
 
-"""
-    current_book()
-
-Global fallback for retrieving the current book. Tries to find it in the caller's module.
-"""
-function current_book()
-    # Check if there is a current_book() in Main or the caller's context
-    # This is a bit of a hack for the LLMChat plugin
-    if isdefined(Main, :current_book)
-        return Main.current_book()
-    end
-    return nothing
-end
-
 # Include plugins as submodules
-include("../plugins/LLMChat/book.jl")
 include("../plugins/Slideshow/book.jl")
 
 export Book, ChatComponent, ChatAgent, ChatMessage, MCPJuliaServer, Collapsible, Components, LoggingWidget, export_zip, import_zip, InteractiveError
 export InlineBook, current_book
 export LanguageEval, JuliaEval, eval_code, get_language_evaluators
 export ALL_LANGUAGES
-export LLMChatBooks, SlideshowBooks, SimpleCounterBooks
+export SlideshowBooks, SimpleCounterBooks
 export PluginInfo, discover_plugins, get_plugin_info, list_plugins
 export create_book_from_plugin, initialize_plugin_template
 

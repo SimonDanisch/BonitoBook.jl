@@ -43,5 +43,5 @@ mktempdir() do path
     @test isdir(joinpath(path, ".test-bbook", "data"))
 end
 
-include("llmchat.jl")
+include("test_export_md_with_results.jl")
 include("test_export_typst.jl")

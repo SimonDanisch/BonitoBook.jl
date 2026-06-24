@@ -691,10 +691,7 @@ export const BOOK = new Book();
 export function insert_editor_at_index(elem, uuid, index) {
     // Handle empty book (index 1)
     if (BOOK.cells.length === 0) {
-        const inline_block = document.querySelector(".inline-block");
-        const llm_chat_messages = document.querySelector(".llm-chat-messages");
-        const container = llm_chat_messages || inline_block;
-
+        const container = document.querySelector(".inline-block");
         if (container) {
             container.appendChild(elem);
         }
@@ -1123,23 +1120,43 @@ export function register_cell_editor(eval_editor, uuid) {
 }
 
 export class MonacoDiffEditor {
-    constructor(editor_div, original_obs, modified_obs, language, options, theme) {
+    constructor(editor_div, original_obs, modified_obs, language, options, theme,
+                max_height_obs, min_height) {
         this.editor_div = editor_div;
         this.options = options;
         this.language = language;
         this.theme = theme.value;
         this.original_obs = original_obs;
         this.modified_obs = modified_obs;
+        // Height bounds: `min_height` is static (passed as a number); `max_height`
+        // is an Observable so the host can swap compact/full without re-mounting.
+        // `setMaxHeight` (below) is the imperative entry point any pure-JS toggle
+        // (e.g. the chat's Collapsable) can use without round-tripping through
+        // the Observable bridge.
+        this.min_height = (min_height != null) ? min_height : 100;
+        this.max_height = (max_height_obs && max_height_obs.value != null)
+                          ? max_height_obs.value : 600;
+        // Expose the instance on the container so a sibling JS module (e.g. the
+        // BonitoTeam Collapsable for edit-tool bodies) can look it up via the
+        // DOM and call `setMaxHeight` without touching the Observable.
+        editor_div.__btMonacoDiff = this;
 
         theme.on((new_theme) => {
             this.set_theme(new_theme);
         });
+
+        if (max_height_obs && max_height_obs.on) {
+            max_height_obs.on((h) => this.setMaxHeight(h));
+        }
 
         this.editor = monaco.then((m) => {
             const diffEditor = m.editor.createDiffEditor(editor_div, {
                 ...options,
                 language: language,
             });
+            // Cache the models so `setMaxHeight` can re-run `updateHeight`
+            // without needing the diffEditor's model accessor.
+            this.diffEditor = diffEditor;
 
             // Set initial theme
             this.set_theme(this.theme);
@@ -1147,26 +1164,31 @@ export class MonacoDiffEditor {
             // Set the original and modified models
             const originalModel = m.editor.createModel(original_obs.value, language);
             const modifiedModel = m.editor.createModel(modified_obs.value, language);
+            this.originalModel = originalModel;
+            this.modifiedModel = modifiedModel;
 
             diffEditor.setModel({
                 original: originalModel,
                 modified: modifiedModel
             });
 
-            // Calculate height based on content
-            const originalLineCount = originalModel.getLineCount();
-            const modifiedLineCount = modifiedModel.getLineCount();
-            const maxLines = Math.max(originalLineCount, modifiedLineCount);
-            const lineHeight = 19; // Monaco's default line height
-            const minHeight = 100;
-            const maxHeight = 600;
-            const contentHeight = Math.min(Math.max(maxLines * lineHeight + 20, minHeight), maxHeight);
-
-            editor_div.style.height = `${contentHeight}px`;
+            // Initial sizing — same content-based algorithm as `updateHeight`,
+            // but explicit here so the first layout happens BEFORE any scroll
+            // events the wheel listener below would otherwise capture.
+            this.updateHeight(diffEditor, originalModel, modifiedModel);
             editor_div.style.width = '100%';
-
-            // Layout the editor
-            diffEditor.layout();
+            // Monaco's `createDiffEditor` + initial `layout()` can resolve
+            // BEFORE the host's `dom_in_js` mount has fully attached this
+            // editor_div to its final parent. Monaco then measures a
+            // 0-height container and never paints (the editor_div has the
+            // right style.height, but the rendered diff is empty). A
+            // double-RAF reschedule guarantees we re-layout after the
+            // browser has done at least one paint pass, so Monaco picks
+            // up the real geometry and renders the diff on the first
+            // frame the user sees — no expand-toggle needed.
+            requestAnimationFrame(() => requestAnimationFrame(() => {
+                this.updateHeight(diffEditor, originalModel, modifiedModel);
+            }));
 
             // Prevent scroll events from being captured by the diff editor
             // This allows page scrolling to work when mouse is over the editor
@@ -1177,9 +1199,7 @@ export class MonacoDiffEditor {
                     e.stopPropagation();
                     e.preventDefault();
 
-                    // Find the scrollable parent (could be book-cells-area, llm-chat-messages, or window)
-                    const scrollParent = document.querySelector(".book-cells-area") ||
-                                       document.querySelector(".llm-chat-messages");
+                    const scrollParent = document.querySelector(".book-cells-area");
 
                     if (scrollParent) {
                         // Use scrollBy for smoother scrolling with proper delta handling
@@ -1210,17 +1230,41 @@ export class MonacoDiffEditor {
         });
     }
 
+    // Imperative compact↔full toggle. Storing the diffEditor + models on
+    // `this` (set inside the monaco.then) means we can re-layout without a
+    // second `monaco.then` round trip; if called before the editor finished
+    // initializing (rare race during fast mount + toggle), this is a no-op
+    // and the initial `updateHeight` inside the constructor picks up
+    // `this.max_height` then.
+    setMaxHeight(h) {
+        this.max_height = h;
+        if (this.diffEditor && this.originalModel && this.modifiedModel) {
+            this.updateHeight(this.diffEditor, this.originalModel, this.modifiedModel);
+        }
+    }
+
     updateHeight(diffEditor, originalModel, modifiedModel) {
         const originalLineCount = originalModel.getLineCount();
         const modifiedLineCount = modifiedModel.getLineCount();
         const maxLines = Math.max(originalLineCount, modifiedLineCount);
         const lineHeight = 19;
-        const minHeight = 100;
-        const maxHeight = 600;
-        const contentHeight = Math.min(Math.max(maxLines * lineHeight + 20, minHeight), maxHeight);
+        const contentHeight = Math.min(
+            Math.max(maxLines * lineHeight + 20, this.min_height),
+            this.max_height
+        );
 
         this.editor_div.style.height = `${contentHeight}px`;
-        diffEditor.layout();
+        // Pass dimensions explicitly. `diffEditor.layout()` without args
+        // *should* read the container size, but in inline-diff mode Monaco
+        // sometimes keeps its inner scroll viewport pinned at the
+        // construction-time size — passing the new height makes it actually
+        // grow its visible viewport. The `offsetWidth || 800` fallback
+        // covers the construction-race case where the container hasn't
+        // measured yet (the double-RAF up in the constructor catches up).
+        diffEditor.layout({
+            width: this.editor_div.offsetWidth || 800,
+            height: contentHeight,
+        });
     }
 
     set_theme(theme) {
