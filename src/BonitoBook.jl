@@ -19,7 +19,8 @@ const ALL_LANGUAGES = Dict(
 )
 
 function asset_path(paths...)
-    return joinpath(@__DIR__, "assets", paths...)
+    #return joinpath(@__DIR__, "assets", paths...)
+    return joinpath(pkgdir(@__MODULE__), "src", "assets", paths...)
 end
 
 function assets(paths...)
@@ -87,11 +88,13 @@ include("completions.jl")
 include("interact.jl")
 include("chat.jl")
 include("mcp_julia_server.jl")
+include("welcomepage.jl")
 
 export Book, ChatComponent, ChatAgent, ChatMessage, MCPJuliaServer, Collapsible, Components, LoggingWidget, export_zip, import_zip, InteractiveError
 export InlineBook
 export LanguageEval, JuliaEval, eval_code, get_language_evaluators
 export ALL_LANGUAGES
+export Welcome, serve_welcome
 
 function _MakieModule end
 
@@ -115,6 +118,17 @@ function MakieModule()
     else
         return nothing
     end
+end
+
+function __init__()
+
+    # Julia 1.11 has a bug https://github.com/JuliaLang/julia/issues/56077 
+    # hence we need to do something dirty here:
+    dir = !isnothing(pkgdir(@__MODULE__)) ? joinpath(pkgdir(@__MODULE__), "src") : isdir(@__DIR__) ? (@__DIR__) : joinpath(dirname(pkgdir(Bonito)), "BonitoBook/src")
+
+    global Monaco = ES6Module(joinpath(dir, "javascript", "Monaco.js"))
+
+    return
 end
 
 end

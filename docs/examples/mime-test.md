@@ -28,8 +28,16 @@ Bonito.Table(table, class_callback=(t, ir, ic, val) -> begin
     return "cell-good"
 end)
 ```
-#### Markdown
-
+```julia (editor=true, logging=false, output=true)
+?chomp
+```
+```julia (editor=true, logging=false, output=true)
+using Makie.LaTeXStrings
+L"Trigonometric Functions: $\sin(x)$ and $\cos(x)$"
+```
+```julia (editor=true, logging=false, output=true)
+L"1 + \alpha^2"
+```
 ```julia (editor=true, logging=false, output=true)
 md"""
 # Markdown output
@@ -42,16 +50,8 @@ md"""
 """
 ```
 ```julia (editor=true, logging=false, output=true)
-?chomp
-```
-#### Latex
-
-```julia (editor=true, logging=false, output=true)
-using Makie.LaTeXStrings
-L"Trigonometric Functions: $\sin(x)$ and $\cos(x)$"
-```
-```julia (editor=true, logging=false, output=true)
-L"1 + \alpha^2"
+using GeometryBasics
+rand(Vec3f, 10000)
 ```
 ```julia (editor=true, logging=false, output=true)
 struct LatexNum <: Number
