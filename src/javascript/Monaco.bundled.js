@@ -2,7 +2,36 @@
 // deno-lint-ignore-file
 // This code was bundled using `deno bundle` and it's not recommended to edit it manually
 
-const MONACO = "https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/+esm";
+const MONACO_VERSION = "0.52.2";
+const MONACO = `https://cdn.jsdelivr.net/npm/monaco-editor@${MONACO_VERSION}/+esm`;
+const MONACO_WORKERS = {
+    json: "language/json/json.worker.js",
+    css: "language/css/css.worker.js",
+    scss: "language/css/css.worker.js",
+    less: "language/css/css.worker.js",
+    html: "language/html/html.worker.js",
+    handlebars: "language/html/html.worker.js",
+    razor: "language/html/html.worker.js",
+    typescript: "language/typescript/ts.worker.js",
+    javascript: "language/typescript/ts.worker.js"
+};
+if (!self.MonacoEnvironment) {
+    self.MonacoEnvironment = {
+        getWorker (_moduleId, label) {
+            const path = MONACO_WORKERS[label] || "editor/editor.worker.js";
+            const url = `https://cdn.jsdelivr.net/npm/monaco-editor@${MONACO_VERSION}/esm/vs/${path}/+esm`;
+            const blob = new Blob([
+                `import ${JSON.stringify(url)};`
+            ], {
+                type: "text/javascript"
+            });
+            return new Worker(URL.createObjectURL(blob), {
+                type: "module",
+                name: label
+            });
+        }
+    };
+}
 const monaco = import(MONACO);
 const HTML_TO_IMAGE = "https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.10.10/html-to-image.min.js";
 let htmlToImagePromise = null;
