@@ -113,6 +113,8 @@ function Bonito.jsrender(session::Session, editor::MonacoEditor)
             $(Monaco).then(mod => {
                 const init_func = $(editor.js_init_func[]);
                 const editor = new mod.MonacoEditor($(editor_div), $(editor.options), init_func, $(direction), $(visible), $(theme));
+                // The editor lives as long as the session that rendered it.
+                Bonito.Sessions.on_free($(session.id), () => editor.dispose());
                 if ($(visible)) {
                     // return promise tho wait for the editor to be ready
                     return editor.editor;
@@ -672,6 +674,8 @@ function Bonito.jsrender(session::Session, diff_editor::DiffEditor)
                     $(diff_editor.max_height),
                     $(diff_editor.min_height)
                 );
+                // The editor lives as long as the session that rendered it.
+                Bonito.Sessions.on_free($(session.id), () => diffEditor.dispose());
                 return diffEditor.editor;
             })
             """

@@ -1,4 +1,6 @@
-const MONACO_VERSION = "0.52.2";
+// >= 0.55.1: older ones keep disposed diff editors in their registry. 0.57
+// moved the worker paths below.
+const MONACO_VERSION = "0.55.1";
 const MONACO = `https://cdn.jsdelivr.net/npm/monaco-editor@${MONACO_VERSION}/+esm`;
 
 // Monaco runs tokenizing, diffing and language services in web workers, and
@@ -90,6 +92,37 @@ monaco.then((m) => {
     });
 });
 
+// A wheel is the editor's only while it can scroll that way. Otherwise Monaco
+// must not see it (it cancels every wheel) and the browser scrolls the page.
+// Capture phase, so this runs first. `editor_at(e)` is the editor under the
+// wheel; `owner` the wrapper, whose disposed editor takes no wheel at all.
+function pass_wheel_unless_scrollable(container, editor_at, owner) {
+    container.addEventListener("wheel", (e) => {
+        if (owner.disposed) return;
+        const editor = editor_at(e);
+        const layout = editor.getLayoutInfo();
+        const sideways = Math.abs(e.deltaX) > Math.abs(e.deltaY);
+        const pos = sideways ? editor.getScrollLeft() : editor.getScrollTop();
+        const max = sideways ? editor.getScrollWidth() - layout.contentWidth
+                             : editor.getScrollHeight() - layout.height;
+        const delta = sideways ? e.deltaX : e.deltaY;
+        const can_scroll = delta < 0 ? pos > 0 : (delta > 0 && pos < max - 1);
+        if (!can_scroll) e.stopPropagation();
+    }, { capture: true, passive: true });
+}
+
+// Monaco's one hover-delegate factory is bound by the last constructed code
+// editor. A diff's inner editors bind it to the diff's scoped service, so
+// disposing that diff breaks every later hover and suggest widget ("Instantiation
+// Service has been disposed"). A throwaway plain editor binds it to the global
+// service, once until the next diff is created. Still needed in 0.57.
+let hover_factory_global = true;
+function rebind_hover_factory(m) {
+    if (hover_factory_global) return;
+    m.editor.create(document.createElement("div")).dispose();
+    hover_factory_global = true;
+}
+
 // Function to check if we're in export mode
 function is_export_mode() {
     return window.BONITO_EXPORT_MODE === true;
@@ -110,9 +143,10 @@ export class MonacoEditor {
         this.hiding_direction = hiding_direction;
         this.theme = theme.value;
         this.monaco = monaco;
-        theme.on((new_theme) => {
-            this.set_theme(new_theme);
-        });
+        this.disposed = false;
+        this.theme_obs = theme;
+        this.on_theme = (new_theme) => this.set_theme(new_theme);
+        theme.on(this.on_theme);
         this.editor = new Promise((resolve) => {
             this.resolve_setup = resolve;
         });
@@ -135,41 +169,31 @@ export class MonacoEditor {
         this.editor.then((x) => x.updateOptions(options));
     }
     initialize() {
+        // Once: a toggle may call this from both its transition and its timer.
+        if (this.initializing) return;
+        this.initializing = true;
         monaco.then((monaco) => {
+            if (this.disposed) return;      // its session ended before it was shown
             const div = this.editor_div;
             const editor = monaco.editor.create(div, this.options);
             div._editor_instance = this.editor;
             this.set_theme(this.theme);
             this.initialized = true;
 
-            // Prevent scroll events from being captured by the editor
-            // This allows page scrolling to work when mouse is over the editor
-            const editorDomNode = editor.getDomNode();
-            if (editorDomNode) {
-                editorDomNode.addEventListener('wheel', (e) => {
-                    // Prevent Monaco from handling the wheel event
-                    e.stopPropagation();
-                    e.preventDefault();
-
-                    // Find the scrollable parent (could be book-cells-area or window)
-                    const scrollParent = document.querySelector(".book-cells-area");
-
-                    if (scrollParent) {
-                        // Use scrollBy for smoother scrolling with proper delta handling
-                        scrollParent.scrollBy({
-                            top: e.deltaY,
-                            left: e.deltaX,
-                            behavior: 'auto' // Use 'auto' for immediate scrolling like native
-                        });
-                    } else {
-                        // Fallback to window scrolling
-                        window.scrollBy(e.deltaX, e.deltaY);
-                    }
-                }, { passive: false });
-            }
+            pass_wheel_unless_scrollable(div, () => editor, this);
 
             this.resolve_setup(editor);
         });
+    }
+    // Monaco keeps editors and their models until disposed. The event tells a
+    // host holding this node out of the document (a virtual list) that the
+    // content is dead. The container keeps its size.
+    dispose() {
+        if (this.disposed) return;
+        this.disposed = true;
+        this.theme_obs.off(this.on_theme);
+        this.editor_div.dispatchEvent(new CustomEvent("monaco-editor-disposed", { bubbles: true }));
+        if (this.initialized) this.editor.then((editor) => editor.dispose());   // and its model
     }
     toggle_editor(show) {
         const div = this.editor_div;
@@ -1164,20 +1188,21 @@ export class MonacoDiffEditor {
         // BonitoTeam Collapsable for edit-tool bodies) can look it up via the
         // DOM and call `setMaxHeight` without touching the Observable.
         editor_div.__btMonacoDiff = this;
+        this.disposed = false;
+        this.listeners = [];                // [observable, callback], removed on dispose
 
-        theme.on((new_theme) => {
-            this.set_theme(new_theme);
-        });
-
+        this.listen(theme, (new_theme) => this.set_theme(new_theme));
         if (max_height_obs && max_height_obs.on) {
-            max_height_obs.on((h) => this.setMaxHeight(h));
+            this.listen(max_height_obs, (h) => this.setMaxHeight(h));
         }
 
         this.editor = monaco.then((m) => {
+            if (this.disposed) return null;  // its session ended before Monaco loaded
             const diffEditor = m.editor.createDiffEditor(editor_div, {
                 ...options,
                 language: language,
             });
+            hover_factory_global = false;
             // Cache the models so `setMaxHeight` can re-run `updateHeight`
             // without needing the diffEditor's model accessor.
             this.diffEditor = diffEditor;
@@ -1196,9 +1221,6 @@ export class MonacoDiffEditor {
                 modified: modifiedModel
             });
 
-            // Initial sizing — same content-based algorithm as `updateHeight`,
-            // but explicit here so the first layout happens BEFORE any scroll
-            // events the wheel listener below would otherwise capture.
             this.updateHeight(diffEditor, originalModel, modifiedModel);
             editor_div.style.width = '100%';
             // Monaco's `createDiffEditor` + initial `layout()` can resolve
@@ -1211,46 +1233,50 @@ export class MonacoDiffEditor {
             // up the real geometry and renders the diff on the first
             // frame the user sees — no expand-toggle needed.
             requestAnimationFrame(() => requestAnimationFrame(() => {
+                if (this.disposed) return;
                 this.updateHeight(diffEditor, originalModel, modifiedModel);
             }));
 
-            // Prevent scroll events from being captured by the diff editor
-            // This allows page scrolling to work when mouse is over the editor
-            const editorDomNode = diffEditor.getContainerDomNode();
-            if (editorDomNode) {
-                editorDomNode.addEventListener('wheel', (e) => {
-                    // Prevent Monaco from handling the wheel event
-                    e.stopPropagation();
-                    e.preventDefault();
+            // Side by side, each pane scrolls sideways on its own.
+            const original = diffEditor.getOriginalEditor(), modified = diffEditor.getModifiedEditor();
+            pass_wheel_unless_scrollable(editor_div,
+                (e) => original.getContainerDomNode().contains(e.target) ? original : modified, this);
 
-                    const scrollParent = document.querySelector(".book-cells-area");
-
-                    if (scrollParent) {
-                        // Use scrollBy for smoother scrolling with proper delta handling
-                        scrollParent.scrollBy({
-                            top: e.deltaY,
-                            left: e.deltaX,
-                            behavior: 'auto' // Use 'auto' for immediate scrolling like native
-                        });
-                    } else {
-                        // Fallback to window scrolling
-                        window.scrollBy(e.deltaX, e.deltaY);
-                    }
-                }, { passive: false });
-            }
-
-            // Update models when observables change
-            original_obs.on((text) => {
+            this.listen(original_obs, (text) => {
                 originalModel.setValue(text);
                 this.updateHeight(diffEditor, originalModel, modifiedModel);
             });
-
-            modified_obs.on((text) => {
+            this.listen(modified_obs, (text) => {
                 modifiedModel.setValue(text);
                 this.updateHeight(diffEditor, originalModel, modifiedModel);
             });
 
+            // For a host that set `setMaxHeight` before the diff existed (the
+            // chat's edit cards).
+            editor_div.dispatchEvent(new CustomEvent("monaco-diff-editor-ready", { bubbles: true }));
             return diffEditor;
+        });
+    }
+
+    listen(obs, callback) {
+        obs.on(callback);
+        this.listeners.push([obs, callback]);
+    }
+
+    // See MonacoEditor.dispose. Waits for a diff in progress: with its models
+    // gone, Monaco throws "no diff result available" where nobody catches it.
+    dispose() {
+        if (this.disposed) return;
+        this.disposed = true;
+        for (const [obs, callback] of this.listeners) obs.off(callback);
+        this.editor_div.dispatchEvent(new CustomEvent("monaco-editor-disposed", { bubbles: true }));
+        if (!this.diffEditor) return;
+        const { diffEditor, originalModel, modifiedModel } = this;
+        Promise.all([monaco, diffEditor.waitForDiff()]).then(([m]) => {
+            rebind_hover_factory(m);
+            diffEditor.dispose();
+            originalModel.dispose();
+            modifiedModel.dispose();
         });
     }
 
@@ -1262,6 +1288,7 @@ export class MonacoDiffEditor {
     // `this.max_height` then.
     setMaxHeight(h) {
         this.max_height = h;
+        if (this.disposed) return;
         if (this.diffEditor && this.originalModel && this.modifiedModel) {
             this.updateHeight(this.diffEditor, this.originalModel, this.modifiedModel);
         }

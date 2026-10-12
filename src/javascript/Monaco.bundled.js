@@ -2,7 +2,7 @@
 // deno-lint-ignore-file
 // This code was bundled using `deno bundle` and it's not recommended to edit it manually
 
-const MONACO_VERSION = "0.52.2";
+const MONACO_VERSION = "0.55.1";
 const MONACO = `https://cdn.jsdelivr.net/npm/monaco-editor@${MONACO_VERSION}/+esm`;
 const MONACO_WORKERS = {
     json: "language/json/json.worker.js",
@@ -138,6 +138,28 @@ monaco.then((m)=>{
         ]
     });
 });
+function pass_wheel_unless_scrollable(container, editor_at, owner) {
+    container.addEventListener("wheel", (e)=>{
+        if (owner.disposed) return;
+        const editor = editor_at(e);
+        const layout = editor.getLayoutInfo();
+        const sideways = Math.abs(e.deltaX) > Math.abs(e.deltaY);
+        const pos = sideways ? editor.getScrollLeft() : editor.getScrollTop();
+        const max = sideways ? editor.getScrollWidth() - layout.contentWidth : editor.getScrollHeight() - layout.height;
+        const delta = sideways ? e.deltaX : e.deltaY;
+        const can_scroll = delta < 0 ? pos > 0 : delta > 0 && pos < max - 1;
+        if (!can_scroll) e.stopPropagation();
+    }, {
+        capture: true,
+        passive: true
+    });
+}
+let hover_factory_global = true;
+function rebind_hover_factory(m) {
+    if (hover_factory_global) return;
+    m.editor.create(document.createElement("div")).dispose();
+    hover_factory_global = true;
+}
 function is_export_mode() {
     return window.BONITO_EXPORT_MODE === true;
 }
@@ -149,9 +171,10 @@ class MonacoEditor {
         this.hiding_direction = hiding_direction;
         this.theme = theme.value;
         this.monaco = monaco;
-        theme.on((new_theme)=>{
-            this.set_theme(new_theme);
-        });
+        this.disposed = false;
+        this.theme_obs = theme;
+        this.on_theme = (new_theme)=>this.set_theme(new_theme);
+        theme.on(this.on_theme);
         this.editor = new Promise((resolve)=>{
             this.resolve_setup = resolve;
         });
@@ -174,33 +197,27 @@ class MonacoEditor {
         this.editor.then((x)=>x.updateOptions(options));
     }
     initialize() {
+        if (this.initializing) return;
+        this.initializing = true;
         monaco.then((monaco)=>{
+            if (this.disposed) return;
             const div = this.editor_div;
             const editor = monaco.editor.create(div, this.options);
             div._editor_instance = this.editor;
             this.set_theme(this.theme);
             this.initialized = true;
-            const editorDomNode = editor.getDomNode();
-            if (editorDomNode) {
-                editorDomNode.addEventListener('wheel', (e)=>{
-                    e.stopPropagation();
-                    e.preventDefault();
-                    const scrollParent = document.querySelector(".book-cells-area");
-                    if (scrollParent) {
-                        scrollParent.scrollBy({
-                            top: e.deltaY,
-                            left: e.deltaX,
-                            behavior: 'auto'
-                        });
-                    } else {
-                        window.scrollBy(e.deltaX, e.deltaY);
-                    }
-                }, {
-                    passive: false
-                });
-            }
+            pass_wheel_unless_scrollable(div, ()=>editor, this);
             this.resolve_setup(editor);
         });
+    }
+    dispose() {
+        if (this.disposed) return;
+        this.disposed = true;
+        this.theme_obs.off(this.on_theme);
+        this.editor_div.dispatchEvent(new CustomEvent("monaco-editor-disposed", {
+            bubbles: true
+        }));
+        if (this.initialized) this.editor.then((editor)=>editor.dispose());
     }
     toggle_editor(show) {
         const div = this.editor_div;
@@ -1035,17 +1052,19 @@ class MonacoDiffEditor {
         this.min_height = min_height != null ? min_height : 100;
         this.max_height = max_height_obs && max_height_obs.value != null ? max_height_obs.value : 600;
         editor_div.__btMonacoDiff = this;
-        theme.on((new_theme)=>{
-            this.set_theme(new_theme);
-        });
+        this.disposed = false;
+        this.listeners = [];
+        this.listen(theme, (new_theme)=>this.set_theme(new_theme));
         if (max_height_obs && max_height_obs.on) {
-            max_height_obs.on((h)=>this.setMaxHeight(h));
+            this.listen(max_height_obs, (h)=>this.setMaxHeight(h));
         }
         this.editor = monaco.then((m)=>{
+            if (this.disposed) return null;
             const diffEditor = m.editor.createDiffEditor(editor_div, {
                 ...options,
                 language: language
             });
+            hover_factory_global = false;
             this.diffEditor = diffEditor;
             this.set_theme(this.theme);
             const originalModel = m.editor.createModel(original_obs.value, language);
@@ -1059,40 +1078,54 @@ class MonacoDiffEditor {
             this.updateHeight(diffEditor, originalModel, modifiedModel);
             editor_div.style.width = '100%';
             requestAnimationFrame(()=>requestAnimationFrame(()=>{
+                    if (this.disposed) return;
                     this.updateHeight(diffEditor, originalModel, modifiedModel);
                 }));
-            const editorDomNode = diffEditor.getContainerDomNode();
-            if (editorDomNode) {
-                editorDomNode.addEventListener('wheel', (e)=>{
-                    e.stopPropagation();
-                    e.preventDefault();
-                    const scrollParent = document.querySelector(".book-cells-area");
-                    if (scrollParent) {
-                        scrollParent.scrollBy({
-                            top: e.deltaY,
-                            left: e.deltaX,
-                            behavior: 'auto'
-                        });
-                    } else {
-                        window.scrollBy(e.deltaX, e.deltaY);
-                    }
-                }, {
-                    passive: false
-                });
-            }
-            original_obs.on((text)=>{
+            const original = diffEditor.getOriginalEditor(), modified = diffEditor.getModifiedEditor();
+            pass_wheel_unless_scrollable(editor_div, (e)=>original.getContainerDomNode().contains(e.target) ? original : modified, this);
+            this.listen(original_obs, (text)=>{
                 originalModel.setValue(text);
                 this.updateHeight(diffEditor, originalModel, modifiedModel);
             });
-            modified_obs.on((text)=>{
+            this.listen(modified_obs, (text)=>{
                 modifiedModel.setValue(text);
                 this.updateHeight(diffEditor, originalModel, modifiedModel);
             });
+            editor_div.dispatchEvent(new CustomEvent("monaco-diff-editor-ready", {
+                bubbles: true
+            }));
             return diffEditor;
+        });
+    }
+    listen(obs, callback) {
+        obs.on(callback);
+        this.listeners.push([
+            obs,
+            callback
+        ]);
+    }
+    dispose() {
+        if (this.disposed) return;
+        this.disposed = true;
+        for (const [obs, callback] of this.listeners)obs.off(callback);
+        this.editor_div.dispatchEvent(new CustomEvent("monaco-editor-disposed", {
+            bubbles: true
+        }));
+        if (!this.diffEditor) return;
+        const { diffEditor , originalModel , modifiedModel  } = this;
+        Promise.all([
+            monaco,
+            diffEditor.waitForDiff()
+        ]).then(([m])=>{
+            rebind_hover_factory(m);
+            diffEditor.dispose();
+            originalModel.dispose();
+            modifiedModel.dispose();
         });
     }
     setMaxHeight(h) {
         this.max_height = h;
+        if (this.disposed) return;
         if (this.diffEditor && this.originalModel && this.modifiedModel) {
             this.updateHeight(this.diffEditor, this.originalModel, this.modifiedModel);
         }
