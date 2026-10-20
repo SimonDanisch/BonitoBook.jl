@@ -33,6 +33,21 @@ if (!self.MonacoEnvironment) {
     };
 }
 const monaco = import(MONACO);
+function colorize(text, language) {
+    return monaco.then((m)=>m.editor.colorize(text, language, {
+            tabSize: 4
+        }));
+}
+function language_for_path(path) {
+    const name = path.split(/[\\/]/).pop().toLowerCase();
+    return monaco.then((m)=>{
+        for (const lang of m.languages.getLanguages()){
+            if ((lang.filenames || []).some((f)=>f.toLowerCase() === name)) return lang.id;
+            if ((lang.extensions || []).some((e)=>name.endsWith(e.toLowerCase()))) return lang.id;
+        }
+        return "plaintext";
+    });
+}
 const HTML_TO_IMAGE = "https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.10.10/html-to-image.min.js";
 let htmlToImagePromise = null;
 function get_html_to_image() {
@@ -1152,6 +1167,8 @@ class MonacoDiffEditor {
         });
     }
 }
+export { colorize as colorize };
+export { language_for_path as language_for_path };
 export { MonacoEditor as MonacoEditor };
 export { EvalEditor as EvalEditor };
 export { BOOK as BOOK };

@@ -26,6 +26,28 @@ if (!self.MonacoEnvironment) {
     };
 }
 const monaco = import(MONACO);
+
+// Monaco's highlighting without an editor: HTML, one `<span>` per line, each
+// followed by a `<br/>`, coloured by the current theme's `mtk*` classes. Spaces
+// come back as U+00A0 and tabs expanded, so text copied from it is not the
+// source; the caller puts the source text back (bonitoagents.js `resource`).
+export function colorize(text, language) {
+    return monaco.then((m) => m.editor.colorize(text, language, { tabSize: 4 }));
+}
+
+// The language Monaco registers for a file name (by extension or exact name),
+// "plaintext" if none.
+export function language_for_path(path) {
+    const name = path.split(/[\\/]/).pop().toLowerCase();
+    return monaco.then((m) => {
+        for (const lang of m.languages.getLanguages()) {
+            if ((lang.filenames || []).some((f) => f.toLowerCase() === name)) return lang.id;
+            if ((lang.extensions || []).some((e) => name.endsWith(e.toLowerCase()))) return lang.id;
+        }
+        return "plaintext";
+    });
+}
+
 const HTML_TO_IMAGE = "https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.10.10/html-to-image.min.js";
 let htmlToImagePromise = null;
 
