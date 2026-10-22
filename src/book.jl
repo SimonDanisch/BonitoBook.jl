@@ -906,7 +906,7 @@ function new_cell_menu(book, editor_above_uuid, runner, above_cell_language="jul
     end
 
     # Create the language buttons container
-    buttons_container = DOM.div(buttons...; class="new-cell-buttons")
+    buttons_container = DOM.div(buttons; class="new-cell-buttons")
 
     return DOM.div(
         plus_icon,

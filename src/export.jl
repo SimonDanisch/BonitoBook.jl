@@ -90,7 +90,7 @@ function export_dom(session::Session, book::Book)
         class = "saving small-menu-bar"
     ); class = "book-main-menu")
 
-    body = Centered(DOM.div(export_menu, book.cells...))
+    body = Centered(DOM.div(export_menu, book.cells))
     document = DOM.div(DOM.div(body; style = Styles("width" => "100%")))
     # Inject script to set export mode global variable and add CSS class
     export_mode_script = js"""

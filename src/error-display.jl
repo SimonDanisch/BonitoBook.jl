@@ -130,7 +130,7 @@ function linkify_stacktrace_string(stacktrace_string::String, session::Session, 
         end
     end
 
-    return DOM.div(elements...; class="stacktrace-content")
+    return DOM.div(elements; class="stacktrace-content")
 end
 
 """

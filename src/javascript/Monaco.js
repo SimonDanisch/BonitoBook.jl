@@ -1,7 +1,8 @@
+import * as monacoApi from './vendor/monaco.js';
+
 // >= 0.55.1: older ones keep disposed diff editors in their registry. 0.57
 // moved the worker paths below.
 const MONACO_VERSION = "0.55.1";
-const MONACO = `https://cdn.jsdelivr.net/npm/monaco-editor@${MONACO_VERSION}/+esm`;
 
 // Monaco runs tokenizing, diffing and language services in web workers, and
 // asks `MonacoEnvironment` for them. Without it every page with an editor
@@ -25,7 +26,10 @@ if (!self.MonacoEnvironment) {
         },
     };
 }
-const monaco = import(MONACO);
+// Bundle the editor and its lazy language modes in one module graph. Separate
+// CDN +esm bundles duplicate Monaco's registry (JSON then registers tokens in
+// a registry that does not even know the language).
+const monaco = Promise.resolve(monacoApi);
 
 // Monaco's highlighting without an editor: HTML, one `<span>` per line, each
 // followed by a `<br/>`, coloured by the current theme's `mtk*` classes. Spaces

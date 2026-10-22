@@ -1,4 +1,5 @@
 const Monaco = ES6Module(joinpath(@__DIR__, "javascript", "Monaco.js"))
+const CodeTokenizer = ES6Module(joinpath(@__DIR__, "javascript", "CodeTokenizer.js"))
 
 
 
@@ -359,7 +360,7 @@ end
 
 function Bonito.jsrender(session::Session, editor::EvalEditor)
     elems = render_editor(editor)
-    return Bonito.jsrender(session, DOM.div(elems...))
+    return Bonito.jsrender(session, DOM.div(elems))
 end
 
 """

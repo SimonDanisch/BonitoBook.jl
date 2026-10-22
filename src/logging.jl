@@ -126,7 +126,7 @@ function Bonito.jsrender(session::Session, widget::ConsoleLogWidget)
     # DOM tree (serialisable), so we don't need a msgpack mapping for
     # `LogEntry` and can keep that type as a plain Julia struct.
     rendered = map(widget.console_log) do entries
-        DOM.div([_format_entry(e) for e in entries]...;
+        DOM.div([_format_entry(e) for e in entries];
                 class = "console-entries")
     end
     container = DOM.div(rendered; class = "console-log-widget")

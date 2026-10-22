@@ -217,7 +217,7 @@ function Bonito.jsrender(session::Session, message::ChatMessage)
     end
 
     message_content = if !isempty(attachment_elements)
-        DOM.div(content_display, attachment_elements...)
+        DOM.div(content_display, attachment_elements)
     else
         content_display
     end
@@ -232,7 +232,7 @@ end
 function Bonito.jsrender(session::Session, chat::ChatComponent)
     # Create the messages display
     messages_display = map(chat.messages) do messages
-        return DOM.div(messages...; class = "chat-messages-container")
+        return DOM.div(messages; class = "chat-messages-container")
     end
 
     # Create the input area

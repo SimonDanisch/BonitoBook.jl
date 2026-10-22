@@ -1,0 +1,2 @@
+src/javascript/*.bundled.js linguist-generated -whitespace
+src/javascript/vendor/*.js linguist-vendored -whitespace
