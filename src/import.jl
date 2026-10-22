@@ -81,6 +81,28 @@ function parse_cell_options(options_str)
     return (true, false, true, nothing, Dict{Symbol, Any}())
 end
 
+# Parsed cells (`markdown2book`, `ipynb2book`): a cell without an explicit id
+# arrives with 0. Free ids start past the largest explicit one, so a file that
+# mixes `id=`-tagged cells with plain markdown never gives two cells one id, and
+# the same file always parses to the same ids (`apply_file_changes!` matches on them).
+# An id the file repeats stays with its first cell; the later ones get free ids
+# (books saved while the old parser counted prose cells into tagged ids carry such
+# repeats, e.g. docs/examples/intro.md).
+function assign_cell_ids!(cells::Vector{Cell})
+    counter = Ref(maximum(c -> c.id, cells; init = 0) + 1)
+    taken = Set{Int}()
+    for (i, c) in enumerate(cells)
+        if c.id != 0 && !(c.id in taken)
+            push!(taken, c.id)
+        else
+            cells[i] = Cell(c.language, c.source, c.output, c.show_editor, c.show_logging, c.show_output,
+                            counter[], c.metadata)
+            counter[] += 1
+        end
+    end
+    return counter
+end
+
 """
     markdown2book(md; all_blocks_as_cell=false)
 
@@ -92,14 +114,12 @@ Parse markdown document into book cells.
 function markdown2book(md; all_blocks_as_cell = false)
     cells = Cell[]
     last_md = nothing
-    fallback_counter = Ref(1)  # Fallback counter for cells without id
 
+    # Cells without an explicit `id=` get 0 here and a free id at the end.
     function append_last_md()
         if !isnothing(last_md) && !isempty(last_md)
             parsed = Markdown.MD(last_md, md.meta)
-            id = fallback_counter[]
-            fallback_counter[] += 1
-            push!(cells, Cell("markdown", string(parsed), nothing, false, false, true, id, Dict{Symbol, Any}()))
+            push!(cells, Cell("markdown", string(parsed), nothing, false, false, true, 0, Dict{Symbol, Any}()))
             last_md = nothing
         end
         return
@@ -123,13 +143,8 @@ function markdown2book(md; all_blocks_as_cell = false)
                         show_editor, show_logging, show_output, id, metadata = (true, false, true, nothing, Dict{Symbol, Any}())
                     end
 
-                    # Use fallback counter if no id provided
-                    if isnothing(id)
-                        id = fallback_counter[]
-                        fallback_counter[] += 1
-                    end
-
-                    push!(cells, Cell(language, content.code, nothing, show_editor, show_logging, show_output, id, metadata))
+                    push!(cells, Cell(language, content.code, nothing, show_editor, show_logging, show_output,
+                                      something(id, 0), metadata))
                 else
                     # Otherwise we treat it as inline markdown code block
                     isnothing(last_md) && (last_md = [])
@@ -146,6 +161,7 @@ function markdown2book(md; all_blocks_as_cell = false)
         end
     end
     append_last_md()
+    assign_cell_ids!(cells)
     return cells
 end
 
@@ -164,8 +180,8 @@ function ipynb2book(json_path::String)
     # Read the json file
     json_content = JSON3.read(read(json_path))
     cells = Cell[]
-    fallback_counter = Ref(1)  # Fallback counter for cells without id
 
+    # Cells without a `bonitobook.id` get 0 here and a free id at the end.
     for cell in json_content["cells"]
         cell_type = cell["cell_type"]
         if cell_type == "code"
@@ -192,25 +208,19 @@ function ipynb2book(json_path::String)
                 end
             end
 
-            # Use fallback counter if no id
-            if isnothing(id)
-                id = fallback_counter[]
-                fallback_counter[] += 1
-            end
-
             if language == "markdown"
                 show_editor, show_logging, show_output = (false, false, true)
             else
                 show_editor, show_logging, show_output = (true, false, true)
             end
-            isempty(source) || push!(cells, Cell(language, source, nothing, show_editor, show_logging, show_output, id, metadata))
+            isempty(source) || push!(cells, Cell(language, source, nothing, show_editor, show_logging, show_output,
+                                                 something(id, 0), metadata))
         elseif cell_type == "markdown"
             source = join(cell["source"], "")
-            id = fallback_counter[]
-            fallback_counter[] += 1
-            isempty(source) || push!(cells, Cell("markdown", source, nothing, false, false, true, id, Dict{Symbol, Any}()))
+            isempty(source) || push!(cells, Cell("markdown", source, nothing, false, false, true, 0, Dict{Symbol, Any}()))
         end
     end
+    assign_cell_ids!(cells)
     return cells
 end
 

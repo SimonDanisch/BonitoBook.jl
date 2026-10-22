@@ -78,6 +78,49 @@ end
         @test count("````", out) >= 2
     end
 
+    @testset "a Cell written without a book parses back as that cell" begin
+        # Code that writes a notebook without a live Book (BonitoAgents' chat
+        # export) emits plain markdown between `Cell`s; the cells and prose
+        # must come back in order, each with its own id.
+        code = "x = \"\"\"\n```\nfoo\n```\n\"\"\"\nlength(x)"
+        io = IOBuffer()
+        println(io, "## Prose before\n")
+        BonitoBook.write_code_fence(io, BonitoBook.Cell("julia", code, nothing, true, false, true, 1,
+                                                        Dict{Symbol, Any}(:tag => :agent)))
+        println(io, "\nProse between\n")
+        BonitoBook.write_code_fence(io, BonitoBook.Cell("julia", "1 + 1", nothing, false, false, true, 2,
+                                                        Dict{Symbol, Any}()))
+        println(io, "\nProse after")
+        cells = BonitoBook.markdown2book(BonitoBook.Markdown.parse(String(take!(io))))
+        @test [c.language for c in cells] == ["markdown", "julia", "markdown", "julia", "markdown"]
+        @test cells[2].source == code
+        @test cells[2].metadata[:tag] == :agent
+        @test (cells[2].id, cells[4].id) == (1, 2)
+        @test cells[4].show_editor == false
+        # The prose cells take free ids past the tagged ones: no id is used twice.
+        @test allunique(c.id for c in cells)
+    end
+
+    @testset "untagged cells keep their order of ids" begin
+        md = BonitoBook.Markdown.parse("text\n\n```julia\n1\n```\n\nmore\n")
+        @test [c.id for c in BonitoBook.markdown2book(md; all_blocks_as_cell = true)] == [1, 2, 3]
+    end
+
+    @testset "an id the file repeats stays with its first cell" begin
+        md = BonitoBook.Markdown.parse("""
+        ```julia (editor=true, logging=false, output=true, id=2)
+        a = 1
+        ```
+
+        ```julia (editor=true, logging=false, output=true, id=2)
+        b = 2
+        ```
+        """)
+        cells = BonitoBook.markdown2book(md)
+        @test [c.source for c in cells] == ["a = 1", "b = 2"]
+        @test [c.id for c in cells] == [2, 3]
+    end
+
     @testset "round-trips markdown cells unmodified" begin
         mktempdir() do tmp
             src = joinpath(tmp, "src.md")

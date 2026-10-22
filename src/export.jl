@@ -114,22 +114,32 @@ function export_html(file::AbstractString, book::Book)
 end
 
 """
-    cell_metadata_string(cell_editor)
+    cell_metadata_string(cell::Union{Cell, CellEditor})
 
 Build the metadata-options string for a code-cell fence: the
 `editor=… , logging=… , output=… , id=… , …extra_metadata` payload that
 goes after the language in `\`\`\`julia (editor=true, …)`. The roundtrip
 through `markdown2book` only knows how to parse this exact format, so
 both `export_md` and any plugin that emits a fenced cell should go
-through this helper instead of rebuilding the string locally.
+through this helper instead of rebuilding the string locally. A plain
+`Cell` covers code that writes a notebook without a live book.
 """
+cell_metadata_string(cell::Cell) =
+    cell_metadata_string(cell.show_editor, cell.show_logging, cell.show_output, cell.id, cell.metadata)
+
 function cell_metadata_string(cell_editor::CellEditor)
     editor = cell_editor.editor
-    opts = ["editor=$(editor.show_editor[])",
-            "logging=$(editor.show_logging[])",
-            "output=$(editor.show_output[])",
-            "id=$(cell_editor.uuid)"]
-    for (key, val) in cell_editor.metadata
+    return cell_metadata_string(editor.show_editor[], editor.show_logging[], editor.show_output[],
+                                cell_editor.uuid, cell_editor.metadata)
+end
+
+function cell_metadata_string(show_editor::Bool, show_logging::Bool, show_output::Bool,
+                              id::Integer, metadata::AbstractDict{Symbol})
+    opts = ["editor=$(show_editor)",
+            "logging=$(show_logging)",
+            "output=$(show_output)",
+            "id=$(id)"]
+    for (key, val) in metadata
         val_str = if val isa Symbol
             ":$val"
         elseif val isa String
@@ -163,6 +173,20 @@ function write_code_fence(io::IO, info::AbstractString, content::AbstractString)
 end
 
 """
+    write_code_fence(io, cell::Union{Cell, CellEditor})
+
+Write one notebook cell as the fenced block `markdown2book` reads back
+as that cell: its language, its options (`cell_metadata_string`) and
+its source.
+"""
+write_code_fence(io::IO, cell::Cell) =
+    write_code_fence(io, string(cell.language, " (", cell_metadata_string(cell), ")"), cell.source)
+
+write_code_fence(io::IO, cell_editor::CellEditor) =
+    write_code_fence(io, string(cell_editor.language, " (", cell_metadata_string(cell_editor), ")"),
+                     cell_editor.editor.source[])
+
+"""
     export_md(file, book)
 
 Export book to markdown with cell metadata. Each non-markdown cell
@@ -175,10 +199,7 @@ id=…)` so `Book(file)` round-trips back to the same cell layout.
 function export_md(file::AbstractString, book::Book)
     open(file, "w") do io
         for cell_editor in book.cells
-            language = cell_editor.language
-            content  = cell_editor.editor.source[]
-            info     = string(language, " (", cell_metadata_string(cell_editor), ")")
-            write_code_fence(io, info, content)
+            write_code_fence(io, cell_editor)
         end
     end
     return file
