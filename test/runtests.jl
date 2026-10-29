@@ -1,6 +1,8 @@
 using Test
 using BonitoBook
 
+include("test_import_ipynb.jl")
+
 examples_src = normpath(joinpath(dirname(pathof(BonitoBook)), "..", "docs", "examples"))
 
 # Work on a copy so we don't mutate the source examples

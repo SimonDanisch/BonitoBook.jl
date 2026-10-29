@@ -166,6 +166,35 @@ function markdown2book(md; all_blocks_as_cell = false)
 end
 
 """
+    read_ipynb(io::IO; default_language="julia")
+    read_ipynb(path::AbstractString; default_language="julia")
+
+Read a Jupyter notebook without executing it. Returns a named tuple with
+`language`, notebook `metadata` and ordered `cells`. Each cell has `cell_type`,
+joined `source`, `metadata` and saved `outputs`. Output dictionaries retain all
+MIME representations, stream text and error tracebacks as stored in the file.
+Empty and raw cells are retained for viewers; `ipynb2book` converts the supported
+cells into runnable BonitoBook cells.
+"""
+function read_ipynb(io::IO; default_language::AbstractString = "julia")
+    notebook = JSON3.read(read(io, String), Dict{String, Any})
+    metadata = get(notebook, "metadata", Dict{String, Any}())
+    language = String(get(get(metadata, "kernelspec", Dict{String, Any}()),
+                          "language", default_language))
+    cells = map(get(notebook, "cells", [])) do cell
+        source = get(cell, "source", "")
+        return (cell_type = String(get(cell, "cell_type", "code")),
+                source = source isa AbstractString ? String(source) : join(source),
+                metadata = get(cell, "metadata", Dict{String, Any}()),
+                outputs = get(cell, "outputs", []))
+    end
+    return (language = language, metadata = metadata, cells = cells)
+end
+
+read_ipynb(path::AbstractString; default_language::AbstractString = "julia") =
+    open(io -> read_ipynb(io; default_language), path)
+
+"""
     ipynb2book(json_path)
 
 Convert a Jupyter notebook file to book cells.
@@ -177,28 +206,21 @@ Convert a Jupyter notebook file to book cells.
 Vector of `Cell` objects representing the notebook content.
 """
 function ipynb2book(json_path::String)
-    # Read the json file
-    json_content = JSON3.read(read(json_path))
+    notebook = read_ipynb(json_path)
     cells = Cell[]
 
     # Cells without a `bonitobook.id` get 0 here and a free id at the end.
-    for cell in json_content["cells"]
-        cell_type = cell["cell_type"]
+    for cell in notebook.cells
+        cell_type = cell.cell_type
         if cell_type == "code"
-            source = join(cell["source"], "")
-            # Safe access to kernelspec language
-            language = "julia"  # default
-            if haskey(json_content, "metadata") &&
-                    haskey(json_content["metadata"], "kernelspec") &&
-                    haskey(json_content["metadata"]["kernelspec"], "language")
-                language = json_content["metadata"]["kernelspec"]["language"]
-            end
+            source = cell.source
+            language = notebook.language
 
             # Extract metadata from cell metadata if present
             metadata = Dict{Symbol, Any}()
             id = nothing
-            if haskey(cell, "metadata") && haskey(cell["metadata"], "bonitobook")
-                bb_meta = cell["metadata"]["bonitobook"]
+            if haskey(cell.metadata, "bonitobook")
+                bb_meta = cell.metadata["bonitobook"]
                 for (k, v) in pairs(bb_meta)
                     if k == "id"
                         id = v
@@ -216,7 +238,7 @@ function ipynb2book(json_path::String)
             isempty(source) || push!(cells, Cell(language, source, nothing, show_editor, show_logging, show_output,
                                                  something(id, 0), metadata))
         elseif cell_type == "markdown"
-            source = join(cell["source"], "")
+            source = cell.source
             isempty(source) || push!(cells, Cell("markdown", source, nothing, false, false, true, 0, Dict{Symbol, Any}()))
         end
     end
