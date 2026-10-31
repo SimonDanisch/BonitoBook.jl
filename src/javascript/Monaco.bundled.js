@@ -475,6 +475,33 @@ class Book {
         }
         this.auto_scroll_speed = 0;
     }
+    capture_scroll_position() {
+        const scroll_parent = this.scroll_parent && this.scroll_parent.isConnected ? this.scroll_parent : document.querySelector(".book-cells-area");
+        return {
+            scroll_parent,
+            parent_top: scroll_parent ? scroll_parent.scrollTop : null,
+            parent_left: scroll_parent ? scroll_parent.scrollLeft : null,
+            window_x: window.scrollX,
+            window_y: window.scrollY
+        };
+    }
+    restore_scroll_position(snapshot) {
+        if (!snapshot) return;
+        const restore_once = ()=>{
+            if (snapshot.scroll_parent && snapshot.scroll_parent.isConnected && snapshot.parent_top !== null) {
+                snapshot.scroll_parent.scrollTop = snapshot.parent_top;
+                snapshot.scroll_parent.scrollLeft = snapshot.parent_left;
+            } else {
+                window.scrollTo(snapshot.window_x, snapshot.window_y);
+            }
+        };
+        restore_once();
+        requestAnimationFrame(()=>{
+            restore_once();
+            requestAnimationFrame(restore_once);
+        });
+        setTimeout(restore_once, 30);
+    }
     get_cell_wrapper(uuid1) {
         const el = document.getElementById(uuid1);
         return el ? el.parentElement : null;
@@ -564,17 +591,22 @@ class Book {
     }
     handle_drop(event) {
         event.preventDefault();
+        event.stopPropagation();
         if (!this.drag_state || !this.drop_indicator) return;
+        this.stop_auto_scroll();
+        const scroll_snapshot = this.capture_scroll_position();
         const from_uuid = this.drag_state.uuid;
         const target_uuid = parseInt(this.drop_indicator.dataset.targetUuid);
         const before = this.drop_indicator.dataset.before === "true";
         if (isNaN(target_uuid) || from_uuid === target_uuid) {
             this.end_drag();
+            this.restore_scroll_position(scroll_snapshot);
             return;
         }
         let target_idx = this.cells.indexOf(target_uuid);
         if (target_idx === -1) {
             this.end_drag();
+            this.restore_scroll_position(scroll_snapshot);
             return;
         }
         if (!before) target_idx += 1;
@@ -597,6 +629,7 @@ class Book {
             to_index: to_index
         });
         this.end_drag();
+        this.restore_scroll_position(scroll_snapshot);
     }
     find_closest_cell(clientY) {
         let closest = null;
