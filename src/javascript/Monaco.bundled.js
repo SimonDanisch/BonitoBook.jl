@@ -622,9 +622,7 @@ class Book {
 const BOOK = new Book();
 function insert_editor_at_index(elem, uuid1, index) {
     if (BOOK.cells.length === 0) {
-        const inline_block = document.querySelector(".inline-block");
-        const llm_chat_messages = document.querySelector(".llm-chat-messages");
-        const container = llm_chat_messages || inline_block;
+        const container = document.querySelector(".inline-block");
         if (container) {
             container.appendChild(elem);
         }
@@ -998,44 +996,48 @@ function register_cell_editor(eval_editor, uuid1) {
     });
 }
 class MonacoDiffEditor {
-    constructor(editor_div, original_obs, modified_obs, language, options, theme){
+    constructor(editor_div, original_obs, modified_obs, language, options, theme, max_height_obs, min_height){
         this.editor_div = editor_div;
         this.options = options;
         this.language = language;
         this.theme = theme.value;
         this.original_obs = original_obs;
         this.modified_obs = modified_obs;
+        this.min_height = min_height != null ? min_height : 100;
+        this.max_height = max_height_obs && max_height_obs.value != null ? max_height_obs.value : 600;
+        editor_div.__btMonacoDiff = this;
         theme.on((new_theme)=>{
             this.set_theme(new_theme);
         });
+        if (max_height_obs && max_height_obs.on) {
+            max_height_obs.on((h)=>this.setMaxHeight(h));
+        }
         this.editor = monaco.then((m)=>{
             const diffEditor = m.editor.createDiffEditor(editor_div, {
                 ...options,
                 language: language
             });
+            this.diffEditor = diffEditor;
             this.set_theme(this.theme);
             const originalModel = m.editor.createModel(original_obs.value, language);
             const modifiedModel = m.editor.createModel(modified_obs.value, language);
+            this.originalModel = originalModel;
+            this.modifiedModel = modifiedModel;
             diffEditor.setModel({
                 original: originalModel,
                 modified: modifiedModel
             });
-            const originalLineCount = originalModel.getLineCount();
-            const modifiedLineCount = modifiedModel.getLineCount();
-            const maxLines = Math.max(originalLineCount, modifiedLineCount);
-            const lineHeight = 19;
-            const minHeight = 100;
-            const maxHeight = 600;
-            const contentHeight = Math.min(Math.max(maxLines * lineHeight + 20, minHeight), maxHeight);
-            editor_div.style.height = `${contentHeight}px`;
+            this.updateHeight(diffEditor, originalModel, modifiedModel);
             editor_div.style.width = '100%';
-            diffEditor.layout();
+            requestAnimationFrame(()=>requestAnimationFrame(()=>{
+                    this.updateHeight(diffEditor, originalModel, modifiedModel);
+                }));
             const editorDomNode = diffEditor.getContainerDomNode();
             if (editorDomNode) {
                 editorDomNode.addEventListener('wheel', (e)=>{
                     e.stopPropagation();
                     e.preventDefault();
-                    const scrollParent = document.querySelector(".book-cells-area") || document.querySelector(".llm-chat-messages");
+                    const scrollParent = document.querySelector(".book-cells-area");
                     if (scrollParent) {
                         scrollParent.scrollBy({
                             top: e.deltaY,
@@ -1060,13 +1062,22 @@ class MonacoDiffEditor {
             return diffEditor;
         });
     }
+    setMaxHeight(h) {
+        this.max_height = h;
+        if (this.diffEditor && this.originalModel && this.modifiedModel) {
+            this.updateHeight(this.diffEditor, this.originalModel, this.modifiedModel);
+        }
+    }
     updateHeight(diffEditor, originalModel, modifiedModel) {
         const originalLineCount = originalModel.getLineCount();
         const modifiedLineCount = modifiedModel.getLineCount();
         const maxLines = Math.max(originalLineCount, modifiedLineCount);
-        const contentHeight = Math.min(Math.max(maxLines * 19 + 20, 100), 600);
+        const contentHeight = Math.min(Math.max(maxLines * 19 + 20, this.min_height), this.max_height);
         this.editor_div.style.height = `${contentHeight}px`;
-        diffEditor.layout();
+        diffEditor.layout({
+            width: this.editor_div.offsetWidth || 800,
+            height: contentHeight
+        });
     }
     set_theme(theme) {
         this.theme = theme;

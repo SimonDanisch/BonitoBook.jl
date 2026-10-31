@@ -114,9 +114,60 @@ function export_html(file::AbstractString, book::Book)
 end
 
 """
+    cell_metadata_string(cell_editor)
+
+Build the metadata-options string for a code-cell fence: the
+`editor=… , logging=… , output=… , id=… , …extra_metadata` payload that
+goes after the language in `\`\`\`julia (editor=true, …)`. The roundtrip
+through `markdown2book` only knows how to parse this exact format, so
+both `export_md` and any plugin that emits a fenced cell should go
+through this helper instead of rebuilding the string locally.
+"""
+function cell_metadata_string(cell_editor::CellEditor)
+    editor = cell_editor.editor
+    opts = ["editor=$(editor.show_editor[])",
+            "logging=$(editor.show_logging[])",
+            "output=$(editor.show_output[])",
+            "id=$(cell_editor.uuid)"]
+    for (key, val) in cell_editor.metadata
+        val_str = if val isa Symbol
+            ":$val"
+        elseif val isa String
+            "\"$val\""
+        else
+            string(val)
+        end
+        push!(opts, "$key=$val_str")
+    end
+    return join(opts, ", ")
+end
+
+"""
+    write_code_fence(io, info, content)
+
+Write `\`\`\`info` + `content` + closing fence to `io`, growing the fence
+length until it can't collide with any backtick run inside `content`.
+Without this an arbitrary-length backtick prefix in user code would
+break the round-trip (the closing fence would land in the middle of
+the cell content).
+"""
+function write_code_fence(io::IO, info::AbstractString, content::AbstractString)
+    fence = "```"
+    while occursin(fence, content)
+        fence *= "`"
+    end
+    println(io, fence, info)
+    println(io, content)
+    println(io, fence)
+    return
+end
+
+"""
     export_md(file, book)
 
-Export book to markdown with cell metadata.
+Export book to markdown with cell metadata. Each non-markdown cell
+becomes a fenced block tagged with `(editor=…, logging=…, output=…,
+id=…)` so `Book(file)` round-trips back to the same cell layout.
 
 - `file::AbstractString`: Output file path
 - `book::Book`: Book to export
@@ -125,40 +176,9 @@ function export_md(file::AbstractString, book::Book)
     open(file, "w") do io
         for cell_editor in book.cells
             language = cell_editor.language
-            editor = cell_editor.editor
-            content = editor.source[]
-            show_editor = editor.show_editor[]
-            show_logging = editor.show_logging[]
-            show_output = editor.show_output[]
-            metadata = cell_editor.metadata
-
-            # Build options string with metadata
-            opts = ["editor=$show_editor", "logging=$show_logging", "output=$show_output"]
-
-            # Add uuid as id
-            push!(opts, "id=$(cell_editor.uuid)")
-
-            # Add metadata fields
-            for (key, val) in metadata
-                val_str = if val isa Symbol
-                    ":$val"
-                elseif val isa String
-                    "\"$val\""
-                else
-                    string(val)
-                end
-                push!(opts, "$key=$val_str")
-            end
-
-            opts_str = join(opts, ", ")
-            # Use a fence long enough to not conflict with backticks in content
-            fence = "```"
-            while occursin(fence, content)
-                fence *= "`"
-            end
-            println(io, "$fence$language ($opts_str)")
-            println(io, content)
-            println(io, fence)
+            content  = cell_editor.editor.source[]
+            info     = string(language, " (", cell_metadata_string(cell_editor), ")")
+            write_code_fence(io, info, content)
         end
     end
     return file
@@ -251,10 +271,12 @@ end
 
 function _capture_output_png_from_browser(output_dir::String, cell_editor::CellEditor; timeout::Real = 5.0)
     msg = capture_output!(cell_editor.editor; format = "png", timeout = timeout)
-    msg isa Dict{String, Any} || return nothing
+    # See note in `capture_output!`: the JS→Julia bridge may deliver
+    # `Dict{Any, Any}`. Match on `AbstractDict` so we accept both.
+    msg isa AbstractDict || return nothing
     get(msg, "ok", false) || return nothing
     data_url = get(msg, "data_url", nothing)
-    data_url isa String || return nothing
+    data_url isa AbstractString || return nothing
     prefix = "data:image/png;base64,"
     startswith(data_url, prefix) || return nothing
     bytes = Base64.base64decode(data_url[length(prefix)+1:end])
@@ -266,12 +288,67 @@ function _capture_output_png_from_browser(output_dir::String, cell_editor::CellE
 end
 
 """
-    export_md_with_results(file, book; output_dir=nothing)
+    write_cell_output_md(io, output_file, output_dir, rel_output_dir, cell_editor, book)
 
-Export book to markdown with cell outputs inlined as images or code blocks.
-Output files are saved to `output_dir` (defaults to `./<name>-bbook/data/output/`).
+Inline the rendered output of one code cell into the markdown stream
+at `io`. `output_file` is the basename returned by `cell_output_to_file`;
+- `.png` / `.svg` → `![Output](rel/path)`
+- `.html` → tries to capture a PNG from the live browser, then falls
+  back to a link + plain-text block from the matching `.txt` sidecar.
+- `.txt` → fenced ```text block.
 
-Images are referenced as `![](./path/to/output.png)` for GitHub markdown compatibility.
+Factored out of `export_md_with_results` so plugins emitting custom
+result blocks can reuse it.
+"""
+function write_cell_output_md(io::IO, output_file::AbstractString,
+                              output_dir::AbstractString, rel_output_dir::AbstractString,
+                              cell_editor::CellEditor, book::Book)
+    rel_path = joinpath(rel_output_dir, output_file)
+    if endswith(output_file, ".png") || endswith(output_file, ".svg")
+        println(io, "![Output]($(rel_path))")
+    elseif endswith(output_file, ".html")
+        # Prefer a live browser snapshot when available — that gives us
+        # a static PNG for an otherwise-interactive HTML output (e.g.,
+        # a WGLMakie figure that only renders inside a real DOM).
+        browser_img = if !isnothing(book.session) && isopen(book.session)
+            _capture_output_png_from_browser(output_dir, cell_editor)
+        else
+            nothing
+        end
+        if browser_img !== nothing
+            img_rel_path = joinpath(rel_output_dir, browser_img)
+            println(io, "![Output]($(img_rel_path))")
+            println(io)
+        end
+        # Always keep a link to the raw HTML plus a plain-text fallback
+        # for GitHub / PDF flows that don't render HTML inline.
+        println(io, "[Output (HTML)]($(rel_path))")
+        txt_file = replace(output_file, r"\.html$" => ".txt")
+        txt_path = joinpath(output_dir, txt_file)
+        if isfile(txt_path)
+            txt = read(txt_path, String)
+            if !isempty(strip(txt))
+                println(io)
+                write_code_fence(io, "text", txt)
+            end
+        end
+    elseif endswith(output_file, ".txt")
+        txt = read(joinpath(output_dir, output_file), String)
+        if !isempty(strip(txt))
+            write_code_fence(io, "text", txt)
+        end
+    end
+    return
+end
+
+"""
+    export_md_with_results(file, book; output_dir="")
+
+Export book to markdown with cell outputs inlined as images or code
+blocks. Output files are saved to `output_dir` (defaults to
+`./<name>-bbook/data/output/`). The generated markdown is plain
+(GitHub-renderable): each Julia cell becomes a `\`\`\`julia` fence
+followed by a referenced image / text block for its result.
 
 - `file::AbstractString`: Output file path
 - `book::Book`: Book to export
@@ -283,65 +360,28 @@ function export_md_with_results(file::AbstractString, book::Book; output_dir::St
     end
     mkpath(output_dir)
 
-    # Compute relative path from the markdown file to the output dir
     md_dir = dirname(abspath(file))
     rel_output_dir = relpath(abspath(output_dir), md_dir)
 
     open(file, "w") do io
         for cell_editor in book.cells
             language = cell_editor.language
-            editor = cell_editor.editor
-            content = editor.source[]
+            content  = cell_editor.editor.source[]
 
             if language == "markdown"
                 println(io, content)
             else
-                # Write the code block
-                println(io, "```$language")
-                println(io, content)
-                println(io, "```")
+                # Plain fence (no metadata) so the markdown renders on
+                # GitHub. Use the shared fence helper so backticks in
+                # the cell source can't break the closing delimiter.
+                write_code_fence(io, language, content)
                 println(io)
 
-                # Write the output
-                output_val = editor.output[]
-                output_file = cell_output_to_file(output_dir, cell_editor.uuid, output_val)
+                output_file = cell_output_to_file(output_dir, cell_editor.uuid,
+                                                  cell_editor.editor.output[])
                 if !isnothing(output_file)
-                    rel_path = joinpath(rel_output_dir, output_file)
-                    if endswith(output_file, ".png") || endswith(output_file, ".svg")
-                        println(io, "![Output]($(rel_path))")
-                    elseif endswith(output_file, ".html")
-                        # Prefer a live browser snapshot when available.
-                        browser_img = if !isnothing(book.session) && isopen(book.session)
-                            _capture_output_png_from_browser(output_dir, cell_editor)
-                        else
-                            nothing
-                        end
-                        if browser_img !== nothing
-                            img_rel_path = joinpath(rel_output_dir, browser_img)
-                            println(io, "![Output]($(img_rel_path))")
-                            println(io)
-                        end
-                        # Keep a link to raw HTML and include plain-text fallback for GitHub/PDF.
-                        println(io, "[Output (HTML)]($(rel_path))")
-                        txt_file = replace(output_file, r"\.html$" => ".txt")
-                        txt_path = joinpath(output_dir, txt_file)
-                        if isfile(txt_path)
-                            txt = read(txt_path, String)
-                            if !isempty(strip(txt))
-                                println(io)
-                                println(io, "```text")
-                                println(io, txt)
-                                println(io, "```")
-                            end
-                        end
-                    elseif endswith(output_file, ".txt")
-                        txt = read(joinpath(output_dir, output_file), String)
-                        if !isempty(strip(txt))
-                            println(io, "```text")
-                            println(io, txt)
-                            println(io, "```")
-                        end
-                    end
+                    write_cell_output_md(io, output_file, output_dir,
+                                         rel_output_dir, cell_editor, book)
                 end
             end
             println(io)

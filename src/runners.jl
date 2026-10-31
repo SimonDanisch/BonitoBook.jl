@@ -175,12 +175,26 @@ end
 
 parse_source(runner::Nothing, source) = nothing
 
+# `LogEntry`, `CONSOLE_LOG_BYTE_CAP` and `push_console!` are defined in
+# book.jl (which is included before runners.jl) because `Book` itself
+# has a `console_log::Observable{Vector{LogEntry}}` field. The runner
+# uses them here once the chain has been wired.
+
+# `cell_id == 0` means "no book cell" — used for standalone EvalEditors
+# (e.g. FileEditor) or when a RunnerTask is built without explicit
+# attribution. The worker still pushes to console_log under id 0 so
+# global stdout has a home in the attributed history.
 struct RunnerTask
     source::String
     result::Observable{Any}
     logging::Observable
     language::String
+    cell_id::Int
 end
+
+# Back-compat constructor: callers that don't supply a cell_id get 0.
+RunnerTask(source, result, logging, language) =
+    RunnerTask(source, result, logging, language, 0)
 
 """
     AsyncRunner
@@ -202,6 +216,28 @@ struct AsyncRunner
     task_queue::Channel{RunnerTask}
     thread::Task
     callback::Base.RefValue{Function}
+    # Observable mirroring `book.logging_mode`. Lives on the runner so
+    # any code path can route off it without a back-reference to Book.
+    logging_mode::Observable{Symbol}
+    # Attributed log buffer (`Observable{Vector{LogEntry}}`) owned by
+    # the Book; `nothing` for standalone runners.
+    console_log::Any
+    # Single permanent sink fed by the stdout-redirect pipe. All
+    # bytes the pipe reader copies in land here; a listener fans
+    # them out to (current_logging[], console_log) so we don't have
+    # to swap the redirect target per task. Swapping was racy: the
+    # pipe reader runs in its own goroutine and chunks could arrive
+    # after the per-task listener was removed in `finally`.
+    worker_sink::Observable{String}
+    # Cell whose stdout we're currently attributing. The worker
+    # updates these refs as it picks each task off the queue; they
+    # stay set until the next task overwrites them, so late chunks
+    # belong to whichever task just finished (rather than being
+    # mis-attributed to global / cell 0).
+    current_cell_id::Base.RefValue{Int}
+    current_logging::Base.RefValue{Any}
+    # Where to route bytes when no task is active (boot time only).
+    global_logger::Observable{String}
 end
 
 function Base.close(runner::AsyncRunner)
@@ -270,26 +306,64 @@ Create a new asynchronous code runner.
 # Returns
 Configured `AsyncRunner` instance ready for code execution.
 """
-function AsyncRunner(project::String, mod::Module=Module(gensym("BonitoBook")); callback=identity, global_logger=Observable(""))
+function AsyncRunner(project::String, mod::Module=Module(gensym("BonitoBook"));
+                     callback=identity, global_logger=Observable(""),
+                     logging_mode::Observable{Symbol}=Observable{Symbol}(:respect_cell),
+                     console_log=nothing)
     language_evaluators = get_language_evaluators()
     task_queue = Channel{RunnerTask}(Inf)
     redirect_target = redirect_all_to_channel()
-    redirect_target[] = global_logger
+
+    # Permanent worker sink — every chunk the pipe reader produces
+    # lands here and is fanned out below. We never swap the redirect
+    # target after this point, which removes the per-task race where
+    # late chunks would arrive after the per-task listener had been
+    # torn down in `finally`.
+    worker_sink = Observable("")
+    redirect_target[] = worker_sink
+
+    current_cell_id = Ref(0)
+    current_logging = Base.RefValue{Any}(global_logger)
+
+    on(worker_sink) do chunk
+        isempty(chunk) && return
+        # 1) Forward to whichever per-cell logging observable is
+        #    "current" — that's the cell whose stdout these bytes
+        #    belong to. The cell's `terminal_output` listener picks
+        #    it up from there.
+        log_obs = current_logging[]
+        if log_obs !== nothing
+            log_obs[] = chunk
+        end
+        # 2) Attributed mirror into the book-wide console log.
+        if console_log !== nothing
+            push_console!(console_log, LogEntry(current_cell_id[], chunk, time()))
+        end
+    end
 
     taskref = spawnat(1) do
         for task in task_queue
+            # Update attribution before eval — bytes the cell prints
+            # land in the listener above tagged with this task's id.
+            # We deliberately do NOT clear these refs in `finally`:
+            # the pipe reader is async, so chunks can arrive after
+            # invokelatest returns; keeping the refs set until the
+            # NEXT task starts means those late bytes stay attributed
+            # to the task that produced them.
+            current_cell_id[] = task.cell_id
+            current_logging[] = task.logging
             try
-                redirect_target[] = task.logging
                 Base.invokelatest(run!, mod, language_evaluators, task)
                 println()
             catch e
                 @error "Error running code: $(task.source)" exception = (e, catch_backtrace())
-            finally
-                redirect_target[] = global_logger
             end
         end
     end
-    return AsyncRunner(mod, project, language_evaluators, task_queue, taskref, Base.RefValue{Function}(callback))
+    return AsyncRunner(mod, project, language_evaluators, task_queue, taskref,
+                       Base.RefValue{Function}(callback), logging_mode,
+                       console_log, worker_sink, current_cell_id,
+                       current_logging, global_logger)
 end
 
 function interrupt!(runner::AsyncRunner)
@@ -341,7 +415,14 @@ end
 
 function run_sync!(runner::AsyncRunner, editor::EvalEditor)
     fetch(spawnat(1) do
-        task = RunnerTask(editor.source[], editor.output, editor.logging, editor.language)
+        task = RunnerTask(editor.source[], editor.output, editor.logging,
+                          editor.language, editor.cell_id[])
+        # Same attribution dance the worker loop does: point the
+        # ref pair at this task before running, leave them set
+        # afterwards so late chunks from the pipe reader land
+        # under the right cell id.
+        runner.current_cell_id[] = task.cell_id
+        runner.current_logging[] = task.logging
         Base.invokelatest(run!, runner.mod, runner.language_evaluators, task)
     end)
     return
@@ -349,15 +430,28 @@ end
 
 function run!(runner::AsyncRunner, editor::EvalEditor)
     editor.loading[] = true
-    editor.show_logging[] = true
+    # We used to force `editor.show_logging[] = true` here and then
+    # `Timer(2.5)` it back to false after the run completed. That
+    # interacted badly with two things:
+    #   (1) `any_visible = show_editor | show_logging` drives the
+    #       cell-editor card's `hide-vertical` class on JS-side; once
+    #       both observables landed at `false` (e.g. user toggled the
+    #       editor off, then 2.5 s after a run the logging auto-hid)
+    #       the whole card_content vanished. For cells whose output
+    #       is `nothing` (like `using …`) only the hover-buttons
+    #       remained, making the cell appear to disappear.
+    #   (2) Any `println` output that the user wanted to read got
+    #       wiped 2.5 s after the run, which is short enough that you
+    #       miss it if you blink.
+    # Visibility is now driven solely by the cell's own
+    # `show_logging` attribute; the runner doesn't touch it.
     empty!(editor.terminal_output)
-    put!(runner.task_queue, RunnerTask(editor.source[], editor.output, editor.logging, editor.language))
+    put!(runner.task_queue, RunnerTask(editor.source[], editor.output,
+                                       editor.logging, editor.language,
+                                       editor.cell_id[]))
     deregister = nothing
     deregister = on(editor.output) do _
         editor.loading[] = false
-        Timer(2.5) do t
-            editor.show_logging[] = false
-        end
         off(deregister)
     end
     return

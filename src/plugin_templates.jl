@@ -9,8 +9,8 @@
 Metadata about a plugin.
 
 # Fields
-- `name::String`: Plugin name (e.g., "LLMChat")
-- `module_name::String`: Module name (e.g., "LLMChatBooks")
+- `name::String`: Plugin name (e.g., "Slideshow")
+- `module_name::String`: Module name (e.g., "SlideshowBooks")
 - `path::String`: Path to plugin directory
 - `template_path::Union{String, Nothing}`: Path to plugin's bbook template folder
 - `description::String`: Plugin description
@@ -233,15 +233,15 @@ Path to the created bbook folder
 
 # Example
 ```julia
-# Create an LLM Chat book
-folder = create_book_from_plugin("chat.md", "LLMChat")
+# Create a slideshow book
+folder = create_book_from_plugin("slides.md", "Slideshow")
 
 # Create with custom variables
 folder = create_book_from_plugin(
-    "chat.md",
-    "LLMChat",
+    "slides.md",
+    "Slideshow",
     template_vars = Dict(
-        "BOOK_TITLE" => "My Chat Book",
+        "BOOK_TITLE" => "My Slides",
         "AUTHOR" => "John Doe"
     )
 )
