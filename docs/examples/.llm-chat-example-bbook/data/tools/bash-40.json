@@ -1,0 +1,1 @@
+{"tool":{"command":"julia --project=./dev/ReynKoWebViz -e \"include(\\\"./dev/ReynKoWebViz/src/DataManager.jl\\\")\" 2>&1 | head -50"},"result":{"result":"","success":true}}
