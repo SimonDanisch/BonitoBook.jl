@@ -9,6 +9,137 @@ The loop continues until:
 """
 
 """
+    unwrap_exception(e)
+
+Recursively unwrap nested exceptions (TaskFailedException, HTTP.RequestError, etc.)
+to find the root cause. Returns a tuple (root_exception, original_exception).
+"""
+function unwrap_exception(e)
+    original = e
+    while true
+        if e isa Base.TaskFailedException
+            # Get the exception from the failed task
+            e = e.task.result
+        elseif hasproperty(e, :error) && e.error isa Exception
+            # HTTP.RequestError and similar wrappers
+            e = e.error
+        else
+            break
+        end
+    end
+    return (e, original)
+end
+
+"""
+    find_prompt_too_long_error(e)
+
+Search through nested exceptions to find a PromptTooLongError.
+Returns the PromptTooLongError if found, nothing otherwise.
+"""
+function find_prompt_too_long_error(e)
+    root, _ = unwrap_exception(e)
+    if root isa PromptTooLongError
+        return root
+    end
+    return nothing
+end
+
+"""
+    CompactingResult
+
+Result of compacting messages to fit within token limits.
+
+# Fields
+- `messages::Vector{AgentMessage}`: The compacted messages
+- `estimated_tokens::Int`: Estimated token count after compacting
+- `keep_last::Union{Int, Nothing}`: Final keep_last setting used
+- `min_size::Union{Int, Nothing}`: Final min_size setting used
+- `attempts::Int`: Number of compacting iterations performed
+- `success::Bool`: Whether compacting succeeded (tokens under limit)
+"""
+struct CompactingResult
+    messages::Vector{AgentMessage}
+    estimated_tokens::Int
+    keep_last::Union{Int, Nothing}
+    min_size::Union{Int, Nothing}
+    attempts::Int
+    success::Bool
+end
+
+"""
+    compact_messages_to_fit(book, agent; keep_last=nothing, min_size=nothing, max_attempts=10)
+
+Compact conversation messages to fit within the API's token limit.
+
+Iteratively increases compacting aggressiveness until messages fit or max_attempts reached.
+
+# Arguments
+- `book`: The notebook containing conversation cells
+- `agent`: The HTTPAgent (provides token limit and estimation)
+- `keep_last`: Initial keep_last setting (default: nothing = use default 5)
+- `min_size`: Initial min_size setting (default: nothing = use default 500)
+- `max_attempts`: Maximum compacting iterations (default: 10)
+
+# Returns
+A `CompactingResult` with the compacted messages and metadata.
+
+# Example
+```julia
+result = compact_messages_to_fit(book, agent)
+if result.success
+    # Use result.messages for API call
+else
+    # Handle context limit exceeded
+end
+```
+"""
+function compact_messages_to_fit(book, agent;
+    keep_last::Union{Int, Nothing}=nothing,
+    min_size::Union{Int, Nothing}=nothing,
+    max_attempts::Int=10)
+
+    # Get token limit for this API
+    token_limit = context_limit(agent.api)
+    # Leave 10% headroom for response tokens
+    max_input_tokens = Int(floor(token_limit * 0.9))
+
+    # Get messages with current compacting settings
+    messages = cells_to_messages(book; keep_last=keep_last, min_size=min_size)
+    estimated_tokens = estimate_request_tokens(agent, messages)
+
+    attempts = 0
+
+    while estimated_tokens > max_input_tokens && attempts < max_attempts
+        attempts += 1
+        ratio = estimated_tokens / max_input_tokens
+
+        # Increase compacting aggressiveness based on how much we need to cut
+        current_keep_last = something(keep_last, 5)
+        current_min_size = something(min_size, 500)
+
+        if ratio > 1.5
+            keep_last = max(0, current_keep_last - 2)
+            min_size = max(10, current_min_size ÷ 4)
+        elseif ratio > 1.2
+            keep_last = max(0, current_keep_last - 1)
+            min_size = max(50, current_min_size ÷ 2)
+        else
+            keep_last = max(0, current_keep_last - 1)
+            min_size = max(100, current_min_size - 100)
+        end
+
+        @info "Proactive compacting" attempt=attempts estimated_tokens max_input_tokens ratio=round(ratio, digits=2) new_keep_last=keep_last new_min_size=min_size
+
+        # Re-fetch messages with new compacting settings
+        messages = cells_to_messages(book; keep_last=keep_last, min_size=min_size)
+        estimated_tokens = estimate_request_tokens(agent, messages)
+    end
+
+    success = estimated_tokens <= max_input_tokens
+    return CompactingResult(messages, estimated_tokens, keep_last, min_size, attempts, success)
+end
+
+"""
     run_agent_loop!(book, agent::HTTPAgent, user_message::String, task_spinner::TaskSpinner, sanitizer_config::SanitizerConfig, file_editor)
 
 Main agent loop that:
@@ -27,19 +158,71 @@ function run_agent_loop!(book, agent::HTTPAgent, user_message::String, task_spin
     # Add user message cell as Julia code with Markdown.parse
     user_markdown_code = "Markdown.parse($(repr(user_message)))"
     add_cell!(book, user_markdown_code, "julia", Dict{Symbol, Any}(:from => :user))
+
+    # Track compacting aggressiveness - will be adjusted based on token estimates
+    compacting_keep_last = Ref{Union{Int, Nothing}}(nothing)
+    compacting_min_size = Ref{Union{Int, Nothing}}(nothing)
+
     async_spinner!(task_spinner, "agent loop", 1:50) do i
-        # Get current conversation
-        messages = cells_to_messages(book)
-        # Call agent with nested spinner - returns Channel with multiple items (tools and text)
-        result_channel = async_spinner!(task_spinner, "asking") do
-            prompt(agent, messages; spinner=task_spinner)
+        try
+            # Compact messages to fit within token limit
+            result = compact_messages_to_fit(book, agent;
+                keep_last=compacting_keep_last[],
+                min_size=compacting_min_size[])
+
+            # Update compacting settings for next iteration
+            compacting_keep_last[] = result.keep_last
+            compacting_min_size[] = result.min_size
+            messages = result.messages
+
+            if !result.success
+                # Still over limit after max attempts - show error
+                @error "Cannot fit conversation in context window" estimated_tokens=result.estimated_tokens
+                error_markdown = "Markdown.parse($(repr("⚠️ **Context Limit Exceeded:**\nThe conversation history is too long even after aggressive compacting (~$(result.estimated_tokens) tokens > $(Int(floor(context_limit(agent.api) * 0.9))) maximum).\n\nPlease start a new conversation or manually delete some old cells.")))"
+                add_cell!(book, error_markdown, "julia", Dict{Symbol, Any}(:from => :system, :error => true))
+                return true  # Stop the loop
+            end
+
+            # Call agent with nested spinner - returns Channel with multiple items (tools and text)
+            result_channel = async_spinner!(task_spinner, "asking") do
+                prompt(agent, messages; spinner=task_spinner)
+            end
+            # Process all items from the channel
+            async_spinner!(task_spinner, "processing ai", result_channel) do item
+                process_agent_item!(book, agent, item, sanitizer_config, file_editor)
+            end
+
+            # Reset compacting to defaults after successful request
+            compacting_keep_last[] = nothing
+            compacting_min_size[] = nothing
+
+            # Return true for stopping early
+            isdone(agent) && return true
+        catch e
+            # Check if this is a PromptTooLongError (possibly wrapped in TaskFailedException)
+            # This is a fallback - proactive checking above should catch most cases
+            prompt_error = find_prompt_too_long_error(e)
+            if prompt_error !== nothing
+                # This shouldn't normally happen since we check proactively, but handle it anyway
+                @error "Unexpected PromptTooLongError (proactive check should have caught this)" current_tokens=prompt_error.current_tokens max_tokens=prompt_error.max_tokens
+                error_markdown = "Markdown.parse($(repr("⚠️ **Context Limit Exceeded:**\nThe conversation history is too long ($(prompt_error.current_tokens) tokens > $(prompt_error.max_tokens) maximum).\n\nPlease start a new conversation or manually delete some old cells.")))"
+                add_cell!(book, error_markdown, "julia", Dict{Symbol, Any}(:from => :system, :error => true))
+                return true  # Stop the loop
+            else
+                # Catch other errors and feed them back to the LLM as a system message
+                # This allows the agent to see and react to errors (e.g., avoid repeating failed tools)
+                error_msg = sprint(showerror, e)
+                bt = catch_backtrace()
+                @error "Agent loop error, feeding back to LLM" exception=(e, bt)
+
+                # Add error as a system/assistant message so the LLM can see it
+                error_markdown = "Markdown.parse($(repr("⚠️ **System Error:**\n```\n$error_msg\n```\nPlease acknowledge this error and adjust your approach if needed.")))"
+                add_cell!(book, error_markdown, "julia", Dict{Symbol, Any}(:from => :system, :error => true))
+
+                # Don't stop the loop - let the LLM react to the error on next iteration
+                return false
+            end
         end
-        # Process all items from the channel
-        async_spinner!(task_spinner, "processing ai", result_channel) do item
-            process_agent_item!(book, agent, item, sanitizer_config, file_editor)
-        end
-        # Return true for stopping early
-        isdone(agent) && return true
     end
     return
 end
