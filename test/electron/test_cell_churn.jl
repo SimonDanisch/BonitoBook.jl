@@ -162,6 +162,29 @@ try
                @TH.test_true (abs(n_js_editors - length(book.cells)) <= 1))
     end
 
+    TH.section("Insert after deleting every cell") do
+        for editor in copy(book.cells)
+            TH.delete_cell!(ctx, editor) || error("Cell did not leave the DOM")
+        end
+        record("empty book has no cell containers", @TH.test_eq ndom() 0)
+        editor = TH.insert_julia_cell!(ctx, "42")
+        record(
+            "first new cell mounts in the cells area", @TH.test_true TH.wait_for(
+                ctx,
+                "document.querySelector(\".book-cells [id='$(editor.uuid)-container']\") !== null";
+                timeout = 10.0
+            )
+        )
+        TH.cell_run_sync!(editor)
+        record(
+            "new cell output is visible", @TH.test_true TH.wait_for(
+                ctx,
+                "document.getElementById('$(editor.uuid)-container').querySelector('.cell-output').innerText.includes('42')";
+                timeout = 10.0
+            )
+        )
+    end
+
     TH.emit_screenshot(ctx; label = "cell churn — after $(N_INTERLEAVE) iterations")
 finally
     TH.report!("Cell churn — $(N_ADD_PHASE_1) add + $(N_INTERLEAVE) interleave", results)

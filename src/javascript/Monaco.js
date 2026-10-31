@@ -765,7 +765,7 @@ export const BOOK = new Book();
 export function insert_editor_at_index(elem, uuid, index) {
     // Handle empty book (index 1)
     if (BOOK.cells.length === 0) {
-        const container = document.querySelector(".inline-block");
+        const container = document.querySelector(".book-cells");
         if (container) {
             container.appendChild(elem);
         }

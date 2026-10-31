@@ -185257,7 +185257,7 @@ class Book {
 const BOOK = new Book();
 function insert_editor_at_index(elem, uuid1, index) {
     if (BOOK.cells.length === 0) {
-        const container = document.querySelector(".inline-block");
+        const container = document.querySelector(".book-cells");
         if (container) {
             container.appendChild(elem);
         }
