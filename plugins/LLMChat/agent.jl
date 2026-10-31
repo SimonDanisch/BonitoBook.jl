@@ -70,13 +70,9 @@ end
     compact_tool_result(result::ToolResult; max_summary_length::Int=300)
 
 Create a compacted/summarized version of a tool result for the LLM.
+Compacts both successful results and errors (errors can contain huge serialized objects).
 """
 function compact_tool_result(result::ToolResult; max_summary_length::Int=300)
-    if !result.success
-        # Keep errors full - they're important for debugging
-        return result
-    end
-
     result_str = string(result.result)
     if length(result_str) <= max_summary_length
         return result
@@ -95,7 +91,10 @@ function compact_tool_result(result::ToolResult; max_summary_length::Int=300)
     prefix = String(chars[1:actual_prefix_len])
     suffix = String(chars[end-actual_suffix_len+1:end])
 
-    summary = """$prefix
+    # Add context about whether this was an error
+    error_note = result.success ? "" : "[ERROR] "
+
+    summary = """$(error_note)$prefix
 
 [... $(length(result_str) - prefix_len - suffix_len) characters compacted for context efficiency ...]
 
@@ -340,7 +339,7 @@ function extract_markdown_content(source::String)
 end
 
 """
-    cells_to_messages(book; compact::Bool=true)
+    cells_to_messages(book; compact::Bool=true, keep_last::Union{Int, Nothing}=nothing, min_size::Union{Int, Nothing}=nothing)
 
 Convert notebook cells to agent messages with optional history compacting.
 Smartly extracts content from Markdown.parse wrappers and filters out add_cell tool cells.
@@ -352,12 +351,24 @@ to disk so it survives restarts.
 # Arguments
 - `book`: The LLMChatBook or Book to convert
 - `compact::Bool=true`: Whether to compact old, large tool results
+- `keep_last::Union{Int, Nothing}=nothing`: Override for number of recent tool cells to keep full
+- `min_size::Union{Int, Nothing}=nothing`: Override for minimum result size to compact
 """
-function cells_to_messages(book; compact::Bool=true)
+function cells_to_messages(book; compact::Bool=true, keep_last::Union{Int, Nothing}=nothing, min_size::Union{Int, Nothing}=nothing)
     messages = AgentMessage[]
 
     # Load compacting state if enabled
     compacting_state = compact ? load_compacting_state(book.folder) : nothing
+
+    # Apply overrides if provided (for token limit retry scenarios)
+    if compacting_state !== nothing
+        if keep_last !== nothing
+            compacting_state.keep_last = keep_last
+        end
+        if min_size !== nothing
+            compacting_state.min_size_to_compact = min_size
+        end
+    end
 
     # Collect tool cells for compacting decisions
     tool_cells = filter(book.cells) do cell
@@ -371,6 +382,8 @@ function cells_to_messages(book; compact::Bool=true)
     else
         Set{Int}()
     end
+
+    @info "Compacting configuration" num_tool_cells num_to_compact=length(cells_to_compact) keep_last=compacting_state !== nothing ? compacting_state.keep_last : "N/A" min_size=compacting_state !== nothing ? compacting_state.min_size_to_compact : "N/A"
 
     state_changed = false
 
@@ -388,6 +401,15 @@ function cells_to_messages(book; compact::Bool=true)
         else
             TT = tool_name_to_type(string(tool_type))
             data = joinpath(book.folder, "data", "tools", "$(tool_type)-$(cell_id).json")
+
+            # Check if tool data file exists
+            if !isfile(data)
+                # Tool cell exists but data file is missing (interrupted execution, corruption, etc.)
+                # Skip entirely - adding only a tool_result without tool_use causes API errors
+                @warn "Tool data file missing, skipping cell entirely" file=data cell_id=cell_id tool_type=tool_type
+                continue
+            end
+
             tool_execution = open(io -> JSON3.read(io, ToolExecution{TT}), data)
 
             # Tool call message (always full)
@@ -395,16 +417,20 @@ function cells_to_messages(book; compact::Bool=true)
 
             # Tool result message (potentially compacted)
             result = tool_execution.result
+            original_size = length(string(result.result))
             if compact && cell_id in cells_to_compact
-                result_size = length(string(result.result))
-                if result_size >= compacting_state.min_size_to_compact
+                if original_size >= compacting_state.min_size_to_compact
                     result = compact_tool_result(result)
+                    compacted_size = length(string(result.result))
+                    @info "Compacted tool result" cell_id tool_type original_size compacted_size savings_pct=round(100*(1 - compacted_size/original_size), digits=1)
                     # Track that we compacted this cell
                     if !(cell_id in compacting_state.compacted_cells)
                         push!(compacting_state.compacted_cells, cell_id)
                         state_changed = true
                     end
                 end
+            elseif original_size > 1000
+                @info "Large tool result NOT compacted" cell_id tool_type original_size in_compact_set=(cell_id in cells_to_compact) keep_last=compacting_state.keep_last
             end
             push!(messages, AgentMessage(:user, result, cell_id))
         end

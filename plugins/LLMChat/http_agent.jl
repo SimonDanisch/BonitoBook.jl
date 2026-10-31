@@ -3,6 +3,41 @@ using JSON3
 using Bonito.Base64
 
 """
+    PromptTooLongError <: Exception
+
+Exception thrown when the prompt exceeds the API's token limit.
+Contains information to help with compacting.
+"""
+struct PromptTooLongError <: Exception
+    current_tokens::Int
+    max_tokens::Int
+    message::String
+end
+
+function Base.showerror(io::IO, e::PromptTooLongError)
+    print(io, "PromptTooLongError: $(e.current_tokens) tokens > $(e.max_tokens) maximum")
+end
+
+"""
+    parse_token_limit_error(error_body::String)
+
+Parse a token limit error response and return (current_tokens, max_tokens) or nothing.
+"""
+function parse_token_limit_error(error_body::String)
+    # Match patterns like "216913 tokens > 200000 maximum"
+    m = match(r"(\d+)\s*tokens?\s*>\s*(\d+)\s*maximum", error_body)
+    if m !== nothing
+        return (parse(Int, m.captures[1]), parse(Int, m.captures[2]))
+    end
+    # Also match OpenAI-style errors
+    m = match(r"maximum context length is (\d+) tokens.*you requested (\d+)", error_body)
+    if m !== nothing
+        return (parse(Int, m.captures[2]), parse(Int, m.captures[1]))
+    end
+    return nothing
+end
+
+"""
     AbstractApi
 
 Base type for all HTTP API implementations (OpenAI, Claude, Ollama, etc.)
@@ -60,6 +95,44 @@ struct OllamaApi <: AbstractApi
     model::String
     system_prompt::String
 end
+
+# ============================================================================
+# Token estimation (must come after API struct definitions)
+# ============================================================================
+
+"""
+    context_limit(api::AbstractApi)
+
+Return the maximum context window size (in tokens) for the API.
+"""
+context_limit(::ClaudeApi) = 200_000
+context_limit(::OpenAIApi) = 128_000  # GPT-4 Turbo default
+context_limit(::OllamaApi) = 32_000   # Conservative default for local models
+
+"""
+    estimate_tokens(text::AbstractString)
+
+Estimate the number of tokens in a string.
+Uses ~4 characters per token as a rough approximation.
+"""
+estimate_tokens(text::AbstractString) = length(text) ÷ 4 + 1
+
+"""
+    estimate_message_tokens(api::AbstractApi, messages::Vector)
+
+Estimate the total token count for a list of messages.
+"""
+function estimate_message_tokens(api::AbstractApi, messages::Vector)
+    total = 0
+    for msg in messages
+        # Convert message to API format and estimate tokens
+        api_msg = message_to_api(api, msg)
+        total += estimate_tokens(JSON3.write(api_msg))
+    end
+    return total
+end
+
+# Note: estimate_request_tokens is defined later after tool_to_claude is available
 
 """
     HTTPAgent <: LLMChatAgent
@@ -228,7 +301,7 @@ Create configuration for Claude API.
 """
 function claude_config(model::String; api_key=nothing, endpoint="https://api.anthropic.com/v1/messages")
     api_key = something(api_key, get(ENV, "CLAUDE_API_KEY", nothing))
-    return ClaudeApi(endpoint, model, api_key, DEFAULT_SYSTEM_PROMPT)
+    return ClaudeApi(endpoint, model, api_key, "You are Claude Code, Anthropic's official CLI for Claude.")
 end
 
 """
@@ -392,10 +465,9 @@ function prompt(callback, agent::HTTPAgent, messages::Vector{AgentMessage};
 
     # Convert messages to API format
     api_messages = [
-        Dict("role" => "system", "content" => agent.system_prompt),
         [message_to_api(api, msg) for msg in messages]...
     ]
-
+    println(api_messages)
     # Build request with streaming enabled
     body = request_body(api, api_messages, agent.tools)
 
@@ -416,6 +488,14 @@ function prompt(callback, agent::HTTPAgent, messages::Vector{AgentMessage};
             if resp.status >= 400
                 # Read error response body
                 error_body = read(io, String)
+
+                # Check for token limit error - throw special exception for retry handling
+                token_info = parse_token_limit_error(error_body)
+                if token_info !== nothing
+                    current_tokens, max_tokens = token_info
+                    throw(PromptTooLongError(current_tokens, max_tokens, error_body))
+                end
+
                 callback("HTTP $(resp.status): $error_body")
                 return
             end
@@ -518,6 +598,7 @@ function message_to_api(api::AbstractApi, tool::AbstractTool, cell_id)
     return [Dict(
         "type" => "tool_use",
         "id" => tool_id,
+        "type" => "custom",
         "name" => Base.invokelatest(tool_name, typeof(tool)),
         "input" => tool
     )]
@@ -724,6 +805,36 @@ function tool_to_claude(::Type{T}) where T<:AbstractTool
         "description" => tool_description(T),
         "input_schema" => tool_input_schema(T)
     )
+end
+
+"""
+    estimate_request_tokens(agent, messages::Vector)
+
+Estimate the total token count for a full API request, including:
+- All messages
+- System prompt
+- Tool definitions
+
+This gives a more accurate estimate than estimate_message_tokens alone.
+"""
+function estimate_request_tokens(agent, messages::Vector)
+    # Messages
+    msg_tokens = estimate_message_tokens(agent.api, messages)
+
+    # System prompt
+    system_tokens = estimate_tokens(agent.api.system_prompt)
+
+    # Tool definitions
+    tool_tokens = 0
+    if !isempty(agent.tools)
+        tool_json = JSON3.write([tool_to_claude(T) for T in agent.tools])
+        tool_tokens = estimate_tokens(tool_json)
+    end
+
+    # Add some overhead for request structure
+    overhead = 100
+
+    return msg_tokens + system_tokens + tool_tokens + overhead
 end
 
 # ============================================================================
