@@ -1,6 +1,28 @@
 
 abstract type AbstractBook end
 
+"""
+Valid values for `Book.logging_mode`. Each value controls only the
+*visibility* of cell stdout/stderr; the runner always records every
+chunk into `book.console_log` regardless of mode, so switching modes
+never loses data.
+
+  - `:respect_cell` — per-cell `editor.show_logging` decides whether
+    the inline logging div is visible. Default.
+  - `:hide_all` — never show inline logging anywhere. Per-cell toggles
+    are ignored at the visibility layer.
+  - `:show_all` — show every cell's logging inline regardless of its
+    per-cell setting.
+  - `:console` — hide all inline logging; the attributed console log
+    in the bottom panel becomes the canonical place to read output.
+"""
+const LOGGING_MODES = (:respect_cell, :hide_all, :show_all, :console)
+
+# `LogEntry`, `CONSOLE_LOG_BYTE_CAP`, and `push_console!` are defined in
+# logging.jl (which loads before book.jl) because `ConsoleLogWidget`
+# there needs to reference `LogEntry` too. Everything that touches
+# `book.console_log` goes through them.
+
 "Interactive book with code cells and execution runner."
 mutable struct Book <: AbstractBook
     file::String
@@ -20,6 +42,68 @@ mutable struct Book <: AbstractBook
     cell_id_counter::Ref{Int}  # Counter for assigning unique cell IDs
     last_save_hash::Ref{UInt64}  # Hash of file after last save (prevents self-triggering)
     file_watcher::Union{Nothing, EvalFileOnChange}  # Watches markdown file for external changes
+    logging_mode::Observable{Symbol}  # One of LOGGING_MODES; persisted in meta.toml
+    # Attributed history of every stdout/stderr chunk a cell run produced
+    # since the book was opened. Capped at `CONSOLE_LOG_BYTE_CAP` bytes
+    # via `push_console!`. The console widget renders this; per-cell
+    # inline `terminal_output` still gets the same chunks in parallel,
+    # so the only thing `logging_mode` actually changes is visibility.
+    console_log::Observable{Vector{LogEntry}}
+end
+
+# ── meta.toml helpers ────────────────────────────────────────────────────────
+# Per-book settings (mode toggles, etc.) live in `<folder>/meta.toml`
+# alongside the schema-version marker. We keep the file flat so a user
+# can hand-edit it without breaking anything.
+
+"Path to the per-book meta.toml. Doesn't create the file."
+book_meta_path(folder::AbstractString) = joinpath(folder, "meta.toml")
+
+"""
+    read_book_meta(folder) -> Dict{String,Any}
+
+Read `meta.toml` if it exists. Returns an empty dict if the file is
+missing or unreadable so callers can `get(meta, key, default)` safely.
+"""
+function read_book_meta(folder::AbstractString)
+    path = book_meta_path(folder)
+    isfile(path) || return Dict{String,Any}()
+    try
+        return TOML.parsefile(path)
+    catch e
+        @warn "Failed to parse $(path); using defaults" exception=e
+        return Dict{String,Any}()
+    end
+end
+
+"""
+    write_book_meta!(folder, updates::AbstractDict)
+
+Merge `updates` into `meta.toml` (existing keys overwritten, missing
+keys preserved). Creates the file if needed.
+"""
+function write_book_meta!(folder::AbstractString, updates::AbstractDict)
+    path = book_meta_path(folder)
+    base = read_book_meta(folder)
+    merge!(base, updates)
+    mkpath(folder)
+    open(path, "w") do io
+        TOML.print(io, base)
+    end
+    return path
+end
+
+"""
+    load_logging_mode(folder) -> Symbol
+
+Read the persisted logging mode from meta.toml, falling back to
+`:respect_cell` if the file is missing or contains an unknown value.
+"""
+function load_logging_mode(folder::AbstractString)
+    meta = read_book_meta(folder)
+    raw = get(meta, "logging_mode", "respect_cell")
+    sym = Symbol(raw)
+    return sym in LOGGING_MODES ? sym : :respect_cell
 end
 
 
@@ -116,9 +200,18 @@ function Book(user_file::String; folder=nothing, replace_style=false, all_blocks
     # Load the book content
     cells = load_book(markdown_file; all_blocks_as_cell=all_blocks_as_cell)
     global_logging_widget = LoggingWidget()
+    # Attributed console history (cell_id, html, time per chunk).
+    # Owned by the book, mirrored into the runner so the worker can
+    # push directly without a back-reference to the Book.
+    console_log = Observable(LogEntry[])
+    logging_mode = Observable{Symbol}(load_logging_mode(folder))
 
     # The runner will cd into folder for code execution
-    runner = AsyncRunner(folder; global_logger=global_logging_widget.logging)
+    runner = AsyncRunner(folder;
+        global_logger = global_logging_widget.logging,
+        logging_mode = logging_mode,
+        console_log = console_log,
+    )
     monaco_theme = Observable{String}("default")
     editors = cells2editors(cells, runner, monaco_theme, folder)
     progress = Observable((false, 0.0))
@@ -146,10 +239,22 @@ function Book(user_file::String; folder=nothing, replace_style=false, all_blocks
     spinner = BookSpinner()
     current_cell = Observable{Union{CellEditor,Nothing}}(nothing)
     theme_preference = Observable{String}("auto")
+    # Persist mode changes back to meta.toml so re-opening the book
+    # restores the user's last-picked mode. We use `on` without a
+    # session here because the observable is owned by the Book (it
+    # lives across sessions).
+    on(logging_mode) do new_mode
+        new_mode in LOGGING_MODES || return
+        try
+            write_book_meta!(folder, Dict("logging_mode" => string(new_mode)))
+        catch e
+            @warn "Failed to persist logging_mode" exception = e
+        end
+    end
     book = Book(
         markdown_file, folder, editors, runner, progress, nothing, nothing, Dict{String,Any}(),
         global_logging_widget, style_eval, spinner, current_cell, theme_preference, monaco_theme,
-        cell_id_counter, Ref(UInt64(0)), nothing
+        cell_id_counter, Ref(UInt64(0)), nothing, logging_mode, console_log,
     )
     for cell in book.cells
         cell.book = book  # Set back-reference to the parent book
@@ -175,7 +280,7 @@ If a plugin exists, returns the plugin-specific book type. Otherwise returns a s
 - `folder::Union{Nothing, String}`: Folder for .book-name-bbook structure (default: auto-create next to .md file)
 - `replace_style::Bool`: Replace style.jl with template (default: false)
 - `all_blocks_as_cell::Bool`: Treat all code blocks as cells (default: false)
-- `plugin::Union{Nothing, Module}`: Plugin module to apply (e.g. `BonitoBook.LLMChatBooks`)
+- `plugin::Union{Nothing, Module}`: Plugin module to apply
 
 **Plugin Arguments:**
 - `plugin_kw_args...`: Additional keyword arguments passed to the plugin's create_book function
@@ -586,6 +691,27 @@ function start_file_watcher!(book::Book)
 end
 
 """
+    ensure_cell_id!(book, editor)
+
+Assign the next available cell id when `editor.uuid == 0`. CellEditors
+created at runtime (via the +-menu, plugins, or tests) default to
+uuid=0, which collides with every other freshly-inserted cell — and
+`delete!(book, editor)` uses uuid equality to identify the row to
+remove, so a single delete on uuid=0 would purge every freshly-inserted
+cell at once. Assigning a unique id at insert time prevents that.
+"""
+function ensure_cell_id!(book::Book, editor::CellEditor)
+    if editor.uuid == 0
+        editor.uuid = book.cell_id_counter[]
+        book.cell_id_counter[] += 1
+    end
+    # Keep the EvalEditor's cell_id mirror in sync so the runner stamps
+    # console-log entries with the assigned id, not the placeholder 0.
+    editor.editor.cell_id[] = editor.uuid
+    return editor.uuid
+end
+
+"""
     insert_editor!(book, editor, index::Int)
 
 Insert editor at a specific 1-based index position.
@@ -597,6 +723,7 @@ Insert editor at a specific 1-based index position.
 function insert_editor!(book, editor, index::Int)
     # Set book reference
     editor.book = book
+    ensure_cell_id!(book, editor)
 
     # Update book.cells array
     if index == 1
@@ -659,9 +786,11 @@ function insert_cell_at!(book::Book, editor::CellEditor, pos)
     if pos == :begin
         if isempty(book.cells)
             # If no cells exist, add directly and handle manually
+            editor.book = book
+            ensure_cell_id!(book, editor)
             push!(book.cells, editor)
             return Bonito.dom_in_js(
-                book.session, elem, js"""(elem) => {
+                book.session, editor, js"""(elem) => {
                     $(Monaco).then(Monaco => {
                         Monaco.add_editor_at_beginning(elem, $(editor.uuid));
                     })
@@ -799,26 +928,86 @@ function create_chat_agent(book::Book)
     return create_prompting_tools_agent(book)
 end
 
+"""
+    logging_mode_option(book, mode, label, desc) -> DOM element
+
+One clickable row in the logging-mode picker. Factored out so the
+inner closures don't capture loop-bound variables from a `map do`
+block (Hyperscript's `kw...` splat tripped over the closure-capture
+mechanism in mysterious ways).
+"""
+function logging_mode_option(book::Book, mode::Symbol,
+                              label::AbstractString, desc::AbstractString)
+    cls = map(book.logging_mode) do current
+        base = "logmode-option"
+        current === mode ? base * " active" : base
+    end
+    return DOM.div(
+        DOM.div(label; class = "logmode-option-label"),
+        DOM.div(desc;  class = "logmode-option-desc");
+        class = cls,
+        onclick = js"() => $(book.logging_mode).notify($(string(mode)))",
+    )
+end
+
+"""
+    logging_mode_picker(book) -> DOM element
+
+Build a 4-row radio-style picker for `book.logging_mode`. Each row
+sets `book.logging_mode[]` when clicked; the corresponding
+`meta.toml` write is wired in the Book constructor. The currently
+active mode gets the `active` class so CSS can style it as selected.
+"""
+function logging_mode_picker(book::Book)
+    options = [
+        (:respect_cell, "Per-cell setting",
+         "Follow each cell's own log toggle (default)."),
+        (:show_all,     "Show all inline",
+         "Always display every cell's log under it."),
+        (:hide_all,     "Hide all",
+         "Hide every cell's log. Output is still captured."),
+        (:console,      "Send to console",
+         "Hide inline; show attributed log in the bottom panel."),
+    ]
+    rows = [logging_mode_option(book, opt[1], opt[2], opt[3]) for opt in options]
+    return DOM.div(
+        DOM.div("Logging mode"; class = "logmode-picker-title"),
+        rows...;
+        class = "logmode-picker",
+    )
+end
+
 function setup_menu(book::Book, tabbed_file_editor::TabbedFileEditor)
-    style_setting_button, click = SmallButton("paintcan")
-    on(click) do _click
-        # Initialize file for editing (creates folder/file if needed)
-        style_path = initialize_file_for_editing(book.folder, "style.jl"; plugin_template=get_plugin_template_path(book.folder))
-        # Update the book's style_eval to watch the custom file
+    # ── Style editor button (was the entire settings menu)
+    style_setting_button, style_click = SmallButton("paintcan")
+    on(style_click) do _click
+        style_path = initialize_file_for_editing(
+            book.folder, "style.jl";
+            plugin_template = get_plugin_template_path(book.folder),
+        )
         update_filepath!(book.style_eval, style_path)
-        # Open in editor
         open_file!(tabbed_file_editor, style_path)
     end
-    # Settings menu button
     style_button_tooltip = Tooltip(
-        style_setting_button,
-        "Open style editor"; position="bottom"
+        style_setting_button, "Open style editor"; position = "bottom",
     )
-    menu = DOM.div(
-        icon("settings"), style_button_tooltip;
-        class="settings small-menu-bar"
+
+    # ── Settings popup (gear icon → opens picker)
+    settings_button, settings_click = SmallButton("settings")
+    settings_popup = PopUp(logging_mode_picker(book); show = false)
+    on(settings_click) do _click
+        settings_popup.show[] = true
+    end
+    settings_button_tooltip = Tooltip(
+        settings_button, "Settings"; position = "bottom",
     )
-    return menu
+
+    return DOM.div(
+        style_button_tooltip,
+        settings_button_tooltip,
+        settings_popup;
+        class = "settings small-menu-bar",
+    )
 end
 
 function setup_completions(session, cell_module)
@@ -886,6 +1075,25 @@ function standard_setup!(session::Session, book::Book)
             $(book.theme_preference).notify(get_current_theme());
         });
     """
+
+    # Reactively project `book.logging_mode` onto a `logmode-<mode>`
+    # class on `<body>`. CSS rules in style.jl key off this class to
+    # show/hide inline logging divs and the bottom-panel console.
+    # We keep one and only one `logmode-*` class on body at a time so
+    # the rules don't have to disambiguate which mode is active.
+    logmode_tracking = js"""
+        const ALL_MODES = ['respect_cell', 'hide_all', 'show_all', 'console'];
+        function apply_logmode(mode) {
+            for (const m of ALL_MODES) {
+                document.body.classList.remove('logmode-' + m);
+            }
+            // Default to respect_cell if the mode isn't one we know about.
+            const safe = ALL_MODES.indexOf(mode) >= 0 ? mode : 'respect_cell';
+            document.body.classList.add('logmode-' + safe);
+        }
+        apply_logmode($(book.logging_mode).value);
+        $(book.logging_mode).on(apply_logmode);
+    """
     on(session.on_close) do closed
         if closed
             close(book.runner)
@@ -907,7 +1115,7 @@ function standard_setup!(session::Session, book::Book)
             "font-style" => "normal"
         )
     )
-    return [codicon, style, completions, register_book, theme_tracking]
+    return [codicon, style, completions, register_book, theme_tracking, logmode_tracking]
 end
 
 function Bonito.jsrender(session::Session, book::Book)
@@ -942,8 +1150,14 @@ function Bonito.jsrender(session::Session, book::Book)
         ]; width="800px")
 
     # Create horizontal sidebar for global logging
+    # The bottom panel is the user's view into `book.console_log` —
+    # the attributed history of every chunk of cell stdout/stderr,
+    # populated by the runner regardless of mode. CSS in style.jl
+    # hides this whole panel unless `body.logmode-console` is on
+    # (i.e. the user picked the console mode in the settings popup).
+    console_widget = ConsoleLogWidget(book.console_log)
     global_logging_sidebar = Sidebar([
-            ("global-logging", book.global_logging_widget, "Global Output", "terminal")
+            ("console", console_widget, "Console", "terminal")
         ]; width="100vw", orientation="horizontal")
 
     # Create content area that includes both cells and sidebar
@@ -1005,7 +1219,7 @@ Launch a BonitoBook server for interactive notebook editing.
 
 - `path::AbstractString`: Path to .md or .ipynb file
 - `folder::Union{Nothing, AbstractString}`: Folder for .book-name-bbook structure (default: auto-create next to .md file)
-- `plugin::Union{Nothing, Module}`: Plugin module to apply (e.g. `BonitoBook.LLMChatBooks`)
+- `plugin::Union{Nothing, Module}`: Plugin module to apply
 - `replace_style::Bool`: Replace style.jl with template
 - `all_blocks_as_cell::Bool`: Treat all code blocks as cells (and not just ```julia (editor=true, logging=false, output=true)`)
 - `url::String`: Server URL
