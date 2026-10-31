@@ -210,7 +210,7 @@ function capture_output!(editor::EvalEditor; format::String = "png", timeout::Re
         msg = editor.capture_response[]
         return msg isa Dict{String, Any} && get(msg, "request_id", "") == request_id
     end
-    success || return nothing
+    success === :success || return nothing
     return editor.capture_response[]
 end
 
@@ -537,6 +537,7 @@ function Bonito.jsrender(session::Session, editor::CellEditor)
     if !isnothing(editor.book)
         add_cell_div = new_cell_menu(editor.book, editor.uuid, editor.book.runner, editor.language)
         full_cell = DOM.div(cell_div, add_cell_div)
+        editor.book.session = session
         setup_editor_callbacks!(editor.book, editor)
         return Bonito.jsrender(session, full_cell)
     else
