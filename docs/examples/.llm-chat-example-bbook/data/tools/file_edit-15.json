@@ -1,0 +1,1 @@
+{"tool":{"path":"./dev/ReynKoWebViz/src/DataManager.jl","old_text":"    # Load grid data\n    x, y, z, nx, ny, nz = _get_grid_data(file_paths[GRID_FILE])","new_text":"    # Load grid data\n    xyz, nx, ny, nz = _get_grid_data(file_paths[GRID_FILE])"},"result":{"result":"success","success":true}}
