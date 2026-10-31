@@ -29,7 +29,7 @@ function create_book(book::BonitoBook.Book; branding_text="", branding_logo=noth
         logo_path = joinpath(dirname(@__FILE__), "logo.svg")
         branding_text = "Makie.jl"
         branding_logo = isfile(logo_path) ? logo_path : nothing
-        footer_text = "Interactive Data Visualization"
+        footer_text = ""
     end
 
     # Disable markdown click-to-edit for all markdown cells in slideshow mode
