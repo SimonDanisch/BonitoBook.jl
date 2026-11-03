@@ -2,14 +2,16 @@ module BonitoBook
 
 using Bonito
 using Markdown
+using CommonMark
+using Typst_jll
 using UUIDs
 using Pkg
-using ANSIColoredPrinters
 using Logging
 using Markdown
 using Bonito.HTTP
 using JSON3
 using Observables
+using TOML
 
 # Global constant defining all supported languages
 const ALL_LANGUAGES = Dict(
@@ -60,11 +62,12 @@ function icon(name::String; size = "1.2em", class = "", style = Styles(), kw...)
     end
     file = only(candidates)
     asset = Asset(file)
-    # Just return the asset with minimal styling to match codicon behavior
+    # Return the asset with both width and height set to ensure proper sizing
+    # Using max-width/max-height prevents icons from becoming unexpectedly large
     return DOM.img(
         src = asset;
         class = "codicon $(class)",
-        style = Styles(style, "width" => size),
+        style = Styles(style, "width" => size, "height" => size, "max-width" => size, "max-height" => size),
         kw...
     )
 end
@@ -87,11 +90,27 @@ include("completions.jl")
 include("interact.jl")
 include("chat.jl")
 include("mcp_julia_server.jl")
+include("plugin_templates.jl")
+
+"""
+    current_book(session::Session)
+
+Retrieve the current book instance from a Bonito session.
+"""
+function current_book(session::Session)
+    return get(session.metadata, :current_book, nothing)
+end
+
+# Include plugins as submodules
+include("../plugins/Slideshow/book.jl")
 
 export Book, ChatComponent, ChatAgent, ChatMessage, MCPJuliaServer, Collapsible, Components, LoggingWidget, export_zip, import_zip, InteractiveError
-export InlineBook
+export InlineBook, current_book
 export LanguageEval, JuliaEval, eval_code, get_language_evaluators
 export ALL_LANGUAGES
+export SlideshowBooks, SimpleCounterBooks
+export PluginInfo, discover_plugins, get_plugin_info, list_plugins
+export create_book_from_plugin, initialize_plugin_template
 
 function _MakieModule end
 

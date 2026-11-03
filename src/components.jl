@@ -30,7 +30,7 @@ DOM element with toggle functionality.
 function SmallToggle(active, args...; class = "", kw...)
     class = active[] ? class : "toggled $class"
     value = Observable(false)
-    button_dom = DOM.button(args...; class = "small-button $(class)", kw...)
+    button_dom = DOM.button(args; class = "small-button $(class)", kw...)
     toggle_script = js"""
         const elem = $(button_dom);
         $(active).on((x) => {
@@ -369,7 +369,7 @@ function Bonito.jsrender(session::Session, dialog::OpenFileDialog)
             push!(list_items, item)
         end
 
-        return DOM.div(list_items..., class = "file-dialog-list")
+        return DOM.div(list_items, class = "file-dialog-list")
     end
 
     # Handle input changes and enter key
@@ -583,7 +583,7 @@ function Bonito.jsrender(session::Session, tabs::FileTabs)
             onclick = js"event => $(tabs.file_dialog.show_dialog).notify(true)")
         push!(tab_elements, open_btn)
 
-        return DOM.div(tab_elements..., class = "file-tabs-container")
+        return DOM.div(tab_elements, class = "file-tabs-container")
     end
 
     # The file dialog now handles its own popup overlay, so just render it directly

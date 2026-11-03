@@ -1,5 +1,83 @@
-const MONACO = "https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/+esm";
-const monaco = import(MONACO);
+import * as monacoApi from './vendor/monaco.js';
+
+// >= 0.55.1: older ones keep disposed diff editors in their registry. 0.57
+// moved the worker paths below.
+const MONACO_VERSION = "0.55.1";
+
+// Monaco runs tokenizing, diffing and language services in web workers, and
+// asks `MonacoEnvironment` for them. Without it every page with an editor
+// warned "Could not create web worker(s)" and did that work on the main
+// thread. A worker cannot be started from another origin directly, so each one
+// is a module worker from a blob that imports Monaco's own worker script, from
+// the same version on the same CDN (served as a self-contained module).
+const MONACO_WORKERS = {
+    json: "language/json/json.worker.js",
+    css: "language/css/css.worker.js", scss: "language/css/css.worker.js", less: "language/css/css.worker.js",
+    html: "language/html/html.worker.js", handlebars: "language/html/html.worker.js", razor: "language/html/html.worker.js",
+    typescript: "language/typescript/ts.worker.js", javascript: "language/typescript/ts.worker.js",
+};
+if (!self.MonacoEnvironment) {
+    self.MonacoEnvironment = {
+        getWorker(_moduleId, label) {
+            const path = MONACO_WORKERS[label] || "editor/editor.worker.js";
+            const url = `https://cdn.jsdelivr.net/npm/monaco-editor@${MONACO_VERSION}/esm/vs/${path}/+esm`;
+            const blob = new Blob([`import ${JSON.stringify(url)};`], { type: "text/javascript" });
+            return new Worker(URL.createObjectURL(blob), { type: "module", name: label });
+        },
+    };
+}
+// Bundle the editor and its lazy language modes in one module graph. Separate
+// CDN +esm bundles duplicate Monaco's registry (JSON then registers tokens in
+// a registry that does not even know the language).
+const monaco = Promise.resolve(monacoApi);
+
+// Monaco's highlighting without an editor: HTML, one `<span>` per line, each
+// followed by a `<br/>`, coloured by the current theme's `mtk*` classes. Spaces
+// come back as U+00A0 and tabs expanded, so text copied from it is not the
+// source; the caller puts the source text back (bonitoagents.js `resource`).
+export function colorize(text, language) {
+    return monaco.then((m) => m.editor.colorize(text, language, { tabSize: 4 }));
+}
+
+// The language Monaco registers for a file name (by extension or exact name),
+// "plaintext" if none.
+export function language_for_path(path) {
+    const name = path.split(/[\\/]/).pop().toLowerCase();
+    return monaco.then((m) => {
+        for (const lang of m.languages.getLanguages()) {
+            if ((lang.filenames || []).some((f) => f.toLowerCase() === name)) return lang.id;
+            if ((lang.extensions || []).some((e) => name.endsWith(e.toLowerCase()))) return lang.id;
+        }
+        return "plaintext";
+    });
+}
+
+const HTML_TO_IMAGE = "https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.10.10/html-to-image.min.js";
+let htmlToImagePromise = null;
+
+function get_html_to_image() {
+    if (typeof htmlToImage !== "undefined") {
+        return Promise.resolve(htmlToImage);
+    }
+    if (!htmlToImagePromise) {
+        htmlToImagePromise = new Promise((resolve, reject) => {
+            const existing = document.querySelector('script[data-bonitobook-html-to-image="1"]');
+            if (existing) {
+                existing.addEventListener("load", () => resolve(htmlToImage));
+                existing.addEventListener("error", reject);
+                return;
+            }
+            const script = document.createElement("script");
+            script.src = HTML_TO_IMAGE;
+            script.async = true;
+            script.dataset.bonitobookHtmlToImage = "1";
+            script.onload = () => resolve(htmlToImage);
+            script.onerror = reject;
+            document.head.appendChild(script);
+        });
+    }
+    return htmlToImagePromise;
+}
 
 // Configure Julia language support with auto-indentation
 monaco.then((m) => {
@@ -40,6 +118,37 @@ monaco.then((m) => {
     });
 });
 
+// A wheel is the editor's only while it can scroll that way. Otherwise Monaco
+// must not see it (it cancels every wheel) and the browser scrolls the page.
+// Capture phase, so this runs first. `editor_at(e)` is the editor under the
+// wheel; `owner` the wrapper, whose disposed editor takes no wheel at all.
+function pass_wheel_unless_scrollable(container, editor_at, owner) {
+    container.addEventListener("wheel", (e) => {
+        if (owner.disposed) return;
+        const editor = editor_at(e);
+        const layout = editor.getLayoutInfo();
+        const sideways = Math.abs(e.deltaX) > Math.abs(e.deltaY);
+        const pos = sideways ? editor.getScrollLeft() : editor.getScrollTop();
+        const max = sideways ? editor.getScrollWidth() - layout.contentWidth
+                             : editor.getScrollHeight() - layout.height;
+        const delta = sideways ? e.deltaX : e.deltaY;
+        const can_scroll = delta < 0 ? pos > 0 : (delta > 0 && pos < max - 1);
+        if (!can_scroll) e.stopPropagation();
+    }, { capture: true, passive: true });
+}
+
+// Monaco's one hover-delegate factory is bound by the last constructed code
+// editor. A diff's inner editors bind it to the diff's scoped service, so
+// disposing that diff breaks every later hover and suggest widget ("Instantiation
+// Service has been disposed"). A throwaway plain editor binds it to the global
+// service, once until the next diff is created. Still needed in 0.57.
+let hover_factory_global = true;
+function rebind_hover_factory(m) {
+    if (hover_factory_global) return;
+    m.editor.create(document.createElement("div")).dispose();
+    hover_factory_global = true;
+}
+
 // Function to check if we're in export mode
 function is_export_mode() {
     return window.BONITO_EXPORT_MODE === true;
@@ -60,9 +169,10 @@ export class MonacoEditor {
         this.hiding_direction = hiding_direction;
         this.theme = theme.value;
         this.monaco = monaco;
-        theme.on((new_theme) => {
-            this.set_theme(new_theme);
-        });
+        this.disposed = false;
+        this.theme_obs = theme;
+        this.on_theme = (new_theme) => this.set_theme(new_theme);
+        theme.on(this.on_theme);
         this.editor = new Promise((resolve) => {
             this.resolve_setup = resolve;
         });
@@ -85,41 +195,31 @@ export class MonacoEditor {
         this.editor.then((x) => x.updateOptions(options));
     }
     initialize() {
+        // Once: a toggle may call this from both its transition and its timer.
+        if (this.initializing) return;
+        this.initializing = true;
         monaco.then((monaco) => {
+            if (this.disposed) return;      // its session ended before it was shown
             const div = this.editor_div;
             const editor = monaco.editor.create(div, this.options);
             div._editor_instance = this.editor;
             this.set_theme(this.theme);
             this.initialized = true;
 
-            // Prevent scroll events from being captured by the editor
-            // This allows page scrolling to work when mouse is over the editor
-            const editorDomNode = editor.getDomNode();
-            if (editorDomNode) {
-                editorDomNode.addEventListener('wheel', (e) => {
-                    // Prevent Monaco from handling the wheel event
-                    e.stopPropagation();
-                    e.preventDefault();
-
-                    // Find the scrollable parent (could be book-cells-area or window)
-                    const scrollParent = document.querySelector(".book-cells-area");
-
-                    if (scrollParent) {
-                        // Use scrollBy for smoother scrolling with proper delta handling
-                        scrollParent.scrollBy({
-                            top: e.deltaY,
-                            left: e.deltaX,
-                            behavior: 'auto' // Use 'auto' for immediate scrolling like native
-                        });
-                    } else {
-                        // Fallback to window scrolling
-                        window.scrollBy(e.deltaX, e.deltaY);
-                    }
-                }, { passive: false });
-            }
+            pass_wheel_unless_scrollable(div, () => editor, this);
 
             this.resolve_setup(editor);
         });
+    }
+    // Monaco keeps editors and their models until disposed. The event tells a
+    // host holding this node out of the document (a virtual list) that the
+    // content is dead. The container keeps its size.
+    dispose() {
+        if (this.disposed) return;
+        this.disposed = true;
+        this.theme_obs.off(this.on_theme);
+        this.editor_div.dispatchEvent(new CustomEvent("monaco-editor-disposed", { bubbles: true }));
+        if (this.initialized) this.editor.then((editor) => editor.dispose());   // and its model
     }
     toggle_editor(show) {
         const div = this.editor_div;
@@ -274,6 +374,8 @@ export class EvalEditor {
         } else if (message.type === "toggle-logging") {
             this.show_logging = message.data;
             toggle_elem(message.data, this.logging_div, this.direction);
+        } else if (message.type === "capture-output") {
+            this.capture_output(message.format || "png", message.request_id);
         } else if (message.type === "goto-line") {
             this.editor.editor.then((editor) => {
                 const lineNumber = Math.max(1, message.line);
@@ -295,6 +397,53 @@ export class EvalEditor {
             message.data.forEach(this.process_message.bind(this));
         } else {
             console.warn("Unknown message type:", message.type);
+        }
+    }
+    async capture_output(format, request_id) {
+        try {
+            const lib = await get_html_to_image();
+            const node = this.output_div;
+            if (!node) {
+                this.js_to_julia.notify({
+                    type: "captured-output",
+                    ok: false,
+                    request_id,
+                    error: "No output node found"
+                });
+                return;
+            }
+            const hidden_h = node.classList.contains("hide-horizontal");
+            const hidden_v = node.classList.contains("hide-vertical");
+            if (hidden_h) node.classList.remove("hide-horizontal");
+            if (hidden_v) node.classList.remove("hide-vertical");
+
+            // Let layout settle after potential class changes.
+            await new Promise((r) => requestAnimationFrame(() => r()));
+            const filter = (domNode) => domNode.tagName !== "SCRIPT";
+            let data_url;
+            if (format === "svg") {
+                data_url = await lib.toSvg(node, { filter, cacheBust: true });
+            } else {
+                data_url = await lib.toPng(node, { filter, cacheBust: true, pixelRatio: 2 });
+            }
+
+            if (hidden_h) node.classList.add("hide-horizontal");
+            if (hidden_v) node.classList.add("hide-vertical");
+
+            this.js_to_julia.notify({
+                type: "captured-output",
+                ok: true,
+                request_id,
+                format: format === "svg" ? "svg" : "png",
+                data_url
+            });
+        } catch (e) {
+            this.js_to_julia.notify({
+                type: "captured-output",
+                ok: false,
+                request_id,
+                error: String(e)
+            });
         }
     }
     toggle_editor(show) {
@@ -381,36 +530,293 @@ class Book {
         // Needs to be parent since the cell div is wrapped in another with the add menu
         document.getElementById(uuid).parentElement.remove();
     }
+
+    setup_drag_drop(move_cell_obs) {
+        this.move_cell_obs = move_cell_obs;
+        this.drag_state = null;
+        this.drop_indicator = null;
+        this.scroll_parent = document.querySelector(".book-cells-area");
+        this.auto_scroll_speed = 0;
+        this.scroll_interval = null;
+
+        // Ensure we only add listeners once globally
+        if (window._BONITO_DRAG_LISTENERS_SET) return;
+        window._BONITO_DRAG_LISTENERS_SET = true;
+
+        // Use document-level listeners to handle dragging over sticky menus and off-screen
+        document.addEventListener("dragover", (e) => {
+            if (this.drag_state) this.handle_drag_over(e);
+        });
+        document.addEventListener("drop", (e) => {
+            if (this.drag_state) this.handle_drop(e);
+        });
+        document.addEventListener("dragenter", (e) => {
+            if (this.drag_state) e.preventDefault();
+        });
+    }
+
+    start_auto_scroll(speed) {
+        this.auto_scroll_speed = speed;
+        if (!this.scroll_interval) {
+            this.scroll_interval = setInterval(() => {
+                if (this.scroll_parent && this.auto_scroll_speed !== 0) {
+                    this.scroll_parent.scrollTop += this.auto_scroll_speed;
+                }
+            }, 16); // ~60fps
+        }
+    }
+
+    stop_auto_scroll() {
+        if (this.scroll_interval) {
+            clearInterval(this.scroll_interval);
+            this.scroll_interval = null;
+        }
+        this.auto_scroll_speed = 0;
+    }
+
+    get_cell_wrapper(uuid) {
+        const el = document.getElementById(uuid);
+        return el ? el.parentElement : null;
+    }
+
+    start_drag(uuid, event) {
+        const wrapper = this.get_cell_wrapper(uuid);
+        if (!wrapper) return;
+        this.drag_state = { uuid, wrapper };
+        this.drag_start_y = event.clientY; // Track starting position
+        wrapper.classList.add("dragging");
+
+        // Create drop indicator line
+        if (!this.drop_indicator) {
+            this.drop_indicator = document.createElement("div");
+            this.drop_indicator.className = "drop-indicator";
+        }
+
+        // Use a custom data type to prevent browser from navigating if dropped on URL bar
+        event.dataTransfer.effectAllowed = "move";
+        event.dataTransfer.setData("application/x-bonitobook-cell", String(uuid));
+        
+        // Use a transparent drag image to avoid the "ghost" text follow
+        const img = new Image();
+        img.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+        event.dataTransfer.setDragImage(img, 0, 0);
+    }
+
+    end_drag() {
+        this.stop_auto_scroll();
+        if (this.drag_state) {
+            this.drag_state.wrapper.classList.remove("dragging");
+            this.drag_state = null;
+        }
+        if (this.drop_indicator && this.drop_indicator.parentElement) {
+            this.drop_indicator.remove();
+        }
+        // Clear all drop target highlights
+        document.querySelectorAll(".drop-target-before, .drop-target-after").forEach(el => {
+            el.classList.remove("drop-target-before", "drop-target-after");
+        });
+    }
+
+    handle_drag_over(event) {
+        if (!this.drag_state) return;
+        event.preventDefault(); // Always prevent default to allow drop
+        event.dataTransfer.dropEffect = "move";
+
+        // Find scroll parent if missing or detached
+        if (!this.scroll_parent || !this.scroll_parent.isConnected) {
+            this.scroll_parent = document.querySelector(".book-cells-area");
+        }
+
+        // Handle auto-scrolling
+        if (this.scroll_parent) {
+            // Use viewport-relative boundaries for perfect symmetry and menu handling
+            const threshold = 180;
+            const topDist = event.clientY; // relative to viewport top
+            const bottomDist = window.innerHeight - event.clientY; // relative to viewport bottom
+
+            // Directional lock: only scroll if moving towards edge or already at extreme edge
+            const movedTop = event.clientY < this.drag_start_y - 5 || event.clientY < 40;
+            const movedBottom = event.clientY > this.drag_start_y + 5 || (window.innerHeight - event.clientY) < 40;
+
+            // Symmetry check: use the same formula for both directions
+            const calculateSpeed = (dist) => {
+                if (dist >= threshold) return 0;
+                // intensity: 0 at threshold, 1 at edge
+                const intensity = (threshold - dist) / threshold;
+                // Quadratic ramp (0 to ~12px per frame)
+                return Math.pow(Math.min(1.1, intensity), 2) * 12.0;
+            };
+
+            const sTop = calculateSpeed(topDist);
+            const sBottom = calculateSpeed(bottomDist);
+
+            if (sTop > 0 && movedTop) {
+                this.start_auto_scroll(-sTop);
+            } else if (sBottom > 0 && movedBottom) {
+                this.start_auto_scroll(sBottom);
+            } else {
+                this.stop_auto_scroll();
+            }
+        }
+
+        // Find closest cell wrapper
+        const target = this.find_closest_cell(event.clientY);
+        if (!target) return;
+
+        const rect = target.wrapper.getBoundingClientRect();
+        const midY = rect.top + rect.height / 2;
+        const before = event.clientY < midY;
+
+        // Visual feedback: drop indicator and highlights
+        if (before) {
+            target.wrapper.insertAdjacentElement("beforebegin", this.drop_indicator);
+            target.wrapper.classList.add("drop-target-before");
+            target.wrapper.classList.remove("drop-target-after");
+        } else {
+            target.wrapper.insertAdjacentElement("afterend", this.drop_indicator);
+            target.wrapper.classList.add("drop-target-after");
+            target.wrapper.classList.remove("drop-target-before");
+        }
+
+        // Remove highlights from other cells
+        for (const uuid of this.cells) {
+            if (uuid === target.uuid) continue;
+            const wrapper = this.get_cell_wrapper(uuid);
+            if (wrapper) {
+                wrapper.classList.remove("drop-target-before", "drop-target-after");
+            }
+        }
+
+        this.drop_indicator.dataset.targetUuid = String(target.uuid);
+        this.drop_indicator.dataset.before = String(before);
+    }
+
+    handle_drop(event) {
+        event.preventDefault();
+        if (!this.drag_state || !this.drop_indicator) return;
+
+        const from_uuid = this.drag_state.uuid;
+        const target_uuid = parseInt(this.drop_indicator.dataset.targetUuid);
+        const before = this.drop_indicator.dataset.before === "true";
+
+        if (isNaN(target_uuid) || from_uuid === target_uuid) {
+            this.end_drag();
+            return;
+        }
+
+        // Calculate new 1-based index for Julia
+        let target_idx = this.cells.indexOf(target_uuid);
+        if (target_idx === -1) { this.end_drag(); return; }
+
+        // Adjust for before/after
+        if (!before) target_idx += 1;
+        // Convert to 1-based
+        const to_index = target_idx + 1;
+
+        // Reorder in JS cells array
+        const from_idx = this.cells.indexOf(from_uuid);
+        this.cells.splice(from_idx, 1);
+        const adjusted = from_idx < target_idx ? target_idx - 1 : target_idx;
+        this.cells.splice(adjusted, 0, from_uuid);
+
+        // Reorder in DOM
+        const wrapper = this.drag_state.wrapper;
+        const target_wrapper = this.get_cell_wrapper(target_uuid);
+        if (target_wrapper) {
+            if (before) {
+                target_wrapper.insertAdjacentElement("beforebegin", wrapper);
+            } else {
+                target_wrapper.insertAdjacentElement("afterend", wrapper);
+            }
+        }
+
+        // Notify Julia
+        this.move_cell_obs.notify({ uuid: from_uuid, to_index: to_index });
+        this.end_drag();
+    }
+
+    find_closest_cell(clientY) {
+        let closest = null;
+        let closestDist = Infinity;
+        for (const uuid of this.cells) {
+            if (this.drag_state && uuid === this.drag_state.uuid) continue;
+            const wrapper = this.get_cell_wrapper(uuid);
+            if (!wrapper) continue;
+            const rect = wrapper.getBoundingClientRect();
+            const mid = rect.top + rect.height / 2;
+            const dist = Math.abs(clientY - mid);
+            if (dist < closestDist) {
+                closestDist = dist;
+                closest = { uuid, wrapper };
+            }
+        }
+        return closest;
+    }
 }
 
 export const BOOK = new Book();
 
-export function add_editor_at_beginning(elem, uuid) {
+/**
+ * Insert editor at a specific index (1-based)
+ * @param {HTMLElement} elem - The editor element to insert
+ * @param {number} uuid - The unique ID for the editor
+ * @param {number} index - The 1-based index where to insert (1 = beginning)
+ */
+export function insert_editor_at_index(elem, uuid, index) {
+    // Handle empty book (index 1)
     if (BOOK.cells.length === 0) {
-        // No cells exist, just append to the inline block
-        const inline_block = document.querySelector(".inline-block");
-        if (inline_block) {
-            inline_block.appendChild(elem);
+        const container = document.querySelector(".book-cells");
+        if (container) {
+            container.appendChild(elem);
         }
-        BOOK.cells.unshift(uuid);
-    } else {
-        // Insert before the first cell
+        BOOK.cells.push(uuid);
+        return;
+    }
+
+    // Convert to 0-based for array operations
+    const arrayIndex = index - 1;
+
+    // Insert at beginning
+    if (arrayIndex === 0) {
         const first_uuid = BOOK.cells[0];
         const first_editor_div = document.getElementById(first_uuid);
         if (first_editor_div) {
-            const parent = first_editor_div.parentElement;
-            parent.insertAdjacentElement("beforebegin", elem);
+            first_editor_div.parentElement.insertAdjacentElement("beforebegin", elem);
         }
         BOOK.cells.unshift(uuid);
+        return;
     }
+
+    // Insert at end
+    if (arrayIndex >= BOOK.cells.length) {
+        const last_uuid = BOOK.cells[BOOK.cells.length - 1];
+        const last_editor_div = document.getElementById(last_uuid);
+        if (last_editor_div) {
+            last_editor_div.parentElement.insertAdjacentElement("afterend", elem);
+        }
+        BOOK.cells.push(uuid);
+        return;
+    }
+
+    // Insert in middle - after element at arrayIndex - 1
+    const after_uuid = BOOK.cells[arrayIndex - 1];
+    const after_editor_div = document.getElementById(after_uuid);
+    if (after_editor_div) {
+        after_editor_div.parentElement.insertAdjacentElement("afterend", elem);
+    }
+    BOOK.cells.splice(arrayIndex, 0, uuid);
+}
+
+// Backwards compatibility wrappers
+export function add_editor_at_beginning(elem, uuid) {
+    insert_editor_at_index(elem, uuid, 1);
 }
 
 export function add_editor_below(above_editor_uuid, elem, uuid) {
-    const editor_div = document.getElementById(above_editor_uuid); // Correct function
-    const parent1 = editor_div.parentElement; // Parent of editor_div
-    // Append elem just below parent of editor_div
-    parent1.insertAdjacentElement("afterend", elem);
-    BOOK.add_below(above_editor_uuid, uuid);
+    const idx = BOOK.cells.indexOf(above_editor_uuid);
+    if (idx !== -1) {
+        insert_editor_at_index(elem, uuid, idx + 2); // +1 for 0->1 based, +1 for after
+    }
 }
 
 export function add_command(editor, label, keybinding, callback) {
@@ -591,6 +997,23 @@ export function setup_cell_editor(
             }
         });
     }
+
+    // Drag & drop: wire up drag handle and cell wrapper
+    const drag_handle = buttons.querySelector(".drag-handle");
+    if (drag_handle) {
+        // The cell wrapper is the outermost parent with the cell id
+        const cell_div = container.closest("[id]");
+        const cell_wrapper = cell_div ? cell_div.parentElement : null;
+        const uuid = cell_div ? parseInt(cell_div.id) : null;
+        if (cell_wrapper && uuid !== null) {
+            drag_handle.addEventListener("dragstart", (e) => {
+                BOOK.start_drag(uuid, e);
+            });
+            drag_handle.addEventListener("dragend", () => {
+                BOOK.end_drag();
+            });
+        }
+    }
 }
 
 
@@ -768,4 +1191,167 @@ export function register_cell_editor(eval_editor, uuid) {
             });
         });
     });
+}
+
+export class MonacoDiffEditor {
+    constructor(editor_div, original_obs, modified_obs, language, options, theme,
+                max_height_obs, min_height) {
+        this.editor_div = editor_div;
+        this.options = options;
+        this.language = language;
+        this.theme = theme.value;
+        this.original_obs = original_obs;
+        this.modified_obs = modified_obs;
+        // Height bounds: `min_height` is static (passed as a number); `max_height`
+        // is an Observable so the host can swap compact/full without re-mounting.
+        // `setMaxHeight` (below) is the imperative entry point any pure-JS toggle
+        // (e.g. the chat's Collapsable) can use without round-tripping through
+        // the Observable bridge.
+        this.min_height = (min_height != null) ? min_height : 100;
+        this.max_height = (max_height_obs && max_height_obs.value != null)
+                          ? max_height_obs.value : 600;
+        // Expose the instance on the container so a sibling JS module (e.g. the
+        // BonitoTeam Collapsable for edit-tool bodies) can look it up via the
+        // DOM and call `setMaxHeight` without touching the Observable.
+        editor_div.__btMonacoDiff = this;
+        this.disposed = false;
+        this.listeners = [];                // [observable, callback], removed on dispose
+
+        this.listen(theme, (new_theme) => this.set_theme(new_theme));
+        if (max_height_obs && max_height_obs.on) {
+            this.listen(max_height_obs, (h) => this.setMaxHeight(h));
+        }
+
+        this.editor = monaco.then((m) => {
+            if (this.disposed) return null;  // its session ended before Monaco loaded
+            const diffEditor = m.editor.createDiffEditor(editor_div, {
+                ...options,
+                language: language,
+            });
+            hover_factory_global = false;
+            // Cache the models so `setMaxHeight` can re-run `updateHeight`
+            // without needing the diffEditor's model accessor.
+            this.diffEditor = diffEditor;
+
+            // Set initial theme
+            this.set_theme(this.theme);
+
+            // Set the original and modified models
+            const originalModel = m.editor.createModel(original_obs.value, language);
+            const modifiedModel = m.editor.createModel(modified_obs.value, language);
+            this.originalModel = originalModel;
+            this.modifiedModel = modifiedModel;
+
+            diffEditor.setModel({
+                original: originalModel,
+                modified: modifiedModel
+            });
+
+            this.updateHeight(diffEditor, originalModel, modifiedModel);
+            editor_div.style.width = '100%';
+            // Monaco's `createDiffEditor` + initial `layout()` can resolve
+            // BEFORE the host's `dom_in_js` mount has fully attached this
+            // editor_div to its final parent. Monaco then measures a
+            // 0-height container and never paints (the editor_div has the
+            // right style.height, but the rendered diff is empty). A
+            // double-RAF reschedule guarantees we re-layout after the
+            // browser has done at least one paint pass, so Monaco picks
+            // up the real geometry and renders the diff on the first
+            // frame the user sees — no expand-toggle needed.
+            requestAnimationFrame(() => requestAnimationFrame(() => {
+                if (this.disposed) return;
+                this.updateHeight(diffEditor, originalModel, modifiedModel);
+            }));
+
+            // Side by side, each pane scrolls sideways on its own.
+            const original = diffEditor.getOriginalEditor(), modified = diffEditor.getModifiedEditor();
+            pass_wheel_unless_scrollable(editor_div,
+                (e) => original.getContainerDomNode().contains(e.target) ? original : modified, this);
+
+            this.listen(original_obs, (text) => {
+                originalModel.setValue(text);
+                this.updateHeight(diffEditor, originalModel, modifiedModel);
+            });
+            this.listen(modified_obs, (text) => {
+                modifiedModel.setValue(text);
+                this.updateHeight(diffEditor, originalModel, modifiedModel);
+            });
+
+            // For a host that set `setMaxHeight` before the diff existed (the
+            // chat's edit cards).
+            editor_div.dispatchEvent(new CustomEvent("monaco-diff-editor-ready", { bubbles: true }));
+            return diffEditor;
+        });
+    }
+
+    listen(obs, callback) {
+        obs.on(callback);
+        this.listeners.push([obs, callback]);
+    }
+
+    // See MonacoEditor.dispose. Waits for a diff in progress: with its models
+    // gone, Monaco throws "no diff result available" where nobody catches it.
+    dispose() {
+        if (this.disposed) return;
+        this.disposed = true;
+        for (const [obs, callback] of this.listeners) obs.off(callback);
+        this.editor_div.dispatchEvent(new CustomEvent("monaco-editor-disposed", { bubbles: true }));
+        if (!this.diffEditor) return;
+        const { diffEditor, originalModel, modifiedModel } = this;
+        Promise.all([monaco, diffEditor.waitForDiff()]).then(([m]) => {
+            rebind_hover_factory(m);
+            diffEditor.dispose();
+            originalModel.dispose();
+            modifiedModel.dispose();
+        });
+    }
+
+    // Imperative compact↔full toggle. Storing the diffEditor + models on
+    // `this` (set inside the monaco.then) means we can re-layout without a
+    // second `monaco.then` round trip; if called before the editor finished
+    // initializing (rare race during fast mount + toggle), this is a no-op
+    // and the initial `updateHeight` inside the constructor picks up
+    // `this.max_height` then.
+    setMaxHeight(h) {
+        this.max_height = h;
+        if (this.disposed) return;
+        if (this.diffEditor && this.originalModel && this.modifiedModel) {
+            this.updateHeight(this.diffEditor, this.originalModel, this.modifiedModel);
+        }
+    }
+
+    updateHeight(diffEditor, originalModel, modifiedModel) {
+        const originalLineCount = originalModel.getLineCount();
+        const modifiedLineCount = modifiedModel.getLineCount();
+        const maxLines = Math.max(originalLineCount, modifiedLineCount);
+        const lineHeight = 19;
+        const contentHeight = Math.min(
+            Math.max(maxLines * lineHeight + 20, this.min_height),
+            this.max_height
+        );
+
+        this.editor_div.style.height = `${contentHeight}px`;
+        // Pass dimensions explicitly. `diffEditor.layout()` without args
+        // *should* read the container size, but in inline-diff mode Monaco
+        // sometimes keeps its inner scroll viewport pinned at the
+        // construction-time size — passing the new height makes it actually
+        // grow its visible viewport. The `offsetWidth || 800` fallback
+        // covers the construction-race case where the container hasn't
+        // measured yet (the double-RAF up in the constructor catches up).
+        diffEditor.layout({
+            width: this.editor_div.offsetWidth || 800,
+            height: contentHeight,
+        });
+    }
+
+    set_theme(theme) {
+        this.theme = theme;
+        monaco.then((m) => {
+            let effectiveTheme = theme;
+            if (theme === "default") {
+                effectiveTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'vs-dark' : 'vs';
+            }
+            m.editor.setTheme(effectiveTheme);
+        });
+    }
 }

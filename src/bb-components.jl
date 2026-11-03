@@ -9,8 +9,6 @@ module Components
 using Bonito
 
 
-
-
 """
     Button(content; style=Styles(), attributes...)
 

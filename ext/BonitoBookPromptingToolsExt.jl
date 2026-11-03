@@ -5,7 +5,7 @@ using PromptingTools
 using Bonito
 using Markdown
 using TOML
-using JSON
+using JSON3
 using Bonito.HTTP
 
 """
@@ -143,7 +143,7 @@ function julia_exec_tool(agent::PromptingToolsAgent, code::String)
         response = HTTP.post(
             agent.mcp_server_url,
             ["Content-Type" => "application/json"],
-            JSON.json(mcp_request)
+            JSON3.write(mcp_request)
         )
 
         if response.status == 200
@@ -243,7 +243,7 @@ function BonitoBook.prompt(agent::PromptingToolsAgent, question::String)
                     break
                 end
                 try
-                    mcp_call = JSON.parse(strip(response.content))
+                    mcp_call = JSON3.read(strip(response.content))
                     if haskey(mcp_call, "method") && mcp_call["method"] == "julia_exec" &&
                         haskey(mcp_call, "params") && haskey(mcp_call["params"], "code")
                         # This is an MCP call, execute it

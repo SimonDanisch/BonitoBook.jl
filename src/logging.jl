@@ -1,150 +1,77 @@
-const ANSI_CSS = Styles(
-    # Define ANSI color variables for light theme
-    CSS(
-        "@media (prefers-color-scheme: light)",
-        CSS(
-            ":root",
-            # Standard ANSI colors optimized for light backgrounds
-            "--ansi-black" => "#000000",
-            "--ansi-red" => "#cd3131",
-            "--ansi-green" => "#00bc00",
-            "--ansi-yellow" => "#949800",
-            "--ansi-blue" => "#0451a5",
-            "--ansi-magenta" => "#bc05bc",
-            "--ansi-cyan" => "#0598bc",
-            "--ansi-white" => "#555555",
-            # Bright ANSI colors
-            "--ansi-bright-black" => "#686868",
-            "--ansi-bright-red" => "#ff5555",
-            "--ansi-bright-green" => "#55ff55",
-            "--ansi-bright-yellow" => "#ffff55",
-            "--ansi-bright-blue" => "#5555ff",
-            "--ansi-bright-magenta" => "#ff55ff",
-            "--ansi-bright-cyan" => "#55ffff",
-            "--ansi-bright-white" => "#ffffff"
-        )
-    ),
+"""
+    LogEntry(cell_id, html, time)
 
-    # Define ANSI color variables for dark theme
-    CSS(
-        "@media (prefers-color-scheme: dark)",
-        CSS(
-            ":root",
-            # Standard ANSI colors optimized for dark backgrounds
-            "--ansi-black" => "#000000",
-            "--ansi-red" => "#f44747",
-            "--ansi-green" => "#4ec9b0",
-            "--ansi-yellow" => "#dcdcaa",
-            "--ansi-blue" => "#569cd6",
-            "--ansi-magenta" => "#c678dd",
-            "--ansi-cyan" => "#56b6c2",
-            "--ansi-white" => "#d4d4d4",
-            # Bright ANSI colors
-            "--ansi-bright-black" => "#808080",
-            "--ansi-bright-red" => "#ff6b6b",
-            "--ansi-bright-green" => "#6bffb8",
-            "--ansi-bright-yellow" => "#ffffa0",
-            "--ansi-bright-blue" => "#7cc3ff",
-            "--ansi-bright-magenta" => "#ff8cff",
-            "--ansi-bright-cyan" => "#8cffff",
-            "--ansi-bright-white" => "#ffffff"
-        )
-    ),
+One chunk of attributed console output. `cell_id` is the book cell
+that owned the stdout/stderr write at the moment the chunk was
+emitted (`0` for global / out-of-task writes). `html` is the
+ANSI-converted HTML string the cell's logging pipeline produces.
+`time` is a wall-clock timestamp from `time()`, used purely for
+display.
+"""
+struct LogEntry
+    cell_id::Int
+    html::String
+    time::Float64
+end
 
-    # Text formatting
-    CSS("span.sgr1", "font-weight" => "bolder"),
-    CSS("span.sgr2", "font-weight" => "lighter"),
-    CSS("span.sgr3", "font-style" => "italic"),
-    CSS("span.sgr4", "text-decoration" => "underline"),
-    CSS(
-        "span.sgr7",
-        "color" => "var(--bg-primary)",
-        "background-color" => "var(--text-primary)"
-    ),
-    CSS(
-        "span.sgr8, span.sgr8 span, span span.sgr8",
-        "color" => "transparent"
-    ),
-    CSS("span.sgr9", "text-decoration" => "line-through"),
+# Soft cap on total characters held in `book.console_log`. We trim
+# from the front when this is exceeded so a long-running session
+# with chatty `println` doesn't grow memory unboundedly. 1 MB ≈ 10k
+# lines of typical log output; well above what a user reads in a
+# session, well below anything that would slow rendering.
+const CONSOLE_LOG_BYTE_CAP = 1_048_576
 
-    # Standard colors (30-37) using CSS variables
-    CSS("span.sgr30", "color" => "var(--ansi-black)"),
-    CSS("span.sgr31", "color" => "var(--ansi-red)"),
-    CSS("span.sgr32", "color" => "var(--ansi-green)"),
-    CSS("span.sgr33", "color" => "var(--ansi-yellow)"),
-    CSS("span.sgr34", "color" => "var(--ansi-blue)"),
-    CSS("span.sgr35", "color" => "var(--ansi-magenta)"),
-    CSS("span.sgr36", "color" => "var(--ansi-cyan)"),
-    CSS("span.sgr37", "color" => "var(--ansi-white)"),
+"""
+    push_console!(console_log, entry)
 
-    # Background colors (40-47)
-    CSS("span.sgr40", "background-color" => "var(--ansi-black)"),
-    CSS("span.sgr41", "background-color" => "var(--ansi-red)"),
-    CSS("span.sgr42", "background-color" => "var(--ansi-green)"),
-    CSS("span.sgr43", "background-color" => "var(--ansi-yellow)"),
-    CSS("span.sgr44", "background-color" => "var(--ansi-blue)"),
-    CSS("span.sgr45", "background-color" => "var(--ansi-magenta)"),
-    CSS("span.sgr46", "background-color" => "var(--ansi-cyan)"),
-    CSS("span.sgr47", "background-color" => "var(--ansi-white)"),
-
-    # Bright colors (90-97)
-    CSS("span.sgr90", "color" => "var(--ansi-bright-black)"),
-    CSS("span.sgr91", "color" => "var(--ansi-bright-red)"),
-    CSS("span.sgr92", "color" => "var(--ansi-bright-green)"),
-    CSS("span.sgr93", "color" => "var(--ansi-bright-yellow)"),
-    CSS("span.sgr94", "color" => "var(--ansi-bright-blue)"),
-    CSS("span.sgr95", "color" => "var(--ansi-bright-magenta)"),
-    CSS("span.sgr96", "color" => "var(--ansi-bright-cyan)"),
-    CSS("span.sgr97", "color" => "var(--ansi-bright-white)"),
-
-    # Bright background colors (100-107)
-    CSS("span.sgr100", "background-color" => "var(--ansi-bright-black)"),
-    CSS("span.sgr101", "background-color" => "var(--ansi-bright-red)"),
-    CSS("span.sgr102", "background-color" => "var(--ansi-bright-green)"),
-    CSS("span.sgr103", "background-color" => "var(--ansi-bright-yellow)"),
-    CSS("span.sgr104", "background-color" => "var(--ansi-bright-blue)"),
-    CSS("span.sgr105", "background-color" => "var(--ansi-bright-magenta)"),
-    CSS("span.sgr106", "background-color" => "var(--ansi-bright-cyan)"),
-    CSS("span.sgr107", "background-color" => "var(--ansi-bright-white)"),
-
-    # Whitespace handling for logging widgets
-    CSS(".logging-widget", "white-space" => "pre-wrap")
-)
-
+Append `entry` to the book's attributed console log, trimming oldest
+entries until the total HTML payload is at or below
+`CONSOLE_LOG_BYTE_CAP`. Notifies the observable exactly once so
+widgets watching it can rerender on the new state.
+"""
+function push_console!(console_log::Observable{Vector{LogEntry}}, entry::LogEntry)
+    entries = console_log[]
+    push!(entries, entry)
+    total = sum(sizeof(e.html) for e in entries; init = 0)
+    while total > CONSOLE_LOG_BYTE_CAP && length(entries) > 1
+        dropped = popfirst!(entries)
+        total -= sizeof(dropped.html)
+    end
+    notify(console_log)
+    return entry
+end
 
 """
     LoggingWidget
 
-A widget for displaying formatted logging output with HTML rendering.
-Factored out from EvalEditor to be reusable for global logging.
+A widget for displaying formatted logging output with ANSI color support.
+Wraps Bonito's TerminalOutput for streaming log display.
 
 # Fields
-- `logging::Observable{String}`: Raw logging output
-- `logging_html::Observable{String}`: HTML-formatted logging output
-- `visible::Observable{Bool}`: Whether the logging widget is visible
-- `new_content::Observable{Bool}`: Whether there's new content since last view
+- `logging::Observable{String}`: Input channel - receives pre-converted HTML chunks
+- `output::TerminalOutput`: The underlying terminal output widget
+- `direction::String`: Show/hide direction ("horizontal" or "vertical")
 """
 struct LoggingWidget
     logging::Observable{String}
-    logging_html::Observable{String}
+    output::TerminalOutput
     direction::String
 end
 
 """
-    LoggingWidget()
+    LoggingWidget(; direction="horizontal")
 
 Create a new logging widget with empty initial state.
 """
 function LoggingWidget(; direction="horizontal")
     logging = Observable("")
-    logging_html = Observable("")
-    # Convert raw logging to HTML when logging changes
+    output = TerminalOutput(; style=Styles("min-height" => "100px"))
     on(logging) do str
         if !isempty(str)
-            logging_html[] = logging_html[] * str
+            append_html!(output, str)
         end
     end
-    return LoggingWidget(logging, logging_html, direction)
+    return LoggingWidget(logging, output, direction)
 end
 
 """
@@ -153,33 +80,83 @@ end
 Clear all logging content from the widget.
 """
 function clear_logging!(widget::LoggingWidget)
-    widget.logging[] = ""
-    widget.logging_html[] = ""
+    empty!(widget.output)
+end
+
+function Bonito.jsrender(session::Session, widget::LoggingWidget)
+    return Bonito.jsrender(session, DOM.div(
+        widget.output;
+        class="logging-widget"
+    ))
 end
 
 """
-    render_logging_widget(widget::LoggingWidget; direction="horizontal")
+    ConsoleLogWidget(console_log)
 
-Render the logging widget as a DOM element.
+Renders a book's `Observable{Vector{LogEntry}}` (the attributed
+console history populated by the runner regardless of `logging_mode`)
+as a chronological list, with each entry prefixed by its cell id so
+the user can tell which cell produced which output.
 
-# Arguments
-- `widget::LoggingWidget`: The logging widget to render
-- `direction::String`: Direction for show/hide animations ("horizontal" or "vertical")
+The widget reactively re-renders only when new entries arrive, and
+auto-scrolls to the bottom so the freshest output is always in view.
+A clear button (visible when the user hovers) empties the buffer.
 """
-function Bonito.jsrender(session::Session, widget::LoggingWidget)
-    # Create the HTML observable for rendering
-    logging_html = Observable(HTML(""))
-    on(widget.logging_html) do str
-        isempty(str) && return
-        # Don't wrap in <pre> since ANSIColoredPrinters already provides formatted HTML
-        logging_html[] = HTML(str)
-    end
+struct ConsoleLogWidget
+    console_log::Observable{Vector{LogEntry}}
+end
 
-    # Dynamic class based on visibility
-    return Bonito.jsrender(session, DOM.div(
-        ANSI_CSS,
-        logging_html;
-        class = "logging-widget",
-        style = Styles("min-height" => "100px")
-    ))
+function _format_entry(entry::LogEntry)
+    label = entry.cell_id == 0 ? "·" : string("cell ", entry.cell_id)
+    # `entry.html` is already ANSI-converted; wrap it in a row that
+    # carries the cell-id badge for attribution. We use raw HTML
+    # interpolation here because `entry.html` is trusted output from
+    # our own ANSI-to-HTML pipeline.
+    return DOM.div(
+        DOM.span(label; class = "console-cell-id"),
+        Bonito.DontEscape(entry.html);
+        class = "console-entry",
+    )
+end
+
+function Bonito.jsrender(session::Session, widget::ConsoleLogWidget)
+    # `map` over the Observable so the rendered list refreshes when
+    # `push_console!` notifies — Bonito's diffing makes this a cheap
+    # re-render rather than a full DOM reflow. The mapped output is a
+    # DOM tree (serialisable), so we don't need a msgpack mapping for
+    # `LogEntry` and can keep that type as a plain Julia struct.
+    rendered = map(widget.console_log) do entries
+        DOM.div([_format_entry(e) for e in entries];
+                class = "console-entries")
+    end
+    container = DOM.div(rendered; class = "console-log-widget")
+    # Auto-scroll to bottom on new content. We can't watch the
+    # `console_log` observable from JS (`LogEntry` isn't MsgPack-able
+    # and there's no reason to ship the raw struct to the client when
+    # the server already rendered the list). A MutationObserver on
+    # the `.console-entries` subtree handles it cleanly.
+    scroll_to_bottom = js"""
+        const root = $(container);
+        const scroll = () => {
+            const sc = root.querySelector('.console-entries');
+            if (sc) sc.scrollTop = sc.scrollHeight;
+        };
+        const observer = new MutationObserver(
+            () => requestAnimationFrame(scroll));
+        observer.observe(root, { childList: true, subtree: true });
+        requestAnimationFrame(scroll);
+    """
+    return Bonito.jsrender(session, DOM.div(container, scroll_to_bottom))
+end
+
+"""
+    clear_console!(book::AbstractBook)
+
+Empty the attributed console history. Wired to the "clear" button in
+the console widget, but also useful from Julia for tests.
+"""
+function clear_console!(console_log::Observable{Vector{LogEntry}})
+    empty!(console_log[])
+    notify(console_log)
+    return
 end

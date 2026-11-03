@@ -2,7 +2,7 @@
 
 #### Printing
 
-```julia (editor=true, logging=false, output=true)
+```julia (editor=true, logging=false, output=true, id=2)
 ]st
 ```
 #### Tables
@@ -14,7 +14,7 @@ DataFrame(A=1:3, B=5:7, fixed=1)
 ```julia (editor=true, logging=false, output=true)
 Bonito.Table(DataFrame(A=1:3, B=5:7, fixed=1))
 ```
-```julia (editor=true, logging=false, output=true)
+```julia (editor=true, logging=false, output=true, id=6)
 table = [
     (Name="Alice", Age=28, City="New York", Salary=75000),
     (Name="Bob", Age=34, City="San Francisco", Salary=95000),
@@ -53,7 +53,7 @@ L"Trigonometric Functions: $\sin(x)$ and $\cos(x)$"
 ```julia (editor=true, logging=false, output=true)
 L"1 + \alpha^2"
 ```
-```julia (editor=true, logging=false, output=true)
+```julia (editor=true, logging=false, output=true, id=12)
 struct LatexNum <: Number
 end
 

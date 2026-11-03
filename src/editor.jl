@@ -1,4 +1,5 @@
 const Monaco = ES6Module(joinpath(@__DIR__, "javascript", "Monaco.js"))
+const CodeTokenizer = ES6Module(joinpath(@__DIR__, "javascript", "CodeTokenizer.js"))
 
 
 
@@ -18,18 +19,17 @@ function ToggleButton(icon_name::String, obs_to_toggle::Observable{Bool})
     return DOM.button(
         button_icon;
         class = initial_class,
-        onclick = js"""event=> {
+        onclick = js"""((event)=> {
             const button = event.target.closest('button');
             const newValue = !$(obs_to_toggle).value;
             $(obs_to_toggle).notify(newValue);
-
             // Toggle the active class based on new value
             if (newValue) {
                 button.classList.add('active');
             } else {
                 button.classList.remove('active');
             }
-        }"""
+        })"""
     )
 end
 
@@ -114,6 +114,8 @@ function Bonito.jsrender(session::Session, editor::MonacoEditor)
             $(Monaco).then(mod => {
                 const init_func = $(editor.js_init_func[]);
                 const editor = new mod.MonacoEditor($(editor_div), $(editor.options), init_func, $(direction), $(visible), $(theme));
+                // The editor lives as long as the session that rendered it.
+                Bonito.Sessions.on_free($(session.id), () => editor.dispose());
                 if ($(visible)) {
                     // return promise tho wait for the editor to be ready
                     return editor.editor;
@@ -140,7 +142,7 @@ Interactive code editor with execution capabilities and bidirectional JavaScript
 - `source::Observable{String}`: Current source code
 - `output::Observable{Any}`: Execution output
 - `logging::Observable{String}`: Execution logs
-- `logging_html::Observable{String}`: HTML-formatted logs
+- `terminal_output::TerminalOutput`: Terminal output widget for formatted logs
 - `show_logging::Observable{Bool}`: Whether to show logs
 - `show_output::Observable{Bool}`: Whether to show output
 - `show_editor::Observable{Bool}`: Whether to show editor
@@ -159,16 +161,25 @@ struct EvalEditor
 
     output::Observable{Any}
     logging::Observable{String}
-    logging_html::Observable{String}
+    terminal_output::TerminalOutput
 
     show_logging::Observable{Bool}
     show_output::Observable{Bool}
     show_editor::Observable{Bool}
 
     loading::Observable{Bool}
+    capture_response::Observable{Any}
     language::String
     resize_to_lines::Bool
     markdown_focus_edit::Observable{Bool}  # Controls click-to-edit for markdown cells
+    # CellEditor copies its `uuid` here so the runner can stamp
+    # attributed entries into `book.console_log` without a full
+    # CellEditor back-reference. `Ref` (not Observable) because we
+    # don't need to react to changes — we just need a mutable slot
+    # that `ensure_cell_id!` can update if the cell got assigned an id
+    # after EvalEditor construction. Standalone EvalEditors (FileEditor)
+    # leave this at 0 → entries are recorded under "no cell".
+    cell_id::Base.RefValue{Int}
 end
 
 function process_message(editor::EvalEditor, message::Dict)
@@ -187,6 +198,8 @@ function process_message(editor::EvalEditor, message::Dict)
         editor.show_logging[] = message["data"]
     elseif message["type"] == "toggle-output"
         editor.show_output[] = message["data"]
+    elseif message["type"] == "captured-output"
+        editor.capture_response[] = message
     elseif message["type"] === "multi"
         foreach(msg -> process_message(editor, msg), message["data"])
     else
@@ -198,6 +211,25 @@ end
 function send(editor::EvalEditor; msg...)
     editor.julia_to_js[] = Dict{String, Any}((string(k) => v for (k, v) in pairs(msg)))
     return
+end
+
+function capture_output!(editor::EvalEditor; format::String = "png", timeout::Real = 5.0)
+    request_id = string(uuid4())
+    editor.capture_response[] = nothing
+    send(editor; type = "capture-output", format = format, request_id = request_id)
+    # `Bonito.wait_for` returns a Symbol (`:success` / `:timed_out` /
+    # whatever the predicate yielded if it was a Symbol), not a Bool —
+    # so `success || return` would error on the Symbol.
+    # Match on `AbstractDict`, not `Dict{String, Any}`: the Bonito
+    # JS→Julia bridge can produce `Dict{Any, Any}` depending on the
+    # deserialiser path, and the stricter type test silently rejects
+    # valid responses, leaving capture stuck until the wait times out.
+    status = Bonito.wait_for(timeout = timeout) do
+        msg = editor.capture_response[]
+        return msg isa AbstractDict && get(msg, "request_id", "") == request_id
+    end
+    status === :success || return nothing
+    return editor.capture_response[]
 end
 
 function run_from_newest!(editor::EvalEditor)
@@ -254,11 +286,10 @@ function EvalEditor(
     result = Observable{Any}(nothing)
     src = Observable(source)
     logging = Observable("")
-    logging_html = Observable("")
+    terminal_out = TerminalOutput()
     on(logging) do str
         if !isempty(str)
-            # Append the new HTML content (already formatted by ANSIColoredPrinters)
-            logging_html[] = logging_html[] * str
+            append_html!(terminal_out, str)
         end
     end
     # Initialize markdown_focus_edit based on parameter or auto-detect
@@ -279,15 +310,17 @@ function EvalEditor(
         src,
         result,
         logging,
-        logging_html,
+        terminal_out,
 
         Observable(show_logging),
         show_output,
         show_editor_obs,
         loading,
+        Observable{Any}(nothing),
         language,
         resize_to_lines,
-        markdown_focus_edit_obs
+        markdown_focus_edit_obs,
+        Ref(0),
     )
     on(js_to_julia) do message
         process_message(editor, message)
@@ -306,11 +339,7 @@ function render_editor(editor::EvalEditor)
         "cell-logging " * (show ? "" : hiding)
     end
     output_div = DOM.div(editor.output, class = map(c -> "cell-output cell-output-$(editor.language) $(c)", output_class))
-    logging_html = Observable(HTML(""))
-    on(editor.logging_html) do str
-        logging_html[] = HTML("<pre>" * str * "</pre>")
-    end
-    logging_div = DOM.div(ANSI_CSS, DOM.div(logging_html, class = logging_class))
+    logging_div = DOM.div(editor.terminal_output, class = logging_class)
     # Set the init func, which we can only do here where we have all divs
     editor.editor.js_init_func[] = js"""((editor) => {
         const output_div = $(output_div);
@@ -331,7 +360,7 @@ end
 
 function Bonito.jsrender(session::Session, editor::EvalEditor)
     elems = render_editor(editor)
-    return Bonito.jsrender(session, DOM.div(elems...))
+    return Bonito.jsrender(session, DOM.div(elems))
 end
 
 """
@@ -345,11 +374,12 @@ function Base.close(editor::EvalEditor)
     Observables.clear(editor.source)
     Observables.clear(editor.output)
     Observables.clear(editor.logging)
-    Observables.clear(editor.logging_html)
+    Observables.clear(editor.terminal_output.content)
     Observables.clear(editor.show_logging)
     Observables.clear(editor.show_output)
     Observables.clear(editor.show_editor)
     Observables.clear(editor.loading)
+    Observables.clear(editor.capture_response)
     Observables.clear(editor.markdown_focus_edit)
     Observables.clear(editor.editor.theme)
     return nothing
@@ -363,20 +393,26 @@ Interactive cell for code editing and execution.
 # Fields
 - `language::String`: Programming language ("julia", "markdown", "python", etc.)
 - `editor::EvalEditor`: Main code editor
-- `uuid::String`: Unique identifier for the cell
+- `uuid::Int`: Unique counter-based identifier for the cell
 - `delete_self::Observable{Bool}`: Signal for cell deletion
+- `focused::Observable{Bool}`: Whether the cell is currently focused
+- `metadata::Dict{Symbol, Any}`: Plugin-specific metadata (e.g., from=:user)
+- `class::String`: CSS class for the cell container
 """
-struct CellEditor
+mutable struct CellEditor
     language::String
     editor::EvalEditor
-    uuid::String
+    uuid::Int
     delete_self::Observable{Bool}
     focused::Observable{Bool}
+    metadata::Dict{Symbol, Any}
+    class::String
+    book::Any # Reference to the parent book, cant use type here to avoid circular dependency
 end
 
 
 """
-    CellEditor(content, language, runner; show_editor=true, show_logging=false, show_output=true)
+    CellEditor(content, language, runner; show_editor=true, show_logging=false, show_output=true, metadata=Dict{Symbol,Any}(), class="")
 
 Create an interactive cell editor with code execution capabilities.
 
@@ -387,20 +423,27 @@ Create an interactive cell editor with code execution capabilities.
 - `show_editor`: Whether to show the code editor initially
 - `show_logging`: Whether to show execution logs initially
 - `show_output`: Whether to show execution output initially
+- `metadata`: Plugin-specific metadata dictionary
+- `class`: CSS class for the cell container
 
 # Returns
 Configured `CellEditor` instance ready for interactive use.
 """
-function CellEditor(content, language, runner; show_editor = true, show_logging = false, show_output = true, theme = Observable("default"))
-    runner = language == "markdown" ? MarkdownRunner() : runner
-    uuid = string(UUIDs.uuid4())
-
+function CellEditor(content, language, runner; show_editor = true, show_logging = false, show_output = true, theme = Observable("default"), metadata = Dict{Symbol, Any}(), id::Int = 0, class::String = "", folder = "")
+    runner = language == "markdown" ? MarkdownRunner(folder) : runner
+    # Use provided id or 0 as placeholder (will be replaced by assign_cell_ids!)
+    uuid = id
     jleditor = EvalEditor(
         content, runner;
         show_editor = show_editor, show_logging = show_logging, language = language,
         show_output = show_output, theme = theme,
         tabCompletion = "on"
     )
+    # Propagate the cell's uuid into the EvalEditor's cell_id ref so
+    # the runner can stamp attributed entries into `book.console_log`
+    # without a CellEditor back-reference. `ensure_cell_id!` keeps this
+    # in sync for cells that get an id assigned post-construction.
+    jleditor.cell_id[] = uuid
 
     if language == "markdown"
         # run immediately, since we only show output
@@ -412,9 +455,21 @@ function CellEditor(content, language, runner; show_editor = true, show_logging 
         end
     end
     focused = Observable(false)
+
+    # Derive class from metadata[:from] if not explicitly provided
+    if isempty(class)
+        from = get(metadata, :from, nothing)
+        if from === nothing
+            class = ""  # No special class for regular cells
+        else
+            class = "cell-from-$from"
+        end
+    end
+
     return CellEditor(
         language, jleditor,
-        uuid, Observable(false), focused
+        uuid, Observable(false), focused, metadata, class,
+        nothing
     )
 end
 
@@ -474,7 +529,8 @@ function Bonito.jsrender(session::Session, editor::CellEditor)
         })
     }
     """
-    hover_buttons = DOM.div(show_editor, show_logging, out, delete_editor; class = "hover-buttons", id = hover_id)
+    drag_handle = DOM.div(icon("gripper", size = "14px"); class = "drag-handle small-button", draggable = "true")
+    hover_buttons = DOM.div(drag_handle, show_editor, show_logging, out, delete_editor; class = "hover-buttons", id = hover_id)
 
     # Create small always-visible language indicator positioned in bottom right
     names = Dict(lang_name => lang.icon for (lang_name, lang) in ALL_LANGUAGES)
@@ -494,10 +550,22 @@ function Bonito.jsrender(session::Session, editor::CellEditor)
 
     # Add collapsed class to container based on editor visibility
     container_class = map(any_visible) do visible
-        visible ? "cell-editor-container" : "cell-editor-container editor-collapsed"
+        base = "cell-editor-container"
+        collapsed = visible ? "" : " editor-collapsed"
+        custom = isempty(editor.class) ? "" : " $(editor.class)"
+        return base * collapsed * custom
     end
     cell_div = DOM.div(container, class = container_class, id = editor.uuid)
-    return Bonito.jsrender(session, cell_div)
+
+    # Add new_cell_menu if book is attached
+    if !isnothing(editor.book)
+        add_cell_div = new_cell_menu(editor.book, editor.uuid, editor.book.runner, editor.language)
+        full_cell = DOM.div(cell_div, add_cell_div)
+        setup_editor_callbacks!(editor.book, editor)
+        return Bonito.jsrender(session, full_cell)
+    else
+        return Bonito.jsrender(session, cell_div)
+    end
 end
 
 struct FileEditor
@@ -528,6 +596,92 @@ struct FileEditor
 
         return new(editor, current_file)
     end
+end
+
+"""
+    DiffEditor
+
+Monaco diff editor for comparing original and modified text.
+
+# Fields
+- `original::Observable{String}`: Original text content
+- `modified::Observable{String}`: Modified text content
+- `language::String`: Programming language for syntax highlighting
+- `options::Dict{Symbol, Any}`: Editor configuration options
+- `theme::Observable{String}`: Editor theme
+- `max_height::Observable{Int}`: Upper bound on the auto-sized editor
+  height (the JS dynamically sizes to content; this caps it). Drive this
+  from the host to swap between a compact preview and a fully expanded
+  view without re-mounting Monaco — the JS reacts to changes via
+  `setMaxHeight` and calls `editor.layout()` so the resize is animated by
+  Monaco itself instead of fighting with an outer CSS clip.
+- `min_height::Int`: Lower bound on the auto-sized height (so the editor
+  stays usable for trivial diffs); static after construction.
+"""
+struct DiffEditor
+    original::Observable{String}
+    modified::Observable{String}
+    language::String
+    options::Dict{Symbol, Any}
+    theme::Observable{String}
+    max_height::Observable{Int}
+    min_height::Int
+end
+
+function DiffEditor(original::String, modified::String;
+                    language = "julia",
+                    theme = Observable("default"),
+                    max_height::Union{Int,Observable{Int}} = 600,
+                    min_height::Int = 100,
+                    options...)
+    defaults = Dict{Symbol, Any}(
+        :readOnly => true,
+        :renderSideBySide => true,
+        :minimap => Dict(:enabled => false),
+        :scrollBeyondLastLine => false,
+        :automaticLayout => true,
+        :renderOverviewRuler => false,
+        :scrollbar => Dict(:vertical => "auto", :horizontal => "auto"),
+    )
+    opts = merge!(defaults, Dict{Symbol, Any}(options))
+    max_h = max_height isa Observable ? max_height : Observable(Int(max_height))
+
+    return DiffEditor(
+        Observable(original),
+        Observable(modified),
+        language,
+        opts,
+        theme,
+        max_h,
+        Int(min_height),
+    )
+end
+
+function Bonito.jsrender(session::Session, diff_editor::DiffEditor)
+    editor_div = DOM.div(class="monaco-diff-editor-div")
+
+    return Bonito.jsrender(
+        session, DOM.div(
+            editor_div,
+            js"""
+            $(Monaco).then(mod => {
+                const diffEditor = new mod.MonacoDiffEditor(
+                    $(editor_div),
+                    $(diff_editor.original),
+                    $(diff_editor.modified),
+                    $(diff_editor.language),
+                    $(diff_editor.options),
+                    $(diff_editor.theme),
+                    $(diff_editor.max_height),
+                    $(diff_editor.min_height)
+                );
+                // The editor lives as long as the session that rendered it.
+                Bonito.Sessions.on_free($(session.id), () => diffEditor.dispose());
+                return diffEditor.editor;
+            })
+            """
+        )
+    )
 end
 
 function open_file!(editor::FileEditor, filepath::String; line::Union{Int, Nothing} = nothing)

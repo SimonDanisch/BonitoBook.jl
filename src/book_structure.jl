@@ -39,21 +39,125 @@ function get_template_path()
     return joinpath(@__DIR__, "bbook")
 end
 
-"""
-    get_file_path(bbook_folder, relative_path::String)
+function plugin_fullname(plugin::Module)
+    return join(string.(Base.fullname(plugin)), ".")
+end
 
-Get path to a file, checking custom bbook folder first, then falling back to template.
+function plugin_template_path(plugin::Module)
+    plugin_file = pathof(plugin)
+    if isnothing(plugin_file)
+        return nothing
+    end
+    template_folder = joinpath(dirname(plugin_file), "bbook")
+    return isdir(template_folder) ? normpath(abspath(template_folder)) : nothing
+end
+
+function resolve_module_name(module_name::AbstractString)
+    parts = Symbol.(split(String(module_name), '.'))
+    isempty(parts) && return nothing
+
+    function descend(root::Module, names::Vector{Symbol})
+        isdefined(root, names[1]) || return nothing
+        current = getfield(root, names[1])
+        current isa Module || return nothing
+        for name in names[2:end]
+            isdefined(current, name) || return nothing
+            next_module = getfield(current, name)
+            next_module isa Module || return nothing
+            current = next_module
+        end
+        return current
+    end
+
+    return something(descend(Main, parts), descend(@__MODULE__, parts), nothing)
+end
+
+"""
+    is_plugin_template(folder::String) -> Bool
+
+Check if a folder is a plugin's bbook template directory (read-only).
+Returns true if the folder lives inside the BonitoBook plugins directory.
+"""
+function is_plugin_template(folder::String)
+    plugins_dir = normpath(joinpath(@__DIR__, "..", "plugins"))
+    return startswith(normpath(abspath(folder)), plugins_dir)
+end
+
+"""
+    get_plugin_template_path(bbook_folder::String)
+
+Get the plugin's bbook template path if a plugin is loaded.
+Checks if book.jl exists and if the plugin module provides a bbook template.
+
+Returns the plugin template path if found, nothing otherwise.
+"""
+function get_plugin_template_path(bbook_folder::String)
+    book_jl_path = joinpath(bbook_folder, "book.jl")
+    if !isfile(book_jl_path)
+        return nothing
+    end
+
+    # Read the book.jl to determine the plugin module
+    book_jl_content = read(book_jl_path, String)
+
+    # Legacy autodetection path for books without explicit `plugin=...`.
+    # Parse the `using ...` module and resolve template from pathof(module).
+    for module_match in eachmatch(r"using\s+([A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*)", book_jl_content)
+        module_name = module_match.captures[1]
+        if module_name == "BonitoBook"
+            continue
+        end
+        plugin_module = resolve_module_name(module_name)
+        if plugin_module isa Module
+            template = plugin_template_path(plugin_module)
+            if !isnothing(template)
+                return template
+            end
+        end
+    end
+
+    # Final compatibility fallback for older plugin wrapper format.
+    m = match(r"BonitoBook\.(\w+)", book_jl_content)
+    if m !== nothing
+        plugin_name = m.captures[1]
+        plugin_template = joinpath(@__DIR__, "..", "plugins", plugin_name, "bbook")
+        if isdir(plugin_template)
+            return normpath(abspath(plugin_template))
+        end
+    end
+
+    return nothing
+end
+
+"""
+    get_file_path(bbook_folder, relative_path::String; plugin_template=nothing)
+
+Get path to a file, checking in order:
+1. Custom file in bbook_folder (user's custom version)
+2. Plugin template (if a plugin is loaded and has the file)
+3. BonitoBook template (default fallback)
+
 Returns (path, is_custom) where is_custom indicates if it's from the custom folder.
 """
-function get_file_path(bbook_folder, relative_path::String)
+function get_file_path(bbook_folder, relative_path::String; plugin_template=nothing)
     if !isnothing(bbook_folder)
+        # Check for custom file first
         custom_path = joinpath(bbook_folder, relative_path)
         if isfile(custom_path)
             return (custom_path, true)
         end
+
+        # Check for plugin template
+        resolved_plugin_template = isnothing(plugin_template) ? get_plugin_template_path(bbook_folder) : plugin_template
+        if !isnothing(resolved_plugin_template)
+            plugin_file = joinpath(resolved_plugin_template, relative_path)
+            if isfile(plugin_file)
+                return (plugin_file, false)
+            end
+        end
     end
 
-    # Fall back to template
+    # Fall back to BonitoBook template
     template_path = joinpath(get_template_path(), relative_path)
     return (template_path, false)
 end
@@ -126,13 +230,14 @@ function check_or_create_meta(bbook_folder::String)
 end
 
 """
-    initialize_file_for_editing(bbook_folder::String, relative_path::String)
+    initialize_file_for_editing(bbook_folder::String, relative_path::String; plugin_template=nothing)
 
 Initialize a file for editing by copying from template if it doesn't exist.
+Checks plugin template first, then falls back to BonitoBook template.
 Creates the bbook folder and necessary subdirectories if needed.
 Returns the path to the file to edit.
 """
-function initialize_file_for_editing(bbook_folder::String, relative_path::String)
+function initialize_file_for_editing(bbook_folder::String, relative_path::String; plugin_template=nothing)
     # Ensure bbook folder exists
     if !isdir(bbook_folder)
         mkpath(bbook_folder)
@@ -157,7 +262,17 @@ function initialize_file_for_editing(bbook_folder::String, relative_path::String
         mkpath(parent_dir)
     end
 
-    # Copy from template
+    # Try to copy from plugin template first
+    resolved_plugin_template = isnothing(plugin_template) ? get_plugin_template_path(bbook_folder) : plugin_template
+    if !isnothing(resolved_plugin_template)
+        plugin_file = joinpath(resolved_plugin_template, relative_path)
+        if isfile(plugin_file)
+            _cp(plugin_file, custom_path)
+            return custom_path
+        end
+    end
+
+    # Fall back to BonitoBook template
     template_path = joinpath(get_template_path(), relative_path)
     if isfile(template_path)
         _cp(template_path, custom_path)
@@ -211,4 +326,37 @@ function create_book_structure(bookfile::String; replace_style=false)
     end
 
     return folder
+end
+
+# ============================================================================
+# Cell ID Management
+# ============================================================================
+
+"""
+    assign_cell_ids!(cells::Vector)
+
+Assign IDs to cells that don't have them (uuid == 0), using the highest existing ID + 1 as the starting point.
+Returns the next available ID counter.
+"""
+function assign_cell_ids!(cells::Vector)
+    max_id = 0
+
+    # Find the highest existing ID
+    for cell in cells
+        if cell.uuid > 0
+            max_id = max(max_id, cell.uuid)
+        end
+    end
+    # Start counter after the highest ID
+    counter = Ref(max_id + 1)
+    # Assign IDs to cells without them (uuid == 0)
+    for (i, cell) in enumerate(cells)
+        if cell.uuid == 0
+            # Create new cell with assigned ID
+            cell.uuid = counter[]
+            counter[] += 1
+        end
+    end
+
+    return counter
 end

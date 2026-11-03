@@ -49,7 +49,7 @@ However, direct matrix inversion is computationally expensive and numerically un
 
 **Theorem 2.1** (LU Decomposition): *Any nonsingular matrix $\mathbf{A}$ can be factored as $\mathbf{A} = \mathbf{L}\mathbf{U}$, where $\mathbf{L}$ is lower triangular and $\mathbf{U}$ is upper triangular.*
 
-```julia (editor=true, logging=false, output=true)
+```julia (editor=true, logging=false, output=true, id=2)
 using LinearAlgebra
 # Simple matrix operations example (no external dependencies)
 A = [4.0 3.0 2.0; 3.0 4.0 -1.0; 2.0 -1.0 4.0]
@@ -87,7 +87,7 @@ where $h$ is the step size and $t_n = t_{0} + n \cdot h$.
 
 **Example 2.1**: Consider the exponential growth equation $\frac{dy}{dt} = ky$ with initial condition $y(0) = y_{0}$.
 
-```julia (editor=true, logging=false, output=true)
+```julia (editor=true, logging=false, output=true, id=4)
 function euler_method(f, y0, t_span, h)
     t_start, t_end = t_span
     t = t_start:h:t_end
@@ -165,7 +165,7 @@ x_{n+1} = x_n - \frac{f(x_n)}{f\prime(x_n)}
 
 **Algorithm 3.1**: Newton-Raphson Method
 
-```julia (editor=true, logging=false, output=true)
+```julia (editor=true, logging=false, output=true, id=6)
 """
     newton_raphson(f, df, x0; tol=1e-10, max_iter=100)
 
@@ -235,7 +235,7 @@ Numerical integration is essential when analytical integration is impossible or 
 |      Simpson's Rule |          $O(h^4)$ |          $-\frac{h^4}{90}f^{(4)}(\xi)$ |           Moderate |
 | Gaussian Quadrature |       $O(h^{2n})$ |                       Depends on nodes |               High |
 
-```julia (editor=true, logging=false, output=true)
+```julia (editor=true, logging=false, output=true, id=8)
 """
     trapezoidal_rule(f, a, b, n)
 
@@ -308,7 +308,7 @@ The sample variance is:
 s^2 = \frac{1}{n-1}\sum_{i=1}^{n} (x_i - \bar{x})^2
 ```
 
-```julia (editor=true, logging=false, output=true)
+```julia (editor=true, logging=false, output=true, id=10)
 # Generate simple sample data using built-in functions
 n_samples = 100
 
@@ -375,7 +375,7 @@ DOM.div(
 
 Effective visualization is crucial for communicating computational results. Here's a simple example using text-based representation.
 
-```julia (editor=true, logging=false, output=true)
+```julia (editor=true, logging=false, output=true, id=12)
 # Generate simple dataset
 n_points = 20
 x_data = collect(1:n_points)
@@ -424,7 +424,7 @@ Optimization is central to many computational applications. Here's a simple grad
 
 **Problem 5.1**: Minimize the function $f(x) = x^2 - 4x + 5$ using gradient descent.
 
-```julia (editor=true, logging=false, output=true)
+```julia (editor=true, logging=false, output=true, id=14)
 # Simple gradient descent implementation
 function gradient_descent(f, df, x0, α=0.1, max_iter=100, tol=1e-6)
     x = x0
@@ -496,7 +496,7 @@ I \approx \frac{b-a}{n} \sum_{i=1}^{n} f(x_i)
 
 where $x_i$ are uniformly distributed random points in $[a,b]$.
 
-```julia (editor=true, logging=false, output=true)
+```julia (editor=true, logging=false, output=true, id=16)
 """
     monte_carlo_integrate(f, a, b, n)
 

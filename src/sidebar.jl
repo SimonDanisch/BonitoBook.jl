@@ -137,7 +137,7 @@ function Bonito.jsrender(session::Bonito.Session, sidebar::Sidebar)
     end
 
     # Tab bar with orientation class
-    tab_bar = DOM.div(tabs...; class = "sidebar-tabs $(sidebar.orientation)")
+    tab_bar = DOM.div(tabs; class = "sidebar-tabs $(sidebar.orientation)")
 
     # Add resize handle with unified resize functionality
     resize_handle = DOM.div(

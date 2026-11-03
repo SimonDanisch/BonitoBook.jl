@@ -499,11 +499,58 @@ function generate_style(book;
             "pointer-events" => "auto",
         ),
 
+        # Drag handle
+        CSS(
+            ".drag-handle",
+            "cursor" => "grab",
+            "opacity" => "0.7",
+            "transition" => "all var(--transition-fast)",
+        ),
+        CSS(
+            ".drag-handle:hover",
+            "opacity" => "1",
+            "background-color" => "var(--hover-bg)",
+            "transform" => "scale(1.1)",
+        ),
+        CSS(
+            ".drag-handle:active",
+            "cursor" => "grabbing",
+        ),
+        # Dragging state
+        CSS(
+            ".dragging",
+            "opacity" => "0.2 !important",
+            "transform" => "scale(0.98)",
+            "transition" => "transform var(--transition-fast)",
+        ),
+        # Drop indicator line
+        CSS(
+            ".drop-indicator",
+            "height" => "4px",
+            "background" => "var(--accent-blue)",
+            "border-radius" => "2px",
+            "margin" => "4px 0",
+            "box-shadow" => "0 0 8px var(--accent-blue)",
+            "z-index" => "var(--z-overlay)",
+            "position" => "relative",
+            "transition" => "all 0.1s ease",
+        ),
+        # Highlights for target cells
+        CSS(
+            ".drop-target-before",
+            "border-top" => "2px solid var(--accent-blue) !important",
+            "transition" => "border-top 0.1s ease",
+        ),
+        CSS(
+            ".drop-target-after",
+            "border-bottom" => "2px solid var(--accent-blue) !important",
+            "transition" => "border-bottom 0.1s ease",
+        ),
+
         # Cell output
         CSS(
             ".cell-output",
             "margin" => "var(--spacing-xs)",
-            "max-height" => "1000px",
             "overflow-y" => "auto",
             "overflow-x" => "visible",
             "width" => "var(--editor-width)",
@@ -520,6 +567,90 @@ function generate_style(book;
         # Visibility controls
         CSS(".hide-vertical", "display" => "none"),
         CSS(".show-vertical", "display" => "block"),
+
+        # `book.logging_mode` is mirrored onto the body element as one
+        # of these classes by a JS bridge in `standard_setup!`. The CSS
+        # rules below force inline cell-logging visibility regardless
+        # of the per-cell `editor.show_logging` setting — the runner
+        # always captures the data; mode only affects whether you see
+        # it inline.
+        #   :respect_cell — no override; default behaviour wins.
+        #   :hide_all     — force-hide every inline logging div.
+        #   :show_all     — force-show every inline logging div.
+        #   :console      — hide inline; the bottom-panel console
+        #                   widget renders the attributed history.
+        CSS("body.logmode-hide_all .cell-logging",
+            "display" => "none !important"),
+        CSS("body.logmode-show_all .cell-logging",
+            "display" => "block !important",
+            "height" => "auto !important",
+            "overflow" => "visible !important"),
+        CSS("body.logmode-console .cell-logging",
+            "display" => "none !important"),
+        # The bottom-panel "global logging" widget is only useful when
+        # the user is actually pointing the console there. In every
+        # other mode the attributed history is either hidden (`hide_all`)
+        # or displayed inline alongside its cell (`show_all`,
+        # `respect_cell`), so showing the panel as well would just
+        # eat screen real estate.
+        CSS("body:not(.logmode-console) .book-bottom-panel",
+            "display" => "none"),
+
+        # ── Logging-mode picker (inside the settings popup) ──────────
+        CSS(".logmode-picker",
+            "display" => "flex",
+            "flex-direction" => "column",
+            "gap" => "var(--spacing-xs)",
+            "min-width" => "320px",
+            "padding" => "var(--spacing-sm)"),
+        CSS(".logmode-picker-title",
+            "font-weight" => "600",
+            "font-size" => "var(--font-size-base)",
+            "margin-bottom" => "var(--spacing-xs)"),
+        CSS(".logmode-option",
+            "border" => "1px solid var(--border-secondary)",
+            "border-radius" => "var(--border-radius-small)",
+            "padding" => "var(--spacing-sm) var(--spacing-md)",
+            "cursor" => "pointer",
+            "transition" => "background-color var(--transition-fast)"),
+        CSS(".logmode-option:hover",
+            "background-color" => "var(--hover-bg)"),
+        CSS(".logmode-option.active",
+            "border-color" => "var(--accent-blue)",
+            "background-color" => "var(--menu-hover-bg)"),
+        CSS(".logmode-option-label",
+            "font-weight" => "500",
+            "font-size" => "var(--font-size-sm)"),
+        CSS(".logmode-option-desc",
+            "color" => "var(--text-secondary)",
+            "font-size" => "var(--font-size-xs)",
+            "margin-top" => "2px"),
+
+        # ── Attributed console-log widget (bottom panel) ─────────────
+        CSS(".console-log-widget",
+            "display" => "flex",
+            "flex-direction" => "column",
+            "height" => "100%"),
+        CSS(".console-entries",
+            "flex" => "1",
+            "overflow-y" => "auto",
+            "padding" => "var(--spacing-xs) var(--spacing-sm)",
+            "font-family" => "var(--mono-font)",
+            "font-size" => "var(--font-size-sm)"),
+        CSS(".console-entry",
+            "display" => "flex",
+            "gap" => "var(--spacing-sm)",
+            "padding" => "2px 0",
+            "align-items" => "baseline"),
+        # The cell-id badge is the only attribution surface; keep it
+        # narrow + monospaced so prose output to the right doesn't
+        # ragged-edge across rows.
+        CSS(".console-cell-id",
+            "color" => "var(--text-secondary)",
+            "font-size" => "var(--font-size-xs)",
+            "min-width" => "4.5rem",
+            "text-align" => "right",
+            "user-select" => "none"),
         CSS(
             ".hide-horizontal",
             "height" => "6px",
@@ -544,7 +675,7 @@ function generate_style(book;
             CSS("100%", "box-shadow" => "var(--shadow-soft)")
         ),
 
-        # Language icon
+        # Language icon - fixed size to prevent unexpected sizing issues
         CSS(
             ".small-language-icon",
             "position" => "absolute",
@@ -553,7 +684,20 @@ function generate_style(book;
             "opacity" => "0.8",
             "pointer-events" => "none",
             "color" => "var(--icon-color)",
-            "filter" => "var(--icon-filter)"
+            "filter" => "var(--icon-filter)",
+            "width" => "10px !important",
+            "height" => "10px !important",
+            "max-width" => "10px !important",
+            "max-height" => "10px !important"
+        ),
+        # Ensure language icon images don't grow
+        CSS(
+            ".small-language-icon img",
+            "width" => "10px !important",
+            "height" => "10px !important",
+            "max-width" => "10px !important",
+            "max-height" => "10px !important",
+            "object-fit" => "contain"
         ),
         ),
         editor_styles
@@ -918,7 +1062,13 @@ function generate_style(book;
             "margin" => "0",
             "width" => "100%",
             "min-width" => "var(--editor-width)",
-            "height" => "calc(100vh - 20px)"
+            # 100% of `.editor-container` (which is `flex: 1; min-height: 0`
+            # inside `.tabbed-file-editor`). Sourcing height from the flex
+            # chain rather than viewport units removes a redundant ResizeObserver
+            # path: when the URL bar slides, only `.tabbed-file-editor` reflows
+            # — Monaco's wrapper no longer self-recomputes from `dvh` on top
+            # of that.
+            "height" => "100%"
         ),
 
         CSS(
@@ -982,7 +1132,7 @@ function generate_style(book;
             "top" => "0",
             "left" => "0",
             "width" => "100vw",
-            "height" => "100vh",
+            "height" => "100dvh",
             "background-color" => "rgba(0, 0, 0, 0.5)",
             "z-index" => "var(--z-popup)",
             "display" => "flex",
@@ -1069,28 +1219,38 @@ function generate_style(book;
         ),
         CSS(
             ".book-cells-area",
+            "flex" => "1",
             "overflow-y" => "auto",
             "overflow-x" => "hidden",
             "width" => "100%",
-            "display" => "grid",
-            "place-items" => "center",
+            "display" => "flex",
+            "flex-direction" => "column",
+            "align-items" => "center",
             "-webkit-overflow-scrolling" => "touch"
         ),
         CSS(
             ".book-main-content",
             "overflow" => "hidden",
+            "flex" => "1",
+            "display" => "flex",
+            "flex-direction" => "column",
+            "height" => "100%",
         ),
         CSS(
             ".book-document",
             "display" => "flex",
             "flex-direction" => "column",
-            "height" => "100vh",
+            "height" => "100dvh",
+            "width" => "100vw",
             "overflow" => "hidden"
         ),
         CSS(
             ".book-wrapper",
             "overflow" => "hidden",
-            "height" => "100vh"
+            "height" => "100dvh",
+            "width" => "100vw",
+            "display" => "flex",
+            "flex-direction" => "column"
         ),
         CSS(
             ".book-bottom-panel",
@@ -1329,6 +1489,7 @@ function generate_style(book;
             "flex-direction" => "row",
             "width" => "100%",
             "height" => "100%",
+            "flex" => "1",
             "overflow" => "hidden",
             "position" => "relative",
         ),
